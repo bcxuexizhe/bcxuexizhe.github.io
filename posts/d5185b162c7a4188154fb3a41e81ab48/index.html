@@ -1,0 +1,145 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>堆溢出bug定位调试修复 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d5185b162c7a4188154fb3a41e81ab48/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="堆溢出bug定位调试修复">
+  <meta property="og:description" content="最近代码出了bug，堆溢出。 debug下一切正常， release时随机崩溃到某几个地方，
+报错是: Critical error detected c0000374
+不是完全随机崩溃，崩溃到某几个正常的地方，开始怀疑是不是这几个地方真的有什么bug,
+由于使用了qt库，炸到qt函数调用最后崩溃到系统dll中，根本无法调试，最后发现了一个神器
+就是 WinDbg自带的工具软件 gflags， 通过这个软件可以修改注册表让程序运行时，系统runtime分配内存时额外再前后多分配两个字节，并且填充0xfd(貌似是这个)，当程序内存发生溢出时写到
+额外分配的内存时就直接终端。 gflags工具下载。这个再WindowsSDK中包含了，如果没有可以去
+微软官网单独下载这个sdk安装时只安装调试工具，安装完成后的路径：
+C:\Program Files (x86)\Windows Kits\10\Debuggers\x64
+打开里面的gflags.exe 切换到如下图选择 Image File， 注意exe只需要
+文件名不需要完整路径。 下面Debugger可以不选，我选了之后有报错，
+然后用vs正常启动release来调试就可以定位到，另外如果无法定位。可以
+把下面的几个Enable xxx checking都勾选试试，不过这样程序运行会变很慢，
+调试完记得在注册表中删除这些设置，否则程序一直运行很慢。
+注册表路径是:
+HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/WindowsNT/CurrentVersion/Image File Execution Options/mytest.exe
+有时间研究下Windbg这个，有非常多的调试工具有助于定位bug。
+也可参考这几篇博客：
+Windbg的gflags.exe -- Attach调试利器_windbg gflag 挂 exe-CSDN博客
+【VS】Windbg的gflags.exe调试堆栈溢出，访问越界等问题。_vs vld 越界访问-CSDN博客">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T17:18:39+08:00">
+    <meta property="article:modified_time" content="2024-05-22T17:18:39+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">堆溢出bug定位调试修复</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>最近代码出了bug，堆溢出。 debug下一切正常， release时随机崩溃到某几个地方，</p> 
+<p><img alt="" height="48" src="https://images2.imgbox.com/a6/15/XnmVmDMj_o.png" width="463"></p> 
+<p>报错是: Critical error detected c0000374</p> 
+<p>不是完全随机崩溃，崩溃到某几个正常的地方，开始怀疑是不是这几个地方真的有什么bug,</p> 
+<p>由于使用了qt库，炸到qt函数调用最后崩溃到系统dll中，根本无法调试，最后发现了一个神器</p> 
+<p>就是 WinDbg自带的工具软件 gflags， 通过这个软件可以修改注册表让程序运行时，系统runtime分配内存时额外再前后多分配两个字节，并且填充0xfd(貌似是这个)，当程序内存发生溢出时写到</p> 
+<p>额外分配的内存时就直接终端。 gflags工具下载。这个再WindowsSDK中包含了，如果没有可以去</p> 
+<p>微软官网单独下载这个sdk安装时只安装调试工具，安装完成后的路径：</p> 
+<p>        C:\Program Files (x86)\Windows Kits\10\Debuggers\x64</p> 
+<p>打开里面的gflags.exe 切换到如下图选择 Image File，  注意exe只需要</p> 
+<p>文件名不需要完整路径。 下面Debugger可以不选，我选了之后有报错，</p> 
+<p>然后用vs正常启动release来调试就可以定位到，另外如果无法定位。可以</p> 
+<p>把下面的几个Enable xxx checking都勾选试试，不过这样程序运行会变很慢，</p> 
+<p>调试完记得在注册表中删除这些设置，否则程序一直运行很慢。</p> 
+<p>注册表路径是:</p> 
+<p>HKEY_LOCAL_MACHINE/SOFTWARE/Microsoft/WindowsNT/CurrentVersion/Image File Execution Options/mytest.exe</p> 
+<p><img alt="" height="556" src="https://images2.imgbox.com/eb/62/PX6o0RCE_o.png" width="536"></p> 
+<p>有时间研究下Windbg这个，有非常多的调试工具有助于定位bug。</p> 
+<p>也可参考这几篇博客：</p> 
+<p>        <a href="https://blog.csdn.net/ABCBA642024874/article/details/23784025" title="Windbg的gflags.exe -- Attach调试利器_windbg gflag 挂 exe-CSDN博客">Windbg的gflags.exe -- Attach调试利器_windbg gflag 挂 exe-CSDN博客</a></p> 
+<p><a href="https://blog.csdn.net/qq_43331089/article/details/129637618" title="【VS】Windbg的gflags.exe调试堆栈溢出，访问越界等问题。_vs vld 越界访问-CSDN博客">【VS】Windbg的gflags.exe调试堆栈溢出，访问越界等问题。_vs vld 越界访问-CSDN博客</a></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/23c229e1a3eb8a72ca63fd2387f0bd57/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">基于vue3速学angular</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8945dd982beebd078add2c6140cb0dc0/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">深度解析 Spring 源码：揭秘JDK动态代理的奥秘</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

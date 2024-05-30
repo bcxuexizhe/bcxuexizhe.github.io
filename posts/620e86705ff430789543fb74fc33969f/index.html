@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【运维】Kafka高可用： KRaft（不依赖zookeeper）集群搭建 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/620e86705ff430789543fb74fc33969f/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【运维】Kafka高可用： KRaft（不依赖zookeeper）集群搭建">
+  <meta property="og:description" content="文章目录 一. kafka kraft 集群介绍1. KRaft架构2. Controller 服务器3. Process Roles4. Quorum Voters5. kraft的工作原理 ing 二. 集群安装1. 安装1.1. 配置1.2. 格式化 2. 启动测试2.1. 启功节点服务2.2. 测试 本文主要介绍了
+kafka raft集群架构：
+与旧架构的不同点，有哪些优势，哪些问题
+架构成员有哪些，怎么规划。三节点集群安装、启动与测试 一. kafka kraft 集群介绍 1. KRaft架构 在旧的架构中
+Kafka集群包含多个broker节点和一个ZooKeeper 集群。如上图集群结构：4个broker节点和3个ZooKeeper节点。Kafka 集群的controller在被选中后，会从 ZooKeeper 中加载它的状态。选举controller的过程是由zookeeper自动完成的。
+在新的架构中
+三个 controller 节点替代三个ZooKeeper节点。 controller节点和 broker 节点运行在不同的进程中。这些controller 节点中会选择一个成为Leader。新的架构中，controller不会向 broker 推送更新，而是 broker 从 controller Leader 拉取元数据的更新信息。
+尽管 controller 进程在逻辑上与 broker 进程是分离的，但它们不需要在物理上分离。即在某些情况下，部分或所有 controller 进程和 broker 进程是可以是同一个进程，即一个broker节点即是broker也是controller。
+2. Controller 服务器 在KRaft模式下，通过指定某些服务器作为控制器，在Server.properties的Process.roles 参数里面配置。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-13T10:57:10+08:00">
+    <meta property="article:modified_time" content="2023-12-13T10:57:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【运维】Kafka高可用： KRaft（不依赖zookeeper）集群搭建</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_kafka_kraft__7" rel="nofollow">一. kafka kraft 集群介绍</a></li><li><ul><li><a href="#1_KRaft_10" rel="nofollow">1. KRaft架构</a></li><li><a href="#2_Controller__30" rel="nofollow">2. Controller 服务器</a></li><li><a href="#3_Process_Roles_48" rel="nofollow">3. Process Roles</a></li><li><a href="#4_Quorum_Voters_61" rel="nofollow">4. Quorum Voters</a></li><li><a href="#5_kraft_ing_86" rel="nofollow">5. kraft的工作原理 ing</a></li></ul> 
+  </li><li><a href="#__91" rel="nofollow">二. 集群安装</a></li><li><ul><li><a href="#1__102" rel="nofollow">1. 安装</a></li><li><ul><li><a href="#11__110" rel="nofollow">1.1. 配置</a></li><li><a href="#12__142" rel="nofollow">1.2. 格式化</a></li></ul> 
+   </li><li><a href="#2__165" rel="nofollow">2. 启动测试</a></li><li><ul><li><a href="#21__167" rel="nofollow">2.1. 启功节点服务</a></li><li><a href="#22__175" rel="nofollow">2.2. 测试</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<blockquote> 
+ <p>本文主要介绍了</p> 
+ <ul><li>kafka raft集群架构：<br> 与旧架构的不同点，有哪些优势，哪些问题<br> 架构成员有哪些，怎么规划。</li><li>三节点集群安装、启动与测试</li></ul> 
+</blockquote> 
+<h2><a id="_kafka_kraft__7"></a>一. kafka kraft 集群介绍</h2> 
+<h3><a id="1_KRaft_10"></a>1. KRaft架构</h3> 
+<p><img src="https://images2.imgbox.com/03/f2/AWOC3ZZh_o.png" alt="在这里插入图片描述"></p> 
+<p>在旧的架构中</p> 
+<blockquote> 
+ <p>Kafka集群包含<strong>多个broker节点和一个ZooKeeper 集群</strong>。如上图集群结构：4个broker节点和3个ZooKeeper节点。Kafka 集群的controller在被选中后，会从 ZooKeeper 中加载它的状态。选举controller的过程是由zookeeper自动完成的。</p> 
+</blockquote> 
+<p> </p> 
+<p>在新的架构中</p> 
+<blockquote> 
+ <p><strong>三个 controller 节点替代三个ZooKeeper节点。</strong> controller节点和 broker 节点运行在不同的进程中。这些controller 节点中会选择一个成为Leader。新的架构中，controller不会向 broker 推送更新，而是 broker 从 controller Leader 拉取元数据的更新信息。</p> 
+</blockquote> 
+<p>尽管 controller 进程在逻辑上与 broker 进程是分离的，但它们不需要在物理上分离。即在某些情况下，部分或所有 controller 进程和 broker 进程是可以是同一个进程，即一个broker节点即是broker也是controller。</p> 
+<p> </p> 
+<h3><a id="2_Controller__30"></a>2. Controller 服务器</h3> 
+<p>在KRaft模式下，通过指定某些服务器作为控制器，在Server.properties的Process.roles 参数里面配置。</p> 
+<blockquote> 
+ <p>不像基于ZooKeeper的模式，（zk去做的事情，我们手动配置不了）任何服务器都可以成为控制器。这带来了一个非常优秀的好处，即如果我们认为 controller 节点的负载会比其他只当做broker节点高，那么可以为 controller 节点使用高配的机器。这就解决了在1.0, 2.0架构中， controller 节点会比其他节点负载高，却无法控制哪些节点能成为 controller 节点的问题。</p> 
+</blockquote> 
+<p>被（<strong>手动配置</strong>）选中的 controller 节点将参与元数据集群的选举。对于当前的 controller 节点，每个控制器服务器要么是Active的，要么是Standby的。</p> 
+<p>用户通常会选择3或5台(奇数台)服务器成为 controller 节点，3和5的个数问题和Raft的原理一样，少数服从多数。</p> 
+<blockquote> 
+ <p>就像使用ZooKeeper一样，为了保持可用性，你必须让大部分 controller 保持active状态。如果你有3个controller，你可以容忍1个故障；在5个控制器中，您可以容忍2个故障。</p> 
+</blockquote> 
+<p> </p> 
+<h3><a id="3_Process_Roles_48"></a>3. Process Roles</h3> 
+<p>在KRaft模式下，每个Kafka服务器都有一个新的配置项，叫做process.roles, 这个参数可以有以下值:</p> 
+<blockquote> 
+ <ul><li>如果process.roles = broker, 服务器在KRaft模式中充当 broker。</li><li>如果process.roles = controller, 服务器在KRaft模式下充当 controller。</li><li>如果process.roles = broker,controller，服务器在KRaft模式中同时充当 broker 和controller。</li></ul> 
+</blockquote> 
+<p>注意：如果process.roles 没有设置。那么集群就假定是运行在ZooKeeper模式下。</p> 
+<blockquote> 
+ <p>对于简单的场景，组合节点更容易运行和部署，可以避免多进程运行时，JVM带来的相关的固定内存开销。但controller将较少地与系统的其余部分隔离。例如，如果代理上的活动导致内存不足，controller也会受到例如OOM的影响。</p> 
+</blockquote> 
+<p> </p> 
+<h3><a id="4_Quorum_Voters_61"></a>4. Quorum Voters</h3> 
+<p>系统中的<strong>所有节点</strong>都必须设置 controller.quorum.voters 配置。用于配置所有想成为controller的节点。</p> 
+<p> </p> 
+<p>如果你有10个broker和 3个controller1，分别命名为controller1、controller2、controller3，你可能在 controller1上有以下配置:</p> 
+<pre><code class="prism language-xml">process.roles=controller
+node.id=1
+listeners=CONTROLLER://controller1.example.com:9093
+controller.quorum.voters=1@controller1.com:9093,2@controller2.com:9093,3@controller3.com:9093
+</code></pre> 
+<p>controller.quorum.voters配置格式说明：<code>nodeid1@controller-node1:9093,nodeid2@controller-node2:9093,nodeid3@controller-node3:9093</code></p> 
+<p> <br> 如果你只有三个节点，每个节点都是controller，broker角色，那么每个节点都这样配置</p> 
+<pre><code class="prism language-xml">process.roles=broker,controller
+listeners=CONTROLLER://controller1.example.com:9093
+controller.quorum.voters=1@controller1.com:9093,2@controller2.com:9093,3@controller3.com:9093
+</code></pre> 
+<p> </p> 
+<h3><a id="5_kraft_ing_86"></a>5. kraft的工作原理 ing</h3> 
+<p><a href="https://developer.confluent.io/learn/kraft/" rel="nofollow">KRaft: Apache Kafka Without ZooKeeper</a></p> 
+<p> </p> 
+<h2><a id="__91"></a>二. 集群安装</h2> 
+<p>进行三个节点的安装，如下规划：</p> 
+<table><thead><tr><th>节点</th><th>node.id</th><th>角色</th></tr></thead><tbody><tr><td>node1</td><td>1</td><td>controller,broker</td></tr><tr><td>node2</td><td>2</td><td>controller,broker</td></tr><tr><td>node3</td><td>3</td><td>controller,broker</td></tr></tbody></table> 
+<h3><a id="1__102"></a>1. 安装</h3> 
+<p>kafka下载: <a href="https://kafka.apache.org/downloads" rel="nofollow">https://kafka.apache.org/downloads</a><br> 解压</p> 
+<pre><code class="prism language-c">tar <span class="token operator">-</span>zxvf kafka_2<span class="token punctuation">.</span><span class="token number">13</span><span class="token operator">-</span><span class="token number">3.0</span><span class="token number">.0</span><span class="token punctuation">.</span>tgz
+</code></pre> 
+<h4><a id="11__110"></a>1.1. 配置</h4> 
+<p>在node1中配置：<code>server.properties</code></p> 
+<p>在{KAFKA_HOME}/config/kraft/server.properties</p> 
+<pre><code class="prism language-pro">############################# Server Basics #############################
+
+java.home=/opt/jvm/java
+
+# The role of this server. Setting this puts us in KRaft mode
+process.roles=broker,controller
+
+# The node id associated with this instance's roles
+node.id={<!-- -->{broker_id}}
+
+# The connect string for the controller quorum
+# 每个节点配置都一样：格式：{<!-- -->{broker_id_1}}@{<!-- -->{hostname1}}:9093,{<!-- -->{broker_id_2}}@{<!-- -->{hostname2}}:9093,{<!-- -->{broker_id_3}}@{<!-- -->{hostname3}}:9093
+controller.quorum.voters={<!-- -->{voters}}
+
+
+############################# Log Basics #############################
+
+# A comma separated list of directories under which to store log files
+# 数据存储目录
+log.dirs=/opt/kafka3.5.0/logs
+</code></pre> 
+<p>配置node2、node3，其余两个节点配置除了<code>node.id</code>不同，其他配置都相同。<code>node.id</code>配置如上节点规划。</p> 
+<p> </p> 
+<h4><a id="12__142"></a>1.2. 格式化</h4> 
+<p><strong>生成集群 ID</strong></p> 
+<p>整个集群唯一的ID标志</p> 
+<pre><code class="prism language-shell">$ ./bin/kafka-storage.sh random-uuid
+qGuAL6YzRyWQdzt4cQTZgA
+</code></pre> 
+<p> </p> 
+<p><strong>格式化存储目录</strong></p> 
+<p>使用上面生成集群 uuid, 在三个节点上都执行格式化存储目录命令：</p> 
+<pre><code class="prism language-shell">$ ./bin/kafka-storage.sh <span class="token function">format</span> <span class="token punctuation">\</span>
+<span class="token parameter variable">-t</span> xtzWWN4bTjitpL3kfd9s5g <span class="token punctuation">\</span>
+<span class="token parameter variable">-c</span> ./config/kraft/server.properties
+</code></pre> 
+<p> </p> 
+<h3><a id="2__165"></a>2. 启动测试</h3> 
+<h4><a id="21__167"></a>2.1. 启功节点服务</h4> 
+<p>在每个节点上执行</p> 
+<pre><code class="prism language-shell">$ ./bin/kafka-server-start.sh ./config/kraft/server.properties
+</code></pre> 
+<p> </p> 
+<h4><a id="22__175"></a>2.2. 测试</h4> 
+<pre><code class="prism language-shell"><span class="token comment"># 创建topic</span>
+$ bin/kafka-topics.sh <span class="token parameter variable">--create</span> <span class="token punctuation">\</span>
+<span class="token parameter variable">--topic</span> quickstart-events <span class="token punctuation">\</span>
+--bootstrap-server localhost:9092
+
+
+<span class="token comment"># 查看topic信息</span>
+$ bin/kafka-topics.sh <span class="token parameter variable">--describe</span> <span class="token punctuation">\</span>
+<span class="token parameter variable">--topic</span> quickstart-events <span class="token punctuation">\</span>
+--bootstrap-server localhost:9092
+
+Topic: quickstart-events        TopicId: NPmZHyhbR9y00wMglMH2sg PartitionCount: <span class="token number">1</span>       ReplicationFactor: <span class="token number">1</span>	Configs:
+    Topic: quickstart-events Partition: <span class="token number">0</span>    Leader: <span class="token number">0</span>   Replicas: <span class="token number">0</span> Isr: <span class="token number">0</span>
+
+
+<span class="token comment"># 生产消息</span>
+$ bin/kafka-console-producer.sh <span class="token punctuation">\</span>
+<span class="token parameter variable">--topic</span> quickstart-events  <span class="token punctuation">\</span>
+--bootstrap-server localhost:9092
+
+This is my first event
+This is my second event
+
+
+<span class="token comment">#消费数据</span>
+$ bin/kafka-console-consumer.sh <span class="token punctuation">\</span>
+<span class="token parameter variable">--topic</span> quickstart-events <span class="token punctuation">\</span>
+--from-beginning --bootstrap-server localhost:9092
+
+This is my first event
+This is my second event
+</code></pre> 
+<p> </p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4d5de05a3064675b06245d8249103f41/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Golang入门教程（非常详细）从零基础入门到精通，看完这一篇就够了</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c337b3f3803a2322f3fc619121b84b1f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">采用MQTT协议实现Android APP与阿里云平台的连接</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

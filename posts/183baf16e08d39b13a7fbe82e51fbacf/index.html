@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>详解静态网页数据获取以及浏览器数据和网络数据交互流程-Python - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/183baf16e08d39b13a7fbe82e51fbacf/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="详解静态网页数据获取以及浏览器数据和网络数据交互流程-Python">
+  <meta property="og:description" content="目录
+前言
+一、静态网页数据
+二、网址通讯流程
+1.DNS查询
+2.建立连接
+3.发送HTTP请求
+4.服务器处理请求
+5.服务器响应
+6.渲染页面
+7.页面交互
+三、URL/POST/GET
+1.URL
+2.GET
+形式
+3.POST
+形式
+四.获取静态网页数据
+1.requests库
+点关注，防走丢，如有纰漏之处，请留言指教，非常感谢
+前言 在网站设计领域，基于纯HTML格式构建的网页通常定义为静态网页，这种类型的网页是早期网站建设的主要形式。对于网络爬虫来说，抓取静态网页中的数据相对较为简单，因为所需的所有信息都直接嵌入在网页的HTML代码里。然而，对于那些利用AJAX技术动态加载数据的网页，其数据并不总是直接出现在HTML代码中，这对爬虫的抓取工作造成了一定的难度。
+在静态网页的数据抓取过程中，Requests库显示出其卓越的实用性。这个库不仅功能全面，而且操作简洁直观。本章的内容将从介绍如何安装Requests库开始，接着如何使用这个库来发送HTTP请求并获得相应内容，探讨如何通过自定义Requests的参数来适应不同的数据抓取需求。
+一、静态网页数据 静态网页是互联网的基本组成部分，它们是由服务器以 HTML（超文本标记语言）形式发送到客户端（通常是浏览器）的网页。这些页面在服务器上是预先编写好的，对于所有用户来说，其内容在每次请求时都保持不变。与之相对的是动态网页，它们的内容可以根据用户的不同请求或交互而变化。
+一般来说静态网页可获取到的信息有：
+文本内容：网页上的所有文本，如文章、标题、链接描述等。链接（URLs）：网页上的所有超链接。图像及其URL：网页上的图像以及它们的源URL。HTML结构信息：如各种HTML标签中的内容（div、span、p等）。样式信息：例如CSS类和ID等。元数据：如网页标题、描述、关键词等。 目前主流处理静态网页的工具有Python 语言的 requests 库来发送HTTP请求，并使用 BeautifulSoup 或 lxml 解析HTML内容。在浏览器中使用开发者工具可以更深入地分析网页结构和内容，按下F12即可进入开发者模式。
+二、网址通讯流程 因为涉及到网址通讯流程，这里简要介绍一下网页信息传输流程更方便以后了解我们应该如何获取静态数据以及抓取信息。
+当我们在浏览器中输入一个网址并访问时，发生的网络通讯流程可以分为以下几个主要步骤：
+1.DNS查询 浏览器首先需要找出您要访问的网站的IP地址。它通过向DNS（域名系统）服务器发出查询来完成这一步骤。如果该地址已经在浏览器的缓存中，这一步将被跳过。
+2.建立连接 一旦浏览器获得了网站的IP地址，它将尝试通过TCP（传输控制协议）建立到该地址的连接。通常这涉及到一个“三次握手”过程，确保稳定的连接建立。
+3.发送HTTP请求 连接建立后，浏览器会向服务器发送一个HTTP请求。这个请求包括所请求页面的详细信息，以及客户端（即浏览器）的信息，如请求的类型（通常是GET或POST）、所需资源的路径、浏览器类型等。
+4.服务器处理请求 服务器接收到请求后，会根据请求的类型和资源处理请求。如果是静态内容（如HTML页面、图片、CSS文件等），服务器通常会直接返回这些文件。对于动态内容，服务器可能会执行后端代码，如数据库查询，然后生成相应的HTML内容。
+5.服务器响应 服务器处理请求后，会将响应数据（网页代码、图片、错误消息等）发送回浏览器。这通常以HTTP响应的形式发生，包括状态码（如200表示成功，404表示未找到等）和响应体。
+6.渲染页面 浏览器接收到服务器的响应后，会解析和渲染页面。这包括HTML的解析、CSS样式的应用、JavaScript的执行等。这一过程中，浏览器可能还会发送额外的请求来获取页面上的其他资源（如图片、CSS文件、JavaScript文件等）。
+7.页面交互 页面加载完成后，用户可以与页面进行交互，如点击链接、提交表单等。这可能会触发额外的HTTP请求和服务器响应，从而更新页面内容。通常使用HTTP的GET和POST请求最为常见，用于获取和提交数据。
+从以上网页数据获取流程理解完，我们再来了解URL/POST/GET三者在浏览器网页网络通讯中代表的意义和作用，这也是一般通用的网络信息通讯规则。
+三、URL/POST/GET 大家不妨在浏览器开发者模式，点击网络一栏可以查看每次网络数据交互情况，基本上都会有涉及到GET和POST，所有这里详细讲述GET和POST的具体作用和形式。
+1.URL URL想必大家都知道，诸如：https://www.csdn.net/就是一个URL，但是这里要较为详细的讲述一下URL的参数，也就是除去标准的URL后续?后面所带的参数含义。
+URL参数是指在URL（统一资源定位符）中包含的一组键值对，用于向服务器传递额外的信息。它们通常出现在问号（?）之后，并使用等号（=）分隔键和值，不同键值对之间使用和号（&amp;）分隔。这种传递参数的方式使得客户端（通常是浏览器）能够向服务器发送特定的请求，以获取或提交特定的数据。 比如https://www.csdn.net/?spm=1010.2135.3001.4476，?后面的参数就是。其中，spm是一个参数，它的值是1010.2135.3001.4476；这样，服务器就能够识别客户端的请求，并根据这些参数来执行相应的操作，比如执行搜索操作并过滤到编程相关的结果。
+这里需要URL的四个特点：
+键值对： URL参数是以键值对的形式存在的，一个键对应一个值。在上面的例子中，q是键，python是值。
+多个参数： URL可以包含多个参数，它们之间使用&amp;符号分隔。在上面的例子中，q=python和category=programming是两个不同的参数。
+编码： 由于URL中不能包含一些特殊字符，参数的键和值通常需要进行URL编码。例如，空格可能被编码为%20。
+GET请求： URL参数通常与HTTP的GET请求一起使用。在GET请求中，参数会被附加到URL上，而在POST请求中，参数通常包含在请求体中。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-03T11:00:47+08:00">
+    <meta property="article:modified_time" content="2024-01-03T11:00:47+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">详解静态网页数据获取以及浏览器数据和网络数据交互流程-Python</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E4%B8%80%E3%80%81%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE" rel="nofollow">一、静态网页数据</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E7%BD%91%E5%9D%80%E9%80%9A%E8%AE%AF%E6%B5%81%E7%A8%8B-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E7%BD%91%E5%9D%80%E9%80%9A%E8%AE%AF%E6%B5%81%E7%A8%8B" rel="nofollow">二、网址通讯流程</a></p> 
+<p id="1.DNS%E6%9F%A5%E8%AF%A2-toc" style="margin-left:40px;"><a href="#1.DNS%E6%9F%A5%E8%AF%A2" rel="nofollow">1.DNS查询</a></p> 
+<p id="2.%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5-toc" style="margin-left:40px;"><a href="#2.%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5" rel="nofollow">2.建立连接</a></p> 
+<p id="3.%E5%8F%91%E9%80%81HTTP%E8%AF%B7%E6%B1%82-toc" style="margin-left:40px;"><a href="#3.%E5%8F%91%E9%80%81HTTP%E8%AF%B7%E6%B1%82" rel="nofollow">3.发送HTTP请求</a></p> 
+<p id="4.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%A4%84%E7%90%86%E8%AF%B7%E6%B1%82-toc" style="margin-left:40px;"><a href="#4.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%A4%84%E7%90%86%E8%AF%B7%E6%B1%82" rel="nofollow">4.服务器处理请求</a></p> 
+<p id="5.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%93%8D%E5%BA%94-toc" style="margin-left:40px;"><a href="#5.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%93%8D%E5%BA%94" rel="nofollow">5.服务器响应</a></p> 
+<p id="6.%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2-toc" style="margin-left:40px;"><a href="#6.%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2" rel="nofollow">6.渲染页面</a></p> 
+<p id="7.%E9%A1%B5%E9%9D%A2%E4%BA%A4%E4%BA%92-toc" style="margin-left:40px;"><a href="#7.%E9%A1%B5%E9%9D%A2%E4%BA%A4%E4%BA%92" rel="nofollow">7.页面交互</a></p> 
+<p id="%E4%B8%89%E3%80%81URL%2FPOST%2FGET-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81URL%2FPOST%2FGET" rel="nofollow">三、URL/POST/GET</a></p> 
+<p id="1.URL-toc" style="margin-left:40px;"><a href="#1.URL" rel="nofollow">1.URL</a></p> 
+<p id="2.GET-toc" style="margin-left:40px;"><a href="#2.GET" rel="nofollow">2.GET</a></p> 
+<p id="%C2%A0%E5%BD%A2%E5%BC%8F-toc" style="margin-left:80px;"><a href="#%C2%A0%E5%BD%A2%E5%BC%8F" rel="nofollow"> 形式</a></p> 
+<p id="3.POST-toc" style="margin-left:40px;"><a href="#3.POST" rel="nofollow">3.POST</a></p> 
+<p id="%E5%BD%A2%E5%BC%8F-toc" style="margin-left:80px;"><a href="#%E5%BD%A2%E5%BC%8F" rel="nofollow">形式</a></p> 
+<p id="%E5%9B%9B.%E8%8E%B7%E5%8F%96%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE-toc" style="margin-left:0px;"><a href="#%E5%9B%9B.%E8%8E%B7%E5%8F%96%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE" rel="nofollow">四.获取静态网页数据</a></p> 
+<p id="1.requests%E5%BA%93-toc" style="margin-left:40px;"><a href="#1.requests%E5%BA%93" rel="nofollow">1.requests库</a></p> 
+<p id="%E7%82%B9%E5%85%B3%E6%B3%A8%EF%BC%8C%E9%98%B2%E8%B5%B0%E4%B8%A2%EF%BC%8C%E5%A6%82%E6%9C%89%E7%BA%B0%E6%BC%8F%E4%B9%8B%E5%A4%84%EF%BC%8C%E8%AF%B7%E7%95%99%E8%A8%80%E6%8C%87%E6%95%99%EF%BC%8C%E9%9D%9E%E5%B8%B8%E6%84%9F%E8%B0%A2-toc" style="margin-left:40px;"><a href="#%E7%82%B9%E5%85%B3%E6%B3%A8%EF%BC%8C%E9%98%B2%E8%B5%B0%E4%B8%A2%EF%BC%8C%E5%A6%82%E6%9C%89%E7%BA%B0%E6%BC%8F%E4%B9%8B%E5%A4%84%EF%BC%8C%E8%AF%B7%E7%95%99%E8%A8%80%E6%8C%87%E6%95%99%EF%BC%8C%E9%9D%9E%E5%B8%B8%E6%84%9F%E8%B0%A2" rel="nofollow">点关注，防走丢，如有纰漏之处，请留言指教，非常感谢</a></p> 
+<hr> 
+<h2 id="%E5%89%8D%E8%A8%80"><a id="_7"></a>前言</h2> 
+<p>在网站设计领域，基于纯HTML格式构建的网页通常定义为静态网页，这种类型的网页是早期网站建设的主要形式。对于网络爬虫来说，抓取静态网页中的数据相对较为简单，因为所需的所有信息都直接嵌入在网页的HTML代码里。然而，对于那些利用AJAX技术动态加载数据的网页，其数据并不总是直接出现在HTML代码中，这对爬虫的抓取工作造成了一定的难度。</p> 
+<p>在静态网页的数据抓取过程中，Requests库显示出其卓越的实用性。这个库不仅功能全面，而且操作简洁直观。本章的内容将从介绍如何安装Requests库开始，接着如何使用这个库来发送HTTP请求并获得相应内容，探讨如何通过自定义Requests的参数来适应不同的数据抓取需求。</p> 
+<hr> 
+<h2 id="%E4%B8%80%E3%80%81%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE"><a id="pandas_16"></a>一、静态网页数据</h2> 
+<p>静态网页是互联网的基本组成部分，它们是由服务器以 HTML（超文本标记语言）形式发送到客户端（通常是浏览器）的网页。这些页面在服务器上是预先编写好的，对于所有用户来说，其内容在每次请求时都保持不变。与之相对的是动态网页，它们的内容可以根据用户的不同请求或交互而变化。</p> 
+<p><img alt="" height="332" src="https://images2.imgbox.com/ab/10/15jG6ZT2_o.png" width="1001"></p> 
+<p>一般来说静态网页可获取到的信息有：</p> 
+<ul><li><strong>文本内容</strong>：网页上的所有文本，如文章、标题、链接描述等。</li><li><strong>链接（URLs）</strong>：网页上的所有超链接。</li><li><strong>图像及其URL</strong>：网页上的图像以及它们的源URL。</li><li><strong>HTML结构信息</strong>：如各种HTML标签中的内容（div、span、p等）。</li><li><strong>样式信息</strong>：例如CSS类和ID等。</li><li><strong>元数据</strong>：如网页标题、描述、关键词等。</li></ul> 
+<p>目前主流处理静态网页的工具有Python 语言的 <code>requests</code> 库来发送HTTP请求，并使用 <code>BeautifulSoup</code> 或 <code>lxml</code> 解析HTML内容。在浏览器中使用开发者工具可以更深入地分析网页结构和内容，按下F12即可进入开发者模式。</p> 
+<h2 id="%E4%BA%8C%E3%80%81%E7%BD%91%E5%9D%80%E9%80%9A%E8%AE%AF%E6%B5%81%E7%A8%8B">二、网址通讯流程</h2> 
+<p>因为涉及到网址通讯流程，这里简要介绍一下网页信息传输流程更方便以后了解我们应该如何获取静态数据以及抓取信息。</p> 
+<p>当我们在浏览器中输入一个网址并访问时，发生的网络通讯流程可以分为以下几个主要步骤：</p> 
+<h3 id="1.DNS%E6%9F%A5%E8%AF%A2">1.<strong>DNS查询</strong></h3> 
+<p>浏览器首先需要找出您要访问的网站的IP地址。它通过向DNS（域名系统）服务器发出查询来完成这一步骤。如果该地址已经在浏览器的缓存中，这一步将被跳过。</p> 
+<h3 id="2.%E5%BB%BA%E7%AB%8B%E8%BF%9E%E6%8E%A5">2.<strong>建立连接</strong></h3> 
+<p>一旦浏览器获得了网站的IP地址，它将尝试通过TCP（传输控制协议）建立到该地址的连接。通常这涉及到一个“三次握手”过程，确保稳定的连接建立。</p> 
+<h3 id="3.%E5%8F%91%E9%80%81HTTP%E8%AF%B7%E6%B1%82">3.<strong>发送HTTP请求</strong></h3> 
+<p>连接建立后，浏览器会向服务器发送一个HTTP请求。这个请求包括所请求页面的详细信息，以及客户端（即浏览器）的信息，如请求的类型（通常是GET或POST）、所需资源的路径、浏览器类型等。</p> 
+<h3 id="4.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%A4%84%E7%90%86%E8%AF%B7%E6%B1%82">4.<strong>服务器处理请求</strong></h3> 
+<p>服务器接收到请求后，会根据请求的类型和资源处理请求。如果是静态内容（如HTML页面、图片、CSS文件等），服务器通常会直接返回这些文件。对于动态内容，服务器可能会执行后端代码，如数据库查询，然后生成相应的HTML内容。</p> 
+<h3 id="5.%E6%9C%8D%E5%8A%A1%E5%99%A8%E5%93%8D%E5%BA%94">5.<strong>服务器响应</strong></h3> 
+<p>服务器处理请求后，会将响应数据（网页代码、图片、错误消息等）发送回浏览器。这通常以HTTP响应的形式发生，包括状态码（如200表示成功，404表示未找到等）和响应体。</p> 
+<h3 id="6.%E6%B8%B2%E6%9F%93%E9%A1%B5%E9%9D%A2">6.<strong>渲染页面</strong></h3> 
+<p>浏览器接收到服务器的响应后，会解析和渲染页面。这包括HTML的解析、CSS样式的应用、JavaScript的执行等。这一过程中，浏览器可能还会发送额外的请求来获取页面上的其他资源（如图片、CSS文件、JavaScript文件等）。</p> 
+<h3 id="7.%E9%A1%B5%E9%9D%A2%E4%BA%A4%E4%BA%92">7.<strong>页面交互</strong></h3> 
+<p>页面加载完成后，用户可以与页面进行交互，如点击链接、提交表单等。这可能会触发额外的HTTP请求和服务器响应，从而更新页面内容。通常使用HTTP的GET和POST请求最为常见，用于获取和提交数据。</p> 
+<p>从以上网页数据获取流程理解完，我们再来了解URL/POST/GET三者在浏览器网页网络通讯中代表的意义和作用，这也是一般通用的网络信息通讯规则。</p> 
+<h2 id="%E4%B8%89%E3%80%81URL%2FPOST%2FGET" style="background-color:transparent;">三、URL/POST/GET</h2> 
+<p>大家不妨在浏览器开发者模式，点击网络一栏可以查看每次网络数据交互情况，基本上都会有涉及到GET和POST，所有这里详细讲述GET和POST的具体作用和形式。</p> 
+<p><img alt="" height="185" src="https://images2.imgbox.com/3f/d3/fb5mQm2S_o.png" width="1032"></p> 
+<h3 id="1.URL">1.URL</h3> 
+<p>URL想必大家都知道，诸如：<a href="https://www.csdn.net/" title="https://www.csdn.net/">https://www.csdn.net/</a>就是一个URL，但是这里要较为详细的讲述一下URL的参数，也就是除去标准的URL后续?后面所带的参数含义。</p> 
+<p>URL参数是指在URL（统一资源定位符）中包含的一组键值对，用于向服务器传递额外的信息。它们通常出现在问号（?）之后，并使用等号（=）分隔键和值，不同键值对之间使用和号（&amp;）分隔。这种传递参数的方式使得客户端（通常是浏览器）能够向服务器发送特定的请求，以获取或提交特定的数据。 比如<a href="https://www.csdn.net/?spm=1010.2135.3001.4476" title="https://www.csdn.net/?spm=1010.2135.3001.4476">https://www.csdn.net/?spm=1010.2135.3001.4476</a>，?后面的参数就是。其中，spm是一个参数，它的值是1010.2135.3001.4476；这样，服务器就能够识别客户端的请求，并根据这些参数来执行相应的操作，比如执行搜索操作并过滤到编程相关的结果。</p> 
+<p>这里需要URL的四个特点：</p> 
+<ol><li> <p><strong>键值对：</strong> URL参数是以键值对的形式存在的，一个键对应一个值。在上面的例子中，<code>q</code>是键，<code>python</code>是值。</p> </li><li> <p><strong>多个参数：</strong> URL可以包含多个参数，它们之间使用<code>&amp;</code>符号分隔。在上面的例子中，<code>q=python</code>和<code>category=programming</code>是两个不同的参数。</p> </li><li> <p><strong>编码：</strong> 由于URL中不能包含一些特殊字符，参数的键和值通常需要进行URL编码。例如，空格可能被编码为<code>%20</code>。</p> </li><li> <p><strong>GET请求：</strong> URL参数通常与HTTP的GET请求一起使用。在GET请求中，参数会被附加到URL上，而在POST请求中，参数通常包含在请求体中。</p> </li></ol> 
+<p>URL参数在Web开发中被广泛使用，用于传递用户输入、筛选数据、进行搜索等各种场景。在服务端，开发人员可以通过解析URL参数来理解客户端请求的意图，并采取相应的操作。</p> 
+<h3 id="2.GET">2.GET</h3> 
+<p>在浏览器与服务器之间的网络交互中，GET请求是最常用的请求类型之一，主要用于从服务器检索数据。GET主要有四种作用：</p> 
+<ol><li> <p><strong>数据检索</strong>：GET请求的主要目的是请求服务器发送资源（如网页、图片、文件等）。它是一个“只读”请求，意味着它应该不对服务器上的数据产生任何影响。</p> </li><li> <p><strong>简单和无副作用</strong>：GET请求被设计为安全和幂等的，这意味着重复执行相同的GET请求应该得到相同的结果，且不会对服务器的数据状态产生改变。</p> </li><li> <p><strong>可被缓存</strong>：GET请求的结果往往可以被浏览器或服务器缓存以加速后续访问。</p> </li><li> <p><strong>书签和分享</strong>：GET请求可以通过URL完整表达，这使得请求的资源可以通过链接共享或保存为书签。</p> </li></ol> 
+<h4 id="%C2%A0%E5%BD%A2%E5%BC%8F"> 形式</h4> 
+<p><strong>URL结构</strong>如 <code>https://www.example.com/page</code>，指定请求的服务器和资源路径。查询字符串：以<code>?</code>开始，后接一个或多个参数。每个参数由键值对组成，格式为<code>key=value</code>，多个参数之间用<code>&amp;</code>分隔，如 <code>?query=search&amp;sort=asc</code>。</p> 
+<blockquote> 
+ <p>https://www.example.com/search?query=keyword&amp;sort=ascending&amp;page=1</p> 
+</blockquote> 
+<p>上述GET请求中客户端请求服务器上的<code>/search</code>资源，并传递了三个参数：<code>query</code>（搜索关键字）、<code>sort</code>（排序方式）、<code>page</code>（页码）。</p> 
+<ul><li>GET请求还包括HTTP请求头部，其中可能包含浏览器类型、接受的响应格式、语言偏好等信息。</li><li>例如：<code>User-Agent: Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.36</code>。</li></ul> 
+<p>一般用到GET的场景有：</p> 
+<ul><li><strong>检索数据</strong>：当需要从服务器获取数据时使用，如加载网页、图片、视频或任何其他类型的文件。</li><li><strong>搜索查询</strong>：在搜索引擎中输入查询，提交的就是一个GET请求。</li><li><strong>简单的表单提交</strong>：用于提交非敏感数据的表单，虽然不推荐（出于安全和数据长度限制的考虑）。</li></ul> 
+<h3 id="3.POST">3.POST</h3> 
+<p>它与GET请求相比，通常用于发送数据到服务器以便更新或创建资源。POST请求主要用于向服务器提交数据，通常不会被缓存。这些数据通常用于更新现有资源或创建新资源。由于POST请求将数据包含在请求体中，而不是URL中，因此它比GET请求更适合发送敏感或大量的数据。相同的POST请求如果被重复发送，可能会每次都产生不同的结果，例如在数据库中创建多个资源。</p> 
+<h4 id="%E5%BD%A2%E5%BC%8F">形式</h4> 
+<p><strong>请求体</strong>：</p> 
+<ul><li>数据是在HTTP请求的主体中发送的，而不是在URL中。</li><li>数据可以采用多种格式，例如表单数据、JSON、XML等。</li></ul> 
+<p><strong>HTTP头部</strong>：</p> 
+<ul><li><code>Content-Type</code>头部指定了发送数据的格式，例如<code>application/x-www-form-urlencoded</code>（表单数据）、<code>application/json</code>（JSON格式）等。</li><li><code>Content-Length</code>头部显示数据的大小。</li></ul> 
+<p>我们举个POST例子来看：</p> 
+<pre><code class="hljs">POST /submit-form HTTP/1.1
+Host: www.example.com
+Content-Type: application/x-www-form-urlencoded
+Content-Length: 27
+
+name=John&amp;age=30&amp;city=New York
+</code></pre> 
+<p> 客户端向<code>/submit-form</code>路径发送POST请求，请求体中包含了表单数据。</p> 
+<p>一般来说POST发送的场景有：</p> 
+<ul><li><strong>表单提交</strong>：在用户提交表单（尤其是包含敏感信息的表单，如登录凭证）时使用。</li><li><strong>文件上传</strong>：在上传文件到服务器时使用。</li><li><strong>API交互</strong>：在与API进行交互，尤其是在创建或更新数据时使用。</li></ul> 
+<p>POST请求因其安全性和非幂等性，被广泛用于敏感数据的传输和处理。</p> 
+<h2 id="%E5%9B%9B.%E8%8E%B7%E5%8F%96%E9%9D%99%E6%80%81%E7%BD%91%E9%A1%B5%E6%95%B0%E6%8D%AE">四.获取静态网页数据</h2> 
+<h3 id="1.requests%E5%BA%93">1.requests库</h3> 
+<p>Requests 是一个简单易用的 Python HTTP 库，用于发送网络请求。它是基于 urllib3 构建的，并提供了大量直观的功能来发送 HTTP/1.1 请求。它是 Python 社区中最受欢迎的 HTTP 客户端库之一。Requests主要特点有：</p> 
+<ol><li><strong>用户友好</strong>：Requests 的设计初衷是使 HTTP 请求更简单、更人性化。</li><li><strong>内置功能丰富</strong>：支持从基本的 GET、POST 请求到复杂的 HTTP 功能如会话、cookie 管理等。</li><li><strong>自动内容解码</strong>：自动解码来自服务器的响应。</li><li><strong>JSON 响应内容</strong>：内置的 JSON 解码器。</li><li><strong>超时控制</strong>：轻松添加请求超时。</li><li><strong>会话与 Cookie 管理</strong>：维持会话并管理 Cookies。</li><li><strong>SSL证书验证</strong>：可选的证书验证。</li></ol> 
+<p>我们可以使用Requests去模拟每一次与服务端网络数据交互的过程，通过requests支持的常用函数就可以看出：</p> 
+<ul><li><code>requests.get(url, params=None, **kwargs)</code>：发送一个 GET 请求到指定的 URL。</li><li><code>requests.post(url, data=None, json=None, **kwargs)</code>：发送一个 POST 请求到指定的 URL。</li><li><code>requests.put(url, data=None, **kwargs)</code>：发送一个 PUT 请求到指定的 URL。</li><li><code>requests.delete(url, **kwargs)</code>：发送一个 DELETE 请求到指定的 URL。</li><li><code>requests.head(url, **kwargs)</code>：发送一个 HEAD 请求到指定的 URL。</li><li><code>requests.options(url, **kwargs)</code>：发送一个 OPTIONS 请求到指定的 URL。</li></ul> 
+<p>大家可以通过跑一下我给出的demo：</p> 
+<pre><code class="language-python">import requests
+r =requests.get('https://www.csdn.net/')
+print("文本编码:",r.encoding)
+print('响应状态码:',r.status_code)
+print('字符串的方式的响应体:',r.text)</code></pre> 
+<p> 但是有些网页需要对Requests的参数进行设置才能获取需要的数据，这里暂时不做展开，以后详细讲述request的时候再讲。接下来来尝试访问带有参数的url：</p> 
+<pre><code class="language-python">link = "https://blog.csdn.net/master_hunter"#定义link为目标网页地址
+#定义请求头的浏览器代理，伪装成浏览器
+headers = {'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0'}
+key_dict={'spm':'1000.2115.3001.5343'}
+r = requests.get(link,headers = headers,params=key_dict)#请求网页
+print('URL已经正确编码:',r.url)
+print('字符串方式的响应体:\n',r.text)</code></pre> 
+<p> 可以得到：<img alt="" height="297" src="https://images2.imgbox.com/33/75/SjAT671k_o.png" width="739"></p> 
+<p>现在通过使用POST方法，客户端向服务器提交数据，我们便可以得到想要的内容：</p> 
+<pre><code class="language-python">import requests
+link = "https://blog.csdn.net/master_hunter"#定义link为目标网页地址
+#定义请求头的浏览器代理，伪装成浏览器
+headers = {
+    'User-Agent':'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:120.0) Gecko/20100101 Firefox/120.0',
+    'Host':'eva2.csdn.net'
+}
+key_dict={'spm':'1000.2115.3001.5343'}
+r=requests.post(link,headers = headers,params=key_dict)
+print(r.text)</code></pre> 
+<p>大家可以自己运行一遍，这里就不作演示了。 </p> 
+<hr> 
+<h3 id="%E7%82%B9%E5%85%B3%E6%B3%A8%EF%BC%8C%E9%98%B2%E8%B5%B0%E4%B8%A2%EF%BC%8C%E5%A6%82%E6%9C%89%E7%BA%B0%E6%BC%8F%E4%B9%8B%E5%A4%84%EF%BC%8C%E8%AF%B7%E7%95%99%E8%A8%80%E6%8C%87%E6%95%99%EF%BC%8C%E9%9D%9E%E5%B8%B8%E6%84%9F%E8%B0%A2"><a name="t6"></a>点关注，防走丢，如有纰漏之处，请留言指教，非常感谢</h3> 
+<p>以上就是本期全部内容。我是fanstuck ，有问题大家随时留言讨论 ，我们下期见。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8cc7a8f41ff10730f4f7c43824e2fea4/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">最好用的Redis客户端:RedisInsight安装部署教程, 官方亲儿子真香, 2种安装方式(包含Docker方式)， 超详细教程</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/346d3800ce020b227b42953524baf217/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【docker启动nginx】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

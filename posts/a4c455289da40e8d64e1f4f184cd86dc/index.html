@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>yolov5识别cf火线敌人（FPS类的AI瞄准）详细教程一 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a4c455289da40e8d64e1f4f184cd86dc/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="yolov5识别cf火线敌人（FPS类的AI瞄准）详细教程一">
+  <meta property="og:description" content="一. 前言 以下代码只可用于私服，不可商用，代码完全开源，因为自己的研究方向也是深度学习方向，而且平时闲的时候还喜欢玩会cf火线等枪战，就想着找一个大模型做一个对游戏敌人的识别的功能，一切实现之后就想把自己的心得写出来，我打算分俩个教程分别细述整个学习以及操作的过程，教程一主要包括了yolov5的基本使用，制作并训练自己的数据集，第二个教程包括对yolov5添加或修改部分代码以达到实现完整功能的目的
+提示：看这篇文章需要会一些虚拟环境的基础操作以及python的基本操作，如果对虚拟环境不了解，对cudnn和cuda不了解可以看下面这篇文章 ==》https://blog.csdn.net/calmdownn/article/details/130609866
+二. 制作数据集 2.1 下载labelImg 和 所需配置库 进入aconda虚拟环境中之后下载下面三个库文件
+pip install PyQt5 -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+pip install pyqt5-tools -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+pip install lxml -i http://pypi.douban.com/simple --trusted-host pypi.douban.com
+labelImg : 到github上将labelImg压缩包下载下来，我用的是1.8.1的版本 ==》labelImg下载地址
+2.2 进入虚拟环境编译resources.py文件之后启动labelImg 进入虚拟环境之后切换到（cd）下载之后的labelImg文件夹目录，执行以下命令将qt文件转化为.py
+pyrcc5 -o resources.py resources.qrc
+(我的python版本是3.8),最后运行labelImg.py的python文件,打开labelImg
+python labelImg.py
+注意：可能会爆出以下错误，提示在libs文件中找不到resources文件
+解决方法：将resources.py文件转移到libs文件夹中
+打开之后如下：
+点击PascalVoc按钮，将其切换成yolo格式，open就是打开你原始图片的文件夹，open dir 就是打开你的目标图片文件夹（推荐这个），change save Dir就是改变你的保存路径
+下面是它的快捷键：
+2.3 使用labelImg 添加原图片，按w进行拉框，拉框之后为其命名即可
+我这里是画了一个头和一个身子
+全部画完之后按住 ctrl &#43; s 进行保存，你就能在原先设置的存储路径中看见一个.txt的文件了
+打开txt文件之后如下，0和1分别代表头部类和身体类，四个数值分别代表你画框的左上角坐标和右下角坐标
+到这制作数据集的步骤就结束了，下面开始下载并使用yolov5模型
+三. yolov5的下载与使用 3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-03T19:49:26+08:00">
+    <meta property="article:modified_time" content="2023-12-03T19:49:26+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">yolov5识别cf火线敌人（FPS类的AI瞄准）详细教程一</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>一. 前言</h2> 
+<p><strong>以下代码只可用于私服，不可商用，代码完全开源，</strong>因为自己的研究方向也是深度学习方向，而且平时闲的时候还喜欢玩会cf火线等枪战，就想着找一个大模型做一个对游戏敌人的识别的功能，一切实现之后就想把自己的心得写出来，我打算分俩个教程分别细述整个学习以及操作的过程，教程一主要包括了yolov5的基本使用，制作并训练自己的数据集，第二个教程包括对yolov5添加或修改部分代码以达到实现完整功能的目的</p> 
+<p>提示：看这篇文章需要会一些虚拟环境的基础操作以及python的基本操作，如果对虚拟环境不了解，对cudnn和cuda不了解可以看下面这篇文章  ==》<a href="https://blog.csdn.net/calmdownn/article/details/130609866" title="https://blog.csdn.net/calmdownn/article/details/130609866">https://blog.csdn.net/calmdownn/article/details/130609866</a></p> 
+<h2>二. 制作数据集</h2> 
+<h4>2.1 下载labelImg 和 所需配置库</h4> 
+<p>进入aconda虚拟环境中之后下载下面三个库文件</p> 
+<blockquote> 
+ <p>pip install PyQt5 -i http://pypi.douban.com/simple --trusted-host pypi.douban.com<br>  <br> pip install pyqt5-tools -i http://pypi.douban.com/simple --trusted-host pypi.douban.com<br>  <br> pip install lxml -i http://pypi.douban.com/simple --trusted-host pypi.douban.com</p> 
+</blockquote> 
+<p>labelImg : 到github上将labelImg压缩包下载下来，我用的是1.8.1的版本  ==》<a class="link-info" href="https://github.com/HumanSignal/labelImg/tree/v1.8.1" title="labelImg下载地址">labelImg下载地址</a></p> 
+<p class="img-center"><img alt="" height="247" src="https://images2.imgbox.com/14/8a/Atf6OAz9_o.png" width="525"></p> 
+<p class="img-center"><img alt="" height="178" src="https://images2.imgbox.com/42/a8/3rbD450p_o.png" width="525"></p> 
+<h4>2.2 进入虚拟环境编译resources.py文件之后启动labelImg</h4> 
+<p>进入虚拟环境之后切换到（cd）下载之后的labelImg文件夹目录，执行以下命令将qt文件转化为.py</p> 
+<blockquote> 
+ <p>pyrcc5 -o resources.py resources.qrc</p> 
+</blockquote> 
+<p><img alt="" height="290" src="https://images2.imgbox.com/dd/b2/naxSNKAa_o.png" width="1200"></p> 
+<p>(我的python版本是3.8),最后运行labelImg.py的python文件,打开labelImg</p> 
+<blockquote> 
+ <p>python labelImg.py</p> 
+</blockquote> 
+<p><img alt="" height="40" src="https://images2.imgbox.com/8f/ef/d258urJm_o.png" width="631"></p> 
+<p><span style="color:#fe2c24;">注意：可能会爆出以下错误，提示在libs文件中找不到resources文件</span></p> 
+<p class="img-center"><img alt="" height="86" src="https://images2.imgbox.com/8d/2d/pOpLg18t_o.png" width="539"></p> 
+<p><span style="color:#fe2c24;">解决方法：将resources.py文件转移到libs文件夹中</span></p> 
+<p class="img-center"><img alt="" height="398" src="https://images2.imgbox.com/3f/c6/vcufdR4Y_o.png" width="406"></p> 
+<p>打开之后如下：</p> 
+<p>点击PascalVoc按钮，将其切换成yolo格式，open就是打开你原始图片的文件夹，open dir 就是打开你的目标图片文件夹（推荐这个），change save Dir就是改变你的保存路径</p> 
+<p class="img-center"><img alt="" height="319" src="https://images2.imgbox.com/3a/5a/EqqSNNXE_o.png" width="540"></p> 
+<p> 下面是它的快捷键：</p> 
+<p class="img-center"><img alt="" height="377" src="https://images2.imgbox.com/d2/ee/nMwtvzAh_o.png" width="275"></p> 
+<h4>2.3 使用labelImg</h4> 
+<p>添加原图片，按w进行拉框，拉框之后为其命名即可</p> 
+<p class="img-center"><img alt="" height="303" src="https://images2.imgbox.com/55/09/Z2izLjZO_o.png" width="513"></p> 
+<p> 我这里是画了一个头和一个身子</p> 
+<p class="img-center"><img alt="" height="303" src="https://images2.imgbox.com/ba/68/JgXeElxe_o.png" width="513"></p> 
+<p> 全部画完之后按住 ctrl + s 进行保存，你就能在原先设置的存储路径中看见一个.txt的文件了</p> 
+<p><img alt="" height="98" src="https://images2.imgbox.com/31/bd/W9IZe2a7_o.png" width="771"></p> 
+<p>打开txt文件之后如下，0和1分别代表头部类和身体类，四个数值分别代表你画框的左上角坐标和右下角坐标</p> 
+<p class="img-center"><img alt="" height="99" src="https://images2.imgbox.com/53/39/DKL8eTXO_o.png" width="325"></p> 
+<p>到这制作数据集的步骤就结束了，下面开始下载并使用yolov5模型</p> 
+<h2>三. yolov5的下载与使用</h2> 
+<h4>3.1 官网下载yolov5</h4> 
+<p>进入github，选择版本然后下载，我下载的版本是7.0版本 ==》<a class="link-info" href="https://github.com/ultralytics/yolov5" title="yolov5下载地址">yolov5下载地址</a></p> 
+<p class="img-center"><img alt="" height="206" src="https://images2.imgbox.com/18/4b/UxJqqrNB_o.png" width="525"></p> 
+<p> 下载完打开如下：</p> 
+<p class="img-center"><img alt="" height="381" src="https://images2.imgbox.com/26/90/XRmJe7sv_o.png" width="385"></p> 
+<h4>3.2 配置yolov5的所需虚拟环境</h4> 
+<p>基本的虚拟环境创建</p> 
+<p><span style="color:#fe2c24;">注意事项：</span></p> 
+<p>1).确定你的显卡驱动版本，下载对应的cuda和cudnn，是为了能够使用gpu版本的pytorch，比如我的电脑显卡是1060，所对应的cuda和cudnn版本分别就是10.2和7.6.5版本</p> 
+<p>显卡与cuda和cudnn的对应关系以及虚拟环境的知识可以看下面这篇文章 == 》<a href="https://blog.csdn.net/calmdownn/article/details/130609866" title="Anaconda/jupyter notebook安装使用tensorflow-gpu_jupyter notebook安装tensorflow_calmdownn的博客-CSDN博客">Anaconda/jupyter notebook安装使用tensorflow-gpu_jupyter notebook安装tensorflow_calmdownn的博客-CSDN博客</a></p> 
+<p>2).注意pytorch的版本，yolov5的官网有声明，至少pytorch要大于1.7.0版本，所以我下载的是1.8.1版本</p> 
+<blockquote> 
+ <p>conda install cudatoolkit=10.2 -c  https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/win-64/</p> 
+ <p></p> 
+ <p>conda install cudnn=7.6.5 -c https://mirrors.tuna.tsinghua.edu.cn/anaconda/pkgs/main/win-64/</p> 
+ <p></p> 
+ <p>conda install pytorch==1.8.1 torchvision==0.9.1 torchaudio==0.8.1 cudatoolkit=10.2 -c pytorch</p> 
+</blockquote> 
+<p>pytorch对应的工具包下载地址 == 》<a class="link-info" href="https://pytorch.org/get-started/previous-versions/" rel="nofollow" title="https://pytorch.org/get-started/previous-versions/">https://pytorch.org/get-started/previous-versions/</a></p> 
+<p>比如你要下载1.8.1版本的gpu的pytorch，就可以 ctrl + f 全局搜索，找到linux和windows的下载，然后找准你对应的cuda版本下载就可以了</p> 
+<p><span style="color:#fe2c24;">建议：最好先看看官网支持的cuda有什么版本，然后根据你的显卡再去选择cuda会更省力一些</span></p> 
+<p><img alt="" height="923" src="https://images2.imgbox.com/71/74/CCu2gAA1_o.png" width="1200"></p> 
+<p>3)测试pytorch的gpu版本是否可以使用</p> 
+<p>进入虚拟环境，运行python之后，导入import，执行下面语句判断gpu版本是否可用，如果结果为true就代表成功了</p> 
+<blockquote> 
+ <p>print(torch.cuda.is_available())</p> 
+</blockquote> 
+<p><img alt="" height="265" src="https://images2.imgbox.com/14/04/RBk5KGEz_o.png" width="1200"></p> 
+<p>4)其他包的安装</p> 
+<p>剩余其他工具包的安装就比较简单了，一键自动安装即可，命令如下</p> 
+<p><span style="color:#fe2c24;">注意</span>：使用这个命令的前提还是要进入虚拟环境之后，通过cd切换到yolov5文件目录下才能执行</p> 
+<blockquote> 
+ <p>pip install -r requirements.txt</p> 
+</blockquote> 
+<p> 下面就是requirements.txt的位置和内容</p> 
+<p><img alt="" class="left" height="338" src="https://images2.imgbox.com/5d/4d/IzZ8xhCE_o.png" width="311"><img alt="" class="right" height="333" src="https://images2.imgbox.com/4c/a4/oDV3ii6K_o.png" width="299"></p> 
+<h4>3.3 测试yolov5运行</h4> 
+<p>1) 下载yolov5s.pt文件，放进根目录中，网址 ==》 <a class="link-info" href="https://github.com/ultralytics/yolov5/releases" title="https://github.com/ultralytics/yolov5/releases">https://github.com/ultralytics/yolov5/releases</a></p> 
+<p>进入网站往下翻，看到assets配置，点击展开全部assets，找到yolov5s.pt文件下载下来</p> 
+<p class="img-center"><img alt="" height="406" src="https://images2.imgbox.com/82/79/djJ8Vfur_o.png" width="535"></p> 
+<p class="img-center"><img alt="" height="265" src="https://images2.imgbox.com/b0/6e/rxhVGBbt_o.png" width="535"></p> 
+<p>将yolov5s.pt文件放入根目录下面</p> 
+<p class="img-center"><img alt="" height="424" src="https://images2.imgbox.com/6f/9a/1zUS5NA3_o.png" width="407"></p> 
+<p>2) 打开pycharm或者其他的编辑软件导入yolov5这个文件夹，这里只用pycharm举例了，将pycharm切换到你创建的虚拟环境，如果没有的自己add添加一下自己的虚拟环境，如果不会的查一下，这里就不多说了</p> 
+<p class="img-center"><img alt="" height="375" src="https://images2.imgbox.com/97/17/B08eNHbi_o.png" width="535"></p> 
+<p>3) 更改参数</p> 
+<p>打开detect.py的文件，在根目录下可以找到</p> 
+<p class="img-center"><img alt="" height="377" src="https://images2.imgbox.com/f7/da/VnA8KGRi_o.png" width="185"></p> 
+<p>找到下面画红线的几行参数，yolov5-7.0版本在212行开始，将你们的代码图片中画红线的地方改成同样的代码，我简单说下一些属性的功能</p> 
+<p>weights :  代表权重，yolov5s.pt也就是官方已经训练好的权重，经过很多数据集锻炼出来的，有一些基本的类识别功能，我们以后就是在这个权重上继续训练的，也就是站在巨人的肩膀前进</p> 
+<p>source :  代表来源，这个来源可以是图片，视频，屏幕等，这里测试用的就是yolov5里面自带的照片，大家可以照着路径找一下这个图片</p> 
+<p>data :  代表数据配置文件，.yaml文件里面包含了训练集，实验集，测试集路径，还包含了识别的所有类别名称集合，无论是训练还是测试都会用到</p> 
+<p>device :  设备名称，如果你只有一个显卡默认改为0即可，如果你有多个显卡可以写成 0,1,2这个形式</p> 
+<p>view-img，save-txt 等，这些都是一些不太重要的属性，也就是是否弹出预测图片，是否生成txt文件等等</p> 
+<p class="img-center"><img alt="" height="637" src="https://images2.imgbox.com/d3/0c/QSTO5U3B_o.png" width="1200"></p> 
+<p>4) 运行</p> 
+<p>上面都准备好之后就可以运行detect.py文件了</p> 
+<p class="img-center"><img alt="" height="395" src="https://images2.imgbox.com/18/37/oPnPHxUP_o.png" width="480"></p> 
+<p>运行成功之后提示如下，运行之后的结果图片会自动保存到runs\detect\exp文件夹之下</p> 
+<p><img alt="" height="429" src="https://images2.imgbox.com/f4/9a/BGOv5bD8_o.png" width="1200"></p> 
+<p class="img-center"><img alt="" height="225" src="https://images2.imgbox.com/05/9d/U945Pxof_o.png" width="347"></p> 
+<p class="img-center"><img alt="" height="443" src="https://images2.imgbox.com/93/27/H6ihuXjr_o.png" width="490"></p> 
+<h4>3.4 利用yolov5测试自己的数据</h4> 
+<p>1) 构建自己的数据文件目录</p> 
+<p>创建一个mydata文件夹，mydata文件夹下面有俩个子文件夹，分为images，labels，里面又分为三个文件夹，测试集，训练集，验证集，images文件保存的就是原图片，labels文件保存的是.txt文件，里面有类别和坐标，忘了的看2.3，我们要将数据分成三类，我写了一个小脚本用来将所有的数据集分类</p> 
+<p class="img-center"><img alt="" height="323" src="https://images2.imgbox.com/23/a5/xPT6sJxs_o.png" width="218"></p> 
+<p></p> 
+<p>下面就是我写的数据集分类脚本部分：</p> 
+<p>使用方式：只需要更改source_folder_jpg(你的所有图片地址)，source_folder_txt(l图片对应的.txt文件地址)，destination_folder(你想要生成的目标文件夹地址) ，split_ratio_val(验证集的比例)，split_radio_test(测试集的比例)</p> 
+<p><img alt="" height="275" src="https://images2.imgbox.com/58/b8/2MQXj0f8_o.png" width="1200"></p> 
+<p>运行之前文件夹图片如下：</p> 
+<p class="img-center"><img alt="" height="140" src="https://images2.imgbox.com/34/9e/DgV6e2Vt_o.png" width="534"></p> 
+<p>运行之后文件夹图片如下：</p> 
+<p>mydata文件夹就已经包含了yolov5数据集的整体格式了，直接将它移动到data根目录下就行了，忘了放到什么位置的看3.4的第一步就知道了</p> 
+<p class="img-center"><img alt="" height="158" src="https://images2.imgbox.com/38/5f/OAeW16MM_o.png" width="534"></p> 
+<p class="img-center"><img alt="" height="153" src="https://images2.imgbox.com/cb/1e/HDwfheas_o.png" width="289"></p> 
+<p>脚本代码：</p> 
+<pre><code class="language-python">import os
+import shutil
+import random
+
+def random_split_files(source_folder_jpg,source_folder_txt,destination_folder,split_val=0.3,split_test=0.3):
+
+    # yolov5的文件夹格式
+    mydata_folder = os.path.join(destination_folder, 'mydata')  # mydata文件夹
+    images_folder = os.path.join(mydata_folder,'images')  # images文件夹
+    labels_folder = os.path.join(mydata_folder, 'labels')  # lables文件夹
+    img_train_folder = os.path.join(images_folder,'train')  # img_train文件夹
+    img_val_folder = os.path.join(images_folder, 'val')     # img_val文件夹
+    img_test_folder = os.path.join(images_folder,'test')    # img_test文件夹
+    lbs_train_folder = os.path.join(labels_folder, 'train')  # label_train文件夹
+    lbs_val_folder = os.path.join(labels_folder, 'val')  # label_val文件夹
+    lbs_test_folder = os.path.join(labels_folder, 'test')  # label_test文件夹
+
+    # 放入列表中
+    folder_list = []
+    folder_list.append(img_train_folder)
+    folder_list.append(img_val_folder)
+    folder_list.append(img_test_folder)
+    folder_list.append(lbs_train_folder)
+    folder_list.append(lbs_val_folder)
+    folder_list.append(lbs_test_folder)
+
+    # 判断文件夹是否存在
+    for forder_name in folder_list:
+        if os.path.exists(forder_name) == False:
+            os.makedirs(forder_name)
+        pass
+
+    # 打开数据集的照片以及txt文件
+    files_jpg = os.listdir(source_folder_jpg)
+    files_txt = os.listdir(source_folder_txt)
+
+    # 打乱照片顺序
+    random.shuffle(files_jpg)
+
+    # 三数据数量
+    num_files_val = int(len(files_jpg) * split_val)
+    num_files_test = int(len(files_jpg) * split_test)
+    num_files_train = int(len(files_jpg) - num_files_test - num_files_val)
+
+    # 判断数量是否符合
+    if num_files_train &lt;= 0:
+        print("验证集和和测试集数量比例不对！")
+        return
+
+    files_train = files_jpg[:num_files_train]
+    files_val = files_jpg[num_files_train:num_files_train + num_files_val]
+    files_test = files_jpg[num_files_train + num_files_val:]
+
+
+    for filename_train in files_train:
+        # print(filename)
+        filename_txt = filename_train.replace(".jpg",".txt")
+        source_path_jpg = os.path.join(source_folder_jpg, filename_train)
+        source_path_txt = os.path.join(source_folder_txt, filename_txt)
+        destination_path_jpg = os.path.join(img_train_folder, filename_train)
+        destination_path_txt = os.path.join(lbs_train_folder, filename_txt)
+        shutil.copy(source_path_jpg, destination_path_jpg)
+        shutil.copy(source_path_txt, destination_path_txt)
+
+    print("训练集jpg,txt文件传送完毕")
+
+    for filename_val in files_val:
+        filename_txt = filename_val.replace(".jpg", ".txt")
+        source_path_jpg = os.path.join(source_folder_jpg, filename_val)
+        source_path_txt = os.path.join(source_folder_txt, filename_txt)
+        destination_path_jpg = os.path.join(img_val_folder, filename_val)
+        destination_path_txt = os.path.join(lbs_val_folder, filename_txt)
+        shutil.copy(source_path_jpg, destination_path_jpg)
+        shutil.copy(source_path_txt, destination_path_txt)
+
+    print("验证集jpg,txt文件传送完毕")
+
+    for filename_test in files_test:
+        filename_txt = filename_test.replace(".jpg", ".txt")
+        source_path_jpg = os.path.join(source_folder_jpg, filename_test)
+        source_path_txt = os.path.join(source_folder_txt, filename_txt)
+        destination_path_jpg = os.path.join(img_test_folder, filename_test)
+        destination_path_txt = os.path.join(lbs_test_folder, filename_txt)
+        shutil.copy(source_path_jpg, destination_path_jpg)
+        shutil.copy(source_path_txt, destination_path_txt)
+
+    print("测试集jpg,txt文件传送完毕")
+
+
+if __name__ == "__main__":
+    source_folder_jpg = "D:\lableimg1.8\csdn\dataset_pic"   # 原图片地址
+    source_folder_txt = "D:\lableimg1.8\csdn\dataset_txt"   # 原图片txt地址
+    destination_folder = "D:\lableimg1.8\csdn"              # 目标地址
+    split_ratio_val = 0.2  # 验证集分割比例
+    split_ratio_test = 0.2  # 测试集分割比例
+    random_split_files(source_folder_jpg, source_folder_txt, destination_folder, split_ratio_val,split_ratio_test)
+</code></pre> 
+<p>2) 创建自己的.yaml文件</p> 
+<p>在data根目录下新建一个.yaml文件，我的就是crossFire.yaml了，里面包含了训练集，测试集，验证集的地址，如果和我一样结构就不用改了，如果不一样自行改就行了，这个文件里面还包含了训练的类别</p> 
+<p class="img-center"><img alt="" height="366" src="https://images2.imgbox.com/f7/38/fQutWd4Y_o.png" width="180"></p> 
+<p> <img alt="" height="309" src="https://images2.imgbox.com/d2/e0/IiTpo8Cv_o.png" width="1191"></p> 
+<pre><code class="language-python">train: data/mydata/images/train # train images (relative to 'path') 128 images
+val: data/mydata/images/val  # val images (relative to 'path') 128 images
+test: data/mydata/images/test # test images (optional)
+
+names:
+  0: body
+  1: head</code></pre> 
+<p>3) train.py文件配置</p> 
+<p><span style="color:#fe2c24;">注意：下面画红线的都是需要改的，其他属性可以和我一样，主要是batch-size,epoch,workers，最好根据自己电脑情况来改变</span></p> 
+<p>属性介绍：</p> 
+<p>weights：权重，我们正常就用yolov5s.pt就行了，和上面detect.py预测文件一样</p> 
+<p>cfg：我们用的模型的配置文件，因为我们用的yolov5s，所以这里就用yolov5s.yaml文件，在models文件的根目录下就能看见</p> 
+<p>data：数据集的配置文件，和上面detect.py预测文件一样，上面自己创建的.yaml文件</p> 
+<p>epochs：迭代次数，这里建议300-600次之间较好，多了可能会高方差过拟合，少了可能会高偏差欠拟合</p> 
+<p>batch-size：块训练大小，这个数量大小根据显卡情况来定就行，比如我的1060 3G显存每次只能设定为8，如果大于8我的显存就会爆，会提示out of memory，这里建议2倍递增即可，比如选择 2/4/8/16/32/64 等</p> 
+<p>batch-size扩展（可以不用看）: batch-size其实就是将一大块训练的数据集随机分成多个小块去进行训练，这样模型可以根据每一块训练结束后的loss损失值去调整权重，更好的适应下一块的训练,这样在图像上表现出来的就是Loss会稳步上升，比不用batch-size更加稳定，而且更加节省内存资源，总体循环次数会多出batch-size - 1次</p> 
+<p><img alt="" height="730" src="https://images2.imgbox.com/a7/c3/xum9YtOX_o.png" width="1200"></p> 
+<p>device：选择显卡，如果你只有一张显卡默认0就行了，如果你有多张，就可以写成0,1,2等</p> 
+<p>workers： 数据预处理时候所用的cpu线程数量，如果电脑不太行，就默认0就可以了，我的1060 3G就只设置的为0，多线程也比较吃显存，因为训练的时候gpu吃的比较多，所以cpu做一些比如预处理的操作之后会等待gpu的操作完成再继续，所以用多线程就会把cpu利用的更充分一点，我租服务器的时候workers设置的就为8，3080ti显卡12G</p> 
+<p><img alt="" height="237" src="https://images2.imgbox.com/98/a2/969M7z7k_o.png" width="1200"></p> 
+<p>4) 运行train.py文件</p> 
+<p>上面都准备好就可以运行了，运行图片如下：</p> 
+<p><img alt="" height="480" src="https://images2.imgbox.com/e2/5c/5eYMJ1un_o.png" width="1200"></p> 
+<h4>3.5 训练结果使用</h4> 
+<p>1) 训练结果储存位置：</p> 
+<p>训练结束之后可以在runs/train/exp(exp1就代表第一次训练文件夹，exp2代表第二次)/weights下找到best.pt，和last.pt文件，best.pt文件就代表训练过程中取某一次循环中loss代价函数最低的一次权重，也就是效果最好的一次，last.pt文件就是最后一次循环的权重文件</p> 
+<p class="img-center"><img alt="" height="330" src="https://images2.imgbox.com/39/7e/w81hhRUy_o.png" width="225"></p> 
+<p>2) 利用best.pt文件进行预测操作</p> 
+<p>对没错，你费劲千辛万苦就是为了得到这个best.pt文件，将detect.py文件中的权重路径换成你训练得到的best.pt文件路径（更改weights属性，忘了的看3.3的第三小步，detect.py文件配置那块），source属性换成你想要预测的照片/视频的地址，data属性换成你自己写的.yaml文件，下面地方都可以根据情况更改</p> 
+<p><img alt="" height="126" src="https://images2.imgbox.com/32/a7/jZ2UpxK7_o.png" width="1200"></p> 
+<p>3) 预测</p> 
+<p>预测之后的存储地址就在runs/detect/exp(第几次预测后面就是数字几)，如果你想更改存储的地址可以找到project属性进行更改，目录结构如下:</p> 
+<p class="img-center"><img alt="" height="235" src="https://images2.imgbox.com/69/4b/ozsB8Kif_o.png" width="225"></p> 
+<p>下面这张图片就是我随便从训练集里选出来的一张图片，咱们看看效果</p> 
+<p class="img-center"><img alt="" height="423" src="https://images2.imgbox.com/18/71/WzQU4ydE_o.png" width="421"></p> 
+<p> 结果图如下：</p> 
+<p class="img-center"><img alt="" height="423" src="https://images2.imgbox.com/fa/c6/Mp9M2oGq_o.png" width="421"></p> 
+<h2>四. 材料与总结</h2> 
+<h4>4.1 材料</h4> 
+<p>如果想要敌我数据集或者整个项目的可以邮箱联系我（874302104@qq.com），因为百度云上传大项目需要vip才可，大概有16000千张不同人物不同地点标注好的敌我标注</p> 
+<h4>4.2 总结</h4> 
+<p>yolov5的基础到这就结束了，下一篇我将讲述如何进行时时监控屏幕以及自动进行瞄准，如果有什么困难和不懂的也可以邮箱联系我哦！</p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/cd816f9ca3b4a8ea3393d38c26ea9686/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">SQLAlchemy(2.0)完全入门</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c12248b42dab8bfe6fc1c17b6d4ea681/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Android studio版本对用的gradle版本和插件版本（注意事项）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

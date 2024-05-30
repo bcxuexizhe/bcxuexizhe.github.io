@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Java 实现自动获取法定节假日 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ee743694f07bea0dbdea53226afa0fae/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Java 实现自动获取法定节假日">
+  <meta property="og:description" content="一、背景 在实现业务需求的过程中，遇到了需要计算 x 个工作日后的日期需求。由于工作日是每年国务院发布的，调休和休假都没有规律，所以无法使用算法进行计算。
+一般的实现方案是自己维护一个工作日和调休的表，或者去爬取国务院发布的数据。但前者实现起来麻烦，每年都得搞一遍；后者可能涉及法律风险，爬虫的识别策略也不太可靠。
+所以还是考虑使用由专人维护的接口，找到了天行数据的接口，个人用户有10个免费接口的额度，每个接口每天限制调用100次。
+因为节假日一旦定下来就不会轻易改变，所以可以把获取到的数据存在本地，这样每天100次的接口额度完全够用，不需要进行付费。
+二、技术实现方案 整体流程： 读取节假日配置：从本地文件中读取节假日，如果本地没有文件，则调用天行接口获取。解析数据：从天行返回的数据里，获取该年份里需要调休的日期和补班的日期。计算日期：循环获取日期，判断是否为工作日，计算x个工作日后的日期。 实现细节： 文件名：保存下来的文件，名字里要包含特定的年份。计算逻辑：计算日期的时候，需要考虑到跨年的情况，跨年需要重新获取下一年的数据，再继续进行计算日期。日期判断：工作日=不休假的周一至周五&#43;补班的周六周末。 三、详细代码 Java 代码 主要有五个类，HolidayResponse 是封装天行API的返回结果；TianApiProperties 是获取天行API的key；TianApiHolidayService 是接口；TianApiHolidayServiceImpl 里是具体实现；HttpConnector 是接口请求，这个换成任何一个能发起http请求的库都行。
+目前代码是基于SpringBoot写的，但纯粹只是为了方便，实际是可以转成纯Java工具代码，不依赖于SpringBoot。
+HolidayResponse.java
+import com.fasterxml.jackson.annotation.JsonProperty; import lombok.Data; import java.util.List; /** * @author jing * @version 1.0 * @desc 返回结果 * @date 2023/12/19 11:40 **/ @Data public class HolidayResponse { @JsonProperty(&#34;code&#34;) private int code; // 公共参数 - 状态码 @JsonProperty(&#34;msg&#34;) private String msg; // 公共参数 - 错误信息 @JsonProperty(&#34;result&#34;) private Result result; // 公共参数 - 返回结果集 // Getters and setters /** * Represents the result section of the response.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-29T16:48:10+08:00">
+    <meta property="article:modified_time" content="2023-12-29T16:48:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Java 实现自动获取法定节假日</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h3>一、背景</h3> 
+<p>在实现业务需求的过程中，遇到了需要计算 x 个工作日后的日期需求。由于工作日是每年国务院发布的，调休和休假都没有规律，所以无法使用算法进行计算。</p> 
+<p>一般的实现方案是自己维护一个工作日和调休的表，或者去爬取国务院发布的数据。但前者实现起来麻烦，每年都得搞一遍；后者可能涉及法律风险，爬虫的识别策略也不太可靠。</p> 
+<p>所以还是考虑使用由专人维护的接口，找到了天行数据的接口，个人用户有10个免费接口的额度，每个接口每天限制调用100次。</p> 
+<p>因为节假日一旦定下来就不会轻易改变，所以可以把获取到的数据存在本地，这样每天100次的接口额度完全够用，不需要进行付费。</p> 
+<p></p> 
+<h3>二、技术实现方案</h3> 
+<h6>整体流程：</h6> 
+<ol><li><strong>读取节假日配置：</strong>从本地文件中读取节假日，如果本地没有文件，则调用天行接口获取。</li><li><strong>解析数据：</strong>从天行返回的数据里，获取该年份里需要调休的日期和补班的日期。</li><li><strong>计算日期：</strong>循环获取日期，判断是否为工作日，计算x个工作日后的日期。</li></ol> 
+<h6>实现细节：</h6> 
+<ol><li><strong>文件名：</strong>保存下来的文件，名字里要包含特定的年份。</li><li><strong>计算逻辑：</strong>计算日期的时候，需要考虑到跨年的情况，跨年需要重新获取下一年的数据，再继续进行计算日期。</li><li><strong>日期判断：</strong>工作日=不休假的周一至周五+补班的周六周末。</li></ol> 
+<p></p> 
+<h3>三、详细代码</h3> 
+<h6>Java 代码</h6> 
+<p>主要有五个类，HolidayResponse 是封装天行API的返回结果；TianApiProperties 是获取天行API的key；TianApiHolidayService 是接口；TianApiHolidayServiceImpl 里是具体实现；HttpConnector 是接口请求，这个换成任何一个能发起http请求的库都行。</p> 
+<p>目前代码是基于SpringBoot写的，但纯粹只是为了方便，实际是可以转成纯Java工具代码，不依赖于SpringBoot。</p> 
+<p></p> 
+<p>HolidayResponse.java</p> 
+<pre><code class="language-java">import com.fasterxml.jackson.annotation.JsonProperty;
+import lombok.Data;
+
+import java.util.List;
+
+/**
+ * @author jing
+ * @version 1.0
+ * @desc 返回结果
+ * @date 2023/12/19 11:40
+ **/
+@Data
+public class HolidayResponse {
+
+    @JsonProperty("code")
+    private int code; // 公共参数 - 状态码
+
+    @JsonProperty("msg")
+    private String msg; // 公共参数 - 错误信息
+
+    @JsonProperty("result")
+    private Result result; // 公共参数 - 返回结果集
+
+    // Getters and setters
+
+    /**
+     * Represents the result section of the response.
+     */
+    @Data
+    public static class Result {
+
+        @JsonProperty("update")
+        private boolean update; // 公共参数 - 是否更新法定节假日
+
+        @JsonProperty("list")
+        private List&lt;HolidayItem&gt; list; // 应用参数 - 节假日列表
+
+        // Getters and setters
+    }
+
+    /**
+     * Represents an item in the list of holidays.
+     */
+    @Data
+    public static class HolidayItem {
+        @JsonProperty("holiday")
+        private String holiday; // 应用参数 - 节日日期
+
+        @JsonProperty("name")
+        private String name; // 应用参数 - 节假日名称（中文）
+
+        @JsonProperty("vacation")
+        private String vacation; // 应用参数 - 节假日数组
+
+        @JsonProperty("remark")
+        private String remark; // 应用参数 - 调休日数组
+
+        @JsonProperty("wage")
+        private String wage; // 应用参数 - 薪资法定倍数/按年查询时为具体日期
+
+        @JsonProperty("start")
+        private int start; // 应用参数 - 假期起点计数
+
+        @JsonProperty("now")
+        private int now; // 应用参数 - 假期当前计数
+
+        @JsonProperty("end")
+        private int end; // 应用参数 - 假期终点计数
+
+        @JsonProperty("tip")
+        private String tip; // 应用参数 - 放假提示
+
+        @JsonProperty("rest")
+        private String rest; // 应用参数 - 拼假建议
+
+    }
+
+}
+</code></pre> 
+<p></p> 
+<p>TianApiProperties.java</p> 
+<pre><code class="language-java">import lombok.Data;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.stereotype.Component;
+
+/**
+ * @author jing
+ * @version 1.0
+ * @desc 配置
+ * @date 2023/12/19 11:25
+ **/
+@Component
+@Data
+@ConfigurationProperties(prefix = "tianapi")
+public class TianApiProperties {
+
+    /**
+     * 天行数据凭证key
+     */
+    private String key;
+}
+</code></pre> 
+<p>TianApiHolidayService.java</p> 
+<pre><code class="language-java">import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+import java.time.LocalDateTime;
+
+
+/**
+ * @author jing
+ * @version 1.0
+ * @desc 天行接口获取节假日，目前使用的是免费接口，每天只能调用100次，后续如果需要调用更多次数，可以考虑购买付费接口。只能获取到今年和明年的节假日，明年的节假日需要在今年11月份左右才能获取到
+ * @date 2023/12/19 11:25
+ **/
+@Service
+public interface TianApiHolidayService {
+
+    /**
+     * 计算x个工作日后的日期，跳过节假日
+     *
+     * @param startTime     开始日期
+     * @param workdaysToAdd 需要跳过的工作日天数
+     */
+    LocalDateTime jumpWorkDay(LocalDateTime startTime, int workdaysToAdd) throws IOException;
+
+}
+</code></pre> 
+<p>TianApiHolidayServiceImpl.java （核心逻辑）</p> 
+<pre><code class="language-java">
+import cn.hutool.core.date.DateUtil;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.Gson;
+import com.xxx.app.common.library.holiday.domain.HolidayResponse;
+import com.xxx.app.common.library.holiday.properties.TianApiProperties;
+import com.xxx.app.common.utils.http.HttpConnector;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.time.DayOfWeek;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
+import java.time.format.DateTimeFormatter;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+
+
+/**
+ * @author jing
+ * @version 1.0
+ * @desc 天行接口获取节假日，目前使用的是免费接口，每天只能调用100次，后续如果需要调用更多次数，可以考虑购买付费接口。只能获取到今年和明年的节假日，明年的节假日需要在今年11月份左右才能获取到
+ * @date 2023/12/19 11:25
+ **/
+@Slf4j
+@Service
+public class TianApiHolidayServiceImpl implements TianApiHolidayService {
+
+    @Resource
+    private TianApiProperties tianApiProperties;
+    @Resource
+    private HttpConnector httpConnector;
+
+    private final String FILE_FORMAT = "./.holiday/%s_holiday.json";
+
+    /**
+     * 计算x个工作日后的日期，跳过节假日
+     *
+     * @param startTime     开始日期
+     * @param workdaysToAdd 需要跳过的工作日天数
+     */
+    public LocalDateTime jumpWorkDay(LocalDateTime startTime, int workdaysToAdd) throws IOException {
+        // 从文件中读取节假日
+        HolidayResponse response = getHolidayConfig(startTime);
+        if (response == null) {
+            return null;
+        }
+        // 节假日，只算周一到周五的
+        List&lt;LocalDate&gt; vacationList = new ArrayList&lt;&gt;();
+        // 补班列表，表示周末补班的
+        List&lt;LocalDate&gt; workDayList = new ArrayList&lt;&gt;();
+        extracted(response, vacationList, workDayList);
+        return workDayAdd(startTime, workdaysToAdd, vacationList, workDayList);
+    }
+
+    /**
+     * 提取返回数据里的节假日和调休列表
+     *
+     * @param response     返回数据
+     * @param vacationList 节假日列表
+     * @param workDayList  补班列表
+     */
+    private static void extracted(HolidayResponse response, List&lt;LocalDate&gt; vacationList, List&lt;LocalDate&gt; workDayList) {
+        // 节假日列表
+        response.getResult().getList().forEach(item -&gt; {
+            if (StringUtils.isNotEmpty(item.getWage())) {
+                String[] vList = item.getVacation().split("\\|");
+                for (String wage : vList) {
+                    // 不需要上班的工作日
+                    vacationList.add(LocalDate.parse(wage, DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                }
+            }
+            if (StringUtils.isNotEmpty(item.getRemark())) {
+                String[] workList = item.getRemark().split("\\|");
+                for (String work : workList) {
+                    // 需要上班的周末
+                    workDayList.add(LocalDate.parse(work, DateTimeFormatter.ofPattern("yyyy-MM-dd")));
+                }
+            }
+        });
+    }
+
+    /**
+     * 添加工作日
+     *
+     * @param startTime     开始时间
+     * @param workdaysToAdd 需要添加的工作日天数
+     * @param vacationList  节假日列表
+     * @param workDayList   补班列表
+     * @return LocalDateTime 返回添加工作日后的时间
+     * @throws IOException 异常
+     */
+    private LocalDateTime workDayAdd(LocalDateTime startTime, int workdaysToAdd, List&lt;LocalDate&gt; vacationList, List&lt;LocalDate&gt; workDayList) throws IOException {
+        LocalDateTime result = startTime;
+        // 今年最后一天
+        LocalDateTime lastDayOfYear = LocalDateTime.of(LocalDate.of(startTime.getYear(), 12, 31), LocalTime.MAX);
+        // 循环计算，直到工作日天数为0，或者到了今年最后一天
+        while (workdaysToAdd &gt; 0 &amp;&amp; result.isBefore(lastDayOfYear)) {
+            // 判断周一到周五，是否会放假，周六周日是否会补班
+            result = result.plusDays(1);
+            if (workDayNeedToWork(vacationList, result) &amp;&amp; holidayNeedToWork(workDayList, result)) {
+                workdaysToAdd--;
+            }
+        }
+        // 如果还有剩余的工作日，就继续往后推
+        if (workdaysToAdd &gt; 0) {
+            // 如果还有剩余的工作日，就继续往后推
+            return jumpWorkDay(result, workdaysToAdd);
+        }
+        return result;
+    }
+
+    /**
+     * 工作日需要去上班
+     *
+     * @param vacationList 节假日列表
+     * @param date         日期
+     * @return boolean    工作日是否需要上班
+     */
+    private boolean workDayNeedToWork(List&lt;LocalDate&gt; vacationList, LocalDateTime date) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        boolean isWork = dayOfWeek != DayOfWeek.SATURDAY &amp;&amp; dayOfWeek != DayOfWeek.SUNDAY;
+        if (isWork) {
+            // 如果是工作日，还需要判断是否会放假
+            LocalDate localDate = LocalDate.from(date);
+            return !vacationList.contains(localDate);
+        }
+        return true;
+    }
+
+    /**
+     * 周六末需要去补班
+     *
+     * @param workDayList 补班列表
+     * @param date        日期
+     * @return boolean    是否为休息日
+     */
+    private boolean holidayNeedToWork(List&lt;LocalDate&gt; workDayList, LocalDateTime date) {
+        DayOfWeek dayOfWeek = date.getDayOfWeek();
+        boolean isHoliday = dayOfWeek == DayOfWeek.SATURDAY || dayOfWeek == DayOfWeek.SUNDAY;
+        if (isHoliday) {
+            // 如果是节假日，还需要判断是否是补班
+            LocalDate localDate = LocalDate.from(date);
+            return workDayList.contains(localDate);
+        }
+        return true;
+    }
+
+
+    /**
+     * 获取某个日期所在年份的节假日配置数据，注：节假日指来自官方发布的有假节日，每年底政府公布后同步更新
+     *
+     * @param date 日期
+     * @return boolean
+     */
+    public HolidayResponse getHolidayConfig(LocalDateTime date) throws IOException {
+        // 节假日文件路径
+        String savePath = String.format(FILE_FORMAT, DateUtil.format(date, "yyyy"));
+        try {
+            // 从文件中读取节假日
+            HolidayResponse response = readJsonFromFile(savePath);
+            if (response == null) {
+                String url = "https://apis.tianapi.com/jiejiari/index";
+                // 获取当年的节假日列表
+                Map&lt;String, String&gt; params = new HashMap&lt;&gt;();
+                params.put("key", tianApiProperties.getKey());
+                params.put("date", DateUtil.format(date, "yyyy-MM-dd"));
+                params.put("type", "1");
+                String formData = httpConnector.fromData(params);
+                String rspBody = httpConnector.doFormPost(url, formData);
+                // 将json转换为对象
+                Gson gson = new Gson();
+                response = gson.fromJson(rspBody, HolidayResponse.class);
+                // 将对象写入文件
+                writeJsonToFile(response, savePath);
+            }
+            return response;
+        } catch (IOException e) {
+            log.error("Error during holiday configuration retrieval : {} , {}", savePath, e.getMessage());
+        }
+        return null;
+    }
+
+    /**
+     * 将json写入文件
+     *
+     * @param jsonObject jsonObject
+     * @param filePath   文件路径
+     */
+    private void writeJsonToFile(HolidayResponse jsonObject, String filePath) {
+        try {
+            // Create directory if it doesn't exist
+            Path parentDirectory = FileSystems.getDefault().getPath(filePath).getParent();
+            if (parentDirectory != null &amp;&amp; !Files.exists(parentDirectory)) {
+                Files.createDirectories(parentDirectory);
+            }
+
+            try (FileOutputStream fos = new FileOutputStream(filePath)) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                objectMapper.writeValue(fos, jsonObject);
+                log.info("节假日文件写入成功 : {} , {}", filePath, jsonObject);
+            } catch (Exception e) {
+                log.error("节假日文件写入失败 : {} , {}", filePath, e.getMessage());
+            }
+        } catch (IOException e) {
+            log.error("Error creating directory structure: {}", e.getMessage());
+        }
+    }
+
+    /**
+     * 从文件中读取节假日
+     *
+     * @param filePath 文件路径
+     * @return 节假日
+     */
+    private HolidayResponse readJsonFromFile(String filePath) {
+        try {
+            // Create directory if it doesn't exist
+            Path parentDirectory = FileSystems.getDefault().getPath(filePath).getParent();
+            if (parentDirectory != null &amp;&amp; !Files.exists(parentDirectory)) {
+                Files.createDirectories(parentDirectory);
+            }
+
+            try (FileInputStream fis = new FileInputStream(filePath)) {
+                ObjectMapper objectMapper = new ObjectMapper();
+                return objectMapper.readValue(fis, HolidayResponse.class);
+            } catch (Exception e) {
+                log.error("节假日文件读取失败 : {} , {}", filePath, e.getMessage());
+            }
+        } catch (IOException e) {
+            log.error("Error creating directory structure: {}", e.getMessage());
+        }
+        return null;
+    }
+}
+</code></pre> 
+<p>HttpConnector.java  （不重要，只是发起请求，可替换）</p> 
+<p></p> 
+<pre><code class="language-java">package com.xxx.app.common.utils.http;
+
+import lombok.Setter;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.collections.MapUtils;
+import org.apache.commons.lang3.StringUtils;
+import org.apache.http.*;
+import org.apache.http.client.HttpClient;
+import org.apache.http.client.methods.HttpGet;
+import org.apache.http.client.methods.HttpPost;
+import org.apache.http.client.methods.HttpRequestBase;
+import org.apache.http.entity.StringEntity;
+import org.apache.http.entity.mime.HttpMultipartMode;
+import org.apache.http.entity.mime.MultipartEntityBuilder;
+import org.apache.http.util.EntityUtils;
+import org.springframework.stereotype.Service;
+
+import javax.annotation.Resource;
+import java.io.File;
+import java.io.IOException;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.StringJoiner;
+
+/**
+ * @author Jing
+ * @desc http 连接工具类
+ * https json post 请求用 doSSlPostRsp接口
+ */
+@Setter
+@Slf4j
+@Service
+public class HttpConnector {
+
+    @Resource
+    private HttpClient httpClient;
+
+    /**
+     * 转拼接参数
+     *
+     * @param url    接口地址
+     * @param params 参数
+     * @return 拼接后的参数
+     */
+    public String addUrlParam(String url, Map&lt;String, String&gt; params) {
+        if (MapUtils.isNotEmpty(params)) {
+            StringBuilder sb = new StringBuilder(url);
+            sb.append("?");
+            for (String key : params.keySet()) {
+                sb.append(key).append("=").append(params.get(key)).append("&amp;");
+            }
+            url = sb.substring(0, sb.length() - 1);
+        }
+        return url;
+    }
+
+    /**
+     * 发送带参数post请求 表单请求头
+     *
+     * @param url      接口地址
+     * @param postJson 传参
+     * @return 响应数据
+     */
+    public String doFormPost(String url, String postJson) throws IOException {
+        HttpPost httpPost = new HttpPost(url);
+        if (postJson != null) {
+            httpPost.setHeader("Accept", "application/json");
+            httpPost.setHeader("Content-type", "application/x-www-form-urlencoded");
+            httpPost.setEntity(new StringEntity(postJson, Consts.UTF_8));
+        }
+        Map&lt;String, String&gt; headers = new HashMap&lt;&gt;();
+        return doRequest(headers, httpPost);
+    }
+
+    /**
+     * 发送带参数post请求 表单请求头
+     *
+     * @param url      接口地址
+     * @param formData 传参
+     * @return 响应数据
+     */
+    public String doFormPost(String url, Map&lt;String, String&gt; headers, String formData) throws IOException {
+        HttpPost httpPost = new HttpPost(url);
+        if (formData != null) {
+            httpPost.setHeader("Accept", "application/json");
+            httpPost.setHeader("Content-type", "application/x-www-form-urlencoded");
+            httpPost.setEntity(new StringEntity(formData, Consts.UTF_8));
+        }
+        return doRequest(headers, httpPost);
+    }
+
+    /**
+     * 发送带文件和请求头的post请求
+     *
+     * @param url      接口地址
+     * @param headers  请求头
+     * @param file     文件
+     * @param fileName 文件名
+     * @return 响应数据
+     */
+    public String doPost(String url, Map&lt;String, String&gt; headers, File file, String fileName) throws IOException {
+        HttpPost httpPost = new HttpPost(url);
+        if (file != null) {
+            httpPost.setEntity(assemblyFileEntity(file, fileName));
+        }
+        return doRequest(headers, httpPost);
+    }
+
+    /**
+     * 生成文件请求包
+     *
+     * @param file 文件
+     * @return http 请求体
+     */
+    protected HttpEntity assemblyFileEntity(File file, String fileName) {
+        MultipartEntityBuilder build = MultipartEntityBuilder.create();
+        build.setMode(HttpMultipartMode.BROWSER_COMPATIBLE);
+        build.addBinaryBody("file", file);
+        build.addTextBody("filename", StringUtils.isBlank(fileName) ? file.getName() : fileName);
+        HttpEntity entity = build.build();
+        return entity;
+    }
+
+    /**
+     * 发送请求
+     *
+     * @param headers     请求头
+     * @param httpRequest request
+     * @return 响应数据
+     */
+    private String doRequest(Map&lt;String, String&gt; headers, HttpRequestBase httpRequest) throws IOException {
+        HttpRspBO rspBO = doRequestRsp(headers, httpRequest);
+        return rspBO.getBodyStr();
+    }
+
+
+    /**
+     * 发送request 请求
+     *
+     * @param headers
+     * @param httpRequest 注意这个方法需要自己关闭
+     *                    finally {
+     *                    httpRequest.releaseConnection();
+     *                    }
+     * @return 带请求头的响应数据封装
+     */
+    private HttpRspBO doRequestRsp(Map&lt;String, String&gt; headers, HttpRequestBase httpRequest) throws IOException {
+        if (headers != null) {
+            for (String key : headers.keySet()) {
+                httpRequest.addHeader(key, headers.get(key));
+            }
+        }
+        try {
+            HttpResponse response = httpClient.execute(httpRequest);
+            int statusCode = response.getStatusLine().getStatusCode();
+            if (statusCode == HttpStatus.SC_OK) {
+                HttpRspBO bo = new HttpRspBO();
+                bo.setBodyStr(getEntity(response));
+                HashMap&lt;String, String&gt; map = new HashMap&lt;&gt;();
+                Header[] rspHeaders = response.getAllHeaders();
+                int i = 0;
+                while (i &lt; rspHeaders.length) {
+                    map.put(rspHeaders[i].getName(), rspHeaders[i].getValue());
+                    i++;
+                }
+                bo.setHeaders(map);
+                return bo;
+            } else {
+                String entity = getEntity(response);
+                log.info("result msg " + entity);
+                throw new FinMgwException("");
+            }
+        } finally {
+            httpRequest.releaseConnection();
+        }
+    }
+
+
+    /**
+     * 解析返回请求体
+     *
+     * @param response 返回参数
+     * @return 字符串类型的请求体
+     */
+    public String getEntity(HttpResponse response) throws IOException {
+        HttpEntity entity = response.getEntity();
+        if (entity == null) {
+            throw new FinMgwException(ResultCodeEnum.HTTP_EXECUTE_EX.getCode(),
+                    ResultCodeEnum.HTTP_EXECUTE_EX.getDesc() + ", http response entity is null.");
+        }
+        String result;
+        // 去掉首尾的 ""
+        result = EntityUtils.toString(entity, Consts.UTF_8);
+        String delStr = "\"";
+        if (result.indexOf(delStr) == 0) {
+            result = result.substring(1);
+        }
+        if (result.lastIndexOf(delStr) == result.length() - 1) {
+            result = result.substring(0, result.length() - 1);
+        }
+        return result;
+    }
+
+    /**
+     * 将参数转换为form data传参
+     *
+     * @param param map集合
+     * @return form data
+     */
+    public String fromData(Map&lt;String, String&gt; param) {
+        StringJoiner joiner = new StringJoiner("&amp;");
+        for (Map.Entry&lt;String, String&gt; map : param.entrySet()) {
+            String data = String.format("%s=%s", map.getKey(), map.getValue());
+            joiner.add(data);
+        }
+        return joiner.toString();
+    }
+}
+</code></pre> 
+<h6> 使用示例：</h6> 
+<p>application.yml 配置</p> 
+<pre><code># 天行api
+tianapi:
+  # API密钥
+  key: xxxxxxxxxxxxxxxxxxxxxxxxxxx
+</code></pre> 
+<p>demo 代码：</p> 
+<pre><code class="language-java">
+@Slf4j
+@Service
+public class Demo {
+
+    @Resource
+    private TianApiHolidayService tianApiHolidayService;
+
+    public void get(){
+      LocalDateTime publishTime = LocalDateTime.now()
+      // 计算五个工作日后的日期
+      LocalDateTime deadlineTime = tianApiHolidayService.jumpWorkDay(publishTime, 5);
+    }
+
+}
+</code></pre> 
+<p>理论上可以扩展很多方法，比如判断当前是否工作日/节假日，减去x个工作日之类的。但不太想写了，暂时用不着。</p> 
+<p></p> 
+<h3>四、相关依赖</h3> 
+<h6>天行API申请：</h6> 
+<p><a href="https://www.tianapi.com/apiview/139" rel="nofollow" title="节假日API接口 - 天行数据TianAPI">节假日API接口 - 天行数据TianAPI</a></p> 
+<h6><strong>代码依赖：</strong></h6> 
+<p>Java 版本 = 1.8 </p> 
+<p>Maven 版本 = 3.9.2 </p> 
+<p>涉及maven依赖版本：</p> 
+<pre><code class="language-XML">
+        &lt;!--SpringBoot 启动插件--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter&lt;/artifactId&gt;
+            &lt;version&gt;2.3.4.RELEASE&lt;/version&gt;
+            &lt;exclusions&gt;
+                &lt;exclusion&gt;
+                    &lt;artifactId&gt;log4j-api&lt;/artifactId&gt;
+                    &lt;groupId&gt;org.apache.logging.log4j&lt;/groupId&gt;
+                &lt;/exclusion&gt;
+            &lt;/exclusions&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+            &lt;version&gt;2.3.4.RELEASE&lt;&lt;/version&gt;
+        &lt;/dependency&gt;
+
+        &lt;!--简化开发的jar 包--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+            &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+            &lt;optional&gt;true&lt;/optional&gt;
+            &lt;version&gt;1.18.16&lt;/version&gt;
+        &lt;/dependency&gt;
+
+        &lt;!--日期转化--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;cn.hutool&lt;/groupId&gt;
+            &lt;artifactId&gt;hutool-all&lt;/artifactId&gt;
+            &lt;version&gt;5.7.10&lt;/version&gt;
+        &lt;/dependency&gt;
+
+        &lt;!--json解析--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.fasterxml.jackson.core&lt;/groupId&gt;
+            &lt;artifactId&gt;jackson-databind&lt;/artifactId&gt;
+            &lt;version&gt;2.10.2&lt;/version&gt;
+        &lt;/dependency&gt;
+
+        &lt;!--json解析--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.google.code.gson&lt;/groupId&gt;
+            &lt;artifactId&gt;gson&lt;/artifactId&gt;
+            &lt;version&gt;2.8.9&lt;/version&gt;
+        &lt;/dependency&gt;</code></pre> 
+<p></p> 
+<h3 style="background-color:transparent;">五、补充</h3> 
+<p>附带上2024年的节假日数据，如果只是要判断2024年的，那直接把文件放在项目目录/.holiday 目录下即可，不需要再申请天行的API接口权限。</p> 
+<p>或者拿这个去调试代码也可以，但需要保证日期范围在2024年内，否则会自动调用天行API接口获取其他年份的数据。</p> 
+<p>文件名：2024_holiday.json</p> 
+<pre><code>{
+  "code": 200,
+  "msg": "success",
+  "result": {
+    "update": true,
+    "list": [
+      {
+        "holiday": "1月1号",
+        "name": "元旦节",
+        "vacation": "2023-12-30|2023-12-31|2024-01-01",
+        "remark": "",
+        "wage": "2024-01-01",
+        "start": 0,
+        "now": 0,
+        "end": 2,
+        "tip": "1月1日放假，与周末连休，共三天。",
+        "rest": "2023年12月28日至12月29日请假2天，与周末连休可拼5天小长假。"
+      },
+      {
+        "holiday": "2月10号",
+        "name": "春节",
+        "vacation": "2024-02-10|2024-02-11|2024-02-12|2024-02-13|2024-02-14|2024-02-15|2024-02-16|2024-02-17",
+        "remark": "2024-02-04|2024-02-18",
+        "wage": "2024-02-10|2024-02-11|2024-02-12",
+        "start": 0,
+        "now": 0,
+        "end": 7,
+        "tip": "2月10日至17日放假调休，共8天。2月4日（星期日）、2月18日（星期日）上班。鼓励各单位结合带薪年休假等制度落实，安排职工在除夕（2月9日）休息。",
+        "rest": "2月8日至2月9日请假2天，与春节连休可拼10天长假。"
+      },
+      {
+        "holiday": "4月4号",
+        "name": "清明节",
+        "vacation": "2024-04-04|2024-04-05|2024-04-06",
+        "remark": "2024-04-07",
+        "wage": "2024-04-04",
+        "start": 0,
+        "now": 0,
+        "end": 2,
+        "tip": "4月4日至6日放假调休，共3天。4月7日（星期日）上班。",
+        "rest": "4月3日和4月7日请假2天，与清明节连休可拼5天小长假。"
+      },
+      {
+        "holiday": "5月1号",
+        "name": "劳动节",
+        "vacation": "2024-05-01|2024-05-02|2024-05-03|2024-05-04|2024-05-05",
+        "remark": "2024-04-28|2024-05-11",
+        "wage": "2024-05-01",
+        "start": 0,
+        "now": 0,
+        "end": 4,
+        "tip": "5月1日至5日放假调休，共5天。4月28日（星期日）、5月11日（星期六）上班。",
+        "rest": "4月28日至4月30日请假3天，周六与劳动节连休可拼9天长假。"
+      },
+      {
+        "holiday": "6月10号",
+        "name": "端午节",
+        "vacation": "2024-06-08|2024-06-09|2024-06-10",
+        "remark": "",
+        "wage": "2024-06-10",
+        "start": 0,
+        "now": 0,
+        "end": 2,
+        "tip": "6月10日放假，与周末连休，共3天。",
+        "rest": "6月6日至6月7日请假2天，与端午节连休可拼5天小长假。"
+      },
+      {
+        "holiday": "9月15号",
+        "name": "中秋节",
+        "vacation": "2024-09-15|2024-09-16|2024-09-17",
+        "remark": "2024-09-14",
+        "wage": "2024-09-17",
+        "start": 0,
+        "now": 0,
+        "end": 2,
+        "tip": "9月15日至17日放假调休，共3天。9月14日（星期六）上班。",
+        "rest": "9月13日至9月14日请假2天，与周日连休可拼5天小长假。"
+      },
+      {
+        "holiday": "10月1号",
+        "name": "国庆节",
+        "vacation": "2024-10-01|2024-10-02|2024-10-03|2024-10-04|2024-10-05|2024-10-06|2024-10-07",
+        "remark": "2024-09-29|2024-10-12",
+        "wage": "2024-10-01|2024-10-02|2024-10-03",
+        "start": 0,
+        "now": 0,
+        "end": 6,
+        "tip": "10月1日至7日放假调休，共7天。9月29日（星期日）、10月12日（星期六）上班。",
+        "rest": "9月29日至9月30号请假2天，周六与国庆节连休可拼10天长假。"
+      }
+    ]
+  }
+}
+</code></pre> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3a28b281d65fffc87f2b19a81f15fe80/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">python如何做图形化界面,python的图形界面gui编程</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/300827001abed33fac18dfd16e5bc40d/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">基于OpenAI的Whisper构建的高效语音识别模型：faster-whisper</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

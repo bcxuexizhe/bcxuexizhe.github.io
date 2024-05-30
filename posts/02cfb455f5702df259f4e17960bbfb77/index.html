@@ -1,0 +1,420 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>springboot整合SSE技术开发经验总结及心得 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/02cfb455f5702df259f4e17960bbfb77/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="springboot整合SSE技术开发经验总结及心得">
+  <meta property="og:description" content="springboot整合SSE技术开发经验总结及心得 一、开发背景二、快速了解SSE1、概念2、特性 三、开发思路四、代码演示1、引入依赖2、服务端代码3、后端定时任务代码 4、解决乱码的实体类4、前端代码 五、核心代码分析 一、开发背景 公司需要开发一个大屏界面，大屏页面的数据是实时更新的，由后端主动实时推送数据给大屏页面。此时会立刻联想到：websocket 技术。当然使用websocket，确实可以解决这个场景。但是今天本文的主角是 ：SSE，他和websocket略有不同，SSE只能由服务端主动发消息，而websocket前后端都可以推送消息。
+二、快速了解SSE 1、概念 SSE全称 Server Sent Event，顾名思义，就是服务器发送事件，所以也就注定了他 只能由服务端发送信息。
+2、特性 主动从服务端推送消息的技术本质是一个HTTP的长连接发送的是一个stream流，格式为text/event-stream 三、开发思路 要实现后端的实时推送消息，前台实时更新数据，思路如下：
+1、前后端需要建立连接2、后端如何做到实时推送信息呢？可以采用定时调度 四、代码演示 1、引入依赖 原则上是不需要引入的，因为springboot底层已经整合了SSE
+&lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt; &lt;/dependency&gt; 2、服务端代码 controller层
+@RestController @CrossOrigin @RequestMapping(&#34;/sse&#34;) public class SseEmitterController extends BaseController { @Autowired private SseEmitterService sseEmitterService; /** * 创建SSE连接 * * @return */ @GetMapping(&#34;/connect/{type}&#34;) public SseEmitter connect(@PathVariable(&#34;type&#34;) String type) { return sseEmitterService.connect(type); } } service层
+public interface SseEmitterService { SseEmitter connect(String type); void volumeOverview(); void sysOperation(); void monitor(); .">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-20T11:10:40+08:00">
+    <meta property="article:modified_time" content="2023-11-20T11:10:40+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">springboot整合SSE技术开发经验总结及心得</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>springboot整合SSE技术开发经验总结及心得</h4> 
+ <ul><li><a href="#_1" rel="nofollow">一、开发背景</a></li><li><a href="#SSE_3" rel="nofollow">二、快速了解SSE</a></li><li><ul><li><a href="#1_4" rel="nofollow">1、概念</a></li><li><a href="#2_6" rel="nofollow">2、特性</a></li></ul> 
+  </li><li><a href="#_10" rel="nofollow">三、开发思路</a></li><li><a href="#_15" rel="nofollow">四、代码演示</a></li><li><ul><li><a href="#1_16" rel="nofollow">1、引入依赖</a></li><li><a href="#2_26" rel="nofollow">2、服务端代码</a></li><li><a href="#3_192" rel="nofollow">3、后端定时任务代码</a></li></ul> 
+  </li><li><a href="#4_245" rel="nofollow">4、解决乱码的实体类</a></li><li><ul><li><a href="#4_276" rel="nofollow">4、前端代码</a></li></ul> 
+  </li><li><a href="#_296" rel="nofollow">五、核心代码分析</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_1"></a>一、开发背景</h2> 
+<p>公司需要开发一个大屏界面，大屏页面的数据是实时更新的，由后端主动实时推送数据给大屏页面。此时会立刻联想到：websocket 技术。当然使用websocket，确实可以解决这个场景。但是今天本文的主角是 ：SSE，他和websocket略有不同，SSE只能由服务端主动发消息，而websocket前后端都可以推送消息。</p> 
+<h2><a id="SSE_3"></a>二、快速了解SSE</h2> 
+<h3><a id="1_4"></a>1、概念</h3> 
+<p>SSE全称 Server Sent Event，顾名思义，就是服务器发送事件，所以也就注定了他 只能由服务端发送信息。</p> 
+<h3><a id="2_6"></a>2、特性</h3> 
+<ul><li>主动从服务端推送消息的技术</li><li>本质是一个HTTP的长连接</li><li>发送的是一个stream流，格式为text/event-stream</li></ul> 
+<h2><a id="_10"></a>三、开发思路</h2> 
+<p>要实现后端的实时推送消息，前台实时更新数据，思路如下：</p> 
+<ul><li>1、前后端需要建立连接</li><li>2、后端如何做到实时推送信息呢？可以采用定时调度</li></ul> 
+<h2><a id="_15"></a>四、代码演示</h2> 
+<h3><a id="1_16"></a>1、引入依赖</h3> 
+<p>原则上是不需要引入的，因为springboot底层已经整合了SSE</p> 
+<pre><code class="prism language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-boot-starter-web<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+
+</code></pre> 
+<h3><a id="2_26"></a>2、服务端代码</h3> 
+<p>controller层</p> 
+<pre><code class="prism language-java">
+<span class="token annotation punctuation">@RestController</span>
+<span class="token annotation punctuation">@CrossOrigin</span>
+<span class="token annotation punctuation">@RequestMapping</span><span class="token punctuation">(</span><span class="token string">"/sse"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SseEmitterController</span> <span class="token keyword">extends</span> <span class="token class-name">BaseController</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">SseEmitterService</span> sseEmitterService<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 创建SSE连接
+     *
+     * @return
+     */</span>
+    <span class="token annotation punctuation">@GetMapping</span><span class="token punctuation">(</span><span class="token string">"/connect/{type}"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">SseEmitter</span> <span class="token function">connect</span><span class="token punctuation">(</span><span class="token annotation punctuation">@PathVariable</span><span class="token punctuation">(</span><span class="token string">"type"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> type<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> sseEmitterService<span class="token punctuation">.</span><span class="token function">connect</span><span class="token punctuation">(</span>type<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>service层</p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">SseEmitterService</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token class-name">SseEmitter</span> <span class="token function">connect</span><span class="token punctuation">(</span><span class="token class-name">String</span> type<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">void</span> <span class="token function">volumeOverview</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">void</span> <span class="token function">sysOperation</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">void</span> <span class="token function">monitor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>service实现层</p> 
+<pre><code class="prism language-java">
+<span class="token annotation punctuation">@Service</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SseEmitterServiceImpl</span> <span class="token keyword">implements</span> <span class="token class-name">SseEmitterService</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Logger</span> logger <span class="token operator">=</span> <span class="token class-name">LoggerFactory</span><span class="token punctuation">.</span><span class="token function">getLogger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">SseEmitterUTF8</span><span class="token punctuation">&gt;</span></span> sseCache <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ConcurrentHashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+    <span class="token comment">/**
+     * 创建连接sse
+     * @param type
+     * @return
+     */</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">SseEmitter</span> <span class="token function">connect</span><span class="token punctuation">(</span><span class="token class-name">String</span> type<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+        <span class="token keyword">final</span> <span class="token class-name">String</span> clientId <span class="token operator">=</span> <span class="token constant">UUID</span><span class="token punctuation">.</span><span class="token function">randomUUID</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">replace</span><span class="token punctuation">(</span><span class="token string">"-"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitterUTF8</span> sseEmitter <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SseEmitterUTF8</span><span class="token punctuation">(</span><span class="token number">0L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            sseEmitter<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span><span class="token class-name">SseEmitter</span><span class="token punctuation">.</span><span class="token function">event</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">comment</span><span class="token punctuation">(</span><span class="token string">"创建连接成功 !!!"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">IOException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"创建连接失败 , {} "</span> <span class="token punctuation">,</span> e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        sseEmitter<span class="token punctuation">.</span><span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            logger<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"connect onCompletion , {} 结束连接 ..."</span> <span class="token punctuation">,</span> clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">removeClient</span><span class="token punctuation">(</span>clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        sseEmitter<span class="token punctuation">.</span><span class="token function">onTimeout</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            logger<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"connect onTimeout , {} 连接超时 ..."</span> <span class="token punctuation">,</span> clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">removeClient</span><span class="token punctuation">(</span>clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        sseEmitter<span class="token punctuation">.</span><span class="token function">onError</span><span class="token punctuation">(</span><span class="token punctuation">(</span>throwable<span class="token punctuation">)</span> <span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"connect onError , {} 连接异常 ..."</span> <span class="token punctuation">,</span> clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">removeClient</span><span class="token punctuation">(</span>clientId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        sseCache<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>clientId<span class="token punctuation">,</span> sseEmitter<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">//立即推送</span>
+        <span class="token function">volumeOverview</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">dealResp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">monitor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>type<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">SseEmitterConstant</span><span class="token punctuation">.</span><span class="token constant">OVER_VIEW</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+            <span class="token function">sysOperation</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token function">mileStone</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        logger<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"当前用户总连接数 : {} "</span> <span class="token punctuation">,</span> sseCache<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> sseEmitter<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 交易量概览
+     */</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">volumeOverview</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span><span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> map <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"latest_tps"</span><span class="token punctuation">,</span><span class="token number">440.3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"total_cics_trans"</span><span class="token punctuation">,</span><span class="token number">341656001</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"total_zjcx_trans"</span><span class="token punctuation">,</span><span class="token number">391656001</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"zjcx_tps"</span><span class="token punctuation">,</span><span class="token number">23657</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"day10"</span><span class="token punctuation">,</span><span class="token number">48388352</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        map<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"history"</span><span class="token punctuation">,</span><span class="token number">105013985</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> data <span class="token operator">=</span> <span class="token class-name">SseEmitter</span><span class="token punctuation">.</span><span class="token function">event</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token class-name">SseEmitterConstant</span><span class="token punctuation">.</span><span class="token constant">VOLUME_OVERVIEW</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span>map<span class="token punctuation">,</span> <span class="token class-name">MediaType</span><span class="token punctuation">.</span><span class="token constant">APPLICATION_JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Map<span class="token punctuation">.</span>Entry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">SseEmitterUTF8</span><span class="token punctuation">&gt;</span></span> entry <span class="token operator">:</span> sseCache<span class="token punctuation">.</span><span class="token function">entrySet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token class-name">SseEmitterUTF8</span> sseEmitter <span class="token operator">=</span> entry<span class="token punctuation">.</span><span class="token function">getValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>sseEmitter <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token keyword">continue</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+                sseEmitter<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">IOException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">String</span> body <span class="token operator">=</span> <span class="token string">"SseEmitterServiceImpl[volumeOverview  ]"</span><span class="token punctuation">;</span>
+                logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span>body <span class="token operator">+</span> <span class="token string">": 向客户端 {} 推送消息失败 , 尝试进行重推 : {}"</span><span class="token punctuation">,</span> entry<span class="token punctuation">.</span><span class="token function">getKey</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token function">messageRepush</span><span class="token punctuation">(</span>entry<span class="token punctuation">.</span><span class="token function">getKey</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>data<span class="token punctuation">,</span>body<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+		<span class="token keyword">private</span> <span class="token keyword">void</span> <span class="token function">messageRepush</span><span class="token punctuation">(</span><span class="token class-name">String</span> type<span class="token punctuation">,</span> <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> data<span class="token punctuation">,</span><span class="token class-name">String</span> body<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">2000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token class-name">SseEmitterUTF8</span> sseEmitter <span class="token operator">=</span> sseCache<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>type<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">if</span> <span class="token punctuation">(</span>sseEmitter <span class="token operator">==</span> <span class="token keyword">null</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span>body <span class="token operator">+</span> <span class="token string">" ：向客户端{} 第{}次消息重推失败，未创建长链接"</span><span class="token punctuation">,</span> type<span class="token punctuation">,</span> i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token keyword">continue</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                sseEmitter<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> ex<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span>body <span class="token operator">+</span> <span class="token string">" ：向客户端{} 第{}次消息重推失败"</span><span class="token punctuation">,</span> type<span class="token punctuation">,</span> i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">,</span> ex<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">continue</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            logger<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span>body <span class="token operator">+</span> <span class="token string">" ：向客户端{} 第{}次消息重推成功"</span><span class="token punctuation">,</span> type<span class="token punctuation">,</span> i <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p>常量类</p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SseEmitterConstant</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token comment">/**
+     * 创建连接的客户端类型
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">OVER_VIEW</span> <span class="token operator">=</span> <span class="token string">"overview"</span><span class="token punctuation">;</span>
+
+
+    <span class="token comment">/**
+     * even 数据类型
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">VOLUME_OVERVIEW</span> <span class="token operator">=</span> <span class="token string">"vw"</span><span class="token punctuation">;</span>
+
+
+
+    <span class="token keyword">public</span> <span class="token class-name">SseEmitterConstant</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h3><a id="3_192"></a>3、后端定时任务代码</h3> 
+<p>采用注解的方式实现：@Scheduled，使用该注解时，需要增加这个注解@EnableScheduling，相当于来开启定时调度功能，如果不加@EnableScheduling注解，那么定时调度会不生效的。</p> 
+<p>启动类增加注解@EnableScheduling</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>hidata</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>mybatis<span class="token punctuation">.</span>spring<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">MapperScan</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span></span><span class="token class-name">SpringApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>autoconfigure<span class="token punctuation">.</span></span><span class="token class-name">SpringBootApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>autoconfigure<span class="token punctuation">.</span>jdbc<span class="token punctuation">.</span></span><span class="token class-name">DataSourceAutoConfiguration</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">ComponentScan</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>scheduling<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">EnableScheduling</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootApplication</span><span class="token punctuation">(</span>exclude <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token class-name">DataSourceAutoConfiguration</span><span class="token punctuation">.</span><span class="token keyword">class</span> <span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@EnableScheduling</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">HidataApplication</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">SpringApplication</span><span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">HidataApplication</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span> args<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"[HiUrlShorter platform startup!]"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>创建 定时任务调度类，在该类上加上@Scheduled注解，</p> 
+<pre><code class="prism language-java">
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SendMessageTask</span><span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token keyword">final</span> <span class="token class-name">Logger</span> logger <span class="token operator">=</span> <span class="token class-name">LoggerFactory</span><span class="token punctuation">.</span><span class="token function">getLogger</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">SseEmitterService</span> sseEmitterService<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Scheduled</span><span class="token punctuation">(</span>cron <span class="token operator">=</span> <span class="token string">"0/40 * * * * ?}"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">volumeOverviewTask</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            sseEmitterService<span class="token punctuation">.</span><span class="token function">volumeOverview</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            logger<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"SendMessageTask [volumeOverviewTask]: {} "</span><span class="token punctuation">,</span>e<span class="token punctuation">.</span><span class="token function">getMessage</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+
+
+</code></pre> 
+<h2><a id="4_245"></a>4、解决乱码的实体类</h2> 
+<p>如果发送中文数据的时候，会出现乱码的现象。此时需要做对应的处理</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>hidata<span class="token punctuation">.</span>devops<span class="token punctuation">.</span>lagrescreen<span class="token punctuation">.</span>domain</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">HttpHeaders</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">MediaType</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>http<span class="token punctuation">.</span>server<span class="token punctuation">.</span></span><span class="token class-name">ServerHttpResponse</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>servlet<span class="token punctuation">.</span>mvc<span class="token punctuation">.</span>method<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">SseEmitter</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>nio<span class="token punctuation">.</span>charset<span class="token punctuation">.</span></span><span class="token class-name">StandardCharsets</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SseEmitterUTF8</span> <span class="token keyword">extends</span> <span class="token class-name">SseEmitter</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">public</span> <span class="token class-name">SseEmitterUTF8</span><span class="token punctuation">(</span><span class="token class-name">Long</span> timeout<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">super</span><span class="token punctuation">(</span>timeout<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">protected</span> <span class="token keyword">void</span> <span class="token function">extendResponse</span><span class="token punctuation">(</span><span class="token class-name">ServerHttpResponse</span> outputMessage<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">super</span><span class="token punctuation">.</span><span class="token function">extendResponse</span><span class="token punctuation">(</span>outputMessage<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">HttpHeaders</span> headers <span class="token operator">=</span> outputMessage<span class="token punctuation">.</span><span class="token function">getHeaders</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        headers<span class="token punctuation">.</span><span class="token function">setContentType</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">MediaType</span><span class="token punctuation">(</span><span class="token class-name">MediaType</span><span class="token punctuation">.</span><span class="token constant">TEXT_EVENT_STREAM</span><span class="token punctuation">,</span> <span class="token class-name">StandardCharsets</span><span class="token punctuation">.</span><span class="token constant">UTF_8</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+</code></pre> 
+<h3><a id="4_276"></a>4、前端代码</h3> 
+<pre><code>    // 连接服务器
+    var sseSource = new EventSource("http://localhost:8080/sse/connect");
+    // 连接打开
+    sseSource.onopen = function () {
+        console.log("连接打开");
+    }
+
+    // 连接错误
+    sseSource.onerror = function (err) {
+        console.log("连接错误:", err);
+    }
+    
+	//接收信息
+    eventSource.addEventListener("vw", function (event) {
+    console.log(event.data);
+    .....
+  });
+</code></pre> 
+<h2><a id="_296"></a>五、核心代码分析</h2> 
+<p>先看代码片段</p> 
+<pre><code class="prism language-java"><span class="token class-name">SseEmitter</span><span class="token punctuation">.</span><span class="token function">event</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token string">"vw"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">data</span><span class="token punctuation">(</span>map<span class="token punctuation">,</span> <span class="token class-name">MediaType</span><span class="token punctuation">.</span><span class="token constant">APPLICATION_JSON</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>分析：<br> 后端不会把所有数据一起发送给前端，而是会把页面分成多个模块，然后发给前端，此时前端需要区分哪一块数据对应哪一块页面。所以我们可以给各个模块的数据起个名字。也就是上述的代码</p> 
+<pre><code class="prism language-java"><span class="token class-name">SseEmitter</span><span class="token punctuation">.</span><span class="token function">event</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">name</span><span class="token punctuation">(</span><span class="token string">"vw"</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>这样，前端就知道怎么渲染页面了，类似于这样<br> <img src="https://images2.imgbox.com/1f/cc/Pa39dSMK_o.png" alt="在这里插入图片描述"><br> 关于even()的属性，可以查看源码，</p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">SseEventBuilder</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">id</span><span class="token punctuation">(</span><span class="token class-name">String</span> var1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">name</span><span class="token punctuation">(</span><span class="token class-name">String</span> var1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">reconnectTime</span><span class="token punctuation">(</span><span class="token keyword">long</span> var1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">comment</span><span class="token punctuation">(</span><span class="token class-name">String</span> var1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">data</span><span class="token punctuation">(</span><span class="token class-name">Object</span> var1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">SseEmitter<span class="token punctuation">.</span>SseEventBuilder</span> <span class="token function">data</span><span class="token punctuation">(</span><span class="token class-name">Object</span> var1<span class="token punctuation">,</span> <span class="token annotation punctuation">@Nullable</span> <span class="token class-name">MediaType</span> var2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">Set</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">DataWithMediaType</span><span class="token punctuation">&gt;</span></span> <span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/80/c6/eLTmRNZH_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f23e97cd55bbb2fddf2c2cd7402a08a7/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">2023最新版Python 3.12.0安装使用指南</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b8f78f50d7d459449b336f3cd387613e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">前端获取后端接口的几种方式</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

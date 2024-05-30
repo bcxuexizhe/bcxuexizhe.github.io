@@ -1,0 +1,592 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C# Web控件与数据感应之 BaseDataList 类 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/24aa7c0470c85df4f73774ef8ea96691/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C# Web控件与数据感应之 BaseDataList 类">
+  <meta property="og:description" content="目录
+关于数据感应
+BaseDataList 类
+范例运行环境
+pageview 方法
+设计
+实现
+调用示例
+数据源
+调用
+小结
+关于数据感应 数据感应也即数据捆绑，是一种动态的，Web控件与数据源之间的交互，本文将继续介绍以与数据库提取数据并捆绑控件为例，讲解 C# 创建适用于 BaseDataList 类(如DataGrid)的通用分页数据显示方法。
+BaseDataList 类 BaseDataList 类是包括如 DataList 、DataGrid 服务器控件的基类，本文我们以 DataGrid 服务器控件控件，并结合 MS SQL SERVER 和 达梦数据库，以数据分页的形式，绑定 DataGrid进行显示。
+更多 BaseDataList 类的介绍请参照如下链接：
+https://learn.microsoft.com/ZH-CN/dotnet/api/system.web.ui.webcontrols.basedatalist?view=netframework-4.8.1&amp;viewFallbackFrom=net-7.0
+范例运行环境 操作系统： Windows Server 2019 DataCenter
+.net版本： .netFramework4.7.1 或以上
+开发工具：VS2019 C#
+数据提取：在这里我们以能够支持 MS SQL Server 2016、国产达梦数据 8 的通用数据库内容提取方法为例， 生成数据源需要利用 ADO.NET 中的数据提供者对象包括IDbConnection、IDbCommand、IDbDataParameter等，如何使用这些对象请参考我的文章：
+《C#实现 IDbConnection / IDbCommand 等相关通用数据接口》
+pageview 方法 设计 pageview 方法内置了分页函数写法（目前支持 MS SQL Server 2016 和国产达梦 8 数据库 ），另外传递SQL关键命令及配置相关参数，将数据源分页感应到指定的 BaseDataList 类控件上，其参数说明如下表：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-07T14:00:51+08:00">
+    <meta property="article:modified_time" content="2024-05-07T14:00:51+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C# Web控件与数据感应之 BaseDataList 类</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%85%B3%E4%BA%8E%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94-toc" style="margin-left:40px;"><a href="#%E5%85%B3%E4%BA%8E%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94" rel="nofollow">关于数据感应</a></p> 
+<p id="ListControl%20%E7%B1%BB%E7%B1%BB%E5%9E%8B%E6%8E%A7%E4%BB%B6-toc" style="margin-left:40px;"><a href="#ListControl%20%E7%B1%BB%E7%B1%BB%E5%9E%8B%E6%8E%A7%E4%BB%B6" rel="nofollow">BaseDataList 类</a></p> 
+<p id="%E7%B3%BB%E7%BB%9F%E7%8E%AF%E5%A2%83-toc" style="margin-left:40px;"><a href="#%E7%B3%BB%E7%BB%9F%E7%8E%AF%E5%A2%83" rel="nofollow">范例运行环境</a></p> 
+<p id="%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94%E9%80%9A%E7%94%A8%E6%96%B9%E6%B3%95-toc" style="margin-left:40px;"><a href="#%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94%E9%80%9A%E7%94%A8%E6%96%B9%E6%B3%95" rel="nofollow">pageview 方法</a></p> 
+<p id="%E8%AE%BE%E8%AE%A1-toc" style="margin-left:80px;"><a href="#%E8%AE%BE%E8%AE%A1" rel="nofollow">设计</a></p> 
+<p id="%E5%AE%9E%E7%8E%B0-toc" style="margin-left:80px;"><a href="#%E5%AE%9E%E7%8E%B0" rel="nofollow">实现</a></p> 
+<p id="%E8%B0%83%E7%94%A8%E7%A4%BA%E4%BE%8B-toc" style="margin-left:40px;"><a href="#%E8%B0%83%E7%94%A8%E7%A4%BA%E4%BE%8B" rel="nofollow">调用示例</a></p> 
+<p id="%E6%95%B0%E6%8D%AE%E6%BA%90-toc" style="margin-left:80px;"><a href="#%E6%95%B0%E6%8D%AE%E6%BA%90" rel="nofollow">数据源</a></p> 
+<p id="%E8%B0%83%E7%94%A8-toc" style="margin-left:80px;"><a href="#%E8%B0%83%E7%94%A8" rel="nofollow">调用</a></p> 
+<p id="%E5%B0%8F%E7%BB%93-toc" style="margin-left:40px;"><a href="#%E5%B0%8F%E7%BB%93" rel="nofollow">小结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h3 id="%E5%85%B3%E4%BA%8E%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94">关于数据感应</h3> 
+<p>数据感应也即数据捆绑，是一种动态的，Web控件与数据源之间的交互，本文将继续介绍以与数据库提取数据并捆绑控件为例，讲解 C# 创建适用于 BaseDataList 类(如DataGrid)的通用分页数据显示方法。</p> 
+<h3 id="ListControl%20%E7%B1%BB%E7%B1%BB%E5%9E%8B%E6%8E%A7%E4%BB%B6">BaseDataList 类</h3> 
+<p>BaseDataList 类是包括如 DataList 、DataGrid 服务器控件的基类，本文我们以 DataGrid 服务器控件控件，并结合 MS SQL SERVER 和 达梦数据库，以数据分页的形式，绑定 DataGrid进行显示。</p> 
+<p>更多 BaseDataList 类的介绍请参照如下链接：</p> 
+<p><a class="link-info" href="https://learn.microsoft.com/ZH-CN/dotnet/api/system.web.ui.webcontrols.basedatalist?view=netframework-4.8.1&amp;viewFallbackFrom=net-7.0" rel="nofollow" title="https://learn.microsoft.com/ZH-CN/dotnet/api/system.web.ui.webcontrols.basedatalist?view=netframework-4.8.1&amp;viewFallbackFrom=net-7.0">https://learn.microsoft.com/ZH-CN/dotnet/api/system.web.ui.webcontrols.basedatalist?view=netframework-4.8.1&amp;viewFallbackFrom=net-7.0</a></p> 
+<p></p> 
+<h3 id="%E7%B3%BB%E7%BB%9F%E7%8E%AF%E5%A2%83">范例运行环境</h3> 
+<p>操作系统： Windows Server 2019 DataCenter</p> 
+<p>.net版本： .netFramework4.7.1 或以上</p> 
+<p>开发工具：VS2019  C#</p> 
+<p>数据提取：在这里我们以能够支持 MS SQL Server 2016、国产达梦数据 8 的通用数据库内容提取方法为例， 生成数据源需要利用 ADO.NET 中的数据提供者对象包括IDbConnection、IDbCommand、IDbDataParameter等，如何使用这些对象请参考我的文章：</p> 
+<p><a href="https://blog.csdn.net/michaelline/article/details/138268833" title="《C#实现 IDbConnection / IDbCommand 等相关通用数据接口》">《C#实现 IDbConnection / IDbCommand 等相关通用数据接口》</a></p> 
+<h3 id="%E6%95%B0%E6%8D%AE%E6%84%9F%E5%BA%94%E9%80%9A%E7%94%A8%E6%96%B9%E6%B3%95">pageview 方法</h3> 
+<h4 id="%E8%AE%BE%E8%AE%A1">设计</h4> 
+<p>pageview 方法内置了分页函数写法（目前支持 MS SQL Server 2016 和国产达梦 8 数据库 ），另外传递SQL关键命令及配置相关参数，将数据源分页感应到指定的 BaseDataList 类控件上，其参数说明如下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th>参数名</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><th>1</th><td>DbServerType</td><td>string</td><td>目前支持 "oracle"、 "dm8"，其它字符串均视为 MS SQL Server</td></tr><tr><th>2</th><td>strConn</td><td>string</td><td>对应数据库的连接字符串</td></tr><tr><th>3</th><td>webctls</td><td>string[]</td><td> <p>对应的信息标签和选择框的ID集合，如果不指定则按默认值处理，即：</p> <p>webctls[0]="q_pageno"; //当前页<br> webctls[1]="q_pagecount"; //总页数<br> webctls[2]="q_recordcount"; //总记录数<br> webctls[3]="q_pagesize"; //可选择的每页记录数<br> webctls[4]="q_pageno_label"; //可选择的每页记录数</p> </td></tr><tr><th>4</th><td>navsender</td><td>string</td><td> <p>导航按钮的 CommandArgument，</p> <p>nav1 表示首页，nav2 表示上一页，nav3表示下一页，nav４表示最后一页</p> </td></tr><tr><th>5</th><td>dbgrid</td><td> <p>System.Web.UI.WebControls.</p> <p>BaseDataList</p> </td><td> <p>用于捆绑 BaseDataList 的控件，如DataGrid</p> </td></tr><tr><th>6</th><td>DisplayFieldList</td><td>string</td><td>用于捆绑到 BaseDataList 的控件上的字段列表，以逗号进行分隔</td></tr><tr><th>7</th><td>SelectedFieldList</td><td>string</td><td>SQL 查询语句的 select 部分，即查询字段列表，DisplayFieldList 参数是它的子集</td></tr><tr><th>8</th><td>OrderFieldList</td><td>string</td><td>SQL 查询语句的 order by  部分,字段以逗号进行分隔</td></tr><tr><th>9</th><td>FromTableList</td><td>string</td><td>SQL 查询语句的 from  部分,表名以逗号进行分隔</td></tr><tr><th>10</th><td>WhereStatements</td><td>string</td><td>SQL 查询语句的 where  条件部分, 字符串需要书写 where 字样 </td></tr><tr><th>11</th><td>paras</td><td>ArrayList</td><td>查询条件中的参数对象集合</td></tr><tr><th>12</th><td>keyfield</td><td>string</td><td>查询结果集的唯一标识字段，用于统计总数</td></tr><tr><th>13</th><td>OuterFromTableList</td><td>string</td><td>是否有用于左、右连接的表名列表</td></tr><tr><th>14</th><td>OuterWhereStatements</td><td>string</td><td>用于左、右连接的查询条件</td></tr><tr><th>15</th><td>movWhereToOuter</td><td>bool</td><td>是否用左、右连接查询条件替代where查询条件（如果需要）</td></tr><tr><th>16</th><td>GroupFuncs</td><td>ArrayList</td><td>一组需要特殊指定的统计变量值，其添加string[]对象，string[0] 存储字段名，string[1]存储变量名</td></tr></tbody></table> 
+<h4 id="%E5%AE%9E%E7%8E%B0">实现</h4> 
+<p>pageview 方法完整代码如下：</p> 
+<pre><code class="language-cs">public string pageview(string DbServerType,string strConn,string[] webctls,string navsender,System.Web.UI.WebControls.BaseDataList dbgrid,string DisplayFieldList,string SelectedFieldList,string OrderFieldList,string FromTableList,string WhereStatements,ArrayList paras,string keyfield,string OuterFromTableList,string OuterWhereStatements,bool movWhereToOuter,ArrayList GroupFuncs)
+{
+			
+			string[] defaultobj=new string[5];
+			defaultobj[0]="q_pageno"; //当前页
+			defaultobj[1]="q_pagecount"; //页总数
+			defaultobj[2]="q_recordcount"; //总记录数
+			defaultobj[3]="q_pagesize"; //可选择的每页记录数
+			defaultobj[4]="q_pageno_label"; //可选择的每页记录数
+			
+			if(webctls==null)
+			{
+				webctls=defaultobj;
+			}
+			if(webctls.GetLength(0)&lt;4){
+				webctls=defaultobj;
+			}
+			ObjectEx oe=new ObjectEx();
+			oe.RunAt=RunAt;
+			oe.FindContainer=FindContainer;
+			int _npc=0;
+			int _now=1;
+			try
+			{
+				_now=int.Parse(oe.GetBaseClassText(webctls[0]));
+				if(oe.GetBaseClassText(webctls[1])!="")
+				{
+					_npc=int.Parse(oe.GetBaseClassText(webctls[1]));
+				}   
+			}
+			catch(Exception)
+			{
+				_now=1;
+				_npc=1;
+				oe.SetBaseClassText(webctls[0],"1");
+				oe.SetBaseClassText(webctls[1],"1");
+			}
+			string navtype=oe.GetBaseClassArg(navsender);
+			if(navtype=="nav1")
+			{
+				_now=1;
+			}
+			if(navtype=="nav2")
+			{
+				_now--;
+			}
+			if(navtype=="nav3")
+			{
+				_now++;
+			}
+			if(navtype=="nav4")
+			{
+				_now=_npc;
+			}
+			if(navtype=="nav5")
+			{
+				_now=int.Parse(oe.GetBaseClassText(webctls[0]));
+			}
+			if(_now&gt;_npc)
+			{
+				_now=_npc;
+			}
+			if(_now&lt;1)
+			{
+				_now=1;
+			}
+			_now--;
+         
+            IDbConnection Conn = GetConnection(DbServerType, strConn);
+            IDataReader myDr;
+			string _countf=keyfield;
+			string _pagesize=oe.GetBaseClassList(webctls[3],"Value");
+			_pagesize=(_pagesize==""?"50":_pagesize);
+
+			if(movWhereToOuter==true)
+			{
+				 WhereStatements=WhereStatements.Replace("where 1=1","");
+				if(OuterWhereStatements.IndexOf("{0}")==-1)
+				{
+					OuterWhereStatements+=" "+WhereStatements;
+				}
+				else
+				{
+					OuterWhereStatements=string.Format(OuterWhereStatements,WhereStatements);
+				}
+				WhereStatements="";
+			}
+		    string groupf="",resultf="",declare="",intolist= "RecordCount";
+			if(GroupFuncs!=null)
+			{
+				for(int i=0;i&lt;GroupFuncs.Count;i++)
+				{
+					string[] rv=(string[])GroupFuncs[i];
+                    if (DbServerType.ToLower() == "dm8")
+                    {
+                        intolist += "," + rv[1] ;
+                        groupf += "," + rv[0];
+                        resultf += "," + rv[1] + " " + rv[1];
+                        declare += " " + rv[1] + " " + rv[2] + " ";
+                    }
+                    else
+                    {
+                        groupf += ",@" + rv[1] + "=" + rv[0];
+                        resultf += ",@" + rv[1] + " " + rv[1];
+                        declare += " declare @" + rv[1] + " " + rv[2] + " ";
+                    }
+                }
+			}
+			string CommandText = "DECLARE    @PageIndex INT "+
+				" DECLARE    @PageSize  INT "+
+				" DECLARE    @RecordCount INT "+
+				" DECLARE    @PageCount INT "+declare+
+				"SET @PageIndex="+_now.ToString()+" "+
+				"SET @PageSize="+_pagesize+" "+
+				"SELECT @RecordCount =COUNT("+_countf+")"+groupf+" FROM "+FromTableList+" "+WhereStatements+" "+
+				"SET @PageCount = CEILING(@RecordCount * 1.0 / @PageSize) "+
+				" select @recordcount rc,@pagecount pc"+resultf+
+				" SELECT "+DisplayFieldList+" FROM "+
+				"(SELECT "+SelectedFieldList+","+
+				"ROW_NUMBER() OVER (ORDER BY "+OrderFieldList+") AS sn  "+
+				"FROM "+FromTableList+" "+WhereStatements+") AS T "+OuterFromTableList+
+				" WHERE T.sn &gt; (@PageIndex * @PageSize)  and T.sn &lt;= ((@PageIndex+1) * @PageSize) "+OuterWhereStatements;
+            if (DbServerType.ToLower() == "dm8")
+            {
+                CommandText = "declare PageIndex INT; " +
+                    " PageSize  INT; " +
+                    " RecordCount INT; " +
+                    " PageCount INT; " + declare +
+                    "begin SET PageIndex=" + _now.ToString() + "; " +
+                    "SET PageSize=" + _pagesize + "; " +
+                    "SELECT COUNT(" + _countf + ") " + groupf +" into "+intolist+ " FROM " + FromTableList + " " + WhereStatements + " ;" +
+                    "SET PageCount = CEILING(RecordCount * 1.0 / PageSize) ;" +
+                    " select recordcount rc,pagecount pc" + resultf +";"+
+                    " SELECT " + DisplayFieldList + " FROM " +
+                    "(SELECT " + SelectedFieldList + "," +
+                    "ROW_NUMBER() OVER (ORDER BY " + OrderFieldList + ") AS sn  " +
+                    "FROM " + FromTableList + " " + WhereStatements + ") AS T " + OuterFromTableList +
+                    " WHERE T.sn &gt; (PageIndex * PageSize)  and T.sn &lt;= ((PageIndex+1) * PageSize) " + OuterWhereStatements+" ;"+
+                    " end;";
+
+            }
+			string _info="";
+			try
+			{
+                ArrayList _paras = new ArrayList();
+				if(paras!=null)
+				{
+					for(int i=0;i&lt;paras.Count;i++)
+					{
+                        if (DbServerType.ToLower() == "dm8") {
+                           _paras.Add(paras[i] as DmParameter);
+                        }
+                        else
+                        {
+                            _paras.Add((SqlParameter)paras[i]);
+                        }
+					}
+				}
+                IDbCommand Cmd = GetCommand(DbServerType, CommandText, _paras, Conn);
+
+				Conn.Open();
+                if (DbServerType.ToLower() == "dm8")
+                {
+                    myDr = Cmd.ExecuteReader() as DmDataReader;
+                }
+                else
+                {
+                    myDr = Cmd.ExecuteReader() as SqlDataReader;
+                }
+                if (myDr.Read())
+				{   
+					int pc=int.Parse(myDr["pc"].ToString());
+					int rc=int.Parse(myDr["rc"].ToString());
+					oe.SetBaseClassText(webctls[1],pc.ToString());
+					oe.SetBaseClassText(webctls[2],rc.ToString());
+					oe.SetBaseClassText(webctls[0],(_now+1).ToString());
+					if(webctls.Length&gt;4)
+					{
+						oe.SetBaseClassText(webctls[4],(_now+1).ToString());
+					}
+					if(GroupFuncs!=null)
+					{
+						for(int i=0;i&lt;GroupFuncs.Count;i++)
+						{
+							string[] rv=(string[])GroupFuncs[i];
+							oe.SetBaseClassText(rv[3],myDr[rv[1]].ToString());
+						}
+					}
+				}
+
+				if(myDr.NextResult())
+				{
+					dbgrid.DataSource=myDr;
+					dbgrid.DataBind();
+				}
+				myDr.Close();
+			}
+			catch (Exception ex)
+			{
+				_info=ex.Message;
+
+			}
+
+			finally
+			{
+				Conn.Close();
+				Conn.Dispose();
+			}
+			return _info;
+}//pageview
+
+</code></pre> 
+<p>pageview方法中涉及对控件ID在Page页面的查找 ，及对基类的一些属性如Text进行设置，因此设计了一个 ObjectEx 类，实现一些控件的查找和设置方法，该类设计如下：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th style="width:48px;text-align:center;">序号</th><th style="width:388px;text-align:center;">成员</th><th style="text-align:center;width:49px;">类型</th><th style="text-align:center;width:204px;">说明</th></tr></thead><tbody><tr><th style="width:48px;text-align:center;">1</th><td style="width:388px;">public System.Web.UI.HtmlControls.HtmlForm RunAt=null;<br>         </td><td style="width:49px;">属性</td><td style="width:204px;">运行的Form平台，Asp.net中一般只设置一个Form</td></tr><tr><th style="width:48px;text-align:center;">2</th><td style="width:388px;">public System.Web.UI.Control FindContainer=null;</td><td style="width:49px;">属性</td><td style="width:204px;">要查找的容器，一般设置为Page</td></tr><tr><th style="width:48px;text-align:center;">3</th><td style="width:388px;">public string GetBaseClassArg(string webctl)</td><td style="width:49px;">方法</td><td style="width:204px;">得到指定ID控件的 CommandArgument</td></tr><tr><th style="width:48px;text-align:center;">4</th><td style="width:388px;">public string GetBaseClassList(string webctl,string gettype)<br>         <br>         <br>         </td><td style="width:49px;">方法</td><td style="width:204px;">得到指定 ID 的 ListControl 控件的Text或Value值，gettype 参数值可以设置 Text 或 Value</td></tr><tr><th style="width:48px;text-align:center;">5</th><td style="width:388px;">public string GetBaseClassText(string webctl)</td><td style="width:49px;">方法</td><td style="width:204px;">得到指定ID控件的 Text 属性</td></tr><tr><th style="width:48px;text-align:center;">6</th><td style="width:388px;">public void SetBaseClassText(string webctl,string values)</td><td style="width:49px;">方法</td><td style="width:204px;">设置指定ID控件的 Text 属性</td></tr></tbody></table> 
+<p>类代码如下：</p> 
+<pre><code class="language-cs">public class ObjectEx
+{
+		public System.Web.UI.HtmlControls.HtmlForm RunAt=null;
+		public System.Web.UI.Control FindContainer=null;
+
+		
+		public string GetBaseClassArg(string webctl)
+		{
+			
+			System.Web.UI.Control btnctl;
+			btnctl=RunAt.FindControl(webctl);
+			if(FindContainer!=null)
+			{
+				btnctl=FindContainer.FindControl(webctl);
+			}
+			if(btnctl==null)
+			{
+				return "";
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.HtmlControls.HtmlInputButton))
+			{
+				if(((System.Web.UI.HtmlControls.HtmlInputButton)btnctl).Attributes["CommandArgument"]!=null)
+					return ((System.Web.UI.HtmlControls.HtmlInputButton)btnctl).Attributes["CommandArgument"].ToString();
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.Button))
+			{
+				return ((System.Web.UI.WebControls.Button)btnctl).CommandArgument;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.ImageButton))
+			{
+				return ((System.Web.UI.WebControls.ImageButton)btnctl).CommandArgument;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.LinkButton))
+			{
+				return ((System.Web.UI.WebControls.LinkButton)btnctl).CommandArgument;
+			}
+			return "";
+
+		}
+		public string GetBaseClassText(string webctl)
+		{
+			System.Web.UI.Control btnctl;
+			btnctl=RunAt.FindControl(webctl);
+			if(FindContainer!=null)
+			{
+				btnctl=FindContainer.FindControl(webctl);
+			}
+			if(btnctl==null)
+			{
+				return "";
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.TextBox))
+			{
+				return ((System.Web.UI.WebControls.TextBox)btnctl).Text;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.Label))
+			{
+				return ((System.Web.UI.WebControls.Label)btnctl).Text;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.Button))
+			{
+				return ((System.Web.UI.WebControls.Button)btnctl).Text;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.LinkButton))
+			{
+				return ((System.Web.UI.WebControls.LinkButton)btnctl).Text;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.HyperLink))
+			{
+				return ((System.Web.UI.WebControls.HyperLink)btnctl).Text;
+			}
+			return "";
+		}
+		public void SetBaseClassText(string webctl,string values)
+		{
+			System.Web.UI.Control btnctl;
+			btnctl=RunAt.FindControl(webctl);
+			if(FindContainer!=null)
+			{
+				btnctl=FindContainer.FindControl(webctl);
+			}
+			if(btnctl==null)
+			{
+				return;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.TextBox))
+			{
+				((System.Web.UI.WebControls.TextBox)btnctl).Text=values;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.Label))
+			{
+				((System.Web.UI.WebControls.Label)btnctl).Text=values;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.Button))
+			{
+				((System.Web.UI.WebControls.Button)btnctl).Text=values;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.LinkButton))
+			{
+				((System.Web.UI.WebControls.LinkButton)btnctl).Text=values;
+			}
+			if(btnctl.GetType()==typeof(System.Web.UI.WebControls.HyperLink))
+			{
+				((System.Web.UI.WebControls.HyperLink)btnctl).Text=values;
+			}
+		}
+		public string GetBaseClassList(string webctl,string gettype)
+		{
+			System.Web.UI.Control btnctl;
+			btnctl=RunAt.FindControl(webctl);
+			if(FindContainer!=null)
+			{
+				btnctl=FindContainer.FindControl(webctl);
+			}
+			if(btnctl==null)
+			{
+				return "";
+			}
+			return (gettype.ToLower()=="text"?((System.Web.UI.WebControls.ListControl)btnctl).SelectedItem.Text:((System.Web.UI.WebControls.ListControl)btnctl).SelectedItem.Value);
+		}
+		
+		
+}//ObjectEx Class
+</code></pre> 
+<p> </p> 
+<h3 id="%E8%B0%83%E7%94%A8%E7%A4%BA%E4%BE%8B">调用示例</h3> 
+<h4 id="%E6%95%B0%E6%8D%AE%E6%BA%90">数据源</h4> 
+<p>我们以 MS SQL SERVER 为例，提取信息发布系统列表信息，如下图数据显示：</p> 
+<p><img alt="" height="501" src="https://images2.imgbox.com/cb/ad/1RkPddl0_o.png" width="885"></p> 
+<p>表（wp_infos）设计基本情况如下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th style="text-align:center;">序号</th><th style="text-align:center;">字段名</th><th style="text-align:center;">类型</th><th style="text-align:center;">说明</th></tr></thead><tbody><tr><th style="text-align:center;">1</th><td>title</td><td>nvarchar(200)</td><td>信息标题</td></tr><tr><th style="text-align:center;">2</th><td>pub_time</td><td>datetime</td><td>发布时间</td></tr></tbody></table> 
+<h4 id="%E8%B0%83%E7%94%A8">调用</h4> 
+<p>在页面放置一个ID为 dbgrid 的 DataGrid 控件和一系列的导航按钮等控件，前端示例代码如下： </p> 
+<pre><code class="language-cs">&lt;div align="center" id="panel"&gt;
+&lt;table border="0" cellpadding="0" cellspacing="0" width="100%" style="border:1px solid #CFE2FF; border-top:2px solid #1A5FC9; background-color:#F7F9FF;" id="table310"&gt;
+&lt;tr&gt;
+ &lt;td align="center"&gt;&lt;asp:DataGrid  ID=dbgrid ShowHeader="True"
+ShowFooter="False" CellPadding="0" Border="0"  forecolor="black" Runat=server EnableViewState=True /&gt; &lt;/td&gt;
+&lt;/tr&gt;
+&lt;tr&gt;
+							  &lt;td align="right"&gt;&lt;table border="0" width="100%" cellspacing="0" cellpadding="0" id="table314" bgcolor="#EEF4FF"&gt;
+								&lt;tr&gt;
+									&lt;td align="right" valign="middle" style="display:none;"&gt;  
+							&lt;asp:ImageButton ID=ntop CommandArgument=nav1 OnClick=navpage  ImageUrl="images/nav1.jpg" Visible="false" Runat=server/&gt;
+							&amp;nbsp;&amp;nbsp;&amp;nbsp;&amp;nbsp;&lt;asp:ImageButton ID=nbtm CommandArgument=nav4 OnClick=navpage ImageUrl="images/nav4.jpg" Visible="false" Runat=server/&gt;&lt;asp:dropdownlist  id="x_pagesize" runat="server" style="font-size:9pt;font-family:宋体"  Visible="false"&gt;   
+&lt;asp:ListItem Text="10" Value="10" /&gt;
+&lt;asp:ListItem Text="20" Value="20" selected="true"/&gt;
+&lt;asp:ListItem Text="30" Value="30" /&gt;
+&lt;asp:ListItem Text="40" Value="40" /&gt;
+&lt;asp:ListItem Text="50" Value="50" /&gt;
+&lt;asp:ListItem Text="100" Value="100" /&gt;
+&lt;/asp:dropdownlist&gt;&lt;asp:ImageButton Text="go" id="gotopage" Visible="false" OnClick=navpage CommandArgument=nav5 ImageUrl="images/nav5.jpg" Runat=server/&gt;&lt;/td&gt;&lt;td width="515" height="30"&gt;&lt;/td&gt;&lt;td valign="middle" width="100" align="right"&gt;共计&lt;asp:Label ID=nrc Runat=server/&gt;条记录&lt;/td&gt;&lt;td valign="middle" width="4"&gt;&lt;img src="../images/2012/inner/inner_dg_l.jpg"&gt;&lt;/td&gt;&lt;td valign="middle" width="46" align="center"&gt;&lt;asp:Label ID=ngo Text="1" Runat=server/&gt;/&lt;asp:Label ID=npc Runat=server/&gt;&lt;/td&gt;&lt;td valign="middle" align="left" width="135"&gt;&lt;asp:ImageButton ID=nprv CommandArgument=nav2 OnClick=navpage ImageUrl="../images/2012/inner/inner_dg_btn_p.jpg" Runat=server/&gt;&amp;nbsp;&amp;nbsp;&lt;asp:ImageButton ID=nnxt CommandArgument=nav3 OnClick=navpage ImageUrl="../images/2012/inner/inner_dg_btn_n.jpg" Runat=server/&gt;&lt;/td&gt;
+							    &lt;/tr&gt;
+								&lt;/table&gt;
+                            &lt;/td&gt;
+						  &lt;/tr&gt;
+  &lt;/table&gt;
+&lt;/div&gt;
+</code></pre> 
+<p>后端调用示例代码如下：</p> 
+<pre><code class="language-cs">void navpage(Object sender,EventArgs e)
+{
+ 
+  string _sql="  title,pub_time";
+  string _wherecon="";
+  String arg ="";
+  try{
+     arg=((ImageButton)sender).CommandArgument;
+  }catch(Exception xe){
+     arg=((LinkButton)sender).CommandArgument;
+  }
+  string DisplayFieldList="sn 序号,title 标题名称,pub_time 发布时间";
+  string SelectedFieldList=_sql;
+  string OrderFieldList="pub_time desc";
+  string FromTableList="wp_infos";
+  string WhereStatements="";
+  object[] rv=GetWhere();
+  WhereStatements=rv[0].ToString();	   
+  string[] webctls=new string[4];
+  webctls[0]="ngo";
+  webctls[1]="npc";
+  webctls[2]="nrc";
+  webctls[3]="x_pagesize";
+
+  pageview("sqlserver","您的数据连接串",webctls,((Control)sender).ID,dbgrid,DisplayFieldList,SelectedFieldList,OrderFieldList,FromTableList,WhereStatements,(ArrayList)rv[1],"id");
+}
+object[] GetWhere(){
+  object[] rv=new object[2];
+  string WhereStatements=" where 1=1 ";
+
+  ArrayList paras = new ArrayList();
+  if(q_title.Text!=""){
+       SqlParameter   para2=new   SqlParameter("@title",SqlDbType.NVarChar,200);
+	   para2.Value=q_title.Text;
+	   paras.Add(para2);
+	   WhereStatements+=" and title like @title ";
+  }
+  if(q_pub_time1.Text!=""){
+       SqlParameter   para4=new   SqlParameter("@pub_time1",SqlDbType.DateTime);
+	   para4.Value=q_pub_time1.Text;
+	   paras.Add(para4);
+	   WhereStatements+=" and pub_time&gt;=@pub_time1 ";
+  }
+  if(q_pub_time2.Text!=""){
+       SqlParameter   para5=new   SqlParameter("@pub_time2",SqlDbType.DateTime);
+	   para5.Value=q_pub_time2.Text;
+	   paras.Add(para5);
+	   WhereStatements+=" and pub_time&lt;=@pub_time2 ";
+  }
+  rv[0]=WhereStatements;
+  rv[1]=paras;
+  return rv;
+  
+}
+</code></pre> 
+<p></p> 
+<h3 id="%E5%B0%8F%E7%BB%93">小结</h3> 
+<p>本方法同时适用于达梦8数据库的数据分页技术，我们可以根据自己的实际需要扩充兼容的数据库功能，范例中所需数据库驱动链接库，请下载我的资源：</p> 
+<p><a href="https://download.csdn.net/download/michaelline/89235824" title="https://download.csdn.net/download/michaelline/89235824">https://download.csdn.net/download/michaelline/89235824</a></p> 
+<p>感谢您的阅读，希望本文能够对您有所帮助。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/7ef903c58eab05e29c8ad38f2041da68/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Java】IO流：字节流 字符流 缓冲流</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0f7aef3c7fc1544905e45f52caea8fd6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Spring IoC&amp;DI（3）—DI详解</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

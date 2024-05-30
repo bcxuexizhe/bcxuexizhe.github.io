@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Linux——进程信号(一) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e3ba75142f08ce6411ac14312e4db257/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Linux——进程信号(一)">
+  <meta property="og:description" content="1.信号入门 1.1生活中的信号 什么是信号?
+结合实际红绿灯、闹钟、游戏中的&#34;！&#34;等等这些都是信号。
+以红绿灯为例子：
+一看到红绿灯我们就知道：红灯停、绿灯行；我们不仅知道它是一个红绿灯而且知道当其出现不同的状况时我们应该做出怎么样的行为去应对。
+识别=认识&#43;行为产生
+对于红绿灯：
+我们之前受过的教育，让我们能够识别这个红绿灯(即使它还未出现在我们眼前)，也就是说你能识别&#34;红绿灯&#34;
+当绿灯量了后我们不一定要直接走，也可以等一会再走(也就是说接收信号后我们不一定要立刻产生对应的行为)
+当红灯亮了之后，我们可以玩手机，要记得这个时候还是红灯
+当红或绿灯亮时我们可以做出其他行为，也可以忽略红绿灯
+对于信号来说(进程看待信号的方式)
+在没有发生的时候，进程已经知道发生的时候该怎么处理了信号进程能够认识，在遇见信号之前有人在&#34;大脑&#34;中设置了识别特定信号的方式(进程能够识别一个信号并处理)信号到来的时候，进程正在处理更重要的事情，这时进程暂时不能立即处理到来的信号，进程必须暂时将到来的信号进行临时保存信号到了进程可以不立即处理，等在合适的时候处理信号的产生是随时产生的，进程无法准确预料，所以信号是异步发送的(信号的产生是由别人(用户、进程)产生的，在进程收到信号之前，进程一直在忙自己的事情，并发在跑的) 为什么？
+停止、删除...系统要求进程要有随时响应外部信号的能力，随后做出反应
+我们学习信号是学习它的整个生命周期，在进程运行期间信号的生命周期分为以下几个阶段：
+准备、信号的产生、信号的保存、信号的处理
+1.2Linux中的信号 用户输入命令,在Shell下启动一个前台进程
+用户按下 Ctrl-C ,这个键盘输入产生一个硬件中断，被OS获取，解释成信号，发送给目标前台进程
+前台进程因为收到信号，进而引起进程退出
+#include&lt;iostream&gt; #include&lt;unistd.h&gt; using namespace std; int main() { while(1) { cout&lt;&lt;&#34;i am main process...&#34;&lt;&lt;endl; sleep(1); } return 0; } Ctrl-C 产生的信号只能发给前台进程。一个命令后面加个&amp;可以放到后台运行,这样Shell不必等待进程结束就可以接受新的命令,启动新的进程。Shell可以同时运行一个前台进程和任意多个后台进程,只有前台进程才能接到像 Ctrl-C 这种控制键产生的信号。前台进程在运行过程中用户随时可能按下 Ctrl-C 而产生一个信号,也就是说该进程的用户空间代码执行到任何地方都有可能收到 SIGINT 信号而终止,所以信号相对于进程的控制流程来说是异步(Asynchronous)的。 1.3信号的概念 信号是进程之间事件异步通知的一种方式，属于软中断
+在Linux操作系统中命令：kill -l可以查看系统定义的信号列表 上面的数字和名字都可以标识信号，名字其实就是宏；总共62个信号(没有0、32、33信号)
+其中：1~31号是普通信号 34~64是实时信号
+我们这里只学普通信号
+上面我们说到：每个信号都有一个编号和一个宏定义名称，这些宏定义名称可以在signal.h中找到，这些信号各自在什么条件下产生,默认的处理动作是什么,在signal(7)中都有详细说明: man 7 signal 根据我们对Linux的了解，信号存放在哪呢？既然信号是给进程的，而进程又是通过内核数据结构来管理的，那么我们可以推断出，信号是放在进程的task_struct结构体中
+既然他是在PCB中，如果创建31变量把信号全存进去，那就太浪费了；进程中信号的状态分为有或者没有，那么我们可以大胆的推断：把31个信号存放在一个只有32位整型变量中，每一个比特位都代表一个信号。
+比特位的位置，代表信号的编号
+比特位的内容：代表进程是否收到信号，1表收到，0表没收到
+那么问题来了，内核数据结构的修改，这是由谁来完成的？
+毫无疑问，是操作系统，毕竟task_struct就是由它来维护的，只有OS才有权利去修改它">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T20:06:21+08:00">
+    <meta property="article:modified_time" content="2024-05-23T20:06:21+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Linux——进程信号(一)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>1.信号入门</h2> 
+<h3>1.1生活中的信号</h3> 
+<p>什么是信号?</p> 
+<p>结合实际红绿灯、闹钟、游戏中的"！"等等这些都是信号。</p> 
+<p>以红绿灯为例子：</p> 
+<p>一看到红绿灯我们就知道：红灯停、绿灯行；我们不仅知道它是一个红绿灯而且知道当其出现不同的状况时我们应该做出怎么样的行为去应对。</p> 
+<p><strong>识别=认识+行为产生</strong></p> 
+<p>对于红绿灯：</p> 
+<blockquote> 
+ <p>我们之前受过的教育，让我们能够识别这个红绿灯(即使它还未出现在我们眼前)，也就是说你能识别"红绿灯"</p> 
+ <p>当绿灯量了后我们不一定要直接走，也可以等一会再走(也就是说接收信号后我们不一定要立刻产生对应的行为)</p> 
+ <p>当红灯亮了之后，我们可以玩手机，要记得这个时候还是红灯</p> 
+ <p>当红或绿灯亮时我们可以做出其他行为，也可以忽略红绿灯</p> 
+</blockquote> 
+<p>对于信号来说(进程看待信号的方式)</p> 
+<blockquote> 
+ <ol><li>在没有发生的时候，进程已经知道发生的时候该怎么处理了</li><li>信号进程能够认识，在遇见信号之前有人在"大脑"中设置了识别特定信号的方式(进程能够识别一个信号并处理)</li><li>信号到来的时候，进程正在处理更重要的事情，这时进程暂时不能立即处理到来的信号，进程必须暂时将到来的信号进行临时保存</li><li>信号到了进程可以不立即处理，等在合适的时候处理</li><li>信号的产生是随时产生的，进程无法准确预料，所以信号是异步发送的(信号的产生是由别人(用户、进程)产生的，在进程收到信号之前，进程一直在忙自己的事情，并发在跑的)</li></ol> 
+</blockquote> 
+<p> 为什么？</p> 
+<p>停止、删除...系统要求进程要有随时响应外部信号的能力，随后做出反应</p> 
+<p>我们学习信号是学习它的整个生命周期，在进程运行期间信号的生命周期分为以下几个阶段：</p> 
+<p>准备、<strong>信号的产生、信号的保存、信号的处理</strong></p> 
+<h3 style="background-color:transparent;">1.2Linux中的信号</h3> 
+<p><span style="color:#0d0016;">用户输入命令,在Shell下启动一个前台进程<br> 用户按下 Ctrl-C ,这个键盘输入产生一个硬件中断，被OS获取，解释成信号，发送给目标前台进程<br> 前台进程因为收到信号，进而引起进程退出</span></p> 
+<pre><code class="language-cpp">#include&lt;iostream&gt;
+#include&lt;unistd.h&gt;
+
+using namespace std;
+
+int main()
+{
+    while(1)
+    {
+        cout&lt;&lt;"i am main process..."&lt;&lt;endl;
+        sleep(1);
+    }
+
+
+    return 0;
+}</code></pre> 
+<p><img alt="" height="255" src="https://images2.imgbox.com/5f/e8/MbQZRlf9_o.png" width="1060"></p> 
+<blockquote> 
+ <ol><li><span style="color:#0d0016;">Ctrl-C 产生的信号只能发给前台进程。一个命令后面加个&amp;可以放到后台运行,这样Shell不必等待进程结束就可以接受新的命令,启动新的进程。</span></li><li><span style="color:#0d0016;">Shell可以同时运行一个前台进程和任意多个后台进程,只有前台进程才能接到像 Ctrl-C 这种控制键产生的信号。</span></li><li><span style="color:#0d0016;">前台进程在运行过程中用户随时可能按下 Ctrl-C 而产生一个信号,也就是说该进程的用户空间代码执行到任何地方都有可能收到 SIGINT 信号而终止,所以信号相对于进程的控制流程来说是异步(Asynchronous)的。 </span></li></ol> 
+</blockquote> 
+<p></p> 
+<h3>1.3信号的概念</h3> 
+<blockquote> 
+ <p><span style="color:#0d0016;">信号是进程之间事件异步通知的一种方式，属于软中断</span></p> 
+</blockquote> 
+<p>在Linux操作系统中命令：kill -l可以查看系统定义的信号列表 </p> 
+<p><img alt="" height="454" src="https://images2.imgbox.com/3c/a7/nejTn7M4_o.png" width="1200"></p> 
+<p>上面的数字和名字都可以标识信号，名字其实就是宏；总共62个信号(没有0、32、33信号)</p> 
+<p>其中：1~31号是普通信号                                        34~64是实时信号</p> 
+<p>我们这里只学普通信号</p> 
+<blockquote> 
+ <p><span style="color:#0d0016;">上面我们说到：每个信号都有一个编号和一个宏定义名称，这些宏定义名称可以在signal.h中找到，这些信号各自在什么条件下产生,默认的处理动作是什么,在signal(7)中都有详细说明: <strong>man 7 signal</strong></span><strong> </strong></p> 
+ <p><img alt="" height="1051" src="https://images2.imgbox.com/a5/4a/WNp5hBAo_o.png" width="1200"></p> 
+</blockquote> 
+<p>根据我们对Linux的了解，信号存放在哪呢？既然信号是给进程的，而进程又是通过内核数据结构来管理的，那么我们可以推断出，信号是放在进程的task_struct结构体中</p> 
+<p>既然他是在PCB中，如果创建31变量把信号全存进去，那就太浪费了；进程中信号的状态分为有或者没有，那么我们可以大胆的推断：把31个信号存放在一个只有32位整型变量中，每一个比特位都代表一个信号。</p> 
+<p>比特位的位置，代表信号的编号</p> 
+<p>比特位的内容：代表进程是否收到信号，1表收到，0表没收到</p> 
+<p>那么问题来了，内核数据结构的修改，这是由谁来完成的？</p> 
+<p>毫无疑问，是<strong>操作系统</strong>，毕竟task_struct就是由它来维护的，只有OS才有权利去修改它</p> 
+<p>所以说，无论哪个信号，最后都是经由OS之手<strong>发送</strong>给进程的(发送指的是修改进程PCB中存放信号那个变量的比特位)</p> 
+<blockquote> 
+ <p>信号发送的本质就是：在修改进程PCB中信号位图</p> 
+</blockquote> 
+<p> 信号处理常见方式概览：</p> 
+<blockquote> 
+ <p><span style="color:#0d0016;">1. 忽略此信号。<br> 2. 执行该信号的默认处理动作。<br> 3. 提供一个信号处理函数,要求内核在处理该信号时切换到用户态执行这个处理函数,这种方式称为捕捉(Catch)一个信号。</span></p> 
+</blockquote> 
+<p></p> 
+<h2>2.信号的产生</h2> 
+<p>kill系统调用接口</p> 
+<pre><code class="language-cpp">kill -9 pid //杀死进程
+kill -2 pid //终止进程</code></pre> 
+<p><img alt="" height="338" src="https://images2.imgbox.com/ab/23/5RcvwiDH_o.png" width="1200"></p> 
+<p> <img alt="" height="227" src="https://images2.imgbox.com/82/c5/5KlUkmfW_o.png" width="1200"></p> 
+<h3 style="background-color:transparent;">2.1通过按键产生信号</h3> 
+<p>通过键盘上按一些热键，来给进程发送相应的信号，比如上面的ctrl c，它产生的是2号信号；ctrl \产生的则是3号信号</p> 
+<p>如何进行自定义处理信号呢？</p> 
+<p>信号捕捉</p> 
+<p>signal</p> 
+<p><img alt="" height="275" src="https://images2.imgbox.com/9b/dc/xJ8wJI7j_o.png" width="907"></p> 
+<p>sighandler_t 返回值        signum几号信号       </p> 
+<p>handler自定义方法 typedef void (*sighandler_t)(int)</p> 
+<pre><code class="language-cpp">#include&lt;iostream&gt;
+#include&lt;unistd.h&gt;
+#include&lt;signal.h&gt;
+#include&lt;sys/types.h&gt;
+using namespace std;
+
+void handler(int signo)
+{
+    cout&lt;&lt;"get a sig,number is:"&lt;&lt;signo&lt;&lt;endl;
+}
+
+int main()
+{
+    signal(SIGINT,handler);
+    while(1)
+    {
+        cout&lt;&lt;"I am activing...,pid:"&lt;&lt;getpid()&lt;&lt;endl;
+        sleep(1);
+    }
+
+
+    return 0;
+}</code></pre> 
+<p>设置信号捕捉只需要一次</p> 
+<p>signal调用完了handler方法不会被立即执行，这里只是设置对应的信号的处理方法  </p> 
+<p><img alt="" height="634" src="https://images2.imgbox.com/cb/b6/AEtW8Wjl_o.png" width="934"></p> 
+<p></p> 
+<p>这时候我们发现Ctrl C杀不了这个进程了，这是因为我们捕捉信号后(信号的处理方式是自定义处理信号)对于2号信号的处理动作变成执行handler方法</p> 
+<p></p> 
+<h3><span style="color:#0d0016;">2.2调用系统函数向进程发信号</span></h3> 
+<p><span style="color:#0d0016;">系统调用和命令的名字一样，man 2 kill 查看</span></p> 
+<p><img alt="" height="419" src="https://images2.imgbox.com/f2/6f/ThRwhfCA_o.png" width="1136"></p> 
+<p></p> 
+<p>pid_t pid ：要给发信号的pid </p> 
+<p>int sig:要发送的信号编号</p> 
+<p>返回值：发送成功返回0，失败返回-1 </p> 
+<p>该系统调用是一个进程给另一个进程发送指定信号，可以向任意进程发送任意信号</p> 
+<pre><code class="language-cpp">#include&lt;iostream&gt;
+#include&lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include&lt;signal.h&gt;
+#include&lt;sys/types.h&gt;
+using namespace std;
+
+int main(int argc, char *argv[])
+{
+    if(argc != 3)
+    {
+        cout &lt;&lt; "Usage: " &lt;&lt; argv[0] &lt;&lt; " -signumber pid" &lt;&lt; endl;
+        return 1;
+    }
+
+    int signumber = stoi(argv[1]+1);
+    int pid = stoi(argv[2]);
+
+    int n = kill(pid, signumber);
+    if(n &lt; 0)
+    {
+        cerr &lt;&lt; "kill error, " &lt;&lt; strerror(errno) &lt;&lt; endl;
+    }
+
+    return 0;
+}</code></pre> 
+<p><img alt="" height="296" src="https://images2.imgbox.com/b1/55/JRSUjcwV_o.png" width="683"></p> 
+<p><img alt="" height="302" src="https://images2.imgbox.com/fb/99/DPvuGuCi_o.png" width="1200"></p> 
+<p>raise给自己发送任意信号</p> 
+<p><img alt="" height="590" src="https://images2.imgbox.com/41/3e/eknmRmXA_o.png" width="1173"> </p> 
+<pre><code class="language-cpp">#include&lt;iostream&gt;
+#include&lt;unistd.h&gt;
+#include&lt;signal.h&gt;
+
+using namespace std;
+int main()
+{
+    cout&lt;&lt;"开始运行..."&lt;&lt;endl;
+    sleep(1);
+    int n = raise(2);
+    cout&lt;&lt;"运行结束"&lt;&lt;endl;
+    return 0;
+}</code></pre> 
+<p><img alt="" height="111" src="https://images2.imgbox.com/ea/0a/uZWTx0Wj_o.png" width="645"> </p> 
+<p>abort发信号终止自己(指定信号 6号：SIGABRT) </p> 
+<p><img alt="" height="655" src="https://images2.imgbox.com/4f/4c/MLgMeHKV_o.png" width="1133"></p> 
+<p><img alt="" height="215" src="https://images2.imgbox.com/8c/8e/4N0VnLBQ_o.png" width="640"> </p> 
+<h3> 2.3软件条件产生信号</h3> 
+<p>比如管道那时候，把读端关闭(没有了写的条件)，那么写端也会收到信号关闭(SIGPIPE)</p> 
+<p>再举个闹钟的例子：</p> 
+<p>alarm</p> 
+<p><img alt="" height="410" src="https://images2.imgbox.com/e9/48/ckfTz9ax_o.png" width="1200"></p> 
+<p>unsigned int 返回值 :上一个闹钟剩余秒数</p> 
+<pre><code class="language-cpp">#include&lt;iostream&gt;
+#include&lt;unistd.h&gt;
+#include &lt;string.h&gt;
+#include&lt;signal.h&gt;
+#include&lt;sys/types.h&gt;
+using namespace std;
+int g_cnt = 0;
+void handler(int sig)
+{
+    std::cout &lt;&lt; "get a sig: " &lt;&lt; sig &lt;&lt; " g_cnt: " &lt;&lt; g_cnt &lt;&lt; std::endl;
+    unsigned int n = alarm(5);
+
+    cout &lt;&lt; "还剩多少时间: " &lt;&lt; n &lt;&lt; endl;
+    exit(0);
+}
+
+int mian()
+{
+    //设定一个闹钟
+    signal(SIGALRM,handler);
+    alarm(5);
+    while(true)
+    {
+        g_cnt++;
+    }
+    int cnt = 0;
+    while(true)
+    {
+        sleep(1);
+        cout &lt;&lt; "cnt : " &lt;&lt; cnt++ &lt;&lt; ", pid is : "&lt;&lt; getpid() &lt;&lt; endl; //IO其实很慢
+        if(cnt == 2)
+        {
+            int n = alarm(0); // alarm(0): 取消闹钟
+            cout &lt;&lt; " alarm(0) ret : " &lt;&lt; n &lt;&lt; endl;
+        }
+    }
+
+    return 0;
+}</code></pre> 
+<p> <img alt="" height="107" src="https://images2.imgbox.com/9e/be/j4L3irtr_o.png" width="637"></p> 
+<h3>2.4硬件异常产生信号 </h3> 
+<p>最后一种产生信号的方式：异常</p> 
+<p><span style="color:#0d0016;">硬件异常被硬件以某种方式被硬件检测到并通知内核,然后内核向当前进程发送适当的信号。例如当前进程执行了除以0的指令,CPU的运算单元会产生异常,内核将这个异常解释 为SIGFPE信号发送给进程。再比如当前进程访问了非法内存地址,MMU会产生异常,内核将这个异常解释为SIGSEGV信号发送给进程。</span></p> 
+<p>除零错误引发异常 8）SIGFPE</p> 
+<p></p> 
+<pre><code class="language-cpp">void handler(int sig)
+{
+    cout&lt;&lt;"get a sig:"&lt;&lt;sig&lt;&lt;endl;
+    exit(1);
+}
+
+int main()
+{
+    signal(SIGFPE,handler);
+    int a = 10;
+    a /= 0;
+    while(1)
+    {
+        sleep(1);
+    }
+    return 0;
+}</code></pre> 
+<p><img alt="" height="97" src="https://images2.imgbox.com/6a/ed/2ZFzlB5C_o.png" width="706"></p> 
+<p> </p> 
+<p></p> 
+<p></p> 
+<p>野指针                  11）SIGSEGV</p> 
+<pre><code class="language-cpp">void handler(int sig)
+{
+    cout&lt;&lt;"get a sig:"&lt;&lt;sig&lt;&lt;endl;
+    exit(1);
+}
+int main()
+{
+    signal(SIGSEGV, handler);
+    sleep(1);
+    int *p = NULL;
+    *p = 100;
+    while(1)
+    {
+        sleep(1);
+    }
+    return 0;
+}</code></pre> 
+<p><img alt="" height="76" src="https://images2.imgbox.com/1b/f2/hsqMO1EZ_o.png" width="602"></p> 
+<h3> 2.5关于信号产生的各种情况的理解</h3> 
+<h4 style="background-color:transparent;">2.5.1键盘产生信号——硬件中断</h4> 
+<p>键盘产生信号：</p> 
+<blockquote> 
+ <p>a.按键按下了         b.哪些按键按下了         c.字符输入(字符设备),组合键输入</p> 
+</blockquote> 
+<p>字符输入：abcd         组合键输入：CTRL C                键盘驱动和OS联合解释的</p> 
+<p>OS怎么知道键盘输入了什么数据呢？        硬件中断的技术</p> 
+<p>键盘 将电信号传到CPU的针脚上 通过硬件中断转化位软信号电流，CPU再传给OS，OS通过中断向量表中以中断号去检索解释 判定是字符就放到缓冲区里面，是命令(ctrl+c)解释为信号</p> 
+<h4>2.5.2异常(硬件)产生信号——除零、解引用空指针</h4> 
+<p>除零</p> 
+<pre><code class="language-cpp">void handler(int sig)
+{
+    cout&lt;&lt;"get a sig:"&lt;&lt;sig&lt;&lt;endl;
+}
+
+int main()
+{
+    signal(SIGFPE,handler);
+    int a = 10;
+    a /= 0;
+    while(1)
+    {
+        sleep(1);
+    }
+    return 0;
+}</code></pre> 
+<blockquote> 
+ <p>如果捕捉除零产生的信号不用exit退出进程的话，随着CPU时间片的轮转就会再次被调到</p> 
+ <p>CPU中只有一份寄存器，但是寄存器的内容属于当前进程的硬件上下文</p> 
+ <p><strong>当进程被切换的时候，就有无数次的状态寄存器被保存和恢复的过程</strong></p> 
+ <p><strong>而除0操作导致溢出位置一的数据还会被恢复到CPU中</strong></p> 
+ <p>所以每次恢复的时候，操作系统就会识别到，并且给对应的进程发送SIGFPE信号，这就导致了上面不停调用自定义处理函数，不停地打印</p> 
+</blockquote> 
+<p>如何理解除0？</p> 
+<blockquote> 
+ <p>进行计算的是CPU这个硬件</p> 
+ <p>CPU内部有寄存器，状态寄存器(位图)有对应的状态标记位、溢出标记位，OS会自动进行计算完后的检测，如果溢出标记位是1，CPU会告诉OS有溢出的问题，OS就会来查看问题并且找到出问题的那个进程，并且将所识别到的硬件错误包装成信号发送给目标进程，本质就是操作系统去直接找到这个进程的task_struct并向该进程写入8信号</p> 
+</blockquote> 
+<p></p> 
+<p>野指针异常</p> 
+<p> 对于野指针异常来说，实际上也是CPU、OS共同配合的结果</p> 
+<p>我们所说的野指针指的是虚拟地址，虚拟地址和物理地址的转化如果是成功的，那么就不会抛出野指针异常，如果是失败的，那么CPU就会告诉OS出问题了，OS就会找到那个进程并发出11号信号，让他终止</p> 
+<blockquote> 
+ <p>虚拟地址与物理地址之间的映射是由一个叫MMU的硬件完成的，他是一种负责处理CPU的内存访问请求的计算机硬件</p> 
+ <p>页表实际上是页表和MMU的结合，而MMU位于CPU中。在讨论中一般会简化称为页表。</p> 
+ <p>当对空指针解引用的时候，MMU会拒绝这种操作，从而产生异常标志</p> 
+ <p>操作系统拿到MMU产生的异常以后就会给对应的进程发送SIGSEGV信号</p> 
+ <p></p> 
+</blockquote> 
+<h2>3.信号的保存</h2> 
+<p>上面我们提到：如果当前进行更重要的工作，那么它会将信号进行保存，等到合适的时候再做处理，那么信号的保存机制是怎么实现的呢？</p> 
+<h3>3.1信号常见概念</h3> 
+<blockquote> 
+ <ul><li>实际执行信号的处理动作称为<strong>信号递达(Delivery)</strong></li><li>信号从产生到递达之间的状态,称为<strong>信号未决(Pending)。</strong></li><li>进程可以选择<strong>阻塞 (Block )</strong>某个信号</li><li>被阻塞的信号产生时将保持在未决状态,直到进程解除对此信号的阻塞,才执行递达的动作</li></ul> 
+</blockquote> 
+<p><strong> 注意</strong>: 阻塞和忽略是不同的,只要信号被阻塞就不会递达,而忽略是在递达之后可选的一种处理动作</p> 
+<p>进程PCB中有一张位图：用来表示有无收到指定信号</p> 
+<p>还有一张位图：比特位的位置依然是信号编号，比特位的内容表示是否阻塞该信号</p> 
+<p>如：1号位图4号信号位置为1，2号位图4号信号位置为0，4号信号无阻塞通畅递达</p> 
+<p>1号位图6号信号位置为1，2号位图6号信号位置为1，6号信号阻塞，不递达(除非未来解除阻塞)</p> 
+<h3>3.2在内核中的表示</h3> 
+<p>记住三张表 </p> 
+<p><img alt="" height="344" src="https://images2.imgbox.com/88/a2/PQKQLBL9_o.png" width="1002"></p> 
+<p>block表：位图        pending表：位图        handler表：函数指针数组 </p> 
+<blockquote> 
+ <p>每个信号都有两个标志位分别表示阻塞(block)和未决(pending),还有一个函数指针表示处理动作。信号产生时,内核在进程控制块中设置该信号的未决标志,直到信号递达才清除该标志。在上图的例子中,SIGHUP信号未阻塞也未产生过,当它递达时执行默认处理动作。</p> 
+ <p></p> 
+ <p>SIGINT信号产生过,但正在被阻塞,所以暂时不能递达。虽然它的处理动作是忽略,但在没有解除阻塞之前不能忽略这个信号,因为进程仍有机会改变处理动作之后再解除阻塞。</p> 
+ <p></p> 
+ <p>SIGQUIT信号未产生过,一旦产生SIGQUIT信号将被阻塞,它的处理动作是用户自定义函数sighandler。<br> 如果在进程解除对某信号的阻塞之前这种信号产生过多次,将如何处理?POSIX.1允许系统递送该信号一次或多次。Linux是这样实现的:常规信号在递达之前产生多次只计一次,而实时信号在递达之前产生多次可以依次放在一个队列里。本章不讨论实时信号。 </p> 
+</blockquote> 
+<h3>3.3三张表匹配的操作和系统调用 </h3> 
+<p>在此之前，了解一下sigset_t</p> 
+<blockquote> 
+ <p>从上图来看,每个信号只有一个bit的未决标志,非0即1,不记录该信号产生了多少次,阻塞标志也是这样表示的。<br> 因此,未决和阻塞标志可以用相同的数据类型sigset_t来存储,sigset_t称为信号集,这个类型可以表示每个信号的<strong>“有效”或“无效”状态,在阻塞信号集中“有效”和“无效”的含义是该信号是否被阻塞,而在未决信号集中“有效”和“无效”的含义是该信号是否处于未决状态</strong>。 阻塞信号集也叫做当前进程的信号屏蔽字(Signal Mask),这里的“屏蔽”应该理解为阻塞而不是忽略。</p> 
+ <p></p> 
+</blockquote> 
+<p> sigset_t类型对于每种信号用一个bit表示“有效”或“无效”状态,至于这个类型内部如何存储这些bit则依赖于系统实现,从使用者的角度是不必关心的,使用者只能调用以下函数来操作sigset_ t变量,而不应该对它的内部数据做任何解释,比如用printf直接打印sigset_t变量是没有意义的</p> 
+<h4>3.3.1信号集操作函数</h4> 
+<p>man sigemptyset:</p> 
+<p><img alt="" height="999" src="https://images2.imgbox.com/ed/ae/KdTbKLWc_o.png" width="1200"></p> 
+<blockquote> 
+ <p>sigset_t set：信号集变量</p> 
+ <p>int signum：信号编号</p> 
+ <p>返回值：成功返回0，失败返回-1。 </p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#fe2c24;">函数sigemptyset：</span></p> 
+ <p><strong>初始化</strong>set所指向的信号集,使其中所有信号的对应bit清零,表示该信号集不包含 任何有效信号<br><span style="color:#fe2c24;">函数sigfillset：</span></p> 
+ <p><strong>初始化</strong>set所指向的信号集,使其中所有信号的对应bit置位,表示 该信号集的有效信号包括系统支持的所有信号。</p> 
+ <p><br> 注意,在使用sigset_ t类型的变量之前,一定要调 用sigemptyset或sigfillset做初始化,使信号集处于确定的状态。</p> 
+ <p></p> 
+ <p>初始化sigset_t变量之后就可以在调用<span style="color:#fe2c24;">sigaddset</span>和<span style="color:#fe2c24;">sigdelset</span>在该<strong>信号集中添加或删除某种有效信号</strong></p> 
+ <p>sigismember是一个布尔函数,用于判断一个信号集的有效信号中是否包含某种信号</p> 
+</blockquote> 
+<h4>3.3.2sigprocmask</h4> 
+<p>调用函数sigprocmask可以读取或更改进程的信号屏蔽字(阻塞信号集)。</p> 
+<p>man sigprocmask</p> 
+<p><img alt="" height="211" src="https://images2.imgbox.com/7c/4a/ldap8sgc_o.png" width="996"></p> 
+<blockquote> 
+ <p>int how: 修改方式，有三个选项</p> 
+ <p><img alt="" height="192" src="https://images2.imgbox.com/4d/a3/dSVV2gNC_o.png" width="924"></p> 
+ <p>set:</p> 
+ <p>我们设置号的sigset_t变量</p> 
+ <p>oldset:</p> 
+ <p>输出型参数，将修改之前的信号屏蔽字保存到oldset</p> 
+ <p>返回值：sigprocmask函数调用成功返回0，出错返回-1</p> 
+ <p></p> 
+</blockquote> 
+<h4>3.3.3pending的系统调用sigpending</h4> 
+<p>读取当前进程的未决信号集,通过set参数传出。调用成功则返回0,出错则返回-1。</p> 
+<p>man sigpending</p> 
+<p><img alt="" height="609" src="https://images2.imgbox.com/18/6b/xhsSYzot_o.png" width="1200"></p> 
+<p> </p> 
+<h2> 4.代码</h2> 
+<pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;signal.h&gt;
+#include &lt;unistd.h&gt;
+#include &lt;cassert&gt;
+#include &lt;sys/wait.h&gt;
+using namespace std;
+
+
+void PrintSig(sigset_t &amp;pending)
+{
+    cout&lt;&lt;"Pending bitmap:"&lt;&lt;endl;
+    for(int i=31;i&gt;0;i--)//i为比特位，也是信号编号
+    {
+        if(sigismember(&amp;pending,i))
+        {
+            cout&lt;&lt;"1";
+        }
+        else
+        {
+            cout&lt;&lt;"0";
+        }
+    }
+    cout&lt;&lt;endl;
+}
+void handler(int sig)
+{
+    sigset_t pending;
+    sigemptyset(&amp;pending);
+    int n = sigpending(&amp;pending);//正在处理2号信号
+    assert(n==0);
+    cout&lt;&lt;"递达中..."&lt;&lt;endl;
+    PrintSig(pending);
+    cout&lt;&lt;sig&lt;&lt;"号信号被递达处理"&lt;&lt;endl;
+
+}
+
+int main()
+{
+    //对2号信号进行自定义捕捉
+    signal(2,handler);
+    sigset_t block,o_block;
+    //屏蔽2号信号
+    sigemptyset(&amp;block);
+    sigemptyset(&amp;o_block);
+    sigaddset(&amp;block,2);
+    //进入内核
+    int n = sigprocmask(SIG_SETMASK,&amp;block,&amp;o_block);
+    assert(n==0);
+    cout&lt;&lt;"block 2 signal success"&lt;&lt;"pid:"&lt;&lt;getpid()&lt;&lt;endl;
+    int cnt = 0;
+    while(1)
+    {
+        sigset_t pending;
+        sigemptyset(&amp;pending);
+        n = sigpending(&amp;pending);
+        assert(n == 0);
+        //打印pending位图中收到的信号
+        PrintSig(pending);
+        cnt++;
+        //解除对2号信号的屏蔽
+        if(cnt==10)
+        {
+            n = sigprocmask(SIG_UNBLOCK,&amp;block,&amp;o_block);
+            assert(n==0);
+        }
+        sleep(1);
+    }
+
+    return 0;
+}</code></pre> 
+<p><img alt="" height="1172" src="https://images2.imgbox.com/14/3f/zzYcrH37_o.png" width="1200"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/e345a72810d6e7879de608b4dba037d2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Linux实用操作</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9b2526027417a160fbb072dffebadfd6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">python3如何查看是32位还是64位</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

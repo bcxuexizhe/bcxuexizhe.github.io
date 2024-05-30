@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【MySQL】MySQL在 Linux下环境安装 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/65d2140880a679d00e06e168ecef8e03/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【MySQL】MySQL在 Linux下环境安装">
+  <meta property="og:description" content="MySQL的安装 1.卸载不要的环境2.获取mysql官方yum源3.安装mysql yum源4.安装mysql服务5.登录问题5.配置my.cnf6.设置开机启动(可以不设) 说明：
+安装与卸载中，用户全部切换成为root，一旦安装，普通用户也能使用的 1.卸载不要的环境 ps ajx | grep mariadb # 先检查云服务器是否配的有mariadb存在 像我这里就是没有的
+如果有就先停止掉
+systemctl stop mariadb.service # 停⽌mariadb 服务 检查是否安装过mysql
+ps ajx | grep mysql 我这里就是安装过的
+先切成root用户，然后暂停mysql服务，在查一下mysql就没有了在运行了
+systemctl stop mysqld #关闭mysql服务 如果曾经安装过mariadb或mysql，系统里面一定会有各种安装包，一般通过yum的方式获取到的安装包都是 .rpm 为后缀的
+rpm -qa | grep mysql #查看mysql安装包 下面把这些安装包卸载，当然你可以一个一个卸载，也可以一次卸载一批
+xargs这个指令是将前面内容拼接到这条命令的最后面，因为以前是通过yum安装的，所以还通过yum卸载
+rpm -qa | grep mysql | xargs yum -y remove 卸载完，再查一下发现没有了，这才是真的卸载完成
+ls /etc/my.cnf #检查当前是否有这个文件，如果卸载了mysql这个是没有的 ls /var/lib/mysql #在系统中mysql默认在这个路径下 这个是上一个mysql残留下来的数据，mysql卸载时默认没把数据删掉，这个也是清理之中的，不影响后面的操作
+2.获取mysql官方yum源 mysql官方yum源
+注意：最好安装和自己系统⼀致的mysql版本，否则可能会存在软件兼容性问题
+cat /etc/redhat-release #查看自己的系统版本 mysql有5.7 和8.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-21T09:44:17+08:00">
+    <meta property="article:modified_time" content="2024-05-21T09:44:17+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【MySQL】MySQL在 Linux下环境安装</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>MySQL的安装</h4> 
+ <ul><li><a href="#1_6" rel="nofollow">1.卸载不要的环境</a></li><li><a href="#2mysqlyum_65" rel="nofollow">2.获取mysql官方yum源</a></li><li><a href="#3mysql_yum_89" rel="nofollow">3.安装mysql yum源</a></li><li><a href="#4mysql_115" rel="nofollow">4.安装mysql服务</a></li><li><a href="#5_173" rel="nofollow">5.登录问题</a></li><li><a href="#5mycnf_237" rel="nofollow">5.配置my.cnf</a></li><li><a href="#6_258" rel="nofollow">6.设置开机启动(可以不设)</a></li></ul> 
+</div> 
+<p></p> 
+<p>说明：</p> 
+<ul><li>安装与卸载中，用户全部切换成为root，一旦安装，普通用户也能使用的</li></ul> 
+<h2><a id="1_6"></a>1.卸载不要的环境</h2> 
+<pre><code class="prism language-powershell"> <span class="token function">ps</span> ajx <span class="token punctuation">|</span> grep mariadb  <span class="token comment"># 先检查云服务器是否配的有mariadb存在</span>
+</code></pre> 
+<p>像我这里就是没有的</p> 
+<p><img src="https://images2.imgbox.com/6f/af/eSOiy9ct_o.png" alt="在这里插入图片描述"></p> 
+<p>如果有就先停止掉</p> 
+<pre><code class="prism language-powershell">systemctl stop mariadb<span class="token punctuation">.</span>service <span class="token comment"># 停⽌mariadb 服务</span>
+</code></pre> 
+<p>检查是否安装过mysql</p> 
+<pre><code class="prism language-powershell"><span class="token function">ps</span> ajx <span class="token punctuation">|</span> grep mysql
+</code></pre> 
+<p>我这里就是安装过的</p> 
+<p><img src="https://images2.imgbox.com/16/88/J901GsV6_o.png" alt="在这里插入图片描述"></p> 
+<p>先切成root用户，然后暂停mysql服务，在查一下mysql就没有了在运行了</p> 
+<pre><code class="prism language-powershell">systemctl stop mysqld  <span class="token comment">#关闭mysql服务</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/41/2e/lKvQHtQp_o.png" alt="在这里插入图片描述"></p> 
+<p>如果曾经安装过mariadb或mysql，系统里面一定会有各种安装包，一般通过yum的方式获取到的安装包都是 .rpm 为后缀的</p> 
+<pre><code class="prism language-powershell">rpm <span class="token operator">-</span>qa <span class="token punctuation">|</span> grep mysql <span class="token comment">#查看mysql安装包</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ce/31/PqJenyme_o.png" alt="在这里插入图片描述"></p> 
+<p>下面把这些安装包卸载，当然你可以一个一个卸载，也可以一次卸载一批</p> 
+<p>xargs这个指令是将前面内容拼接到这条命令的最后面，因为以前是通过yum安装的，所以还通过yum卸载</p> 
+<pre><code class="prism language-powershell">rpm <span class="token operator">-</span>qa <span class="token punctuation">|</span> grep mysql <span class="token punctuation">|</span> xargs yum <span class="token operator">-</span>y remove
+</code></pre> 
+<p>卸载完，再查一下发现没有了，这才是真的卸载完成</p> 
+<p><img src="https://images2.imgbox.com/70/8a/VtXpueo1_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-powershell"><span class="token function">ls</span> <span class="token operator">/</span>etc/my<span class="token punctuation">.</span>cnf <span class="token comment">#检查当前是否有这个文件，如果卸载了mysql这个是没有的</span>
+</code></pre> 
+<pre><code class="prism language-powershell"><span class="token function">ls</span> <span class="token operator">/</span><span class="token keyword">var</span><span class="token operator">/</span>lib/mysql <span class="token comment">#在系统中mysql默认在这个路径下</span>
+</code></pre> 
+<p>这个是上一个mysql残留下来的数据，mysql卸载时默认没把数据删掉，这个也是清理之中的，不影响后面的操作</p> 
+<p><img src="https://images2.imgbox.com/65/f7/hCPVG82r_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="2mysqlyum_65"></a>2.获取mysql官方yum源</h2> 
+<p><a href="https://repo.mysql.com/" rel="nofollow">mysql官方yum源</a></p> 
+<p>注意：最好安装和自己系统⼀致的mysql版本，否则可能会存在软件兼容性问题</p> 
+<pre><code class="prism language-powershell"><span class="token function">cat</span> <span class="token operator">/</span>etc/redhat-release <span class="token comment">#查看自己的系统版本</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/1a/8f/yJAxIV9i_o.png" alt="在这里插入图片描述"></p> 
+<p>mysql有5.7 和8.0 我们采用最常用的5.7，el代表CentOS，虽然这里没有7.6的但是我们可以选这个，如果有和自己对应的版本7.7、7.8、7.9就选择对应的。</p> 
+<p><img src="https://images2.imgbox.com/61/d2/rTyHZOEJ_o.png" alt="在这里插入图片描述"></p> 
+<p>下载到你的本地，然后上传到你的Linux服务器</p> 
+<pre><code class="prism language-powershell">rz  <span class="token comment">#拉取本地文件到linux服务器</span>
+</code></pre> 
+<p>现在确实看到是存在的</p> 
+<p><img src="https://images2.imgbox.com/14/6c/1KffcJDk_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3mysql_yum_89"></a>3.安装mysql yum源</h2> 
+<p>rpm是安装命令，yum是下载命令</p> 
+<p>对比前后yum 源</p> 
+<pre><code class="prism language-powershell"><span class="token function">ls</span> <span class="token operator">/</span>etc/yum<span class="token punctuation">.</span>repos<span class="token punctuation">.</span>d/ <span class="token operator">-</span>l
+</code></pre> 
+<p>没安装之前</p> 
+<p><img src="https://images2.imgbox.com/63/4d/XIWfpOU9_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-powershell">rpm <span class="token operator">-</span>ivh mysql57-community-release-el7<span class="token punctuation">.</span>rpm <span class="token comment">#安装刚才下载的mysql源</span>
+</code></pre> 
+<p>安装之后，发现多了两个mysql</p> 
+<p><img src="https://images2.imgbox.com/d9/ab/iATMWUwr_o.png" alt="在这里插入图片描述"></p> 
+<p>测试看看能不能正常工作，如果有内容说明yum已经生效了</p> 
+<pre><code class="prism language-powershell">yum list <span class="token punctuation">|</span>grep mysql
+</code></pre> 
+<h2><a id="4mysql_115"></a>4.安装mysql服务</h2> 
+<p>上面安装好之后，我们就可以用yum的方式一键安装mysql</p> 
+<pre><code class="prism language-powershell"> yum install <span class="token operator">-</span>y mysql-community-server <span class="token comment">#安装mysql</span>
+</code></pre> 
+<p>它会将公共部分、库、客户端，服务器都安装。</p> 
+<p>如果在安装的时候报错了。最常见就是两种问题</p> 
+<p><strong>1.安装遇到秘钥过期的问题：</strong></p> 
+<pre><code class="prism language-powershell">Failing package is: mysql-community-client-5<span class="token punctuation">.</span>7<span class="token punctuation">.</span>39-1<span class="token punctuation">.</span>el7<span class="token punctuation">.</span>x86_64
+GPG Keys are configured as: file:<span class="token operator">/</span><span class="token operator">/</span><span class="token operator">/</span>etc/pki/rpm-gpg/RPM-GPG-KEY-mysql
+
+解决⽅案：
+rpm <span class="token operator">--</span>import https:<span class="token operator">/</span><span class="token operator">/</span>repo<span class="token punctuation">.</span>mysql<span class="token punctuation">.</span>com/RPM-GPG-KEY-mysql-2022
+</code></pre> 
+<p>将上面命令输入命令行，然后在重新安装就可以了</p> 
+<p><strong>2.安装之后可能发现自己装的是mysql80，根本原因是因为把mysql yum源下载错了</strong></p> 
+<p>安装mysql成功，输入下面命令可以看到存在一个my.cnf的文件</p> 
+<pre><code class="prism language-powershell"><span class="token function">ls</span> <span class="token operator">/</span>etc/my<span class="token punctuation">.</span>cnf
+</code></pre> 
+<p><img src="https://images2.imgbox.com/71/cd/XtERAsXw_o.png" alt="在这里插入图片描述"></p> 
+<p>存在mysql服务端和客户端</p> 
+<p><img src="https://images2.imgbox.com/b8/38/bu7iotMP_o.png" alt="在这里插入图片描述"></p> 
+<p>mysqld是服务端，一般启动mysql服务端明显看到/sbin/mysqld代表超级用户需要执行它，一般像mysql等这种存储相关的网络服务启动时必须是root权限。我们普通用户用的不是root启动的服务端，而是mysql客户端。</p> 
+<p>有上面三个东西说明mysql是装好了！</p> 
+<p>然后我们将mysql服务启动</p> 
+<pre><code class="prism language-powershell">systemctl <span class="token function">start</span> mysqld <span class="token comment">#启动mysql服务</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e5/73/jv4zrwvA_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/db/d5/KJqYzDDR_o.png" alt="在这里插入图片描述"></p> 
+<p>启动之后我们登录一下</p> 
+<pre><code class="prism language-powershell">mysql <span class="token operator">-</span>uroot <span class="token operator">-</span>p
+</code></pre> 
+<p>我们发现登录不进去</p> 
+<p><img src="https://images2.imgbox.com/54/8b/oeQ2qYDM_o.png" alt="在这里插入图片描述"><br> 下面我们解决如何在现阶段进行常规登录，</p> 
+<h2><a id="5_173"></a>5.登录问题</h2> 
+<p><strong>登录方法一（不行就下一个）</strong></p> 
+<p><strong>获取临时root密码，使用临时密码登录</strong></p> 
+<pre><code class="prism language-powershell">sudo grep <span class="token string">'temporary password'</span> <span class="token operator">/</span><span class="token keyword">var</span><span class="token operator">/</span>log/mysqld<span class="token punctuation">.</span>log <span class="token comment">#获取临时root密码</span>
+</code></pre> 
+<p>登录之后可以自己修改一下</p> 
+<p>判断修改密码时候新密码是否符合当前的策略，不满足报错，不让修改，关闭它。安全强度，默认为中，即1，要求必须包含 数字、符号、大小写字母，长度至少为8位</p> 
+<blockquote> 
+ <p>mysql&gt; set global validate_password_policy=0;</p> 
+</blockquote> 
+<p>密码最小长度</p> 
+<blockquote> 
+ <p>mysql&gt; set global validate_password_length=1;</p> 
+</blockquote> 
+<p>修改本地登录密码，暂不授权远程登录</p> 
+<blockquote> 
+ <p>mysql&gt; ALTER USER ‘root’@‘localhost’ IDENTIFIED BY ‘qwer@wu.888’;</p> 
+</blockquote> 
+<blockquote> 
+ <p>mysql&gt; FLUSH PRIVILEGES;</p> 
+</blockquote> 
+<p>如果你安装的最新的mysql，没有所谓的临时密码，root默认没有密码</p> 
+<p><strong>登录方法二（不行就下一个）</strong></p> 
+<p>如果你安装的最新的mysql，没有所谓的临时密码，root默认没有密码<br> 试着直接client登陆⼀下</p> 
+<p><strong>登录方法三（这个肯定行）</strong></p> 
+<pre><code class="prism language-powershell">vim <span class="token operator">/</span>etc/my<span class="token punctuation">.</span>cnf <span class="token comment">#打开mysql配置⽂件</span>
+</code></pre> 
+<p>在[mysqld]最后一栏配置(不知道是什么，就放在配置文件最后) 加入: skip-grant-tables 选项，并保存退出。就是登录时不给再给我做密码认证了。</p> 
+<p><img src="https://images2.imgbox.com/43/5a/4YtEjBmP_o.png" alt="在这里插入图片描述"></p> 
+<p>然后重启mysql服务，才能配置文件生效！</p> 
+<pre><code class="prism language-powershell">systemctl stop mysqld <span class="token comment">#关闭</span>
+systemctl <span class="token function">start</span> mysqld <span class="token comment">#启动</span>
+</code></pre> 
+<pre><code class="prism language-powershell">systemctl restart mysqld <span class="token comment">#直接重启</span>
+</code></pre> 
+<p>两种办法都可以，然后在登录就不要密码直接按空格进去了</p> 
+<p><img src="https://images2.imgbox.com/34/5b/gI7G4XCb_o.png" alt="在这里插入图片描述"></p> 
+<p>查看自己的数据库</p> 
+<p><img src="https://images2.imgbox.com/2f/7c/n2Nkpr2S_o.png" alt="在这里插入图片描述"></p> 
+<p>退出</p> 
+<p><img src="https://images2.imgbox.com/07/39/Ca8gZeT0_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="5mycnf_237"></a>5.配置my.cnf</h2> 
+<p>解决mysql编码不一致问题，这里我们统一使用utf8进行编码，也可以自己该mysql端口号</p> 
+<p><strong>改mysql端口号</strong></p> 
+<p>想改就改不改就不用写这句话</p> 
+<p><img src="https://images2.imgbox.com/19/3c/kKGjfMIU_o.png" alt="在这里插入图片描述"><br> datadir 是未来mysql建库建表时数据所在的路径<br> log-error 是错误日子所在路径</p> 
+<p><img src="https://images2.imgbox.com/f6/1c/pyacSHZC_o.png" alt="在这里插入图片描述"><br> <strong>server编码格式</strong></p> 
+<p><img src="https://images2.imgbox.com/10/d2/hJChbpeG_o.png" alt="在这里插入图片描述"><br> <strong>存储引擎</strong></p> 
+<p><img src="https://images2.imgbox.com/97/7a/DLOm2qjj_o.png" alt="在这里插入图片描述"></p> 
+<p>改完重启服务一下才能生效！</p> 
+<h2><a id="6_258"></a>6.设置开机启动(可以不设)</h2> 
+<p>因为我们的服务器是布置在云服务器上，云服务器不会关机，因此可以不设</p> 
+<p>开启开机自启动</p> 
+<pre><code class="prism language-powershell">systemctl enable mysqld
+systemctl daemon-reload
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f06534c76642ddbb53dc38edc4161ed8/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">HBase 基础结构</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8c14e75ee2cfd314c3c7574227f32bdc/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【代码随想录】【算法训练营】【第14天】 [144]二叉树的前序遍历 [94]二叉树的中序遍历 [145]二叉树的后序遍历</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

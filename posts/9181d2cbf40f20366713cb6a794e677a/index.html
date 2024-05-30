@@ -1,0 +1,494 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Gin框架学习笔记(五) ——文件上传与路由中间件 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9181d2cbf40f20366713cb6a794e677a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Gin框架学习笔记(五) ——文件上传与路由中间件">
+  <meta property="og:description" content="文件上传 单文件上传 这里我准备了一张图片,我们想要实现当我们上传了一个图片的时候，这张图片可以出现在服务器中我们指定的位置，图片如下：
+我们可以基于Gin框架来实现我们上述的操作
+package main import &#34;C&#34; import ( &#34;fmt&#34; &#34;github.com/gin-gonic/gin&#34; ) func main() { r := gin.Default() r.MaxMultipartMemory = 8 &lt;&lt; 20 // 8 MiB, r.POST(&#34;/upload&#34;, func(c *gin.Context) { file, _ := c.FormFile(&#34;file&#34;) fmt.Println(file.Filename) dst := &#34;./Source/&#34; &#43; file.Filename c.SaveUploadedFile(file, dst) }) r.Run(&#34;:8080&#34;) } 编译运行:
+保存上传文件 SaveUploadedFile函数
+函数签名： func (c *Context) SaveUploadedFile(file *multipart.FileHeader, dst string) file:要保存的文件
+dst:保存的路径
+Create and Copy
+这个方法其实也好理解，我们读取上传文件的内容,并且以这份文件的名字创建一个文件，将读到的内容储存到这个文件中，代码如下: package main import &#34;C&#34; import ( &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-19T14:28:38+08:00">
+    <meta property="article:modified_time" content="2024-05-19T14:28:38+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Gin框架学习笔记(五) ——文件上传与路由中间件</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="_0"></a>文件上传</h2> 
+<h2><a id="_2"></a>单文件上传</h2> 
+<p>这里我准备了一张图片,我们想要实现当我们上传了一个图片的时候，这张图片可以出现在服务器中我们指定的位置，图片如下：<br> <img src="https://images2.imgbox.com/3d/1b/gxiuABmc_o.jpg" alt="在这里插入图片描述"><br> 我们可以基于Gin框架来实现我们上述的操作</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span>MaxMultipartMemory <span class="token operator">=</span> <span class="token number">8</span> <span class="token operator">&lt;&lt;</span> <span class="token number">20</span> <span class="token comment">// 8 MiB,</span>
+	r<span class="token punctuation">.</span><span class="token function">POST</span><span class="token punctuation">(</span><span class="token string">"/upload"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		file<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> c<span class="token punctuation">.</span><span class="token function">FormFile</span><span class="token punctuation">(</span><span class="token string">"file"</span><span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span>Filename<span class="token punctuation">)</span>
+		dst <span class="token operator">:=</span> <span class="token string">"./Source/"</span> <span class="token operator">+</span> file<span class="token punctuation">.</span>Filename
+		c<span class="token punctuation">.</span><span class="token function">SaveUploadedFile</span><span class="token punctuation">(</span>file<span class="token punctuation">,</span> dst<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>编译运行:<br> <img src="https://images2.imgbox.com/16/d7/MVjESBS9_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/ac/4e/cbKibtjj_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_31"></a>保存上传文件</h3> 
+<ul><li><code>SaveUploadedFile</code>函数<br> 函数签名：</li></ul> 
+<pre><code class="prism language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>Context<span class="token punctuation">)</span> <span class="token function">SaveUploadedFile</span><span class="token punctuation">(</span>file <span class="token operator">*</span>multipart<span class="token punctuation">.</span>FileHeader<span class="token punctuation">,</span> dst <span class="token builtin">string</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><code>file</code>:要保存的文件<br> <code>dst</code>:保存的路径</p> 
+<ul><li><code>Create and Copy</code><br> 这个方法其实也好理解，我们读取上传文件的内容,并且以这份文件的名字创建一个文件，将读到的内容储存到这个文件中，代码如下:</li></ul> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"C"</span>
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+	<span class="token string">"io"</span>
+	<span class="token string">"os"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span>MaxMultipartMemory <span class="token operator">=</span> <span class="token number">8</span> <span class="token operator">&lt;&lt;</span> <span class="token number">20</span> <span class="token comment">// 8 MiB,</span>
+	r<span class="token punctuation">.</span><span class="token function">POST</span><span class="token punctuation">(</span><span class="token string">"/upload"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		file<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> c<span class="token punctuation">.</span><span class="token function">FormFile</span><span class="token punctuation">(</span><span class="token string">"file"</span><span class="token punctuation">)</span>
+		fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span>Filename<span class="token punctuation">)</span>
+		fileRead<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> os<span class="token punctuation">.</span><span class="token function">Open</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span>Filename<span class="token punctuation">)</span>
+		<span class="token keyword">defer</span> fileRead<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		dst <span class="token operator">:=</span> <span class="token string">"./Source/"</span> <span class="token operator">+</span> file<span class="token punctuation">.</span>Filename
+		fileWrite<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> os<span class="token punctuation">.</span><span class="token function">Create</span><span class="token punctuation">(</span>dst<span class="token punctuation">)</span>
+		<span class="token keyword">defer</span> fileWrite<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+		io<span class="token punctuation">.</span><span class="token function">Copy</span><span class="token punctuation">(</span>fileWrite<span class="token punctuation">,</span> fileRead<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_70"></a>多文件上传</h3> 
+<pre><code class="prism language-go"><span class="token keyword">func</span> <span class="token function">file2</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">//处理多文件上传</span>
+	form<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> c<span class="token punctuation">.</span><span class="token function">MultipartForm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">//获取表单数据</span>
+	files <span class="token operator">:=</span> form<span class="token punctuation">.</span>File<span class="token punctuation">[</span><span class="token string">"upload[]"</span><span class="token punctuation">]</span>
+	<span class="token keyword">for</span> <span class="token boolean">_</span><span class="token punctuation">,</span> file <span class="token operator">:=</span> <span class="token keyword">range</span> files <span class="token punctuation">{<!-- --></span>
+		fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span>file<span class="token punctuation">.</span>Filename<span class="token punctuation">)</span>
+		dst <span class="token operator">:=</span> <span class="token string">"./Source/"</span> <span class="token operator">+</span> file<span class="token punctuation">.</span>Filename
+		c<span class="token punctuation">.</span><span class="token function">SaveUploadedFile</span><span class="token punctuation">(</span>file<span class="token punctuation">,</span> dst<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span>
+	c<span class="token punctuation">.</span><span class="token function">String</span><span class="token punctuation">(</span>http<span class="token punctuation">.</span>StatusOK<span class="token punctuation">,</span> fmt<span class="token punctuation">.</span><span class="token function">Sprintf</span><span class="token punctuation">(</span><span class="token string">"%d files uploaded!"</span><span class="token punctuation">,</span> <span class="token function">len</span><span class="token punctuation">(</span>files<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h2><a id="_84"></a>路由中间件</h2> 
+<h3><a id="_86"></a>前言</h3> 
+<p>我们在日常开发的时候可能忽悠很多公共的业务逻辑，比如说:登录验证,权限校验,数据分页,记录日志等等,我们在每一个模块下都进行相关逻辑的书写无疑是不现实的,在Gin框架中它允许我们在<br> 处理请求的同时自主加入自己的钩子(hook)函数来处理这些公共的业务逻辑，而这些钩子函数也就是我们所说的中间件。</p> 
+<h3><a id="_90"></a>单独注册路由中间件</h3> 
+<h4><a id="_92"></a>示例</h4> 
+<p>下面我们首先来看一个很简单的例子:</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"github.com/gin-gonic/gin"</span>
+
+<span class="token keyword">type</span> UserInfo <span class="token keyword">struct</span> <span class="token punctuation">{<!-- --></span>
+	Username <span class="token builtin">string</span> <span class="token string">`json:"username"`</span>
+	Age      <span class="token builtin">int</span>    <span class="token string">`json:"age"`</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		user <span class="token operator">:=</span> UserInfo<span class="token punctuation">{<!-- --></span>
+			Username<span class="token punctuation">:</span> <span class="token string">"张三"</span><span class="token punctuation">,</span>
+			Age<span class="token punctuation">:</span>      <span class="token number">18</span><span class="token punctuation">,</span>
+		<span class="token punctuation">}</span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行并向其发出请求:<br> <img src="https://images2.imgbox.com/75/b4/BQdMBSeY_o.png" alt="在这里插入图片描述"><br> 如上所示，这里的闭包函数就是一个典型的Hook函数，也就是我们所说的中间件。<br> <strong>注意</strong>:中间件的类型必须是<code>gin.HandlerFunc</code>类型</p> 
+<h4><a id="_121"></a>单独注册中间件的细节</h4> 
+<ul><li><strong>多个中间件的使用</strong><br> 我们来看一下<code>GET</code>这一类函数的函数签名:</li></ul> 
+<pre><code class="prism language-go">	<span class="token keyword">func</span> <span class="token punctuation">(</span>group <span class="token operator">*</span>RouterGroup<span class="token punctuation">)</span> <span class="token function">POST</span><span class="token punctuation">(</span>relativePath <span class="token builtin">string</span><span class="token punctuation">,</span> handlers <span class="token operator">...</span>HandlerFunc<span class="token punctuation">)</span> IRoutes <span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">return</span> group<span class="token punctuation">.</span><span class="token function">handle</span><span class="token punctuation">(</span>http<span class="token punctuation">.</span>MethodPost<span class="token punctuation">,</span> relativePath<span class="token punctuation">,</span> handlers<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// GET is a shortcut for router.Handle("GET", path, handlers).</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>group <span class="token operator">*</span>RouterGroup<span class="token punctuation">)</span> <span class="token function">GET</span><span class="token punctuation">(</span>relativePath <span class="token builtin">string</span><span class="token punctuation">,</span> handlers <span class="token operator">...</span>HandlerFunc<span class="token punctuation">)</span> IRoutes <span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">return</span> group<span class="token punctuation">.</span><span class="token function">handle</span><span class="token punctuation">(</span>http<span class="token punctuation">.</span>MethodGet<span class="token punctuation">,</span> relativePath<span class="token punctuation">,</span> handlers<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// DELETE is a shortcut for router.Handle("DELETE", path, handlers).</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>group <span class="token operator">*</span>RouterGroup<span class="token punctuation">)</span> <span class="token function">DELETE</span><span class="token punctuation">(</span>relativePath <span class="token builtin">string</span><span class="token punctuation">,</span> handlers <span class="token operator">...</span>HandlerFunc<span class="token punctuation">)</span> IRoutes <span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">return</span> group<span class="token punctuation">.</span><span class="token function">handle</span><span class="token punctuation">(</span>http<span class="token punctuation">.</span>MethodDelete<span class="token punctuation">,</span> relativePath<span class="token punctuation">,</span> handlers<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// PATCH is a shortcut for router.Handle("PATCH", path, handlers).</span>
+<span class="token keyword">func</span> <span class="token punctuation">(</span>group <span class="token operator">*</span>RouterGroup<span class="token punctuation">)</span> <span class="token function">PATCH</span><span class="token punctuation">(</span>relativePath <span class="token builtin">string</span><span class="token punctuation">,</span> handlers <span class="token operator">...</span>HandlerFunc<span class="token punctuation">)</span> IRoutes <span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">return</span> group<span class="token punctuation">.</span><span class="token function">handle</span><span class="token punctuation">(</span>http<span class="token punctuation">.</span>MethodPatch<span class="token punctuation">,</span> relativePath<span class="token punctuation">,</span> handlers<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>我们可以发现这里第二个参数的类型为:<code>...HandlerFunc</code>,这意味着我们可以使用在一个请求处理中使用多个中间件函数,比如下面这样：</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"github.com/gin-gonic/gin"</span>
+
+<span class="token keyword">type</span> UserInfo <span class="token keyword">struct</span> <span class="token punctuation">{<!-- --></span>
+	Username <span class="token builtin">string</span> <span class="token string">`json:"username"`</span>
+	Age      <span class="token builtin">int</span>    <span class="token string">`json:"age"`</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m1</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	user <span class="token operator">:=</span> UserInfo<span class="token punctuation">{<!-- --></span>
+		Username<span class="token punctuation">:</span> <span class="token string">"张三"</span><span class="token punctuation">,</span>
+		Age<span class="token punctuation">:</span>      <span class="token number">18</span><span class="token punctuation">,</span>
+	<span class="token punctuation">}</span>
+	c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m2</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	user <span class="token operator">:=</span> UserInfo<span class="token punctuation">{<!-- --></span>
+		Username<span class="token punctuation">:</span> <span class="token string">"李四"</span><span class="token punctuation">,</span>
+		Age<span class="token punctuation">:</span>      <span class="token number">20</span><span class="token punctuation">,</span>
+	<span class="token punctuation">}</span>
+	c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> m1<span class="token punctuation">,</span> m2<span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行结果如下:<br> <img src="https://images2.imgbox.com/41/90/utWDEboG_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>请求中间件与响应中间件<br> 一个中间件实现的功能主要是有两部分:<code>对接收到的请求进行相关处理</code>和<code>处理即将发送回客户端的响应</code>,而我们根据实现的功能不同其实也可以将一个中间件分为两部分:<code>请求中间件</code>和<code>响应中间件</code>，而我们也有专门函数去控制它们的工作,比如下面这个例子：</li></ul> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">m1</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m1 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m1 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m2</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m2 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m2 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m3</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m3 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m3 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/user"</span><span class="token punctuation">,</span> m1<span class="token punctuation">,</span> m2<span class="token punctuation">,</span> m3<span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>运行上面的代码，它的结果是这样的:</p> 
+<pre><code>m1 in
+m2 in
+m3 in
+m3 out
+m2 out
+m1 out
+</code></pre> 
+<p>我们可以知道它的过程他该是这样的：<br> <img src="https://images2.imgbox.com/a5/f1/Qpoz2t4m_o.png" alt="在这里插入图片描述"><br> 这就是<code>Next</code>函数的作用了,它先完成请求中间件的工作部分,再完成响应中间件的工作部分，有趣的是它的模型有点类似于栈的先进后出,大家记忆的时候也可以仿照这个来记忆。</p> 
+<p>除此之外,我们还可以用<code>Abort</code>函数来拦截响应，示例如下:</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">m1</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m1 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Abort</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m1 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m2</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m2 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m2 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m3</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m3 in"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m3 out"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/user"</span><span class="token punctuation">,</span> m1<span class="token punctuation">,</span> m2<span class="token punctuation">,</span> m3<span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>运行结果为:</p> 
+<pre><code>m1 in
+m1 out
+</code></pre> 
+<p>我们可以看到Abort()拦截，后续的HandlerFunc就没有执行了</p> 
+<h3><a id="_270"></a>全局注册中间件</h3> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"github.com/gin-gonic/gin"</span>
+
+<span class="token keyword">func</span> <span class="token function">m10</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+		<span class="token string">"message"</span><span class="token punctuation">:</span> <span class="token string">"m1"</span><span class="token punctuation">,</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Use</span><span class="token punctuation">(</span>m10<span class="token punctuation">)</span> <span class="token comment">//注册全局中间件</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+			<span class="token string">"message"</span><span class="token punctuation">:</span> <span class="token string">"hello"</span><span class="token punctuation">,</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行结果为:<br> <img src="https://images2.imgbox.com/38/b3/l6OCpJ6u_o.png" alt="在这里插入图片描述"><br> 我们可以发现，虽然我们没有调用<code>m1</code>,但是还是出现了m1的Json响应数据,而这也就是全局注册中间件的作用。</p> 
+<h3><a id="_298"></a>基于中间件传递数据</h3> 
+<p>在Gin框架中,我们可以使用<code>Set</code>和<code>Get</code>来实现对数据的设置与接收,代码如下：</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">func</span> <span class="token function">m11</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	fmt<span class="token punctuation">.</span><span class="token function">Println</span><span class="token punctuation">(</span><span class="token string">"m11"</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">,</span> <span class="token string">"fengxu"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Use</span><span class="token punctuation">(</span>m10<span class="token punctuation">,</span>m11<span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		name<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> c<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token string">"name"</span><span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+			<span class="token string">"name"</span><span class="token punctuation">:</span> name<span class="token punctuation">,</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行结果如下：<br> <img src="https://images2.imgbox.com/bc/7f/y4spYDYS_o.png" alt="在这里插入图片描述"><br> <strong>细节</strong>：<br> 这里Get函数的签名如下：</p> 
+<pre><code class="prism language-go"><span class="token keyword">func</span> <span class="token punctuation">(</span>c <span class="token operator">*</span>Context<span class="token punctuation">)</span> <span class="token function">Set</span><span class="token punctuation">(</span>key <span class="token builtin">string</span><span class="token punctuation">,</span> value any<span class="token punctuation">)</span>
+</code></pre> 
+<p>所以我们传入任意类型的值,这里我们演示如何传入结构体并获取结构体内指定字段的值:</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token punctuation">(</span>
+	<span class="token string">"fmt"</span>
+	<span class="token string">"github.com/gin-gonic/gin"</span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">type</span> UserInfo <span class="token keyword">struct</span> <span class="token punctuation">{<!-- --></span>
+	Username <span class="token builtin">string</span> <span class="token string">`json:"username"`</span>
+	Age      <span class="token builtin">int</span>    <span class="token string">`json:"age"`</span>
+	Sex      <span class="token builtin">string</span> <span class="token string">`json:"sex"`</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">func</span> <span class="token function">m12</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	user <span class="token operator">:=</span> UserInfo<span class="token punctuation">{<!-- --></span>
+		Username<span class="token punctuation">:</span> <span class="token string">"luoyu"</span><span class="token punctuation">,</span>
+		Age<span class="token punctuation">:</span>      <span class="token number">18</span><span class="token punctuation">,</span>
+		Sex<span class="token punctuation">:</span>      <span class="token string">"男"</span><span class="token punctuation">,</span>
+	<span class="token punctuation">}</span>
+	c<span class="token punctuation">.</span><span class="token function">Set</span><span class="token punctuation">(</span><span class="token string">"user"</span><span class="token punctuation">,</span> user<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Use</span><span class="token punctuation">(</span>m12<span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> m11<span class="token punctuation">,</span> m12<span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		_user<span class="token punctuation">,</span> <span class="token boolean">_</span> <span class="token operator">:=</span> c<span class="token punctuation">.</span><span class="token function">Get</span><span class="token punctuation">(</span><span class="token string">"user"</span><span class="token punctuation">)</span>
+		user <span class="token operator">:=</span> _user<span class="token punctuation">.</span><span class="token punctuation">(</span>UserInfo<span class="token punctuation">)</span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+			<span class="token string">"name"</span><span class="token punctuation">:</span> user<span class="token punctuation">.</span>Username<span class="token punctuation">,</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行结果：<br> <img src="https://images2.imgbox.com/d0/99/qJCTjPFY_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_372"></a>路由分组</h3> 
+<h4><a id="_374"></a>基于路由分组的路由管理</h4> 
+<p>在我们日常开发时，可能我们会有很多个路由中间件,如何有效的管理它们就成了一个很大的问题，而这里我们就介绍的是如何基于路由分组来有效的管理路由，首先我们来看一下示例代码:</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"github.com/gin-gonic/gin"</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	api <span class="token operator">:=</span> r<span class="token punctuation">.</span><span class="token function">Group</span><span class="token punctuation">(</span><span class="token string">"api"</span><span class="token punctuation">)</span> <span class="token comment">//设置总的路由</span>
+
+	api<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/user"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+			<span class="token string">"msg"</span><span class="token punctuation">:</span> <span class="token string">"user"</span><span class="token punctuation">,</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+
+	api<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/admin"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> gin<span class="token punctuation">.</span>H<span class="token punctuation">{<!-- --></span>
+			<span class="token string">"msg"</span><span class="token punctuation">:</span> <span class="token string">"admin"</span><span class="token punctuation">,</span>
+		<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/de/f6/imQG7Qds_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/42/00/K1MSIWHa_o.png" alt="在这里插入图片描述"><br> 我们可以利用这种分组的方式来有效的实现对路由的组织,防止由于路由过多造成不必要的混乱。</p> 
+<h3><a id="_405"></a>路由分组中间件</h3> 
+<h4><a id="_407"></a>路由分组中间件的注册</h4> 
+<p>在Gin框架中,可以去为路由分组去专门订制中间件,以下面的代码为例：</p> 
+<pre><code class="prism language-go"><span class="token keyword">package</span> main
+
+<span class="token keyword">import</span> <span class="token string">"github.com/gin-gonic/gin"</span>
+
+<span class="token keyword">type</span> Res <span class="token keyword">struct</span> <span class="token punctuation">{<!-- --></span>
+	Code <span class="token builtin">int</span>    <span class="token string">`json:"code"`</span>
+	Data any    <span class="token string">`json:"data"`</span>
+	Msg  <span class="token builtin">string</span> <span class="token string">`json:"msg"`</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">m11</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	c<span class="token punctuation">.</span><span class="token function">Next</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> Res<span class="token punctuation">{<!-- --></span>
+		Code<span class="token punctuation">:</span> <span class="token number">200</span><span class="token punctuation">,</span>
+		Data<span class="token punctuation">:</span> <span class="token string">"abc"</span><span class="token punctuation">,</span>
+		Msg<span class="token punctuation">:</span>  <span class="token string">"响应成功"</span><span class="token punctuation">,</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">func</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	r <span class="token operator">:=</span> gin<span class="token punctuation">.</span><span class="token function">Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	api <span class="token operator">:=</span> r<span class="token punctuation">.</span><span class="token function">Group</span><span class="token punctuation">(</span><span class="token string">"api"</span><span class="token punctuation">)</span>
+	login <span class="token operator">:=</span> api<span class="token punctuation">.</span><span class="token function">Group</span><span class="token punctuation">(</span><span class="token string">"login"</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">Use</span><span class="token punctuation">(</span>m11<span class="token punctuation">)</span>
+	login<span class="token punctuation">.</span><span class="token function">GET</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">,</span> <span class="token keyword">func</span><span class="token punctuation">(</span>c <span class="token operator">*</span>gin<span class="token punctuation">.</span>Context<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		c<span class="token punctuation">.</span><span class="token function">JSON</span><span class="token punctuation">(</span><span class="token number">200</span><span class="token punctuation">,</span> <span class="token string">"ok"</span><span class="token punctuation">)</span>
+	<span class="token punctuation">}</span><span class="token punctuation">)</span>
+	r<span class="token punctuation">.</span><span class="token function">Run</span><span class="token punctuation">(</span><span class="token string">":8080"</span><span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行并测试:<br> <img src="https://images2.imgbox.com/fb/57/2d1LMF39_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/0a/4c/IuJIaFmp_o.png" alt="在这里插入图片描述"><br> 我们可以看到这个中间件只有<code>login</code>这个子分组才可以使用这个中间件,我们就实现了一个很简单的路由分组中间件。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/181f1886010248c99a9de61034d45795/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【大模型】Spring AI对接ChatGpt使用详解</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/01996668a617db73937141019bb388d0/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">ISSC-原神启动</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

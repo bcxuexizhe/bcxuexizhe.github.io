@@ -1,0 +1,536 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>RabbitMQ之交换机 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/14dfd217292319744b643271df6794ce/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="RabbitMQ之交换机">
+  <meta property="og:description" content="目录
+前言
+Exchange(交换机)的类型与应用
+- 交换机的属性
+1. 直连交换机：Direct Exchange
+2. 主题交换机：Topic Exchange
+3. 扇形交换机：Fanout Exchange
+4. 默认交换机（直连）
+前言 在讲交换机之前我们需要了解一些概念，在RabbitMQ工作流程有一项叫Exchange（交换机：消息的分发中心），它的作用是将生产者发送的消息转发到具体的队列，队列再将消息以推送或者拉取方式给消费者进行消费。
+原：在RabbitMQ中生产者发送的信息不会直接投递到队列中，而是先将消息投递到交换机中，在由交换机路由到一个或多个队列中。
+流程：生产者 --（路由键）---&gt; 交换机 --（绑定键）---&gt; 队列 --（pull，push）---&gt;消费者
+这里就需要了解这两个东西：
+路由键（RoutingKey）：每个消息都有一个称为路由键(routing key)的属性，它其实就是一个简单的字符串（或者可以说是一种规则的字符串）绑定键（BindingKey）：就是指定将队列跟接收路由键的交换机进行绑定 生产者将信息发送给哪个Exchange是由RoutingKey决定的，而Exchange与哪个队列绑定是由BindingKey决定的。
+Exchange(交换机)的类型与应用 - 交换机的属性 除交换机类型外，在声明交换机时还可以附带许多其他的属性，其中最重要的几个分别是：
+Type：交换机名称Durability：是否持久化。如果持久性，则RabbitMQ重启后，交换机还存在Auto-delete：当所有与之绑定的消息队列都完成了对此交换机的使用后，是否删掉它Internal：当前Exchange是否用于RabbitMQ内部使用，默认fasleArguments：扩展参数 这里就直接开始操作，配置在一篇就已做了讲解，非常简单！接下来的代码也之上在原基础上做了添加。
+项目结构：
+所需依赖：
+&lt;!--amqp协议--&gt; &lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-amqp&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.projectlombok&lt;/groupId&gt; &lt;artifactId&gt;lombok&lt;/artifactId&gt; &lt;optional&gt;true&lt;/optional&gt; &lt;/dependency&gt; 1. 直连交换机：Direct Exchange 这是最简单的一种交换机类型。当一个队列与交换机绑定时，需要指定一个路由键（RoutingKey），只有当消息的路由键与该队列绑定时指定的绑定键（BindingKey）完全匹配时，消息才会被路由到该队列。 如下图：
+一、p发送消息时带了一个叫black的routing_key，交换机接受后会送到与black绑定的binding_key的队列中，也就是Q2。以此类推...
+二、还有一种情况，当Q2也与交换机绑定了black，这时p发送的信息会同时推送到Q1和Q2两个队列中。
+生产者 package com.ycxw.publisher.demos; import org.springframework.amqp.core.Binding; import org.springframework.amqp.core.BindingBuilder; import org.springframework.amqp.core.DirectExchange; import org.springframework.amqp.core.Queue; import org.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-04T19:10:48+08:00">
+    <meta property="article:modified_time" content="2024-02-04T19:10:48+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">RabbitMQ之交换机</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><strong>目录</strong></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%C2%A02%E3%80%81Exchange(%E4%BA%A4%E6%8D%A2%E6%9C%BA)%E7%9A%84%E7%B1%BB%E5%9E%8B-toc" style="margin-left:0px;"><a href="#%C2%A02%E3%80%81Exchange%28%E4%BA%A4%E6%8D%A2%E6%9C%BA%29%E7%9A%84%E7%B1%BB%E5%9E%8B" rel="nofollow">Exchange(交换机)的类型与应用</a></p> 
+<p style="margin-left:0px;"><a href="#-%20%E4%BA%A4%E6%8D%A2%E6%9C%BA%E7%9A%84%E5%B1%9E%E6%80%A7" rel="nofollow">        </a><a href="#-%20%E4%BA%A4%E6%8D%A2%E6%9C%BA%E7%9A%84%E5%B1%9E%E6%80%A7" rel="nofollow">- 交换机的属性</a></p> 
+<p id="1.%C2%A0%E7%9B%B4%E8%BF%9E%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ADirect%20Exchange-toc" style="margin-left:40px;"><a href="#1.%C2%A0%E7%9B%B4%E8%BF%9E%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ADirect%20Exchange" rel="nofollow">1. 直连交换机：Direct Exchange</a></p> 
+<p id="2.%20%E4%B8%BB%E9%A2%98%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ATopic%20Exchange-toc" style="margin-left:40px;"><a href="#2.%20%E4%B8%BB%E9%A2%98%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ATopic%20Exchange" rel="nofollow">2. 主题交换机：Topic Exchange</a></p> 
+<p id="3.%20%E6%89%87%E5%BD%A2%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9AFanout%20Exchange-toc" style="margin-left:40px;"><a href="#3.%20%E6%89%87%E5%BD%A2%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9AFanout%20Exchange" rel="nofollow">3. 扇形交换机：Fanout Exchange</a></p> 
+<p id="4.%20%E9%BB%98%E8%AE%A4%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%88%E7%9B%B4%E8%BF%9E%EF%BC%89-toc" style="margin-left:40px;"><a href="#4.%20%E9%BB%98%E8%AE%A4%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%88%E7%9B%B4%E8%BF%9E%EF%BC%89" rel="nofollow">4. 默认交换机（直连）</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E5%89%8D%E8%A8%80">前言</h2> 
+<p>        在讲交换机之前我们需要了解一些概念，在RabbitMQ工作流程有一项叫<strong>Exchange（交换机：消息的分发中心</strong><strong>），它的作用是将生产者发送的消息转发到具体的队列，队列再将消息以推送或者拉取方式给消费者进行消费。</strong></p> 
+<blockquote> 
+ <p><strong>原：</strong>在<a href="https://so.csdn.net/so/search?q=RabbitMQ&amp;spm=1001.2101.3001.7020" title="RabbitMQ">RabbitMQ</a>中生产者发送的信息不会直接投递到队列中，而是先将消息投递到交换机中，在由交换机路由到一个或多个队列中。</p> 
+</blockquote> 
+<p class="img-center"><img alt="" height="773" src="https://images2.imgbox.com/f2/83/kXykVUbo_o.png" width="1200"></p> 
+<blockquote> 
+ <p style="text-align:center;"><strong>流程：生产者 --（路由键）---&gt; 交换机 --（绑定键）---&gt; 队列 --（pull，push）---&gt;消费者</strong></p> 
+ <p><strong> </strong></p> 
+ <p> 这里就需要了解这两个东西：</p> 
+ <ul><li><strong>路由键（RoutingKey）</strong><strong>：</strong>每个消息都有一个称为路由键(routing key)的属性，它其实就是一个简单的字符串（或者可以说是一种规则的字符串）</li><li><strong>绑定键（BindingKey）</strong><strong>：</strong>就是指定将队列跟接收路由键的交换机进行绑定</li></ul> 
+ <p>        <strong>生产者将信息发送给哪个Exchange是由RoutingKey决定的，而Exchange与哪个队列绑定是由BindingKey决定的。</strong></p> 
+</blockquote> 
+<p></p> 
+<h2 id="%C2%A02%E3%80%81Exchange(%E4%BA%A4%E6%8D%A2%E6%9C%BA)%E7%9A%84%E7%B1%BB%E5%9E%8B">Exchange(交换机)的类型与应用</h2> 
+<h3 id="-%20%E4%BA%A4%E6%8D%A2%E6%9C%BA%E7%9A%84%E5%B1%9E%E6%80%A7">- 交换机的属性</h3> 
+<p>除交换机类型外，在声明交换机时还可以附带许多其他的属性，其中最重要的几个分别是：</p> 
+<ul><li><strong>Type</strong>：交换机名称</li><li><strong>Durability</strong>：是否持久化。如果持久性，则RabbitMQ重启后，交换机还存在</li><li><strong>Auto</strong>-<strong>delete</strong>：当所有与之绑定的消息队列都完成了对此交换机的使用后，是否删掉它</li><li><strong>Internal：</strong>当前Exchange是否用于RabbitMQ内部使用，默认fasle</li><li><strong>Arguments</strong>：扩展参数</li></ul> 
+<blockquote> 
+ <p>这里就直接开始操作，配置在一篇就已做了讲解，非常简单！接下来的代码也之上在原基础上做了添加。</p> 
+ <p><strong>项目结构：</strong></p> 
+ <p><img alt="" height="203" src="https://images2.imgbox.com/09/3d/zG7LZXat_o.png" width="271"></p> 
+ <p><strong>所需依赖：</strong></p> 
+ <pre><code class="language-XML">        &lt;!--amqp协议--&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-amqp&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+            &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+            &lt;optional&gt;true&lt;/optional&gt;
+        &lt;/dependency&gt;</code></pre> 
+</blockquote> 
+<p></p> 
+<h3 id="1.%C2%A0%E7%9B%B4%E8%BF%9E%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ADirect%20Exchange" style="background-color:transparent;">1. 直连交换机：Direct Exchange</h3> 
+<ul><li>这是最简单的一种交换机类型。</li><li>当一个队列与交换机绑定时，需要指定一个路由键（RoutingKey），只有当消息的路由键与该队列绑定时指定的绑定键（BindingKey）完全匹配时，消息才会被路由到该队列。</li></ul> 
+<blockquote> 
+ <p>如下图：</p> 
+ <p>一、p发送消息时带了一个叫black的routing_key，交换机接受后会送到与black绑定的binding_key的队列中，也就是Q2。以此类推...</p> 
+ <p>二、还有一种情况，当Q2也与交换机绑定了black，这时p发送的信息会同时推送到Q1和Q2两个队列中。</p> 
+</blockquote> 
+<p class="img-center"><img alt="" height="404" src="https://images2.imgbox.com/b2/92/GEav8Hm6_o.png" width="871"></p> 
+<ul><li>生产者</li></ul> 
+<pre><code class="language-java">package com.ycxw.publisher.demos;
+
+import org.springframework.amqp.core.Binding;
+import org.springframework.amqp.core.BindingBuilder;
+import org.springframework.amqp.core.DirectExchange;
+import org.springframework.amqp.core.Queue;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+//定义队列
+@Configuration
+@SuppressWarnings("all")
+public class RabbitConfig {
+
+    /**
+     * 定义队列 Q1
+     * @return
+     */
+    @Bean
+    public Queue directQ1() {
+        return new Queue("direct-Q1");
+    }
+
+    /**
+     * 定义队列 Q2
+     * @return
+     */
+    @Bean
+    public Queue directQ2() {
+        return new Queue("direct-Q2");
+    }
+
+    /**
+     * 自定义直连交换机
+     * @return
+     */
+    @Bean
+    public DirectExchange directExchange() {
+        return new DirectExchange("direct-exchange", true, false);
+    }
+
+    /**
+     * 将队列 Q1与交换机进行绑定，并设置路由键
+     * @return
+     */
+    @Bean
+    public Binding bindingQ1() {
+        return BindingBuilder.bind(directQ1())
+                .to(directExchange())
+                .with("direct_orange");
+    }
+
+    /**
+     * 将队列 Q2与交换机进行绑定，并设置路由键
+     * @return
+     */
+    @Bean
+    public Binding bindingQ2() {
+        return BindingBuilder.bind(directQ2())
+                .to(directExchange())
+                .with("direct_black");
+    }
+
+}</code></pre> 
+<pre><code class="language-java">package com.ycxw.publisher.demos;
+
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.amqp.core.AmqpTemplate;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+/**
+ * 模拟发送请求
+ */
+@RestController
+public class Sender {
+    @Autowired
+    private AmqpTemplate rabbitTemplate;
+
+    @RequestMapping("/send1")
+    public String sendFirst() {
+        /*向消息队列发送消息 converAndSend(交换机，路由键，发送的信息)*/
+        rabbitTemplate.convertAndSend("direct-exchange", "direct_orange", "我是Q1");
+        return "🫶";
+    }
+
+    @RequestMapping("/send2")
+    public String sendSecond() throws JsonProcessingException {
+        rabbitTemplate.convertAndSend("direct-exchange", "direct_black", "我是Q2");
+        return "🫶";
+    }
+}</code></pre> 
+<ul><li> 消费者接受信息</li></ul> 
+<pre><code class="language-java">package com.ycxw.consumer.demos;
+
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RabbitListener(queues = {"direct-Q1"})
+public class DirectReceiver {
+
+    @RabbitHandler
+    public void handler(String msg) {
+        System.out.println(msg);
+    }
+}</code></pre> 
+<pre><code class="language-java">package com.ycxw.consumer.demos;
+
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+@Component
+@RabbitListener(queues = {"direct-Q2"})
+public class DirectReceiver2 {
+
+    @RabbitHandler
+    public void handler(String msg) {
+        System.out.println(msg);
+    }
+}</code></pre> 
+<p><img alt="" height="272" src="https://images2.imgbox.com/88/59/UMYNHNYE_o.png" width="548"></p> 
+<ul><li>测试 </li></ul> 
+<p><strong>Q1队列：</strong></p> 
+<p><img alt="" height="110" src="https://images2.imgbox.com/61/31/JbLLIjiT_o.png" width="325"><img alt="" height="145" src="https://images2.imgbox.com/98/1e/U7uLnGxg_o.png" width="351"></p> 
+<p><strong>Q2队列：</strong></p> 
+<p><img alt="" height="110" src="https://images2.imgbox.com/90/5b/8LaxxMNH_o.png" width="294"><img alt="" height="142" src="https://images2.imgbox.com/fc/d2/mcQ5OA9d_o.png" width="388"></p> 
+<p></p> 
+<blockquote> 
+ <p><strong>直连交换机适用场景：</strong><br>         有优先级的任务，根据任务的优先级把消息发送到对应的队列，这样可以指派更多的资源去处理高优先级的队列。</p> 
+</blockquote> 
+<p></p> 
+<h3 id="2.%20%E4%B8%BB%E9%A2%98%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9ATopic%20Exchange" style="background-color:transparent;">2. 主题交换机：Topic Exchange</h3> 
+<blockquote> 
+ <p><strong>直连交换机的缺点！</strong><br>         直连交换机的routing_key方案非常简单，如果我们希望一条消息发送给多个队列，那么这个交换机需要绑定上非常多的routing_key。假设每个交换机上都绑定一堆的routing_key连接到各个队列上，那么消息的管理就会异常地困难。所以RabbitMQ提供了一种主题交换机，发送到主题交换机上的消息需要携带指定规则的routing_key。</p> 
+</blockquote> 
+<p>     主题交换机的routing_key需要有一定的规则，交换机和队列的binding_key需要采用*.#.*.....的格式，每个部分用 <strong>. </strong>分开，其中</p> 
+<ul><li>* 表示一个单词 </li><li># 表示任意数量（零个或多个）单词。</li></ul> 
+<p>主题交换机会根据这个规则将数据发送到对应的(多个)队列上。 </p> 
+<p class="img-center"><img alt="" height="390" src="https://images2.imgbox.com/95/86/i4jUQ2GT_o.png" width="905"></p> 
+<blockquote> 
+ <p><strong>示例：</strong></p> 
+ <ul><li>队列Q1绑定键为 <strong>*.orange.*</strong></li><li>队列Q2绑定键为 <strong>*.*.black</strong> 与 <strong>pink.</strong>#</li></ul> 
+ <ol><li>如果一条消息携带的路由键为 <strong>a.orange.b</strong>，那么队列Q1将会收到 </li><li>如果一条消息携带的路由键为 <strong>a.b.black</strong> 或 <strong>pink.a</strong>（pink.a.b、pink.abc.sb.as....），那么队列Q2将会收到</li><li>如果想让Q1和Q2都接收到P发出的信息，那么路由键为 <strong>xx.orange.black</strong> 或 <strong>pink.orange.xx</strong></li></ol> 
+</blockquote> 
+<ul><li>生产者</li></ul> 
+<pre><code class="language-java">    /**
+     * 定义路由键规则
+     */
+    public static String A_KEY ="*.orange.*";
+    public static String B_KEY ="*.*.black";
+    public static String C_KEY ="pink.#";
+
+    /**
+     * 定义队列 Q1
+     * @return
+     */
+    @Bean
+    public Queue topicQ1() {
+        return new Queue("topic-Q1");
+    }
+
+    /**
+     * 定义队列 Q2
+     * @return
+     */
+    @Bean
+    public Queue topicQ2() {
+        return new Queue("topic-Q2");
+    }
+    /**
+     * 自定义主题交换机
+     * @return
+     */
+    @Bean
+    public TopicExchange topicExchange() {
+        return new TopicExchange("topic-exchange", true, false);
+    }
+
+    @Bean
+    public Binding topic_q1(){
+        return BindingBuilder.bind(topicQ1())
+                .to(topicExchange())
+                .with(A_KEY);
+    }
+
+    @Bean
+    public Binding topic_q2(){
+        return BindingBuilder.bind(topicQ2())
+                .to(topicExchange())
+                .with(B_KEY);
+    }
+
+    @Bean
+    public Binding topicq2(){
+        return BindingBuilder.bind(topicQ2())
+                .to(topicExchange())
+                .with(C_KEY);
+    }
+
+    /**
+     * 同时绑定Q1、Q2
+     */
+    @Bean
+    public Binding topicq1(){
+        return BindingBuilder.bind(topicQ1())
+                .to(topicExchange())
+                .with(C_KEY);
+    }</code></pre> 
+<blockquote> 
+ <p>模拟发送请求：通过路劲传参（指定路由）</p> 
+ <pre><code class="language-java">    @RequestMapping("/send3")
+    public String sendThree(@RequestParam String rex) throws JsonProcessingException {
+        rabbitTemplate.convertAndSend("topic-exchange", rex, "hello");
+        return "🫶";
+    }</code></pre> 
+</blockquote> 
+<ul><li>消费者接受信息</li></ul> 
+<pre><code class="language-java">package com.ycxw.consumer.demos;
+ 
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+ 
+import java.util.Map;
+
+
+@Component
+public class TopicReceiver {
+
+    @RabbitListener(queues = {"topic-Q1"})
+    @RabbitHandler
+    public void handler(String msg){
+        System.out.println("已接受到队列topic-Q1传递过来的消息："+msg);
+    }
+
+    @RabbitListener(queues = {"topic-Q2"})
+    @RabbitHandler
+    public void handlerB(String msg) {
+        System.out.println("已接受到队列topic-Q2传递过来的消息：" + msg);
+    }
+}</code></pre> 
+<ul><li>测试</li></ul> 
+<p> <strong>Q1队列：</strong></p> 
+<p><img alt="" height="169" src="https://images2.imgbox.com/a4/99/QppP8kak_o.png" width="545"></p> 
+<p><img alt="" height="309" src="https://images2.imgbox.com/49/73/8pfZ5k7d_o.png" width="1017"></p> 
+<p></p> 
+<p><strong>Q2队列：</strong></p> 
+<p><img alt="" height="209" src="https://images2.imgbox.com/c8/d2/TRTMDfm7_o.png" width="614"></p> 
+<p><img alt="" height="298" src="https://images2.imgbox.com/ac/dc/j7N0IRq6_o.png" width="1018"></p> 
+<p></p> 
+<p><strong>同时调用两个队列：</strong></p> 
+<p><img alt="" height="191" src="https://images2.imgbox.com/37/4a/Ppm76Faq_o.png" width="553">  </p> 
+<p><img alt="" height="310" src="https://images2.imgbox.com/4e/4c/OAfBjVvo_o.png" width="1012"></p> 
+<p></p> 
+<h3 id="3.%20%E6%89%87%E5%BD%A2%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%9AFanout%20Exchange" style="background-color:transparent;">3. 扇形交换机：Fanout Exchange</h3> 
+<blockquote> 
+ <p>扇形交换机是最基本的交换机类型，它所能做的事情非常简单———广播消息。</p> 
+</blockquote> 
+<p>        扇形交换机会把能接收到的消息全部发送给绑定在自己身上的队列。因为广播不需要“思考”，所以扇形交换机处理消息的速度也是所有的交换机类型里面最快的。 </p> 
+<p>这个交换机没有路由键概念，就算你绑了路由键也是无视的。 </p> 
+<blockquote> 
+ <p><strong>注意<span style="color:#fe2c24;">！！！</span>：扇形交换机没有路由键，所以发送请求会被所有绑定的交换机队列接收</strong></p> 
+</blockquote> 
+<ul><li>生产者</li></ul> 
+<pre><code class="language-java">    /**
+     * 定义队列 Q1
+     * @return
+     */
+    @Bean
+    public Queue fanoutQ1() {
+        return new Queue("fanout-Q1");
+    }
+
+    /**
+     * 定义队列 Q2
+     * @return
+     */
+    @Bean
+    public Queue fanoutQ2() {
+        return new Queue("fanout-Q2");
+    }
+
+    /**
+     * 定义扇形交换机
+     * @return
+     */
+    @Bean
+    public FanoutExchange fanoutExchange(){
+        return new FanoutExchange("fanout-exchange",true,false);
+    }
+
+    /**
+     * 绑定队列 （没有路由键）
+     * @return
+     */
+    @Bean
+    public Binding fanout_q1(){
+        return BindingBuilder.bind(fanoutQ1())
+                .to(fanoutExchange());
+    }
+
+    @Bean
+    public Binding fanout_q2(){
+        return BindingBuilder.bind(fanoutQ2())
+                .to(fanoutExchange());
+    }</code></pre> 
+<ul><li>模拟发送信息</li></ul> 
+<pre><code class="language-java">    @RequestMapping("/send4")
+    public String sendFour() throws JsonProcessingException {
+        //必须填写路由键这项，否则接收不到信息。
+        //由于扇形交换机没有路由键，所以这向需要填空，不然会将发送的信息（hello）解析为路由键
+        rabbitTemplate.convertAndSend("fanout-exchange","","hello");
+        return "🫶";
+    }</code></pre> 
+<ul><li>消费者</li></ul> 
+<pre><code class="language-java">package com.ycxw.consumer.demos;
+
+import org.springframework.amqp.rabbit.annotation.RabbitHandler;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Component;
+
+
+@Component
+public class FanoutReceiver {
+
+    @RabbitListener(queues = {"fanout-Q1"})
+    @RabbitHandler
+    public void handler(String msg) {
+        System.out.println("已接受到队列fanout-Q1传递过来的消息：" + msg);
+    }
+
+    @RabbitListener(queues = {"fanout-Q2"})
+    @RabbitHandler
+    public void handlerB(String msg) {
+        System.out.println("已接受到队列fanout-Q2传递过来的消息：" + msg);
+    }
+}</code></pre> 
+<ul><li>测试</li></ul> 
+<p><img alt="" height="163" src="https://images2.imgbox.com/d6/66/8BhknhxF_o.png" width="445"></p> 
+<p><img alt="" height="289" src="https://images2.imgbox.com/f0/36/tOfdQkBh_o.png" width="1029"></p> 
+<p></p> 
+<h3 id="4.%20%E9%BB%98%E8%AE%A4%E4%BA%A4%E6%8D%A2%E6%9C%BA%EF%BC%88%E7%9B%B4%E8%BF%9E%EF%BC%89" style="background-color:transparent;">4. 默认交换机（直连）</h3> 
+<p>        实际上是一个由RabbitMQ预先声明好的名字为空字符串的<strong>直连交换机（direct exchange）</strong>。它有一个特殊的属性使得它对于简单应用特别有用处：那就是每个新建队列（queue）都会自动绑定到默认交换机上，绑定的路由键（routing key）名称与队列名称相同。</p> 
+<p><img alt="" height="928" src="https://images2.imgbox.com/82/30/vu7zYMBV_o.png" width="1200"></p> 
+<blockquote> 
+ <p><strong>如：</strong>当你声明了一个名为”hello”的队列，RabbitMQ会自动将其绑定到默认交换机上，绑定（binding_key）的路由键名称也是为”hello”。<br> 因此，当携带着名为”hello”的路由键的消息被发送到默认交换机的时候，此消息会被默认交换机路由至名为”hello”的队列中</p> 
+ <p>类似amq.*的名称的交换机：<br>      这些是RabbitMQ默认创建的交换机。这些队列名称被预留做RabbitMQ内部使用，不能被应用使用，否则抛出403 (ACCESS_REFUSED)错误</p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/07c67282b47616a776fcde2fa1c768fc/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">在 VMware 虚拟机上安装黑苹果(Hackintosh)：免费 macOS ISO 镜像下载及安装教程</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/f2cc5d64c513b80b4b867a00cd5d054b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">基于Python&#43;大数据的旅游景区推荐系统设计与实现</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

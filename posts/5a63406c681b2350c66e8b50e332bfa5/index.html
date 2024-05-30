@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C# Web控件与数据感应之 TreeView 类 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/5a63406c681b2350c66e8b50e332bfa5/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C# Web控件与数据感应之 TreeView 类">
+  <meta property="og:description" content="目录
+关于 TreeView
+一些区别
+准备数据源
+范例运行环境
+一些实用方法
+获取数据进行呈现
+​根据ID设置节点
+获取所有结点的索引 小结
+关于 TreeView 数据感应也即数据捆绑，是一种动态的，Web控件与数据源之间的交互，本文将继续介绍与数据库提取数据并捆绑到 TreeView 类控件。在我的前期文章《C# DataSet结合FlyTreeView显示树状模型数据》，对于 FlyTreeView 已做过介绍，本文则介绍C# 实现 Microsoft.Web.UI.WebControls.TreeView 和 System.Web.UI.WebControls.TreeView 的一些实用方法。
+一些区别 Microsoft.Web.UI.WebControls.TreeView 、 System.Web.UI.WebControls.TreeView 和NineRays.WebControls.FlyTreeView 在使用和呈现上大同小异，关键的区别在于 FlyTreeView不是免费的，即使使用破解版本可能也存在部分问题，这个在使用中需要注意。而Microsoft.Web.UI.WebControls.TreeView 和 System.Web.UI.WebControls.TreeView 是微软提供的内置控件，前者是 TreeView 的早期版本，现在基本以 System.Web.UI.WebControls.TreeView 为准。本文将以 Microsoft.Web.UI.WebControls.TreeView 为举例。
+准备数据源 我们在 MS SQL Server 创建 pub_area（区域表），其结构如下表：
+序号字段名类型说明1acodenvarchar(10)区域代码，唯一键2anamenvarchar(50)区域名称3parent_acodenvarchar(10)父项所属区域代码 执行如下 创建表的 SQL 语句：
+SET ANSI_NULLS ON GO SET QUOTED_IDENTIFIER ON GO CREATE TABLE [dbo].[pub_area]( [acode] [nvarchar](10) NOT NULL, [aname] [nvarchar](50) NOT NULL, [parent_acode] [nvarchar](10) NULL, CONSTRAINT [IX_pub_area] UNIQUE NONCLUSTERED ( [acode] ASC )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY] ) ON [PRIMARY] GO 执行如下SQL语句，创建一些数据：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-16T16:33:42+08:00">
+    <meta property="article:modified_time" content="2024-05-16T16:33:42+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C# Web控件与数据感应之 TreeView 类</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong> </strong></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%85%B3%E4%BA%8E%20TreeView-toc" style="margin-left:40px;"><a href="#%E5%85%B3%E4%BA%8E%20TreeView" rel="nofollow">关于 TreeView</a></p> 
+<p id="%E4%B8%80%E4%BA%9B%E5%8C%BA%E5%88%AB-toc" style="margin-left:80px;"><a href="#%E4%B8%80%E4%BA%9B%E5%8C%BA%E5%88%AB" rel="nofollow">一些区别</a></p> 
+<p id="%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90-toc" style="margin-left:40px;"><a href="#%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90" rel="nofollow">准备数据源</a></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91-toc" style="margin-left:40px;"><a href="#%E8%8C%83%E4%BE%8B%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83" rel="nofollow">范例运行环境</a></p> 
+<p id="%E6%96%B9%E6%B3%95%E8%AE%BE%E8%AE%A1-toc" style="margin-left:40px;"><a href="#%E6%96%B9%E6%B3%95%E8%AE%BE%E8%AE%A1" rel="nofollow">一些实用方法</a></p> 
+<p id="%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0-toc" style="margin-left:80px;"><a href="#%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0" rel="nofollow">获取数据进行呈现</a></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91%E6%A0%B9%E6%8D%AEID%E8%AE%BE%E7%BD%AE%E8%8A%82%E7%82%B9-toc" style="margin-left:80px;"><a href="#%E2%80%8B%E7%BC%96%E8%BE%91%E6%A0%B9%E6%8D%AEID%E8%AE%BE%E7%BD%AE%E8%8A%82%E7%82%B9" rel="nofollow">​根据ID设置节点</a></p> 
+<p id="%E8%8E%B7%E5%8F%96%E6%89%80%E6%9C%89%E7%BB%93%E7%82%B9%E7%9A%84%E7%B4%A2%E5%BC%95%C2%A0-toc" style="margin-left:80px;"><a href="#%E8%8E%B7%E5%8F%96%E6%89%80%E6%9C%89%E7%BB%93%E7%82%B9%E7%9A%84%E7%B4%A2%E5%BC%95%C2%A0" rel="nofollow">获取所有结点的索引 </a></p> 
+<p id="%E5%B0%8F%E7%BB%93-toc" style="margin-left:40px;"><a href="#%E5%B0%8F%E7%BB%93" rel="nofollow">小结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h3>关于 TreeView</h3> 
+<p>数据感应也即数据捆绑，是一种动态的，Web控件与数据源之间的交互，本文将继续介绍与数据库提取数据并捆绑到 TreeView 类控件。在我的前期文章<a class="link-info" href="https://blog.csdn.net/michaelline/article/details/138115383" title="《C# DataSet结合FlyTreeView显示树状模型数据》">《C# DataSet结合FlyTreeView显示树状模型数据》</a>，对于 FlyTreeView 已做过介绍，本文则介绍C# 实现 Microsoft.Web.UI.WebControls.TreeView 和 System.Web.UI.WebControls.TreeView 的一些实用方法。</p> 
+<h4 id="%E4%B8%80%E4%BA%9B%E5%8C%BA%E5%88%AB">一些区别</h4> 
+<p>Microsoft.Web.UI.WebControls.TreeView 、 System.Web.UI.WebControls.TreeView 和NineRays.WebControls.FlyTreeView 在使用和呈现上大同小异，关键的区别在于 FlyTreeView不是免费的，即使使用破解版本可能也存在部分问题，这个在使用中需要注意。而Microsoft.Web.UI.WebControls.TreeView 和 System.Web.UI.WebControls.TreeView 是微软提供的内置控件，前者是 TreeView 的早期版本，现在基本以 System.Web.UI.WebControls.TreeView 为准。本文将以 Microsoft.Web.UI.WebControls.TreeView 为举例。</p> 
+<h3 id="%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90">准备数据源</h3> 
+<p>我们在 MS SQL Server 创建 pub_area（区域表），其结构如下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th>字段名</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><th>1</th><td>acode</td><td>nvarchar(10)</td><td>区域代码，唯一键</td></tr><tr><th>2</th><td>aname</td><td>nvarchar(50)</td><td>区域名称</td></tr><tr><th>3</th><td>parent_acode</td><td>nvarchar(10)</td><td>父项所属区域代码</td></tr></tbody></table> 
+<p>执行如下 创建表的 SQL 语句：</p> 
+<pre><code class="language-sql">SET ANSI_NULLS ON
+GO
+
+SET QUOTED_IDENTIFIER ON
+GO
+
+CREATE TABLE [dbo].[pub_area](
+	[acode] [nvarchar](10) NOT NULL,
+	[aname] [nvarchar](50) NOT NULL,
+	[parent_acode] [nvarchar](10) NULL,
+ CONSTRAINT [IX_pub_area] UNIQUE NONCLUSTERED 
+(
+	[acode] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+</code></pre> 
+<p>执行如下SQL语句，创建一些数据：</p> 
+<pre><code class="language-sql">insert into pub_area(acode,aname,parent_acode) values('01','天津市','')
+insert into pub_area(acode,aname,parent_acode) values('0101','南开区','01')
+insert into pub_area(acode,aname,parent_acode) values('010101','学府街道','0101')
+insert into pub_area(acode,aname,parent_acode) values('010102','万兴街道','0101')</code></pre> 
+<p>通过查询分析器，执行查询SQL语句，显示如下图：</p> 
+<h3 id="%E2%80%8B%E7%BC%96%E8%BE%91"><img alt="" height="561" src="https://images2.imgbox.com/4c/a8/fBgILYA2_o.png" width="855"></h3> 
+<p>最后我们将数据填充到 DataSet 即可，具体操作可参考我的文章<a class="link-info" href="https://blog.csdn.net/michaelline/article/details/138275943" title="《C# 利用IDbDataAdapter / IDataReader 实现通用数据集获取》 ">《C# 利用IDbDataAdapter / IDataReader 实现通用数据集获取》 </a></p> 
+<h3></h3> 
+<h3 id="%E8%8C%83%E4%BE%8B%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83">范例运行环境</h3> 
+<p>操作系统： Windows Server 2019 DataCenter</p> 
+<p>数据库：Microsoft SQL Server 2016</p> 
+<p>.net版本： .netFramework4.0 或以上</p> 
+<p>开发工具：VS2019  C#</p> 
+<h3 id="%E6%96%B9%E6%B3%95%E8%AE%BE%E8%AE%A1">一些实用方法</h3> 
+<h4 id="%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0">获取数据进行呈现</h4> 
+<p>simpletreeview方法主要是通过DataSet数据源进行提取呈现的TreeView控件上，方法返回 int 类型，表示成功返回当前节点的节点数，其参数设置见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th style="width:49px;">序号</th><th style="width:73px;">参数名</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><th style="width:49px;">1</th><td style="width:73px;">tv</td><td> <p>Microsoft.Web.UI.WebControls.</p> <p>TreeNodeCollection</p> </td><td>传入的TreeView的当前结点集合对象</td></tr><tr><th style="width:49px;">2</th><td style="width:73px;">ds</td><td>DataSet</td><td>数据集对象，默认只取Tables[0]</td></tr><tr><th style="width:49px;">3</th><td style="width:73px;">key</td><td>string</td><td>数据表的唯一标识字段名</td></tr><tr><th style="width:49px;">4</th><td style="width:73px;">parentkey</td><td>string</td><td>数据表的父结点字段名</td></tr><tr><th style="width:49px;">5</th><td style="width:73px;">dis</td><td>string</td><td>数据表的显示名称字段名</td></tr><tr><th style="width:49px;">6</th><td style="width:73px;">keytype</td><td>string</td><td>标识类型，这是我们自定的规范，比如CID（字符）、ID（数值）固定名称的处理方式，默认处理方式对key或parentKey进行字符串过滤处理</td></tr><tr><th style="width:49px;">7</th><td style="width:73px;">initvalue</td><td>string</td><td>是否指定一个初始值</td></tr><tr><th style="width:49px;">8</th><td style="width:73px;">firstlevel</td><td>bool</td><td>是否指遍历一级，如果为true，则不在进行递归</td></tr><tr><th style="width:49px;">9</th><td style="width:73px;">initByKey</td><td>bool</td><td>初始值使用哪个关键字段，false使用父节点，true使用唯一标识，默认为false</td></tr></tbody></table> 
+<p>实现代码如下：</p> 
+<pre><code class="language-cs">		public int simpletreeview(Microsoft.Web.UI.WebControls.TreeNodeCollection tv,DataSet ds,string key,string parentkey,string dis,string keytype,string initvalue,bool firstlevel,bool initByKey)
+		{
+			int rv=0;
+			DataView dv=new DataView();
+			dv.Table=ds.Tables[0];
+
+            Microsoft.Web.UI.WebControls.TreeNode tmpNd;
+			if((keytype=="uniqueidentifier")&amp;&amp;(initvalue==""))
+			{
+				dv.RowFilter=" "+(initByKey==false?parentkey:key)+" is null ";
+			}
+			else
+			{
+				dv.RowFilter="isnull("+(initByKey==false?parentkey:key)+",'')='"+initvalue+"'";
+			}
+			rv=dv.Count;
+			foreach(DataRowView drv in dv)
+			{
+                tmpNd = new Microsoft.Web.UI.WebControls.TreeNode();
+				tmpNd.ID=drv[key].ToString();
+				tmpNd.Text=drv[dis].ToString();
+				//    tmpNd.ImageUrl="../images/"+drv["Caption"].ToString();
+				//    tmpNd.NavigateUrl="../"+drv["Caption"].ToString();
+				tv.Add(tmpNd);
+				if(!firstlevel)
+				simpletreeview(tmpNd.Nodes,ds,key,parentkey,dis,keytype,tmpNd.ID,firstlevel,false);
+			}
+			return rv;
+		}
+</code></pre> 
+<p>调用示例如下代码：</p> 
+<pre><code class="language-cs">&lt;%@ Page Language="C#" AutoEventWireup="true" ValidateRequest="FALSE" %&gt;
+&lt;%@ Register TagPrefix="codn" Namespace="Microsoft.Web.UI.WebControls" Assembly="Microsoft.Web.UI.WebControls"%&gt;
+&lt;%@ Import Namespace="System.Data" %&gt;
+
+&lt;script language="C#" runat="server"&gt;
+    void Page_Load(Object sender, EventArgs e)
+    {
+
+        if (Page.IsPostBack) { return; }
+        object rvvv=GetDataSet("select acode,aname,parent_acode from pub_area", null);
+        DataSet _ds = rvvv as DataSet;
+        int rvvv_count = simpletreeview(tv.Nodes, _ds, "acode", "parent_acode", "aname", "uniqueidentifier", "",false,false);
+//        Response.Write(rvvv_count);
+        return;
+    }
+ &lt;/script&gt;
+&lt;html&gt;
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=yes"/&gt;
+    &lt;title&gt;&lt;/title&gt;
+    &lt;/style&gt;
+&lt;/head&gt;
+&lt;body&gt;
+&lt;form runat="server"&gt;
+&lt;div style=" margin-top:50px;margin-left:50px"&gt;
+       &lt;codn:TreeView ID="tv" runat="server" Height="300" ShowLines="true"  Width="500" AutoPostBack="false" ExpandLevel="3" BackColor="White" style="font-family: 微软雅黑" 
+                                EnableTheming="True"  BorderColor="#003300" BorderStyle="Solid" BorderWidth="1px"&gt;
+        &lt;/codn:TreeView&gt;
+
+&lt;/div&gt;
+ &lt;/form&gt;
+&lt;/body&gt;
+ 
+&lt;script type="text/javascript"&gt;
+&lt;/script&gt;
+ 
+&lt;/html&gt;</code></pre> 
+<p>成功后如下图显示：</p> 
+<h4 id="%E2%80%8B%E7%BC%96%E8%BE%91%E6%A0%B9%E6%8D%AEID%E8%AE%BE%E7%BD%AE%E8%8A%82%E7%82%B9"><img alt="" height="677" src="https://images2.imgbox.com/01/a2/MsNjDWTi_o.png" width="1075">根据ID设置节点</h4> 
+<p>SetTreeViewById 方法对当前给定集合进行ID查找，并返回结点ID和选中当前结点，其参数说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1" style="width:700px;"><thead><tr><th style="text-align:center;width:51px;">序号</th><th style="text-align:center;width:148px;">参数名</th><th style="text-align:center;">类型</th><th style="text-align:center;">说明</th></tr></thead><tbody><tr><th style="text-align:center;width:51px;">1</th><td style="width:148px;">tv</td><td> <p>Microsoft.Web.UI.WebControls.</p> <p>TreeNodeCollection</p> </td><td>传入的TreeView的当前结点集合对象</td></tr><tr><th style="text-align:center;width:51px;">2</th><td style="width:148px;">id</td><td>string</td><td>要查找的ID</td></tr></tbody></table> 
+<p>实现代码如下：</p> 
+<pre><code class="language-cs">public string SetTreeViewById(Microsoft.Web.UI.WebControls.TreeNodeCollection tv,string id)
+		{
+
+			string findid="";
+			for(int i=0;i&lt;tv.Count;i++)
+			{ 
+				if(tv[i].ID==id) 
+				{ 
+					string index1=tv[i].GetNodeIndex();//取得index 
+					object tn=tv[i];
+					while(tn.GetType()==typeof(Microsoft.Web.UI.WebControls.TreeNode))
+					{
+                        tn = ((Microsoft.Web.UI.WebControls.TreeNode)tn).Parent;
+					}
+					if(tn.GetType()==typeof(Microsoft.Web.UI.WebControls.TreeView))
+					{
+                        ((Microsoft.Web.UI.WebControls.TreeView)tn).SelectedNodeIndex = index1;
+					}
+					findid=i.ToString();
+					break;
+				}		
+				SetTreeViewById(tv[i].Nodes,id);
+			}
+			return findid;
+}
+</code></pre> 
+<p>调用代码如下，本示例要查找南开区（ID为0101）的节点并选中：</p> 
+<pre><code class="language-cs">SetTreeViewById(tv.Nodes, "0101");</code></pre> 
+<p>成功后如下图：</p> 
+<p><img alt="" height="783" src="https://images2.imgbox.com/42/28/gYOOXDBa_o.png" width="1149"></p> 
+<h4 id="%E8%8E%B7%E5%8F%96%E6%89%80%E6%9C%89%E7%BB%93%E7%82%B9%E7%9A%84%E7%B4%A2%E5%BC%95%C2%A0">获取所有结点的索引 </h4> 
+<p>GetTreeViewAllNodes 方法获取当前给定集合的所有结点的索引，并存储到指定的ArrayList当中，其参数说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1" style="width:700px;"><thead><tr><th style="text-align:center;width:51px;">序号</th><th style="text-align:center;width:148px;">参数名</th><th style="text-align:center;">类型</th><th style="text-align:center;">说明</th></tr></thead><tbody><tr><th style="text-align:center;width:51px;">1</th><td style="width:148px;">tv</td><td> <p>Microsoft.Web.UI.WebControls.</p> <p>TreeNodeCollection</p> </td><td>传入的TreeView的当前结点集合对象</td></tr><tr><th style="text-align:center;width:51px;">2</th><td style="width:148px;">rv2</td><td>ArrayList</td><td>要存储的 ArrayList</td></tr></tbody></table> 
+<p>实现代码如下：</p> 
+<pre><code class="language-cs">public void GetTreeViewAllNodes(Microsoft.Web.UI.WebControls.TreeNodeCollection tv,ArrayList rv2)
+{
+	for(int i=0;i&lt;tv.Count;i++)
+	{ 
+		rv2.Add(tv[i].GetNodeIndex());
+		GetTreeViewAllNodes(tv[i].Nodes,rv2);
+	}
+
+}</code></pre> 
+<p>调用示例如下，获取南开区的所有街道结点的索引：</p> 
+<pre><code class="language-cs">ArrayList rv2 = new ArrayList();
+GetTreeViewAllNodes(tv.Nodes, rv2);
+Response.Write(rv2.Count);</code></pre> 
+<h3 id="%E5%B0%8F%E7%BB%93">小结</h3> 
+<p>1、使用控件前需要下载dll并放置到您的网站bin目录下，可以到我的资源进行下载，链接如下：</p> 
+<p><a class="link-info" href="https://download.csdn.net/download/michaelline/89267878" title="https://download.csdn.net/download/michaelline/89267878">https://download.csdn.net/download/michaelline/89267878</a></p> 
+<p>2、在 VS 中开发我们需要在 IDE环境解决方案中添加此 dll 并引用，如果使用 System.Web.UI.WebControls.TreeView 则引用 System.Web，如下图：</p> 
+<p><img alt="" height="1075" src="https://images2.imgbox.com/02/74/NBVTh6Hq_o.png" width="1091"></p> 
+<p></p> 
+<p>3、提供一个后端辅助方法 simplebomlist，该方法可以直接从 DataSet 中获得给定查找值的所有下级的关键值信息，并放置到 ArrayList 中。</p> 
+<p>其参数说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th>参数名</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><th>1</th><td>tv</td><td>TreeNodeCollection</td><td>要遍历的TreeView集合</td></tr><tr><th>2</th><td>key</td><td>string</td><td>关键字段名</td></tr><tr><th>3</th><td>parentkey</td><td>string</td><td>父项关键字段名</td></tr><tr><th>4</th><td>initvalue</td><td>string</td><td>要查找的关键字段值</td></tr><tr><th>5</th><td>rv2</td><td>ArrayList</td><td>要存储的 ArrayList 变量</td></tr></tbody></table> 
+<p>方法代码如下：</p> 
+<pre><code class="language-cs">public void simplebomlist(DataSet ds,string key,string parentkey,string initvalue,ArrayList rv2)
+{
+	DataView dv=new DataView();
+	dv.Table=ds.Tables[0];
+	dv.RowFilter="isnull("+parentkey+",'')='"+initvalue+"'";
+	foreach(DataRowView drv in dv)
+	{
+		rv2.Add(drv[key].ToString());
+		simplebomlist(ds,key,parentkey,drv[key].ToString(),rv2);
+	}
+}
+</code></pre> 
+<p>方法会在指定的 ArrayList 里存储 关键字段 的 Value 值 。</p> 
+<p>关于 System.Web.UI.WebControls.TreeView 的使用方法和 Microsoft.Web.UI.WebControls.TreeView 基本一样，但其一些方法属性会有变化 ，我们会在后续文章中介绍。</p> 
+<p>本文是仅从示例介绍TreeView的使用方法，建议后期使用 System.Web.UI.WebControls.TreeView 进行操作更稳妥一些，详细介绍和用法可参照如下链接：</p> 
+<p><a class="link-info" href="https://learn.microsoft.com/zh-cn/dotnet/api/system.web.ui.webcontrols.treeview?view=netframework-4.8.1&amp;redirectedfrom=MSDN" rel="nofollow" title="https://learn.microsoft.com/zh-cn/dotnet/api/system.web.ui.webcontrols.treeview?view=netframework-4.8.1&amp;redirectedfrom=MSDN">https://learn.microsoft.com/zh-cn/dotnet/api/system.web.ui.webcontrols.treeview?view=netframework-4.8.1&amp;redirectedfrom=MSDN</a></p> 
+<p>感谢您的阅读，希望本文能够对您有所帮助。</p> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/189e0ec70eae039bfed24169677a317e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Golang面向对象编程（三）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/dfdefbe718d9241e2bce2d2b33233a7f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">C# Web控件与数据感应之 TreeView 类 续篇</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

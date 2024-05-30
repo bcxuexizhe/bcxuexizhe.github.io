@@ -1,0 +1,202 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>双层优化入门(2)—基于yalmip的双层优化求解(附matlab代码) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/2d3cea717f71206020273435367ffbe2/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="双层优化入门(2)—基于yalmip的双层优化求解(附matlab代码)">
+  <meta property="og:description" content="上一篇博客介绍了双层优化的基本原理和使用KKT条件求解双层优化的方法：
+双层优化入门(1)—基本原理与求解方法
+这篇博客将介绍使用yalmip的双层优化问题的求解方法。
+1.KKT函数 通过调用yalmip工具箱中的KKT函数，可以直接求出优化问题的KKT条件，省去自己手动写的步骤，函数用法如下：
+[KKTsystem, details] = kkt(Constraint,Objective,z) 其中z表示优化变量，KKTsystem存储KKT条件的约束表达式，details是一个结构体变量，用于存储KKT条件的细节。以上一篇博客中双层优化问题的下层优化问题为例：
+matlab代码： %% 目标函数和约束条件 x=sdpvar(1); y=sdpvar(1); Constraints=[-3*x&#43;y &lt;= -3 , 3*x&#43;y &lt;= 30]; objective=-y; [KKTsystem, details] = kkt(Constraints,objective,x); 运行结果： 将下层优化的KKT条件作为约束添加到上层优化中，就可以求出这个双层优化的结果：
+%% 清空 clc clear close all warning off %% 目标函数和约束条件 x=sdpvar(1); y=sdpvar(1); Constraints_down=[-3*x&#43;y &lt;= -3 , 3*x&#43;y &lt;= 30]; objective_down=-y; [KKTsystem , details] = kkt(Constraints_down,objective_down,x); Constraints_up=[2*x-3*y &gt;= -12 , x&#43;y &lt;= 14]; objective_up=-x-2*y; ops=sdpsettings(&#39;verbose&#39;, 0 , &#39;solver&#39;, &#39;gurobi&#39;); result=optimize([KKTsystem,Constraints_up,boundingbox([Constraints_up,Constraints_down])],objective_up,ops); %% 输出模型 saveampl(KKTsystem,objective_down,&#39;KKT_model&#39;); %% 输出结果 disp([&#39;最优解：x=&#39;,num2str(value(x)),&#39;,y=&#39;,num2str(value(y))]) disp([&#39;最优函数值=&#39;,num2str(value(objective_up))]) 求解的结果如下：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-05-12T09:29:29+08:00">
+    <meta property="article:modified_time" content="2023-05-12T09:29:29+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">双层优化入门(2)—基于yalmip的双层优化求解(附matlab代码)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>        上一篇博客介绍了双层优化的基本原理和使用KKT条件求解双层优化的方法：</p> 
+<p><a class="link-info" href="https://blog.csdn.net/weixin_44209907/article/details/130469530" title="双层优化入门(1)—基本原理与求解方法">双层优化入门(1)—基本原理与求解方法</a></p> 
+<p>        这篇博客将介绍使用yalmip的双层优化问题的求解方法。</p> 
+<h2>1.KKT函数</h2> 
+<p>        通过调用yalmip工具箱中的KKT函数，可以直接求出优化问题的KKT条件，省去自己手动写的步骤，函数用法如下：</p> 
+<pre><code class="language-Matlab">[KKTsystem, details] = kkt(Constraint,Objective,z)</code></pre> 
+<p>        其中z表示优化变量，KKTsystem存储KKT条件的约束表达式，details是一个结构体变量，用于存储KKT条件的细节。以上一篇博客中双层优化问题的下层优化问题为例：</p> 
+<p class="img-center"><img alt="" height="427" src="https://images2.imgbox.com/34/33/K1Vy5707_o.png" width="415"></p> 
+<h3> matlab代码：</h3> 
+<pre><code class="language-Matlab">%% 目标函数和约束条件
+x=sdpvar(1);
+y=sdpvar(1);
+Constraints=[-3*x+y &lt;= -3 , 3*x+y &lt;= 30];
+objective=-y;
+[KKTsystem, details] = kkt(Constraints,objective,x);</code></pre> 
+<h3>运行结果：</h3> 
+<p><img alt="" height="473" src="https://images2.imgbox.com/31/7c/ohIKF0jZ_o.png" width="364"></p> 
+<p><img alt="" height="293" src="https://images2.imgbox.com/20/58/RXy02bQN_o.png" width="1144"></p> 
+<p>        将下层优化的KKT条件作为约束添加到上层优化中，就可以求出这个双层优化的结果：</p> 
+<pre><code class="language-Matlab">%% 清空
+clc
+clear
+close all
+warning off
+%% 目标函数和约束条件
+x=sdpvar(1);
+y=sdpvar(1);
+Constraints_down=[-3*x+y &lt;= -3 , 3*x+y &lt;= 30];
+objective_down=-y;
+[KKTsystem , details] = kkt(Constraints_down,objective_down,x);
+Constraints_up=[2*x-3*y &gt;= -12 , x+y &lt;= 14];
+objective_up=-x-2*y;
+ops=sdpsettings('verbose', 0 , 'solver', 'gurobi');
+result=optimize([KKTsystem,Constraints_up,boundingbox([Constraints_up,Constraints_down])],objective_up,ops);
+%% 输出模型
+saveampl(KKTsystem,objective_down,'KKT_model');
+%% 输出结果
+disp(['最优解：x=',num2str(value(x)),',y=',num2str(value(y))])
+disp(['最优函数值=',num2str(value(objective_up))])</code></pre> 
+<p>        求解的结果如下：</p> 
+<p><img alt="" height="67" src="https://images2.imgbox.com/a4/02/9GJ0sgda_o.png" width="455"></p> 
+<p>        和上一篇博客手动写KKT的求解结果一致。</p> 
+<p>        上面的例子是一个简单的线性双层优化问题，yalmip官方文档中给出了使用KKT函数求解非线性双层优化的例子。这个双层优化问题如下：</p> 
+<p><img alt="" height="706" src="https://images2.imgbox.com/ce/7b/6aUJkW3m_o.png" width="676"></p> 
+<p>一样可以用KKT函数求解，代码如下（这是官网提供的代码）：</p> 
+<pre><code class="language-Matlab">sdpvar x1 x2 y1 y2 y3
+
+OO = -8*x1-4*x2+4*y1-40*y2-4*y3;
+OO = OO+OO^2;
+CO = [x1&gt;=0, x2&gt;=0];
+
+OI = (x1+2*x2+y1+y2+2*y3)^2;
+CI = [[y1 y2 y3] &gt;= 0,
+       -y1+y2+y3 &lt;= 10,
+      2*x1-y1+2*y2-0.5*y3 &lt;= 10,
+      2*x2+2*y1-y2-0.5*y3 &lt;= 9.7];
+
+[K,details] = kkt(CI,OI,[x1 x2])
+optimize([K,CO,boundingbox([CI,CO]),details.dual&lt;=100],OO)</code></pre> 
+<p>求解结果为：</p> 
+<p>最优目标函数为-0.25</p> 
+<p>x1=0.0625,x2=0,y1=0,y2=0,y3=0。</p> 
+<h2>2.solvebilevel函数</h2> 
+<p>        solvebilevel是yalmip工具箱内置的求解双层优化问题的函数。也就是通过这个函数，不需要咱手动写KKT条件，也不需要使用KKT函数，直接把上、下层优化的目标函数、约束条件往里面一放，就能求出结果。</p> 
+<p>        代码如下：</p> 
+<pre><code class="language-Matlab">%% 清空
+clc
+clear
+close all
+warning off
+%% 目标函数和约束条件
+x=sdpvar(1);
+y=sdpvar(1);
+Constraints_down=[-3*x+y &lt;= -3 , 3*x+y &lt;= 30];
+objective_down=-y;
+Constraints_up=[2*x-3*y &gt;= -12 , x+y &lt;= 14];
+objective_up=-x-2*y;
+solvebilevel(Constraints_up,objective_up,Constraints_down,objective_down,y)
+%% 输出结果
+disp(['最优解：x=',num2str(value(x)),',y=',num2str(value(y))])
+disp(['最优函数值=',num2str(value(objective_up))])</code></pre> 
+<p>求解结果如下：</p> 
+<p><img alt="" height="100" src="https://images2.imgbox.com/8e/ff/u1OGUHkn_o.png" width="221"></p> 
+<p>         和上篇博客手动写KKT条件，这篇博客利用KKT函数求解的结果都是一样的，确实比较省事。但也要注意，这个函数只适用于规模较小的问题，如果问题规模比较大，还是需要自己手动进行双层问题的求解。</p> 
+<h2>完整代码可以从这里获取：</h2> 
+<p><a class="link-info" href="https://download.csdn.net/download/weixin_44209907/87770083" title="双层优化入门(2)-基于yalmip的双层优化求解">双层优化入门(2)-基于yalmip的双层优化求解</a></p> 
+<h2>参考资料均来源于yalmip官方文档：</h2> 
+<p><a class="link-info" href="https://yalmip.github.io/command/kkt/" rel="nofollow" title="[1]KKT函数的用法介绍">[1]KKT函数的用法介绍</a></p> 
+<p><a class="link-info" href="https://yalmip.github.io/tutorial/bilevelprogramming/" rel="nofollow" title="[2]双层优化的求解">[2]双层优化的求解</a></p> 
+<p><a class="link-info" href="https://yalmip.github.io/example/bilevelprogrammingalternatives/" rel="nofollow" title="[3]双层优化求解的备用方法">[3]双层优化求解的备用方法</a></p> 
+<p><a class="link-info" href="https://yalmip.github.io/command/solvebilevel/" rel="nofollow" title="[4]solvebilevel函数用法介绍">[4]solvebilevel函数用法介绍</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3a15b46298d4a450dce00aaece0db138/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">如何将时间戳转化为年月日时分秒格式</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e838e4227c7f209eba98e56f3459751c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Elasticsearch 核心技术（十）：GEO 地理查询（geo_bounding_box、geo_distance、geo_shape）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

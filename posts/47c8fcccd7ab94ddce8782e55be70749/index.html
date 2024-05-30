@@ -1,0 +1,182 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>深入理解 package.json 文件与 package-lock.json 文件 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/47c8fcccd7ab94ddce8782e55be70749/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="深入理解 package.json 文件与 package-lock.json 文件">
+  <meta property="og:description" content="目录
+一、什么是 package.json文件?
+二、什么是 package-lock.json文件?
+三、为什么有了package.json，还需要package-lock.json文件呢？
+四、项目中如何生成package.json 和 package-lock.json 文件？
+五、npm 安装包的方式
+六、npm install 后发生了什么？
+七、node 包版本号
+八、版本符号含义
+一、什么是 package.json文件? package.json 文件一般都在每个项目的根目录下面，定义了这个项目所需要的各种模块，以及项目的配置信息，包括名称、版本、许可证、依赖模块等元数据。格式是严格的JSON格式。
+当你执行 npm install 的时候，node 会先从 package.json 文件中读取所有 dependencies 信息，然后根据 dependencies 中的信息与 node_modules 中的模块进行对比，没有的直接下载，已有的检查更新。另外，package.json 文件只记录你通过 npm install 方式安装的模块信息，而这些模块所依赖的其他子模块的信息不会记录。这样让我们远离了依赖地狱！
+二、什么是 package-lock.json文件? package-lock.json 文件会保存 node_modules 中所有包的信息，包括精确版本 version 和下载地址 resolved 以及依赖关系 dependencies 等，用以记录当前状态下实际安装的各个模块的具体来源和版本号。这样 npm install 时速度就会提升。
+npm5 以前没有 package-lock.json 这个文件，需要保存依赖信息，每次安装时都要加上 --save 参数；npm5以后版本加入了 package-lock.json 文件。当安装包的时候，不需要加上 --save 参数，它会自动保存依赖信息，且会生成或更新 package-lock.json 这个文件。
+三、为什么有了package.json，还需要package-lock.json文件呢？ 当项目中已有package-lock.json 文件，在安装项目依赖时，将以该文件为主进行解析安装指定版本依赖包，而不是使用 package.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-19T16:49:53+08:00">
+    <meta property="article:modified_time" content="2024-03-19T16:49:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">深入理解 package.json 文件与 package-lock.json 文件</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%20package.json%E6%96%87%E4%BB%B6%3F-toc" style="margin-left:80px;"><a href="#%E4%B8%80%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%20package.json%E6%96%87%E4%BB%B6%3F" rel="nofollow">一、什么是 package.json文件?</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%20package-lock.json%E6%96%87%E4%BB%B6%3F-toc" style="margin-left:80px;"><a href="#%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%20package-lock.json%E6%96%87%E4%BB%B6%3F" rel="nofollow">二、什么是 package-lock.json文件?</a></p> 
+<p id="%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E4%BA%86package.json%EF%BC%8C%E8%BF%98%E9%9C%80%E8%A6%81package-lock.json%E6%96%87%E4%BB%B6%E5%91%A2%EF%BC%9F-toc" style="margin-left:80px;"><a href="#%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E4%BA%86package.json%EF%BC%8C%E8%BF%98%E9%9C%80%E8%A6%81package-lock.json%E6%96%87%E4%BB%B6%E5%91%A2%EF%BC%9F" rel="nofollow">三、为什么有了package.json，还需要package-lock.json文件呢？</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E9%A1%B9%E7%9B%AE%E4%B8%AD%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90package.json%20%E5%92%8C%20package-lock.json%20%E6%96%87%E4%BB%B6%EF%BC%9F-toc" style="margin-left:80px;"><a href="#%E5%9B%9B%E3%80%81%E9%A1%B9%E7%9B%AE%E4%B8%AD%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90package.json%20%E5%92%8C%20package-lock.json%20%E6%96%87%E4%BB%B6%EF%BC%9F" rel="nofollow">四、项目中如何生成package.json 和 package-lock.json 文件？</a></p> 
+<p id="%E4%BA%94%E3%80%81npm%20%E5%AE%89%E8%A3%85%E5%8C%85%E7%9A%84%E6%96%B9%E5%BC%8F-toc" style="margin-left:80px;"><a href="#%E4%BA%94%E3%80%81npm%20%E5%AE%89%E8%A3%85%E5%8C%85%E7%9A%84%E6%96%B9%E5%BC%8F" rel="nofollow">五、npm 安装包的方式</a></p> 
+<p id="%E5%85%AD%E3%80%81npm%20install%20%E5%90%8E%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F-toc" style="margin-left:80px;"><a href="#%E5%85%AD%E3%80%81npm%20install%20%E5%90%8E%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F" rel="nofollow">六、npm install 后发生了什么？</a></p> 
+<p id="%E4%B8%83%E3%80%81node%20%E5%8C%85%E7%89%88%E6%9C%AC%E5%8F%B7-toc" style="margin-left:80px;"><a href="#%E4%B8%83%E3%80%81node%20%E5%8C%85%E7%89%88%E6%9C%AC%E5%8F%B7" rel="nofollow">七、node 包版本号</a></p> 
+<p id="%E5%85%AB%E3%80%81%E7%89%88%E6%9C%AC%E7%AC%A6%E5%8F%B7%E5%90%AB%E4%B9%89-toc" style="margin-left:80px;"><a href="#%E5%85%AB%E3%80%81%E7%89%88%E6%9C%AC%E7%AC%A6%E5%8F%B7%E5%90%AB%E4%B9%89" rel="nofollow">八、版本符号含义</a></p> 
+<hr id="hr-toc"> 
+<h4>一、什么是 package.json文件?</h4> 
+<p><strong>package.json </strong> 文件一般都在每个项目的根目录下面，定义了这个项目所需要的各种模块，以及项目的配置信息，包括名称、版本、许可证、依赖模块等元数据。格式是严格的JSON格式。</p> 
+<blockquote> 
+ <p>当你执行 npm install 的时候，node 会先从 package.json 文件中读取所有 dependencies 信息，然后根据 dependencies 中的信息与 node_modules 中的模块进行对比，没有的直接下载，已有的检查更新。另外，package.json 文件只记录你通过 npm install 方式安装的模块信息，而这些模块所依赖的其他子模块的信息不会记录。这样让我们远离了依赖地狱！<img alt="" height="1200" src="https://images2.imgbox.com/58/a4/aPmeIVZi_o.png" width="1200"></p> 
+</blockquote> 
+<h4 id="%E4%BA%8C%E3%80%81%E4%BB%80%E4%B9%88%E6%98%AF%20package-lock.json%E6%96%87%E4%BB%B6%3F">二、什么是 package-lock.json文件?</h4> 
+<p><strong>package-lock.json</strong> 文件会保存 node_modules 中所有包的信息，包括精确版本 version 和下载地址 resolved 以及依赖关系 dependencies 等，用以记录当前状态下实际安装的各个模块的具体来源和版本号。<strong>这样 npm install 时速度就会提升。</strong></p> 
+<blockquote> 
+ <p><strong>npm5 以前没有 package-lock.json 这个文件，需要保存依赖信息，每次安装时都要加上 --save 参数；npm5以后版本加入了 package-lock.json 文件。当安装包的时候，不需要加上 --save 参数，它会自动保存依赖信息，且会生成或更新 package-lock.json 这个文件。</strong></p> 
+</blockquote> 
+<h4 id="%E4%B8%89%E3%80%81%E4%B8%BA%E4%BB%80%E4%B9%88%E6%9C%89%E4%BA%86package.json%EF%BC%8C%E8%BF%98%E9%9C%80%E8%A6%81package-lock.json%E6%96%87%E4%BB%B6%E5%91%A2%EF%BC%9F">三、为什么有了package.json，还需要package-lock.json文件呢？</h4> 
+<p>当项目中已有package-lock.json 文件，在安装项目依赖时，将以该文件为主进行解析安装指定版本依赖包，而不是使用 package.json 来解析和安装模块。因为 package.json 指定的版本不够具体，而package-lock 为每个模块及其每个依赖项指定了版本，位置和完整性哈希，所以它每次的安装都是相同的。</p> 
+<p>package-lock.json 文件主要作用有以下两点：</p> 
+<p>①.当删除 node_module 目录时，想通过 npm install 恢复所有包时，提升下载速度。<br> ②.锁定版本号，防止自动升级新版本。</p> 
+<p>正因为有了 package-lock.json 文件锁定版本号，所以当你执行 npm install 的时候，node 不会自动更新 package.json 文件中的模块，必须用 npm install packagename（自动更新小版本号）或者npm install packagename@x.x.x（指定版本号）来进行安装才会更新，package-lock.json 文件中的版本号也会随着更新。</p> 
+<h4 id="%E5%9B%9B%E3%80%81%E9%A1%B9%E7%9B%AE%E4%B8%AD%E5%A6%82%E4%BD%95%E7%94%9F%E6%88%90package.json%20%E5%92%8C%20package-lock.json%20%E6%96%87%E4%BB%B6%EF%BC%9F">四、项目中如何生成package.json 和 package-lock.json 文件？</h4> 
+<p>生成 package.json </p> 
+<pre><code>npm init -y</code></pre> 
+<p> 生成 package-lock.json</p> 
+<pre><code>npm install --package-lock-only</code></pre> 
+<p>在首次安装依赖包时会创建package-lock.json文件。</p> 
+<h4 id="%E4%BA%94%E3%80%81npm%20%E5%AE%89%E8%A3%85%E5%8C%85%E7%9A%84%E6%96%B9%E5%BC%8F">五、npm 安装包的方式</h4> 
+<p>①.npm 安装包的方式分为本地安装和全局安装。安装使用 npm install 或简写形式 npm i</p> 
+<p>②.本地安装的包又分为<a class="link-info" href="https://blog.csdn.net/m0_73531461/article/details/127266353?spm=1001.2014.3001.5502" title="开发依赖(devDependencies)和生产依赖(dependencies)">开发依赖(devDependencies)和生产依赖(dependencies)</a></p> 
+<ul><li>开发依赖(devDependencies)：传递参数 --save-dev 或 -D 即可</li><li>生产依赖(dependencies)：传递参数 --save 或 -S 即可</li><li>如果没传递依赖参数，会把包默认安装到生产依赖(dependencies)中</li></ul> 
+<blockquote> 
+ <p>注意：cnpm 不支持 package-lock</p> 
+ <p>在使用 cnpm install 时候，并不会生成 package-lock.json 文件。cnpm install 的时候，就算你项目中有 package-lock.json 文件，cnpm 也不会识别，仍会根据 package.json 来安装，因此，尽量不要直接使用 cnpm install 安装项目依赖包。</p> 
+</blockquote> 
+<h4 id="%E5%85%AD%E3%80%81npm%20install%20%E5%90%8E%E5%8F%91%E7%94%9F%E4%BA%86%E4%BB%80%E4%B9%88%EF%BC%9F">六、npm install 后发生了什么？</h4> 
+<p><img alt="" height="620" src="https://images2.imgbox.com/b3/3c/XqU9QsUC_o.png" width="1200"></p> 
+<h4 id="%E4%B8%83%E3%80%81node%20%E5%8C%85%E7%89%88%E6%9C%AC%E5%8F%B7">七、node 包版本号</h4> 
+<p>npm 默认所有的 node 包都使用语义化版本号，这是一套指导开发人员如何增长版本号的规则。<br> 每个版本号都形如：1.2.1，有三部分组成，依次叫主版本号、次版本号、修订号；</p> 
+<ul><li>主版本号：当新版本无法兼容基于前一版本的代码时，则提高主版本号；</li><li>次版本号：当新版本新增了功能和特性，但仍兼容前一版本的代码时，则提高次版本号；</li><li>修订号：当新版本仅仅修正了漏洞或者增强了效率，仍然兼容前一版本代码，则提高修订号；</li></ul> 
+<p>查看npm版本</p> 
+<pre><code class="language-javascript">npm -v </code></pre> 
+<p>升级 moment 到最新版本，-g 表示全局安装</p> 
+<pre><code class="language-javascript">npm install -g moment</code></pre> 
+<p> 升级 moment 到指定版本 </p> 
+<pre><code class="language-javascript">npm install -g moment@1.11.0</code></pre> 
+<h4 id="%E5%85%AB%E3%80%81%E7%89%88%E6%9C%AC%E7%AC%A6%E5%8F%B7%E5%90%AB%E4%B9%89">八、版本符号含义</h4> 
+<p>指定版本：比如1.2.0，遵循“大版本.次要版本.小版本”的格式规定，安装时只安装指定版本。</p> 
+<p>①.波浪号：比如~1.2.2，表示安装1.2.x的最新版本（不低于1.2.2），但是不安装1.3.x，安装时不改变大版本号和次要版本号。<br> ②.插入号：比如ˆ1.2.2，表示安装1.x.x的最新版本（不低于1.2.2），但是不安装2.x.x，安装时不改变大版本号。<br> ③. latest：安装最新版本</p> 
+<p>注意：如果大版本号为0，则插入号的行为与波浪号相同，因为此时处于开发阶段，即使是次要版本号变动，也可能带来程序的不兼容。</p> 
+<p>所以建议使用 ~ 来标记版本号，这样可以保证项目不会出现大的问题，也能保证包中的小 bug 可以得到修复。</p> 
+<pre><code class="language-javascript">// package.json 中的版本符号
+{
+    "react"："^18.2.0",              //  插入符号 ^18.2.0 ：匹配 18.X.X 的最新版本。
+    "react-dom"："~18.2.0"      //  波浪符号 ~18.2.0 ：匹配 18.2.X 的最新版本。
+    "react-refresh": "0.11.0"     //  固定版本 0.11.0 ： 匹配 0.11.0， 不会更新版本。
+}</code></pre> 
+<p>因此，<code>package.json </code>定义的是锁住主版本。<code>package-lock.json </code>定义的是锁住小版本，并提供了下载链接和验证。</p> 
+<p></p> 
+<p>参考：<a class="link-info" href="https://blog.csdn.net/qq_34402069/article/details/127638319" title="package.json 与 package-lock.json文件的区别">package.json 与 package-lock.json文件的区别</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f55e28afc2445086e8d7633494beac16/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MySQL中replace into详解、批量更新、不存在插入存在则更新、replace into的坑</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b671805a7ba0193a390807e3bbcdd778/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python 数据持久层ORM框架 TorToise模块（异步）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

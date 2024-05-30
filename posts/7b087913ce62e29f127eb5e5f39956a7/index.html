@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>多线程理论及操作 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7b087913ce62e29f127eb5e5f39956a7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="多线程理论及操作">
+  <meta property="og:description" content="【一】什么是线程 在传统操作系统中，每个进程有一个地址空间，而且默认就有一个控制线程
+线程顾名思义，就是一条流水线工作的过程
+一条流水线必须属于一个车间，一个车间的工作过程是一个进程
+车间负责把资源整合到一起，是一个资源单位，而一个车间内至少有一个流水线
+流水线的工作需要电源，电源就相当于cpu
+所以进程只是用来把资源集中到一起（进程只是一个资源单位，或者说资源集合），而线程才是cpu上的执行单位。
+多线程（即多个控制线程）的概念是在一个进程中存在多个控制线程，多个控制线程共享该进程的地址空间，相当于一个车间内有多条流水线，都共用一个车间的资源。
+例如
+北京地铁与上海地铁是不同的进程，而北京地铁里的13号线是一个线程，北京地铁所有的线路共享北京地铁所有的资源，比如所有的乘客可以被所有线路拉。
+【1】示例： 进程
+资源单位
+线程
+执行单位
+将操作系统比喻成大的工厂
+进程相当于工厂里面的车间
+线程相当于车间里面的流水线
+【2】小结 每一个进程必定自带一个线程
+进程：资源单位
+起一个进程仅仅只是 在内存空间中开辟出一块独立的空间
+线程：执行单位
+真正被CPU执行的其实是进程里面的线程
+线程指的就是代码的执行过程，执行代码中所需要使用到的资源都找所在的进程索要
+进程和线程都是虚拟单位，只是为了我们更加方便的描述问题
+【二】线程的创建开销 【1】创建进程的开销要远大于线程 如果我们的软件是一个工厂
+该工厂有多条流水线
+流水线工作需要电源
+电源只有一个即cpu（单核cpu）
+一个车间就是一个进程
+一个车间至少一条流水线（一个进程至少一个线程）
+创建一个进程
+就是创建一个车间（申请空间，在该空间内建至少一条流水线）
+而建线程
+就只是在一个车间内造一条流水线
+无需申请空间，所以创建开销小
+【2】进程之间是竞争关系，线程之间是协作关系 车间直接是竞争/抢电源的关系，竞争
+不同的进程直接是竞争关系
+不同的程序员写的程序运行的迅雷抢占其他进程的网速
+360把其他进程当做病毒干死
+一个车间的不同流水线式协同工作的关系
+同一个进程的线程之间是合作关系，是同一个程序写的程序内开启动
+迅雷内的线程是合作关系，不会自己干自己
+【三】线程和进程的区别 Threads share the address space of the process that created it; processes have their own address space.
+线程共享创建它的进程的地址空间； 进程具有自己的地址空间。
+Threads have direct access to the data segment of its process; processes have their own copy of the data segment of the parent process.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-27T22:00:17+08:00">
+    <meta property="article:modified_time" content="2024-05-27T22:00:17+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">多线程理论及操作</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>【一】什么是线程</h2> 
+<ul><li> <p>在传统操作系统中，每个进程有一个地址空间，而且默认就有一个控制线程</p> </li><li> <p>线程顾名思义，就是一条流水线工作的过程</p> </li><li> 
+  <ul><li> <p>一条流水线必须属于一个车间，一个车间的工作过程是一个进程</p> </li><li> <p>车间负责把资源整合到一起，是一个资源单位，而一个车间内至少有一个流水线</p> </li><li> <p>流水线的工作需要电源，电源就相当于cpu</p> </li></ul></li><li> <p>所以<strong>进程只是用来把资源集中到一起（进程只是一个资源单位，或者说资源集合），而线程才是cpu上的执行单位。</strong></p> </li><li> <p>多线程（即多个控制线程）的概念是在一个进程中存在多个控制线程，多个控制线程共享该进程的地址空间，相当于一个车间内有多条流水线，都共用一个车间的资源。</p> </li><li> <p>例如</p> </li><li> 
+  <ul><li> <p>北京地铁与上海地铁是不同的进程，而北京地铁里的13号线是一个线程，北京地铁所有的线路共享北京地铁所有的资源，比如所有的乘客可以被所有线路拉。</p> </li></ul></li></ul> 
+<h3>【1】示例：</h3> 
+<ul><li> <p>进程</p> </li><li> 
+  <ul><li> <p>资源单位</p> </li></ul></li><li> <p>线程</p> </li><li> 
+  <ul><li> <p>执行单位</p> </li></ul></li><li> <p>将操作系统比喻成大的工厂</p> </li><li> 
+  <ul><li> <p>进程相当于工厂里面的车间</p> </li><li> <p>线程相当于车间里面的流水线</p> </li></ul></li></ul> 
+<h3>【2】小结</h3> 
+<ul><li> <p>每一个进程必定自带一个线程</p> </li><li> <p>进程：资源单位</p> </li><li> 
+  <ul><li> <p>起一个进程仅仅只是 在内存空间中开辟出一块独立的空间</p> </li></ul></li><li> <p>线程：执行单位</p> </li><li> 
+  <ul><li> <p>真正被CPU执行的其实是进程里面的线程</p> </li><li> <p>线程指的就是代码的执行过程，执行代码中所需要使用到的资源都找所在的进程索要</p> </li></ul></li><li> <p>进程和线程都是虚拟单位，只是为了我们更加方便的描述问题</p> </li></ul> 
+<h2>【二】线程的创建开销</h2> 
+<h3>【1】创建进程的开销要远大于线程</h3> 
+<ul><li> <p>如果我们的软件是一个工厂</p> </li><li> <p>该工厂有多条流水线</p> </li><li> <p>流水线工作需要电源</p> </li><li> <p>电源只有一个即cpu（单核cpu）</p> </li><li> 
+  <ul><li> <p>一个车间就是一个进程</p> </li></ul></li><li> 
+  <ul><li> 
+    <ul><li> <p>一个车间至少一条流水线（一个进程至少一个线程）</p> </li></ul></li></ul></li><li> 
+  <ul><li> <p>创建一个进程</p> </li></ul></li><li> 
+  <ul><li> 
+    <ul><li> <p>就是创建一个车间（申请空间，在该空间内建至少一条流水线）</p> </li></ul></li></ul></li><li> 
+  <ul><li> <p>而建线程</p> </li></ul></li><li> 
+  <ul><li> 
+    <ul><li> <p>就只是在一个车间内造一条流水线</p> </li><li> <p>无需申请空间，所以创建开销小</p> </li></ul></li></ul></li></ul> 
+<h3>【2】进程之间是竞争关系，线程之间是协作关系</h3> 
+<ul><li> <p>车间直接是竞争/抢电源的关系，竞争</p> </li><li> 
+  <ul><li> <p>不同的进程直接是竞争关系</p> </li><li> <p>不同的程序员写的程序运行的迅雷抢占其他进程的网速</p> </li><li> <p>360把其他进程当做病毒干死</p> </li></ul></li><li> <p>一个车间的不同流水线式协同工作的关系</p> </li><li> 
+  <ul><li> <p>同一个进程的线程之间是合作关系，是同一个程序写的程序内开启动</p> </li><li> <p>迅雷内的线程是合作关系，不会自己干自己</p> </li></ul></li></ul> 
+<h2>【三】线程和进程的区别</h2> 
+<ul><li> <p>Threads share the address space of the process that created it; processes have their own address space.</p> </li><li> 
+  <ul><li> <p>线程共享创建它的进程的地址空间； 进程具有自己的地址空间。</p> </li></ul></li><li> <p>Threads have direct access to the data segment of its process; processes have their own copy of the data segment of the parent process.</p> </li><li> 
+  <ul><li> <p>线程可以直接访问其进程的数据段； 进程具有其父进程数据段的副本。</p> </li></ul></li><li> <p>Threads can directly communicate with other threads of its process; processes must use interprocess communication to communicate with sibling processes.</p> </li><li> 
+  <ul><li> <p>线程可以直接与其进程中的其他线程通信； 进程必须使用进程间通信与同级进程进行通信。</p> </li></ul></li><li> <p>New threads are easily created; new processes require duplication of the parent process.</p> </li><li> 
+  <ul><li> <p>新线程很容易创建； 新进程需要复制父进程。</p> </li></ul></li><li> <p>Threads can exercise considerable control over threads of the same process; processes can only exercise control over child processes.</p> </li><li> 
+  <ul><li> <p>线程可以对同一进程的线程行使相当大的控制权。 进程只能控制子进程。</p> </li></ul></li><li> <p>Changes to the main thread (cancellation, priority change, etc.) may affect the behavior of the other threads of the process; changes to the parent process does not affect child processes.</p> </li><li> 
+  <ul><li> <p>对主线程的更改（取消，优先级更改等）可能会影响该进程其他线程的行为； 对父进程的更改不会影响子进程。</p> </li></ul></li></ul> 
+<h2>【四】为何要有多线程</h2> 
+<h3>【1】开设进程</h3> 
+<ul><li> <p>申请内存空间 -- 耗资源</p> </li><li> <p>拷贝代码 - 耗资源</p> </li></ul> 
+<h3>【2】开设线程</h3> 
+<ul><li> <p>一个进程内可以开设多个线程</p> </li><li> <p>在一个进程内开设多个线程无需再次申请内存空间及拷贝代码操作</p> </li></ul> 
+<h3>【3】总结线程的优点</h3> 
+<ul><li> <p>减少了资源的消耗</p> </li><li> <p>同一个进程下的多个线程资源共享</p> </li></ul> 
+<h3>【4】什么是多线程</h3> 
+<ul><li> <p>多线程指的是</p> </li><li> 
+  <ul><li> <p>在一个进程中开启多个线程</p> </li><li> <p>简单的讲：如果多个任务共用一块地址空间，那么必须在一个进程内开启多个线程。</p> </li></ul></li><li> <p>多线程共享一个进程的地址空间</p> </li><li> 
+  <ul><li> <p>线程比进程更轻量级，线程比进程更容易创建可撤销，在许多操作系统中，创建一个线程比创建一个进程要快10-100倍，在有大量线程需要动态和快速修改时，这一特性很有用</p> </li></ul></li><li> <p>若多个线程都是cpu密集型的，那么并不能获得性能上的增强</p> </li><li> 
+  <ul><li> <p>但是如果存在大量的计算和大量的I/O处理，拥有多个线程允许这些活动彼此重叠运行，从而会加快程序执行的速度。</p> </li></ul></li><li> <p>在多cpu系统中，为了最大限度的利用多核，可以开启多个线程，比开进程开销要小的多。（这一条并不适用于Python）</p> </li></ul> 
+<h2>【五】开设多线程的两种方式</h2> 
+<h3>【1】方式一：直接调用Thread</h3> 
+<pre>from multiprocessing import Process
+from threading import Thread
+import time
+​
+​
+def task(name):
+    print(f'当前任务:&gt;&gt;&gt;{name} 正在运行')
+    time.sleep(3)
+    print(f'当前任务:&gt;&gt;&gt;{name} 结束运行')
+​
+​
+def Thread_main():
+    t = Thread(target=task, args=("dream",))
+    # 创建线程的开销非常小，几乎代码运行的一瞬间线程就已经创建了
+    t.start()
+    '''
+    当前任务:&gt;&gt;&gt;dream 正在运行this is main process!
+    this is main process!
+    当前任务:&gt;&gt;&gt;dream 结束运行
+    '''
+​
+​
+def Process_main():
+    p = Process(target=task, args=("dream",))
+    p.start()
+    '''
+    this is main process!
+    当前任务:&gt;&gt;&gt;dream 正在运行
+    当前任务:&gt;&gt;&gt;dream 结束运行
+    '''
+​
+​
+if __name__ == '__main__':
+    Thread_main()
+    # Process_main()
+    print('this is main process!')</pre> 
+<h3>【2】方式二：继承Thread父类</h3> 
+<pre>from threading import Thread
+import time
+​
+​
+class MyThread(Thread):
+​
+    def __init__(self, name):
+        # 重写了别人的方法，又不知道别人的方法里面有什么， 就调用父类的方法
+        super().__init__()
+        self.name = name
+​
+    # 定义 run 函数
+    def run(self):
+        print(f'{self.name} is running')
+        time.sleep(3)
+        print(f'{self.name} is ending')
+​
+​
+def main():
+    t = MyThread('dream')
+    t.start()
+    print(f'this is a main process')
+​
+    """
+    dream is running
+    this is a main process
+    dream is ending
+    """
+​
+​
+if __name__ == '__main__':
+    main()</pre> 
+<h3>【三】一个进程下开启多个线程和多个子进程的区别</h3> 
+<h4>【1】线程比进程速度快</h4> 
+<pre>from threading import Thread
+from multiprocessing import Process
+import time
+​
+​
+def work():
+    print('hello')
+​
+​
+def timer(func):
+    def inner(*args, **kwargs):
+        start_time = time.time()
+        res = func(*args, **kwargs)
+        print(f'函数 {func.__name__} 运行时间为：{time.time() - start_time}')
+        return res
+​
+    return inner
+​
+​
+@timer
+def work_process():
+    # 在主进程下开启子进程
+    t = Process(target=work)
+    t.start()
+    print('主线程/主进程')
+    '''
+    主线程/主进程
+    函数 work_process 运行时间为：0.0043752193450927734
+    hello
+    '''
+​
+​
+@timer
+def work_thread():
+    # 在主进程下开启线程
+    t = Thread(target=work)
+    t.start()
+    print('主线程/主进程')
+    '''
+    打印结果:
+    hello
+    主线程/主进程
+    函数 work_thread 运行时间为：0.0001499652862548828
+    '''
+​
+​
+if __name__ == '__main__':
+    # part1 : 多线程
+    work_thread()
+    # part2 : 多进程
+    work_process()</pre> 
+<h4>【2】查看pid</h4> 
+<pre>from threading import Thread
+from multiprocessing import Process
+import os
+​
+​
+def work():
+    print('hello', os.getpid())
+​
+​
+def work_thread():
+    # part1:在主进程下开启多个线程,每个线程都跟主进程的pid一样
+    t1 = Thread(target=work)
+    t2 = Thread(target=work)
+    t1.start()
+    t2.start()
+    print('主线程/主进程pid', os.getpid())
+​
+    # hello 5022
+    # hello 5022
+    # 主线程/主进程pid 5022
+​
+​
+def work_process():
+    # part2:开多个进程,每个进程都有不同的pid
+    p1 = Process(target=work)
+    p2 = Process(target=work)
+    p1.start()
+    p2.start()
+    print('主线程/主进程pid', os.getpid())
+​
+    # 主线程/主进程pid 5032
+    # hello 5034
+    # hello 5035
+​
+​
+if __name__ == '__main__':
+    # part1:在主进程下开启多个线程,每个线程都跟主进程的pid一样
+    work_thread()
+    # part2:开多个进程,每个进程都有不同的pid
+    work_process()</pre> 
+<h4>【3】同一进程内的线程共享进程内的数据</h4> 
+<pre>from threading import Thread
+from multiprocessing import Process
+​
+​
+def work():
+    global n
+    n = 0
+​
+​
+def work_process():
+    n = 100
+    p = Process(target=work)
+    p.start()
+    p.join()
+    print('主', n)  # 毫无疑问子进程p已经将自己的全局的n改成了0,但改的仅仅是它自己的,查看父进程的n仍然为100
+​
+    # 主 100
+​
+​
+def work_thread():
+    n = 1
+    t = Thread(target=work)
+    t.start()
+    t.join()
+    print('主', n)  # 查看结果为1,因为同一进程内的线程之间共享进程内的数据
+​
+​
+if __name__ == '__main__':
+    # part1 多进程 ： 子进程只改自己的
+    work_process()
+    # part2 多线程： 数据发生错乱,同一进程内的线程之间共享数据
+    work_thread()</pre> 
+<h2>【四】守护线程</h2> 
+<h3>【1】主线程死亡，子线程未死亡</h3> 
+<ul><li> <p>主线程结束运行后不会马上结束，而是等待其他非守护子线程结束之后才会结束</p> </li><li> <p>如果主线程死亡就代表者主进程也死亡，随之而来的是所有子线程的死亡</p> </li></ul> 
+<pre>from threading import Thread
+import time
+​
+​
+def work(name):
+    print(f"当前{name} 是开始\n")
+    time.sleep(2)
+    print(f"当前{name} 是结束")
+​
+​
+def main():
+    print(f'这是主函数main开始')
+    task = Thread(target=work,args=('knight',))
+    task.start()
+    print(f'这是主函数main结束')
+​
+​
+if __name__ == '__main__':
+    main()
+​
+# 这是主函数main开始
+# 当前knight 是开始
+# 这是主函数main结束
+​
+# 当前knight 是结束</pre> 
+<h3>【2】主线程死亡，子线程也死亡</h3> 
+<pre>from threading import Thread
+import time
+​
+​
+def work(name):
+    print(f"当前{name} 是开始\n")
+    time.sleep(2)
+    print(f"当前{name} 是结束")
+​
+​
+def main():
+    print(f'这是主函数main开始')
+    task = Thread(target=work,args=('knight',))
+    task.daemon = True  # 开启守护进程，主线程结束，子线程也随之结束
+    task.start()
+    print(f'这是主函数main结束')
+​
+​
+if __name__ == '__main__':
+    main()
+​
+# 这是主函数main开始
+# 当前knight 是开始
+# 这是主函数main结束</pre> 
+<h3>示例：对比是否被守护进程的区别</h3> 
+<pre># 导入所需模块
+from threading import Thread
+import time
+​
+​
+# 定义函数foo，模拟一个耗时操作
+def foo():
+    # 打印开始信息
+    print(f' this is foo begin')
+    # 模拟耗时操作，暂停3秒
+    time.sleep(3)
+    # 打印结束信息
+    print(f' this is foo end')
+​
+​
+# 定义另一个函数func，同样模拟耗时操作
+def func():
+    # 打印开始信息
+    print(f' this is func begin')
+    # 模拟耗时操作，暂停1秒
+    time.sleep(1)
+    # 打印结束信息
+    print(f' this is func end')
+​
+​
+# 主函数
+def main():
+    # 创建线程 task_foo ，目标函数为foo
+    task_foo = Thread(target=foo)
+    # 设置 task_foo 为守护线程
+    # 意味着当主线程结束时，不论 task_foo 是否执行完毕都会被强制终止
+    task_foo.daemon = True
+    # 创建线程 task_func ，目标函数为func
+    task_func = Thread(target=func)
+​
+    # 启动线程 task_foo
+    task_foo.start()
+    # 启动线程 task_func
+    task_func.start()
+​
+    # 主线程继续执行，打印以下信息
+    print(f' this is main')
+​
+​
+# 程序入口
+if __name__ == '__main__':
+    main()
+    #  this is main begin 
+    #  this is foo begin
+    #  this is func begin
+    #  this is main end
+    #  this is func end</pre> 
+<h4>执行过程</h4> 
+<h5>（1） 初始化阶段</h5> 
+<ul><li> <p>程序开始执行时，首先会导入所需的模块，并定义两个函数<code>foo()</code>和<code>func()</code>。</p> </li><li> <p>这两个函数分别代表了两个需要并发执行的任务。</p> </li></ul> 
+<h5>（2）线程创建与启动</h5> 
+<ul><li> <p>在<code>main()</code>函数中</p> </li><li> <p>首先通过<code>Thread</code>类创建了两个线程实例<code>t1</code>和<code>t2</code></p> </li><li> <p>其中<code>t1</code>的目标函数是<code>foo</code>，<code>t2</code>的目标函数是<code>func</code>。</p> </li><li> <p>然后将<code>t1</code>设置为守护线程（daemon=True），这意味着当主线程结束时，即使<code>t1</code>尚未执行完毕也会被系统终止。</p> </li><li> <p>之后，两个线程通过<code>start()</code>方法启动，这意味着它们将异步地执行各自的目标函数。</p> </li></ul> 
+<h4>原理分析</h4> 
+<h5>（1）并发执行</h5> 
+<ul><li> 
+  <ul><li> <p><code>t1</code>开始执行，打印出“this is foo begin”，随后进入3秒的等待状态。</p> </li><li> <p>几乎同时，<code>t2</code>也开始执行，打印出“this is func begin”，并进入1秒的等待状态。</p> </li><li> <p>由于线程调度机制，实际的打印顺序可能会略有不同，但通常情况下<code>func()</code>会先于<code>foo()</code>结束，因为它的等待时间较短。</p> </li></ul></li></ul> 
+<h5>（2）主线程执行</h5> 
+<ul><li> <p>主线程继续执行，打印出“this is main”。</p> </li><li> <p>由于<code>t1</code>被设置为守护线程，即便它还在睡眠中，当主线程执行结束后，整个程序也会直接终止，此时<code>t1</code>不论是否完成都会被系统停止。</p> </li><li> <p>而<code>t2</code>作为一个非守护线程，如果在主线程结束前已完成，则正常结束，否则也会随程序终止。</p> </li></ul> 
+<h2>【五】线程的互斥锁</h2> 
+<ul><li> <p>所有子线程都会进行阻塞操作，导致最后的改变只是改了一次</p> </li></ul> 
+<pre>from threading import Thread
+import time
+
+money = 100
+
+
+def work():
+    global money
+
+    # 模拟获取到车票信息
+    temp = money
+
+    # 模拟网络延迟
+    time.sleep(2)
+
+    # 模拟购票
+    money = temp - 1
+
+
+def main():
+    task_list = [Thread(target=work) for i in range(100)]
+    [task.start() for task in task_list]
+    [task.join() for task in task_list]
+    print(money)
+
+
+if __name__ == '__main__':
+    main()
+
+    # 99</pre> 
+<h4>解决方法</h4> 
+<ul><li> <p>在数据发生改变的地方进行加锁处理</p> </li></ul> 
+<pre>from threading import Thread,Lock
+import time
+
+money = 100
+mutex = Lock()
+
+
+def work():
+    global money
+
+    # 数据发生改变之前加锁
+    mutex.acquire()
+
+    # 模拟获取到车票信息
+    temp = money
+
+    # 模拟网络延迟
+    time.sleep(1)
+
+    # 模拟购票
+    money = temp - 1
+
+    # 数据改变之后解锁
+    mutex.release()
+
+
+def main():
+    task_list = [Thread(target=work) for i in range(100)]
+    [task.start() for task in task_list]
+    [task.join() for task in task_list]
+    print(money)
+
+
+if __name__ == '__main__':
+    main()
+
+
+    # 0</pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/99301fb57504c8af4397cf4c6258dc45/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【学习记录】服务器转发使用tensorboard</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/15a1bd457047c66e139797016020deea/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">AIGC技术的探讨</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

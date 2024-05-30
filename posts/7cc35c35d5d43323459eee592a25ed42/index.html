@@ -1,0 +1,581 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>大数据Hadoop之——部署hadoop&#43;hive&#43;Mysql环境（Linux） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7cc35c35d5d43323459eee592a25ed42/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="大数据Hadoop之——部署hadoop&#43;hive&#43;Mysql环境（Linux）">
+  <meta property="og:description" content="目录
+前期准备
+一、JDK的安装
+1、安装jdk
+2、配置Java环境变量 3、加载环境变量
+4、进行校验
+二、hadoop的集群搭建
+1、hadoop的下载安装 2、配置文件设置
+2.1. 配置 hadoop-env.sh
+2.2. 配置 core-site.xml
+2.3. 配置hdfs-site.xml
+2.4. 配置 yarn-site.xml
+2.5. 配置 mapred-site.xml
+2.6. 配置 workers（伪分布式不配置）
+2.7 配置sbin下启停命令
+3、复制hadoop到其他节点（伪分布式不执行此步）
+4、Hdfs格式化 5、启动hdfs分布式文件系统
+三、msyql安装
+1、卸载旧MySQL文件
+2、Mysql下载安装
+3、配置环境变量 4、删除用户组
+5、创建用户和组
+6、创建文件夹
+7、更改权限
+8、初始化
+9、记住初始密码
+10 将mysql加入到服务中
+11、配置文件
+12、设置开机启动并查看进程
+13、 创建软连接
+14、授权修改密码
+四、HIve安装 1、下载安装
+2、配置环境变量
+3、配置文件
+4、拷贝jar包
+5、初始化
+6、启动hive
+前期准备 设置虚拟机
+vi /etc/syscnfig/network-scripts/ifcfg-eth1
+设置主机名
+hostnamectl --static set-hostname 主机名
+配置IP与主机名映射
+vi /etc/hosts
+关闭防火墙">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-09T09:05:01+08:00">
+    <meta property="article:modified_time" content="2024-05-09T09:05:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">大数据Hadoop之——部署hadoop&#43;hive&#43;Mysql环境（Linux）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="main-toc-toc" style="margin-left:0px;"><a href="#main-toc" rel="nofollow"> 前期准备</a></p> 
+<p id="%E4%B8%80%E3%80%81JDK%E7%9A%84%E5%AE%89%E8%A3%85-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81JDK%E7%9A%84%E5%AE%89%E8%A3%85" rel="nofollow">一、JDK的安装</a></p> 
+<p id="1%E3%80%81%E5%AE%89%E8%A3%85jdk-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E5%AE%89%E8%A3%85jdk" rel="nofollow">1、安装jdk</a></p> 
+<p id="2%E3%80%81%E9%85%8D%E7%BD%AEJava%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E9%85%8D%E7%BD%AEJava%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0" rel="nofollow">2、配置Java环境变量 </a></p> 
+<p id="%C2%A03%E3%80%81%E5%8A%A0%E8%BD%BD%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F-toc" style="margin-left:40px;"><a href="#%C2%A03%E3%80%81%E5%8A%A0%E8%BD%BD%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F" rel="nofollow"> 3、加载环境变量</a></p> 
+<p id="4%E3%80%81%E8%BF%9B%E8%A1%8C%E6%A0%A1%E9%AA%8C-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E8%BF%9B%E8%A1%8C%E6%A0%A1%E9%AA%8C" rel="nofollow">4、进行校验</a></p> 
+<p id="%E4%BA%8C%E3%80%81hadoop%E7%9A%84%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81hadoop%E7%9A%84%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA" rel="nofollow">二、hadoop的集群搭建</a></p> 
+<p id="1%E3%80%81hadoop%E7%9A%84%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85%C2%A0-toc" style="margin-left:40px;"><a href="#1%E3%80%81hadoop%E7%9A%84%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85%C2%A0" rel="nofollow">1、hadoop的下载安装 </a></p> 
+<p id="2%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AE%BE%E7%BD%AE-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AE%BE%E7%BD%AE" rel="nofollow">2、配置文件设置</a></p> 
+<p id="2.1.%20%E9%85%8D%E7%BD%AE%20hadoop-env.sh-toc" style="margin-left:80px;"><a href="#2.1.%20%E9%85%8D%E7%BD%AE%20hadoop-env.sh" rel="nofollow">2.1. 配置 hadoop-env.sh</a></p> 
+<p id="2.2.%20%E9%85%8D%E7%BD%AE%C2%A0core-site.xml-toc" style="margin-left:80px;"><a href="#2.2.%20%E9%85%8D%E7%BD%AE%C2%A0core-site.xml" rel="nofollow">2.2. 配置 core-site.xml</a></p> 
+<p id="2.3.%20%E9%85%8D%E7%BD%AEhdfs-site.xml-toc" style="margin-left:80px;"><a href="#2.3.%20%E9%85%8D%E7%BD%AEhdfs-site.xml" rel="nofollow">2.3. 配置hdfs-site.xml</a></p> 
+<p id="2.4.%20%E9%85%8D%E7%BD%AE%20yarn-site.xml-toc" style="margin-left:80px;"><a href="#2.4.%20%E9%85%8D%E7%BD%AE%20yarn-site.xml" rel="nofollow">2.4. 配置 yarn-site.xml</a></p> 
+<p id="2.5.%20%E9%85%8D%E7%BD%AE%20mapred-site.xml-toc" style="margin-left:80px;"><a href="#2.5.%20%E9%85%8D%E7%BD%AE%20mapred-site.xml" rel="nofollow">2.5. 配置 mapred-site.xml</a></p> 
+<p id="2.6.%20%E9%85%8D%E7%BD%AE%20workers%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E9%85%8D%E7%BD%AE%EF%BC%89-toc" style="margin-left:80px;"><a href="#2.6.%20%E9%85%8D%E7%BD%AE%20workers%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E9%85%8D%E7%BD%AE%EF%BC%89" rel="nofollow">2.6. 配置 workers（伪分布式不配置）</a></p> 
+<p id="%C2%A02.7%20%E9%85%8D%E7%BD%AEsbin%E4%B8%8B%E5%90%AF%E5%81%9C%E5%91%BD%E4%BB%A4-toc" style="margin-left:80px;"><a href="#%C2%A02.7%20%E9%85%8D%E7%BD%AEsbin%E4%B8%8B%E5%90%AF%E5%81%9C%E5%91%BD%E4%BB%A4" rel="nofollow"> 2.7 配置sbin下启停命令</a></p> 
+<p id="3%E3%80%81%E5%A4%8D%E5%88%B6hadoop%E5%88%B0%E5%85%B6%E4%BB%96%E8%8A%82%E7%82%B9%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E6%89%A7%E8%A1%8C%E6%AD%A4%E6%AD%A5%EF%BC%89-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E5%A4%8D%E5%88%B6hadoop%E5%88%B0%E5%85%B6%E4%BB%96%E8%8A%82%E7%82%B9%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E6%89%A7%E8%A1%8C%E6%AD%A4%E6%AD%A5%EF%BC%89" rel="nofollow">3、复制hadoop到其他节点（伪分布式不执行此步）</a></p> 
+<p id="4%E3%80%81Hdfs%E6%A0%BC%E5%BC%8F%E5%8C%96%C2%A0-toc" style="margin-left:40px;"><a href="#4%E3%80%81Hdfs%E6%A0%BC%E5%BC%8F%E5%8C%96%C2%A0" rel="nofollow">4、Hdfs格式化 </a></p> 
+<p id="5%E3%80%81%E5%90%AF%E5%8A%A8hdfs%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E5%90%AF%E5%8A%A8hdfs%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F" rel="nofollow">5、启动hdfs分布式文件系统</a></p> 
+<p id="%E4%B8%89%E3%80%81msyql%E5%AE%89%E8%A3%85-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81msyql%E5%AE%89%E8%A3%85" rel="nofollow">三、msyql安装</a></p> 
+<p id="1.%E5%8D%B8%E8%BD%BD%E6%97%A7MySQL%E6%96%87%E4%BB%B6-toc" style="margin-left:40px;"><a href="#1.%E5%8D%B8%E8%BD%BD%E6%97%A7MySQL%E6%96%87%E4%BB%B6" rel="nofollow">1、卸载旧MySQL文件</a></p> 
+<p id="1%E3%80%81%E4%B8%8B%E8%BD%BDmysql%E5%AE%89%E8%A3%85%E5%8C%85-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E4%B8%8B%E8%BD%BDmysql%E5%AE%89%E8%A3%85%E5%8C%85" rel="nofollow">2、Mysql下载安装</a></p> 
+<p id="2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0" rel="nofollow">3、配置环境变量 </a></p> 
+<p id="3%E3%80%81%E5%88%A0%E9%99%A4%E7%94%A8%E6%88%B7%E7%BB%84-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E5%88%A0%E9%99%A4%E7%94%A8%E6%88%B7%E7%BB%84" rel="nofollow">4、删除用户组</a></p> 
+<p id="4%E3%80%81%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7%E5%92%8C%E7%BB%84-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7%E5%92%8C%E7%BB%84" rel="nofollow">5、创建用户和组</a></p> 
+<p id="5%E3%80%81%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9" rel="nofollow">6、创建文件夹</a></p> 
+<p id="6%E3%80%81%E6%9B%B4%E6%94%B9%E6%9D%83%E9%99%90-toc" style="margin-left:40px;"><a href="#6%E3%80%81%E6%9B%B4%E6%94%B9%E6%9D%83%E9%99%90" rel="nofollow">7、更改权限</a></p> 
+<p id="7%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96-toc" style="margin-left:40px;"><a href="#7%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96" rel="nofollow">8、初始化</a></p> 
+<p id="8%E3%80%81%E8%AE%B0%E4%BD%8F%E5%88%9D%E5%A7%8B%E5%AF%86%E7%A0%81-toc" style="margin-left:40px;"><a href="#8%E3%80%81%E8%AE%B0%E4%BD%8F%E5%88%9D%E5%A7%8B%E5%AF%86%E7%A0%81" rel="nofollow">9、记住初始密码</a></p> 
+<p id="10%C2%A0%E5%B0%86mysql%E5%8A%A0%E5%85%A5%E5%88%B0%E6%9C%8D%E5%8A%A1%E4%B8%AD-toc" style="margin-left:40px;"><a href="#10%C2%A0%E5%B0%86mysql%E5%8A%A0%E5%85%A5%E5%88%B0%E6%9C%8D%E5%8A%A1%E4%B8%AD" rel="nofollow">10 将mysql加入到服务中</a></p> 
+<p id="11%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B-toc" style="margin-left:40px;"><a href="#11%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B" rel="nofollow">11、配置文件</a></p> 
+<p id="12%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B-toc" style="margin-left:40px;"><a href="#12%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B" rel="nofollow">12、设置开机启动并查看进程</a></p> 
+<p id="12%E3%80%81%C2%A0%E5%88%9B%E5%BB%BA%E8%BD%AF%E8%BF%9E%E6%8E%A5-toc" style="margin-left:40px;"><a href="#12%E3%80%81%C2%A0%E5%88%9B%E5%BB%BA%E8%BD%AF%E8%BF%9E%E6%8E%A5" rel="nofollow">13、 创建软连接</a></p> 
+<p id="13%E3%80%81%E6%8E%88%E6%9D%83%E4%BF%AE%E6%94%B9%E5%AF%86%E7%A0%81-toc" style="margin-left:40px;"><a href="#13%E3%80%81%E6%8E%88%E6%9D%83%E4%BF%AE%E6%94%B9%E5%AF%86%E7%A0%81" rel="nofollow">14、授权修改密码</a></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%E5%9B%9B%E3%80%81HIve%E5%AE%89%E8%A3%85%C2%A0-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81HIve%E5%AE%89%E8%A3%85%C2%A0" rel="nofollow">四、HIve安装 </a></p> 
+<p id="1%E3%80%81%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85" rel="nofollow">1、下载安装</a></p> 
+<p id="2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F" rel="nofollow">2、配置环境变量</a></p> 
+<p id="3%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6" rel="nofollow">3、配置文件</a></p> 
+<p id="4%E3%80%81%E6%8B%B7%E8%B4%9Djar%E5%8C%85-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E6%8B%B7%E8%B4%9Djar%E5%8C%85" rel="nofollow">4、拷贝jar包</a></p> 
+<p id="5%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96" rel="nofollow">5、初始化</a></p> 
+<p id="6%E3%80%81%E5%90%AF%E5%8A%A8hive-toc" style="margin-left:40px;"><a href="#6%E3%80%81%E5%90%AF%E5%8A%A8hive" rel="nofollow">6、启动hive</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="main-toc"> 前期准备</h2> 
+<p><strong>设置虚拟机</strong></p> 
+<p>vi /etc/syscnfig/network-scripts/ifcfg-eth1</p> 
+<p><img alt="" height="501" src="https://images2.imgbox.com/eb/58/hHXqOim7_o.png" width="978"></p> 
+<p>设置主机名</p> 
+<blockquote> 
+ <p>hostnamectl --static set-hostname  主机名</p> 
+</blockquote> 
+<p><strong>配置IP与主机名映射</strong></p> 
+<p>vi /etc/hosts</p> 
+<p><img alt="" height="324" src="https://images2.imgbox.com/44/b0/qy1rbxcz_o.png" width="1200"></p> 
+<p></p> 
+<p>关闭防火墙</p> 
+<blockquote> 
+ <p>systemctl stop firewalld</p> 
+ <p>systemctl disable firewalld</p> 
+</blockquote> 
+<h2 id="%E4%B8%80%E3%80%81JDK%E7%9A%84%E5%AE%89%E8%A3%85">一、JDK的安装</h2> 
+<h3 id="1%E3%80%81%E5%AE%89%E8%A3%85jdk">1、安装jdk</h3> 
+<blockquote> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">sudo  yum search  openjdk</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">yum install java-1.8.0-openjdk.x86_64</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">yum install java-1.8.0-openjdk-devel.x86_64</span></p> 
+</blockquote> 
+<h3 id="2%E3%80%81%E9%85%8D%E7%BD%AEJava%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0" style="background-color:transparent;"><strong><strong>2、配置Java环境变量</strong></strong> </h3> 
+<p>  vi ~/.bash_profile (或 /etc/profile 或 ~/.profile  或 ~/.bashrc 或 /etc/bashrc 或 /etc/bash.bashrc[在ubuntu 中的位置])  </p> 
+<blockquote> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">vi  ~/.bash_profile</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export JAVA_HOME=/usr/local/jdk1.8.0_11</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export PATH=$PATH:$JAVA_HOME/bin</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"></p> 
+</blockquote> 
+<h3 id="%C2%A03%E3%80%81%E5%8A%A0%E8%BD%BD%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F"> 3、<strong><strong>加载环境变量</strong></strong></h3> 
+<blockquote> 
+ <p><span style="background-color:#e7e6e6;"><span style="color:#0000ff;">source  </span><span style="color:#0000ff;">~/</span><span style="color:#0000ff;">.</span><span style="color:#0000ff;">bash_profile</span></span></p> 
+ <p style="margin-left:.0001pt;text-align:justify;">验证环境变量是否生效:</p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">env | grep HOME</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">env | grep PATH</span></p> 
+</blockquote> 
+<h3 id="4%E3%80%81%E8%BF%9B%E8%A1%8C%E6%A0%A1%E9%AA%8C">4、进行校验</h3> 
+<p><img alt="" height="159" src="https://images2.imgbox.com/f7/0a/1nXm5wr1_o.png" width="830"></p> 
+<h2 id="%E4%BA%8C%E3%80%81hadoop%E7%9A%84%E9%9B%86%E7%BE%A4%E6%90%AD%E5%BB%BA">二、hadoop的集群搭建</h2> 
+<h3 id="1%E3%80%81hadoop%E7%9A%84%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85%C2%A0">1、hadoop的下载安装 </h3> 
+<blockquote> 
+ <p><strong>1.1. 下载</strong></p> 
+ <p>https://archive.apache.org/dist/hadoop/common/hadoop-3.3.4/<br> ​下载 hadoop-3.3.4.tar.gz  安装包</p> 
+ <p><strong>1.2 上传</strong><br> 使用xshell上传到指定安装路径</p> 
+ <p>此处是安装路径是<strong> /usr/local</strong></p> 
+ <p><img alt="" height="416" src="https://images2.imgbox.com/f2/3d/5OOHBN0J_o.png" width="1200"></p> 
+ <p><strong>1.3 解压重命名</strong></p> 
+ <p>tar -xzvf hadoop-3.3.4.tar.gz</p> 
+ <p>mv hadoop-3.3.4 hadoop</p> 
+ <p><img alt="" height="253" src="https://images2.imgbox.com/4b/b4/W3y9sglH_o.png" width="789"></p> 
+ <p><img alt="" height="110" src="https://images2.imgbox.com/b3/42/smlAETEN_o.png" width="783"></p> 
+ <p><strong>1.4 配置环境变量</strong></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">vi  ~/.bash_profile</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export JAVA_HOME=/usr/local/jdk1.8.0_11</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export CLASSPATH=.:$JAVA_HOME/lib/dt.jar:$JAVA_HOME/lib/tools.jar</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export HADOOP_HOME=/usr/local/hadoop</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">export PATH=$PATH<span style="color:#4da8ee;"><strong>:</strong>$JAVA_HOME/bin</span><span style="color:#fe2c24;"><strong>:</strong>$HADOOP_HOME/bin:$HADOOP_HOME/sbin</span></span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><strong>1.5 加载环境变量</strong></p> 
+ <p style="margin-left:.0001pt;text-align:left;"></p> 
+ <p><span style="background-color:#e7e6e6;"><span style="color:#0000ff;">source  </span><span style="color:#0000ff;">~/</span><span style="color:#0000ff;">.</span><span style="color:#0000ff;">bash_profile</span></span></p> 
+ <p style="margin-left:.0001pt;text-align:justify;">验证环境变量是否生效:</p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">env | grep HOME</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">env | grep PATH</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><strong><span style="background-color:#e7e6e6;">1.6检验安装</span></strong></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">hadoop version</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#e7e6e6;">出现下图说明安装成功</span></p> 
+ <p style="margin-left:.0001pt;text-align:left;"><img alt="" height="176" src="https://images2.imgbox.com/f9/83/TSce3fnN_o.png" width="1195"></p> 
+</blockquote> 
+<h3 id="2%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E8%AE%BE%E7%BD%AE">2、配置文件设置</h3> 
+<h4 id="2.1.%20%E9%85%8D%E7%BD%AE%20hadoop-env.sh">2.1. 配置 hadoop-env.sh</h4> 
+<blockquote> 
+ <p><strong>hadoop伪分布式配置</strong></p> 
+ <p>export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}<br> export JAVA_HOME=/usr/local/jdk1.8.0_11</p> 
+ <p></p> 
+ <p><strong>hadoop集群配置（root指的是用户名）</strong></p> 
+ <p>export HADOOP_OS_TYPE=${HADOOP_OS_TYPE:-$(uname -s)}<br> export JAVA_HOME=/usr/local/jdk1.8.0_11</p> 
+ <p>export HDFS_NAMENODE_USER=root<br> export HDFS_DATANODE_USER=root<br> export HDFS_SECONDARYNAMENODE_USER=root<br> export YARN_RESOURCEMANAGER_USER=root</p> 
+</blockquote> 
+<h4 id="2.2.%20%E9%85%8D%E7%BD%AE%C2%A0core-site.xml">2.2. 配置 core-site.xml</h4> 
+<blockquote> 
+ <p>&lt;configuration&gt;<br>     &lt;!-- 指定HDFS中NameNode的地址 默认 9000端口--&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;fs.defaultFS&lt;/name&gt;<br>         &lt;value&gt;hdfs://hadoop001:9000&lt;/value&gt;<br>         &lt;description&gt;配置NameNode的URL&lt;/description&gt;<br>     &lt;/property&gt;</p> 
+ <p>    &lt;!-- 指定Hadoop运行时产生文件的存储目录 --&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;<br>         &lt;value&gt;/usr/local/hadoop/data&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p></p> 
+ <p>  <span style="color:#fe2c24;"><strong>  分布式集群配置下面内容，伪分布式只需配置上面内容</strong></span><br>     &lt;!--配置所有节点的<span style="color:#fe2c24;"><strong>root</strong></span>用户都可作为代理用户--&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;hadoop.proxyuser.<span style="color:#fe2c24;"><strong>root</strong></span>.hosts&lt;/name&gt;<br>         &lt;value&gt;*&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p>    &lt;!--配置<span style="color:#fe2c24;"><strong>root</strong></span>用户能够代理的用户组为任意组--&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;hadoop.proxyuser.<span style="color:#fe2c24;"><strong>root</strong></span>.groups&lt;/name&gt;<br>         &lt;value&gt;*&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p>    &lt;!--配置<span style="color:#fe2c24;"><strong>root</strong></span>用户能够代理的用户为任意用户--&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;hadoop.proxyuser.<span style="color:#fe2c24;"><strong>root</strong></span>.users&lt;/name&gt;<br>         &lt;value&gt;*&lt;/value&gt;<br>     &lt;/property&gt;<br> &lt;/configuration&gt;</p> 
+</blockquote> 
+<h4 id="2.3.%20%E9%85%8D%E7%BD%AEhdfs-site.xml">2.3. 配置hdfs-site.xml</h4> 
+<blockquote> 
+ <p><strong>以下配置集群和伪分布式均可用</strong></p> 
+ <p>&lt;configuration&gt;<br> &lt;!-- 数据的副本数量 --&gt; <br>     &lt;property&gt; <br>         &lt;name&gt;dfs.replication&lt;/name&gt; <br>         <span style="color:#fe2c24;">&lt;value&gt;3&lt;/value&gt;</span>  <strong>&lt;!-- 伪分布式此时为<span style="color:#fe2c24;">1</span>-&gt; </strong><br>     &lt;/property&gt; <br>     &lt;!-- nn web端访问地址 默认也是9870--&gt; <br>     &lt;property&gt; <br>         &lt;name&gt;dfs.namenode.http-address&lt;/name&gt; <br>         &lt;value&gt;hadoop001:9870&lt;/value&gt; <br>     &lt;/property&gt; </p> 
+ <p>    &lt;!--设置权限为false--&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;dfs.permissions.enabled &lt;/name&gt;<br>         &lt;value&gt;false&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p>   &lt;!--设置元数据存储目录--&gt;<br>    &lt;property&gt;<br>       &lt;name&gt;dfs.namenode.name.dir&lt;/name&gt;<br>       &lt;value&gt;file:///usr/local/hadoopdata/dfs/name&lt;/value&gt;<br>    &lt;/property&gt;<br>    &lt;property&gt;<br>       &lt;name&gt;dfs.datanode.data.dir&lt;/name&gt;<br>       &lt;value&gt;file:///usr/local/hadoopdata/dfs/data&lt;/value&gt;<br>   &lt;/property&gt;</p> 
+ <p></p> 
+ <p><span style="color:#fe2c24;"> 集群配置使用</span></p> 
+ <p>  &lt;property&gt;<br>     &lt;name&gt;dfs.namenode.secondary.http-address&lt;/name&gt;<br>     &lt;value&gt;hadoop003:9868&lt;/value&gt;<br>   &lt;/property&gt;  </p> 
+ <p><br>     &lt;!-- 2nn web端访问地址 可以不配置--&gt; <br>     &lt;property&gt; <br>         &lt;name&gt;dfs.namenode.secondary.http-address&lt;/name&gt; <br>         &lt;value&gt;hadoop002:9868&lt;/value&gt; <br>     &lt;/property&gt;</p> 
+ <p>&lt;/configuration&gt;</p> 
+</blockquote> 
+<h4 id="2.4.%20%E9%85%8D%E7%BD%AE%20yarn-site.xml">2.4. 配置 yarn-site.xml</h4> 
+<blockquote> 
+ <p>&lt;configuration&gt;</p> 
+ <p>    &lt;!-- NodeManager上运行的附属服务。需配置成mapreduce_shuffle,才可运行MR程序。--&gt; <br>     &lt;property&gt;    <br>         &lt;name&gt;yarn.nodemanager.aux-services&lt;/name&gt;  <br>         &lt;value&gt;mapreduce_shuffle&lt;/value&gt; <br>     &lt;/property&gt;</p> 
+ <p></p> 
+ <p><span style="color:#fe2c24;"><strong> 伪分布式以下无需配置</strong></span></p> 
+ <p>&lt;!-- Site specific YARN configuration properties --&gt;<br> &lt;!-- yarn集群主角色RM运行机器。--&gt; <br>     &lt;property&gt;    <br>         &lt;name&gt;yarn.resourcemanager.hostname&lt;/name&gt;    <br>         &lt;value&gt;hadoop002&lt;/value&gt;<br>     &lt;/property&gt; <br>  &lt;!-- 每个容器请求的最小内存资源（以MB为单位）。--&gt;<br>     &lt;property&gt;     <br>         &lt;name&gt;yarn.scheduler.minimum-allocation-mb&lt;/name&gt; <br>         &lt;value&gt;512&lt;/value&gt; <br>     &lt;/property&gt; <br>  &lt;!-- 每个容器请求的最大内存资源（以MB为单位）。--&gt; <br>     &lt;property&gt;     <br>         &lt;name&gt;yarn.scheduler.maximum-allocation-mb&lt;/name&gt; <br>         &lt;value&gt;2048&lt;/value&gt;<br>     &lt;/property&gt;<br>     &lt;!-- 容器虚拟内存与物理内存之间的比率。--&gt; <br>     &lt;property&gt;    <br>         &lt;name&gt;yarn.nodemanager.vmem-pmem-ratio&lt;/name&gt;  <br>         &lt;value&gt;4&lt;/value&gt; <br>     &lt;/property&gt;<br>     <br>     &lt;!-- 关闭yarn内存检查 flink on hadoop 配置--&gt;<br>     &lt;!--是否启动一个线程检查每个任务正使用的物理内存量，如果任务超出分配值，则直接将其杀掉，默认是 true --&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;yarn.nodemanager.pmem-check-enabled&lt;/name&gt;<br>         &lt;value&gt;false&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p>    &lt;!--是否启动一个线程检查每个任务正使用的虚拟内存量，如果任务超出分配值，则直接将其杀掉，默认是 true --&gt;<br>     &lt;property&gt;<br>         &lt;name&gt;yarn.nodemanager.vmem-check-enabled&lt;/name&gt;<br>         &lt;value&gt;false&lt;/value&gt;<br>     &lt;/property&gt;<br> &lt;/configuration&gt;</p> 
+</blockquote> 
+<h4 id="2.5.%20%E9%85%8D%E7%BD%AE%20mapred-site.xml">2.5. 配置 mapred-site.xml</h4> 
+<blockquote> 
+ <p>&lt;configuration&gt;<br>     &lt;!-- mr程序默认运行方式。yarn集群模式 local本地模式--&gt;<br>     &lt;property&gt;<br>     &lt;name&gt;mapreduce.framework.name&lt;/name&gt;<br>     &lt;value&gt;yarn&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p>  <span style="color:#fe2c24;"><strong> 以下配置为集群配置使用</strong></span><br>     &lt;!-- MR App Master环境变量。--&gt;<br>     &lt;property&gt;<br>     &lt;name&gt;yarn.app.mapreduce.am.env&lt;/name&gt;<br>     &lt;value&gt;HADOOP_MAPRED_HOME=${HADOOP_HOME}&lt;/value&gt;<br>     &lt;/property&gt;<br>     &lt;!-- MR MapTask环境变量。--&gt;<br>     &lt;property&gt;<br>     &lt;name&gt;mapreduce.map.env&lt;/name&gt;<br>     &lt;value&gt;HADOOP_MAPRED_HOME=${HADOOP_HOME}&lt;/value&gt;<br>     &lt;/property&gt;<br>     &lt;!-- MR ReduceTask环境变量。--&gt;<br>     &lt;property&gt;<br>     &lt;name&gt;mapreduce.reduce.env&lt;/name&gt;<br>     &lt;value&gt;HADOOP_MAPRED_HOME=${HADOOP_HOME}&lt;/value&gt;<br>     &lt;/property&gt;</p> 
+ <p></p> 
+ <p>  &lt;!-- <strong>历史服务器端地址<span style="color:#ff9900;">伪分布式和集群分布式</span><span style="color:#38d8f0;">都可以不配置</span></strong> --&gt; <br>     &lt;property&gt; <br>         &lt;name&gt;mapreduce.jobhistory.address&lt;/name&gt; <br>         &lt;value&gt;hadoop003:10020&lt;/value&gt; <br>     &lt;/property&gt; <br>     &lt;!-- 历史服务器web端地址 --&gt; <br>     &lt;property&gt; <br>         &lt;name&gt;mapreduce.jobhistory.webapp.address&lt;/name&gt; <br>         &lt;value&gt;hadoop003:19888&lt;/value&gt; <br>     &lt;/property&gt; <br> &lt;/configuration&gt;</p> 
+</blockquote> 
+<h4 id="2.6.%20%E9%85%8D%E7%BD%AE%20workers%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E9%85%8D%E7%BD%AE%EF%BC%89">2.6. 配置 workers（伪分布式不配置）</h4> 
+<blockquote> 
+ <p>配置三台主机名，在集群中使用。如果不是集群可以不用配置</p> 
+ <p>hadoop001<br> hadoop002<br> hadoop003</p> 
+</blockquote> 
+<h4 id="%C2%A02.7%20%E9%85%8D%E7%BD%AEsbin%E4%B8%8B%E5%90%AF%E5%81%9C%E5%91%BD%E4%BB%A4"> 2.7 配置sbin下启停命令</h4> 
+<blockquote> 
+ <p><strong>在 sbin下的start-dfs.sh和stop-dfs.sh中顶部配置</strong></p> 
+ <p>#!/usr/bin/env bash<br> HDFS_DATANODE_USER=root <br> HADOOP_SECURE_DN_USER=hdfs <br> HDFS_NAMENODE_USER=root <br> HDFS_SECONDARYNAMENODE_USER=root</p> 
+</blockquote> 
+<blockquote> 
+ <p><strong>在 sbin下的start-yarn.sh和stop-yarn.sh中顶部配置</strong></p> 
+ <p>#!/usr/bin/env bash<br> YARN_RESOURCEMANAGER_USER=root <br> HADOOP_SECURE_DN_USER=yarn <br> YARN_NODEMANAGER_USER=root</p> 
+</blockquote> 
+<h3 id="3%E3%80%81%E5%A4%8D%E5%88%B6hadoop%E5%88%B0%E5%85%B6%E4%BB%96%E8%8A%82%E7%82%B9%EF%BC%88%E4%BC%AA%E5%88%86%E5%B8%83%E5%BC%8F%E4%B8%8D%E6%89%A7%E8%A1%8C%E6%AD%A4%E6%AD%A5%EF%BC%89">3、复制hadoop到其他节点（伪分布式不执行此步）</h3> 
+<blockquote> 
+ <p>scp /usr/local/hadoop root@hadoop002:/usr/local/</p> 
+</blockquote> 
+<h3 id="4%E3%80%81Hdfs%E6%A0%BC%E5%BC%8F%E5%8C%96%C2%A0">4、Hdfs格式化 </h3> 
+<blockquote> 
+ <p>cd /usr/local/hadoop/</p> 
+ <p>bin/hdfs  namenode  -format</p> 
+ <p>find /usr/local/data/hadoop/</p> 
+</blockquote> 
+<h3 id="5%E3%80%81%E5%90%AF%E5%8A%A8hdfs%E5%88%86%E5%B8%83%E5%BC%8F%E6%96%87%E4%BB%B6%E7%B3%BB%E7%BB%9F">5、<strong>启动hdfs分布式文件系统</strong></h3> 
+<blockquote> 
+ <p>cd /usr/local/hadoop</p> 
+ <p>./sbin/start-dfs.sh</p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><span style="background-color:#ffffff;">使用 <strong>jps </strong>查看启动进程</span></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><img alt="" height="183" src="https://images2.imgbox.com/3f/fe/U963z5A1_o.png" width="858"></p> 
+ <p style="text-align:justify;"></p> 
+ <p style="text-align:justify;"><strong>访问h</strong><strong>adoop</strong><strong>分布式文件系统</strong></p> 
+ <p style="text-align:justify;"></p> 
+ <p style="text-align:justify;"><img alt="" height="439" src="https://images2.imgbox.com/e6/76/KxCNOXy8_o.png" width="796"></p> 
+</blockquote> 
+<p>6、启动yarn</p> 
+<blockquote> 
+ <p>cd /usr/local/hadoop</p> 
+ <p>./sbin/start-yarn.sh</p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><span style="background-color:#ffffff;">使用 <strong>jps </strong>查看启动进程</span></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><img alt="" height="167" src="https://images2.imgbox.com/69/87/EGCwqOPF_o.png" width="669"></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><strong>访问h</strong><strong>adoop</strong><strong>分布式yarn页面</strong></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"></p> 
+ <p style="margin-left:.0001pt;text-align:justify;"><img alt="" height="661" src="https://images2.imgbox.com/36/7e/c41CKtcH_o.png" width="1200"></p> 
+</blockquote> 
+<h2 id="%E4%B8%89%E3%80%81msyql%E5%AE%89%E8%A3%85">三、msyql安装</h2> 
+<h3 id="1.%E5%8D%B8%E8%BD%BD%E6%97%A7MySQL%E6%96%87%E4%BB%B6" style="margin-left:0pt;">1、卸载旧MySQL文件</h3> 
+<blockquote> 
+ <p style="margin-left:0pt;">执行命令 <br>     # yum remove mysql mysql-server mysql-lib mysql-server<br> •再查看当前安装mysql的情况看卸载情况：<br>     # rpm -qa|grep -i mysql<br> 可以看到之前安装的包，然后执行删除命令，全部删除<br>     # rpm -ev MySQL-devel--5.1.52-1.el6.i686 --nodeps<br> •查找之前老版本MySQL的目录，并删除老版本的MySQL的文件和库<br>     # find / -name mysql<br> 删除查找到的所有目录<br> #例如：rm -rf /run/lock/subsys/mysql    <br> #例如： rm -rf /etc/selinux/targeted/active/modules/100/mysql    # rm -rf /var/lib/mysql<br> •手动删除/etc/my.cnf<br>     # rm -rf /etc/my.cnf<br> •再次查询如果无，则删除干净<br>     # rpm -qa|grep -i mysql</p> 
+ <p style="margin-left:0pt;"></p> 
+ <p style="margin-left:0pt;">删除 mariadb<br>  rpm -qa|grep mariadb <br>  rpm -e --nodeps mariadb-libs<br>  rpm -e --nodeps mysql-libs-5.1.52-1.el6_0.1.x86_64</p> 
+</blockquote> 
+<p></p> 
+<h3 id="1%E3%80%81%E4%B8%8B%E8%BD%BDmysql%E5%AE%89%E8%A3%85%E5%8C%85" style="margin-left:0pt;"><strong><span style="background-color:#ffffff;"><span style="color:#333333;"><strong>2、Mysql下载安装</strong></span></span></strong></h3> 
+<blockquote> 
+ <p style="margin-left:0pt;"><strong>1.1 下载</strong></p> 
+ <p style="margin-left:0pt;"><strong>官网网址：</strong><a href="https://dev.mysql.com/downloads/mysql/" rel="nofollow" title="MySQL :: Download MySQL Community Server">MySQL :: Download MySQL Community Server</a></p> 
+ <p style="margin-left:0pt;">在这里下载的是如下版本的mysql<br> https://cdn.mysql.com//Downloads/MySQL-5.7/mysql-5.7.26-linux-glibc2.12-x86_64.tar.gz</p> 
+ <p></p> 
+ <p><strong>1.2 上传</strong></p> 
+ <p>使用xshell上传到到linux服务器指定安装路径</p> 
+ <p>此处是安装路径是<strong> /usr/local</strong></p> 
+ <p></p> 
+ <p style="margin-left:0pt;"><strong>1.3 解压重命名</strong></p> 
+ <p style="margin-left:0pt;"><strong>cd </strong> /usr/local/</p> 
+ <p style="margin-left:0pt;">tar -xzvf  mysql-5.7.26-linux-glibc2.12-x86_64.tar.gz -C</p> 
+ <p style="margin-left:0pt;"># 如果是xz结尾压缩包用  tar -xvJf，如  tar -xvJf  mysql-8.0.30-linux-glibc2.12-x86_64.tar.xz</p> 
+ <p style="margin-left:0pt;">重命令</p> 
+ <p style="margin-left:0pt;">mv mysql-5.7.26-linux-glibc2.12-x86_64 mysql</p> 
+</blockquote> 
+<h3 id="2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F%C2%A0">3、配置环境变量 </h3> 
+<blockquote> 
+ <p>vim /etc/profile<br> export MYSQL_HOME=/usr/local/mysql<br> export PATH=$PATH:$MYSQL_HOME/bin</p> 
+ <p></p> 
+ <p>使环境生效<br> source /etc/profile</p> 
+</blockquote> 
+<h3 id="3%E3%80%81%E5%88%A0%E9%99%A4%E7%94%A8%E6%88%B7%E7%BB%84">4、删除用户组</h3> 
+<blockquote> 
+ <p style="text-align:left;">删除用户组<br> cat /etc/group|grep mysql<br> groupdel mysql<br> userdel mysql</p> 
+</blockquote> 
+<h3 id="4%E3%80%81%E5%88%9B%E5%BB%BA%E7%94%A8%E6%88%B7%E5%92%8C%E7%BB%84" style="text-align:left;"><strong><span style="background-color:#ffffff;"><span style="color:#333333;"><strong>5、创建用户和组</strong></span></span></strong></h3> 
+<blockquote> 
+ <p style="text-align:left;">groupadd mysql<br> useradd -r -g mysql mysql</p> 
+</blockquote> 
+<h3 id="5%E3%80%81%E5%88%9B%E5%BB%BA%E6%96%87%E4%BB%B6%E5%A4%B9" style="text-align:left;">6、创建文件夹</h3> 
+<blockquote> 
+ <p style="text-align:left;">mkdir /usr/local/mysql/data</p> 
+</blockquote> 
+<h3 id="6%E3%80%81%E6%9B%B4%E6%94%B9%E6%9D%83%E9%99%90" style="text-align:left;">7、更改权限</h3> 
+<blockquote> 
+ <p style="text-align:left;">更改mysql目录下所有的目录及文件夹所属的用户组和用户，以及赋予可执行权限</p> 
+ <p style="text-align:left;">chown -R mysql:mysql /usr/local/mysql/data/</p> 
+ <p style="text-align:left;">chmod -R 755 /usr/local/mysql/data/<br> chown -R mysql:mysql /usr/local/mysql/<br> chmod -R 755 /usr/local/mysql/</p> 
+</blockquote> 
+<h3 id="7%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96" style="text-align:left;">8、初始化</h3> 
+<blockquote> 
+ <p style="text-align:left;">安装依赖包</p> 
+ <p style="margin-left:.0001pt;text-align:justify;">yum install libaio 或者下面的</p> 
+ <p style="margin-left:.0001pt;text-align:justify;">yum install -y mariadb-server 安装mariadb-server 5.X版本使用</p> 
+ <p style="margin-left:.0001pt;text-align:justify;">执行初始化</p> 
+ <p style="text-align:left;"> /usr/local/mysql/bin/mysqld --user=mysql --basedir=/usr/local/mysql/ --datadir=/usr/local/mysql/data/ --initialize</p> 
+ <p style="text-align:left;"></p> 
+ <p style="text-align:left;">#说明</p> 
+ <p style="text-align:left;">–initialize 初始化（真正开始干活）<br> –user=mysql 以mysql用户的身份初始化数据库，产生文件都是mysql作为拥有者<br> –basedir=xxx mysql其安装目录，非常重要<br> –lower_case_table_names=1 不区分大小写，如果初始化不指定，必须重装才能解决，非常重要</p> 
+</blockquote> 
+<h3 id="8%E3%80%81%E8%AE%B0%E4%BD%8F%E5%88%9D%E5%A7%8B%E5%AF%86%E7%A0%81" style="text-align:left;">9、记住初始密码</h3> 
+<p style="text-align:left;"><img alt="" height="237" src="https://images2.imgbox.com/c2/32/uVIy6yzU_o.png" width="1200"></p> 
+<h3 id="10%C2%A0%E5%B0%86mysql%E5%8A%A0%E5%85%A5%E5%88%B0%E6%9C%8D%E5%8A%A1%E4%B8%AD" style="text-align:left;">10 <strong><span style="background-color:#ffffff;"><span style="color:#333333;"><strong>将mysql加入到服务中</strong></span></span></strong></h3> 
+<blockquote> 
+ <p>复制<br> cp /usr/local/mysql/support-files/mysql.server /etc/init.d/mysql</p> 
+ <p>#注意：默认情况下，GBLIC版本的数据库要求安装到/usr/local/mysql目录，其mysql.server脚本中对应的目录也是/usr/local/mysql，这会导致mysql无法启动。所以可以更改其basedir以及datadir两个变量，我们后面在 my.cnf中配置。</p> 
+ <p></p> 
+ <p>#赋予可执行权限<br> chmod +x /etc/init.d/mysql<br>  #添加服务    <br> chkconfig --add mysql<br>  #显示服务列表   <br> chkconfig --list mysql</p> 
+ <p><img alt="" height="574" src="https://images2.imgbox.com/fb/70/OX5NnCbS_o.png" width="1200"></p> 
+</blockquote> 
+<h3 id="11%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B">11、配置文件</h3> 
+<blockquote> 
+ <p style="text-align:left;">5.x版本</p> 
+ <p style="text-align:left;"></p> 
+ <p style="text-align:left;">vi /etc/my.cnf</p> 
+ <p style="text-align:left;"></p> 
+ <p style="text-align:left;">[mysqld]<br> port=3306<br> user=mysql<br> basedir=/usr/local/mysql<br> datadir=/usr/local/mysql/data<br> socket=/tmp/mysql.sock<br> #character config<br> character_set_server=utf8mb4<br> explicit_defaults_for_timestamp=true </p> 
+</blockquote> 
+<blockquote> 
+ <p>8.0版</p> 
+ <p>注意：使用配置前一定要创建好目录</p> 
+ <p>mkdir /usr/local/mysql/tmp</p> 
+ <p>mkdir /usr/local/mysql/log</p> 
+ <p>touch /usr/local/mysql/log/mysqld_safe.err</p> 
+ <p>chown -R mysql:mysql /usr/local/mysql/tmp</p> 
+ <p>chown -R mysql:mysql /usr/local/mysql/log</p> 
+ <p>chown -R mysql:mysql /usr/local/mysql/log/mysqld_safe.err</p> 
+ <p></p> 
+ <p><strong>简单配置（推荐）</strong></p> 
+ <p><strong>vi /etc/my.cnf</strong></p> 
+ <p>[mysql]<br> user=mysql<br> default-character-set=utf8</p> 
+ <p>[mysqld]<br> basedir=/usr/local/mysql<br> datadir=/usr/local/mysql/data<br> socket=/usr/local/mysql/tmp/mysql.sock<br> user=mysql<br> log_timestamps=SYSTEM<br> collation-server = utf8_unicode_ci<br> character-set-server = utf8<br> default_authentication_plugin= mysql_native_password</p> 
+ <p>[mysqld_safe]<br> log-error=/usr/local/mysql/log/mysqld_safe.err<br> pid-file=/usr/local/mysql/tmp/mysqld.pid</p> 
+ <p></p> 
+ <p></p> 
+ <p>复杂配置</p> 
+ <p><strong>vi /etc/my.cnf</strong></p> 
+ <p>[mysql]<br> socket=/usr/local/mysql/tmp/mysql.sock<br> port=3306<br> user=mysql<br> default-character-set=utf8</p> 
+ <p>[mysqld]<br> basedir=/usr/local/mysql<br> datadir=/usr/local/mysql/data<br> socket=/usr/local/mysql/tmp/mysql.sock<br> port=3306<br> user=mysql<br> log_timestamps=SYSTEM<br> collation-server = utf8_unicode_ci<br> character-set-server = utf8<br> default_authentication_plugin= mysql_native_password</p> 
+ <p></p> 
+ <p>[mysqld_safe]<br> log-error=/usr/local/mysql/log/mysqld_safe.err<br> pid-file=/usr/local/mysql/tmp/mysqld.pid<br> socket=/usr/local/mysql/tmp/mysql.sock</p> 
+ <p>[mysql.server]<br> basedir=/usr/local/mysql<br> datadir=/usr/local/mysql/data<br> socket=/usr/local/mysql/tmp/mysql.sock<br> port=3306<br> user=mysql</p> 
+</blockquote> 
+<h3 id="12%E3%80%81%E8%AE%BE%E7%BD%AE%E5%BC%80%E6%9C%BA%E5%90%AF%E5%8A%A8%E5%B9%B6%E6%9F%A5%E7%9C%8B%E8%BF%9B%E7%A8%8B" style="text-align:left;">12、设置开机启动并查看进程</h3> 
+<blockquote> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;">设置开机启动：chkconfig mysql on</span></span></p> 
+ <p></p> 
+ <p><strong><span style="background-color:#f5f5f5;"><span style="color:#008000;">启动mysql ：service mysql start</span></span><span style="background-color:#f5f5f5;"><span style="color:#008000;">;</span></span></strong></p> 
+ <p><strong><span style="background-color:#f5f5f5;"><span style="color:#008000;">启动报错：</span></span></strong></p> 
+ <p><strong><span style="color:#fe2c24;"><span style="background-color:#f5f5f5;">Starting MySQL.2023-06-25T04:58:08.333370Z mysqld_safe error: log-error set to ‘/usr/local/mysql/log/</span>mysqld_safe.err<span style="background-color:#f5f5f5;">’, however file don’t exists. Create writable for user ‘mysql’.<br> ERROR! The server quit without updating PID file (/usr/local/mysql/pid/mysqld.pid).</span></span></strong></p> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;"><strong>解决方案</strong></span></span><br> [root@mysql]# touch /usr/local/mysql/log/mysqld_safe.err<br> [root@mysql]# chown -R mysql:mysql /usr/local/mysql/log/mysqld_safe.err</p> 
+ <p><strong><span style="background-color:#f5f5f5;"><span style="color:#008000;">启动报错：</span></span></strong><br><strong><span style="color:#fe2c24;">my_print_defaults: [Warning] World-writable config file ‘/usr/local/mysql/my.cnf’ is ignored.<br> Starting MySQL.my_print_defaults: [Warning] World-writable config file ‘/usr/local/mysql/my.cnf’ is ignored.<br> my_print_defaults: [Warning] World-writable config file ‘/usr/local/mysql/my.cnf’ is ignored.<br> ERROR! The server quit without updating PID file (/usr/local/mysql/data/localhost.localdomain.pid).</span></strong></p> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;"><strong>解决方案</strong></span></span></p> 
+ <p>/usr/local/mysql/my.cnf’ 权限给的是 777,需要改成644，再次重新启动即可。</p> 
+ <p></p> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;">查看进程：ps -ef|grep mysql</span></span><span style="background-color:#f5f5f5;"><span style="color:#008000;">; </span></span></p> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;">查看状态：service mysql status;</span></span> </p> 
+</blockquote> 
+<h3 id="12%E3%80%81%C2%A0%E5%88%9B%E5%BB%BA%E8%BD%AF%E8%BF%9E%E6%8E%A5">13、 创建软连接</h3> 
+<blockquote> 
+ <p>ln -s /usr/local/mysql/bin/mysql <strong>/usr/bin</strong></p> 
+</blockquote> 
+<h3 id="13%E3%80%81%E6%8E%88%E6%9D%83%E4%BF%AE%E6%94%B9%E5%AF%86%E7%A0%81">14、授权修改密码</h3> 
+<blockquote> 
+ <p>mysql -uroot -p</p> 
+ <p>    输入密码（初始化时候的密码）</p> 
+ <p><strong><span style="background-color:#f5f5f5;"><span style="color:#008000;">输入密码报错：</span></span></strong></p> 
+ <p>Can't connect to local MySQL server through socket '/tmp/mysql.sock' (2)</p> 
+ <p><span style="background-color:#f5f5f5;"><span style="color:#008000;"><strong>解决方案</strong></span></span></p> 
+ <p>创建软连接或者 修改配置文件my.cnf 中 socket = /usr/local/mysql/tmp/mysql.sock</p> 
+ <p></p> 
+ <p><strong><span style="color:#1c7331;">修改密码</span></strong></p> 
+ <p><strong>8.0以下修改密码：</strong></p> 
+ <p>use mysql;</p> 
+ <p>SET PASSWORD FOR 'root'@'localhost' = PASSWORD('newpassword');</p> 
+ <p>flush privileges;</p> 
+ <p></p> 
+ <p><strong>8.0以上修改密码</strong></p> 
+ <p>use mysql;</p> 
+ <p>alter user "root"@"localhost" identified by "root";<br> UPDATE user SET authentication_string="" WHERE user="root";<br> FLUSH PRIVILEGES; <br> update user set Host="%" where User="root";<br> flush privileges;<br> alter user "root"@"%" identified by "root";<br> flush privileges;</p> 
+ <p><strong>说明：</strong></p> 
+ <ul><li>UPDATE user SET authentication_string="" WHERE user="root"; 更新user表，将用户名为root的用户的authentication_string字段设置为空字符串。实际上是在清空root用户的密码。</li><li>update user set Host="%" where User="root"; 更新user表，它将用户名为root的用户的Host字段设置为%。即root用户可以从任何主机进行连接。默认情况下，root用户可能只能从localhost进行连接。</li><li>alter user "root"@"%" identified by "root"; 更改用户的认证信息。它指定了用户名为root且来源主机为任意主机（%）的用户，并将其密码设置为root。这是在新版本的MySQL中设置或更改用户密码的推荐方式。</li></ul> 
+ <p><span style="color:#1c7331;"><strong>授权</strong></span></p> 
+ <p><strong>8.0以下授权</strong><br> grant all privileges on *.* to 'root'@'%' identified by '密码123456' with grant option;<br> flush privileges;</p> 
+ <p>说明：</p> 
+ <ul><li>all privileges：表示将所有权限授予给用户。也可指定具体的权限，如：SELECT、CREATE、DROP等。</li><li>on：表示这些权限对哪些数据库和表生效，格式：数据库名.表名，这里写“*”表示所有数据库，所有表。如果我要指定将权限应用到test库的user表中，可以这么写：test.user</li><li>to：将权限授予哪个用户。格式：”用户名”@”登录IP或域名”。%表示没有限制，在任何主机都可以登录。比如：”yangxin”@”192.168.0.%”，表示yangxin这个用户只能在192.168.0IP段登录</li><li>identified by：指定用户的登录密码</li></ul> 
+ <p></p> 
+ <p><strong>8.0以上授权</strong></p> 
+ <p>use mysql;</p> 
+ <p>ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';</p> 
+ <p>flush privileges;</p> 
+ <p><strong>说明：</strong></p> 
+ <ul><li>ALTER USER 'root'@'%' IDENTIFIED WITH mysql_native_password BY 'root';   #还原密码验证插件，将MySQL8的密码认证插件由caching_sha2_password更换成mysql_native_password</li></ul> 
+ <p></p> 
+</blockquote> 
+<h2></h2> 
+<h2 id="%E5%9B%9B%E3%80%81HIve%E5%AE%89%E8%A3%85%C2%A0">四、HIve安装 </h2> 
+<h3 id="1%E3%80%81%E4%B8%8B%E8%BD%BD%E5%AE%89%E8%A3%85">1、下载安装</h3> 
+<blockquote> 
+ <p><strong>1.1下载</strong></p> 
+ <p>下载地址：<a href="http://archive.apache.org/dist/hive/" rel="nofollow" title="http://archive.apache.org/dist/hive/">http://archive.apache.org/dist/hive/</a></p> 
+ <p style="text-align:justify;">我们选择apache-hive-3.1.3-bin.tar.gz版本学习</p> 
+ <p style="text-align:justify;"><strong>1.2 上传</strong></p> 
+ <p style="text-align:justify;"><strong>1.3 解压重命名</strong></p> 
+</blockquote> 
+<h3 id="2%E3%80%81%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F">2、配置环境变量</h3> 
+<blockquote> 
+ <p>vi ~/.bash_profile <br> export HIVE_HOME=/usr/local/hive</p> 
+ <p>export PATH=$PATH:$HIVE_HOME/bin</p> 
+ <p></p> 
+ <p>刷新配置<br> source ~/.bash_profile</p> 
+</blockquote> 
+<h3 id="3%E3%80%81%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6">3、配置文件</h3> 
+<p><strong>配置hive-env.sh</strong></p> 
+<blockquote> 
+ <p>export HADOOP_HOME=/usr/local/hadoop</p> 
+ <p><br> export HIVE_CONF_DIR=/usr/local/hive/conf</p> 
+</blockquote> 
+<p><strong>配置hive-site.xml</strong></p> 
+<blockquote> 
+ <p> &lt;?xml version="1.0" encoding="UTF-8" standalone="no"?&gt;<br> &lt;?xml-stylesheet type="text/xsl" href="configuration.xsl"?&gt;</p> 
+ <p>&lt;configuration&gt;<br>   &lt;property&gt;<br>     &lt;name&gt;javax.jdo.option.ConnectionURL&lt;/name&gt;<br>     &lt;value&gt;jdbc:mysql://localhost:3306/hive?createDatabaseIfNotExist=true&amp;amp;useUnicode=true&amp;amp;characterEncoding=UTF-8&amp;amp;useSSL=false&lt;/value&gt;<br>   &lt;/property&gt;<br>   &lt;property&gt;<br>     &lt;name&gt;javax.jdo.option.ConnectionDriverName&lt;/name&gt;<br>     &lt;value&gt;com.mysql.cj.jdbc.Driver&lt;/value&gt;<br>   &lt;/property&gt;<br>   &lt;property&gt;<br>     &lt;name&gt;javax.jdo.option.ConnectionUserName&lt;/name&gt;<br>     &lt;value&gt;root&lt;/value&gt;   <br>   &lt;/property&gt;<br>   &lt;property&gt;<br>     &lt;name&gt;javax.jdo.option.ConnectionPassword&lt;/name&gt;<br>     &lt;value&gt;root&lt;/value&gt;   <br>   &lt;/property&gt;<br> &lt;/configuration&gt;</p> 
+</blockquote> 
+<h3 id="4%E3%80%81%E6%8B%B7%E8%B4%9Djar%E5%8C%85">4、拷贝jar包</h3> 
+<blockquote> 
+ <p><strong>4.1 拷贝mysql驱动</strong></p> 
+ <p>      需要提前现在对应的驱动包，并解压</p> 
+ <p>      cp mysql-connector-java-5.1.49/mysql-connector-java-5.1.49-bin.jar /usr/local/hive/lib/ </p> 
+ <p></p> 
+ <p><strong>4.2 拷贝guava包</strong></p> 
+ <p>      #hadoop和hive里面的guava包版本可能不一致，那么用hadoop里面的覆盖掉hive里面的<br>       cp /usr/local/hadoop/share/hadoop/common/lib/guava-27.0-jre.jar <strong>/usr/local/hive/lib/</strong></p> 
+ <p>      #删除hive的旧依赖包<br><strong>      rm /opt/hive/lib/guava-19.0.jar </strong></p> 
+</blockquote> 
+<h3 id="5%E3%80%81%E5%88%9D%E5%A7%8B%E5%8C%96">5、初始化</h3> 
+<blockquote> 
+ <p><strong>5.1 启动msyql</strong></p> 
+ <p>     # 先查看mysql是否启动</p> 
+ <p>      service mysql status；</p> 
+ <p>      #未启动则进行启动</p> 
+ <p style="margin-left:.0001pt;text-align:justify;">      service mysql start</p> 
+ <p><strong>5.2 启动hadoop</strong></p> 
+ <p>      #进入hadoop安装目录</p> 
+ <p>      cd /usr/local/hadoop/</p> 
+ <p>      #启动hadoop</p> 
+ <p><strong>      sbin/start-all.sh</strong></p> 
+ <p><strong>5.3 初始化hive</strong></p> 
+ <p>      #进入hive安装目录</p> 
+ <p>      cd /usr/local/hive</p> 
+ <p>      #执行初始化命令，#初始化Hive<br>       bin/schematool -dbType mysql -initSchema</p> 
+</blockquote> 
+<h3 id="6%E3%80%81%E5%90%AF%E5%8A%A8hive">6、启动hive</h3> 
+<blockquote> 
+ <p>#进入hive安装目录</p> 
+ <p>cd /usr/local/hive</p> 
+ <p>#使用命令验证hive是否安装成功</p> 
+ <p>bin/hive</p> 
+ <p>#进入hive shell，使用show databases; 查看数据，说明安装成功！</p> 
+ <p><img alt="" height="428" src="https://images2.imgbox.com/59/86/8w28AlRb_o.png" width="956"></p> 
+ <p></p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/095362abd7ffb4fdb98a938d64bb4400/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">JavaScript 垃圾回收机制深度解析：内存管理的艺术</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/042af6e8471fb07ddbf2cfb9d6600e7a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【c&#43;&#43;】继承学习(二)：探索 C&#43;&#43; 中派生类的默认机制与静态成员共享</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

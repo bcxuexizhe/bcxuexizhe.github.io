@@ -1,0 +1,279 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【大模型】LLaMA-1 模型介绍 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/95d486e80411e468dfe6795397a25bdb/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【大模型】LLaMA-1 模型介绍">
+  <meta property="og:description" content="文章目录 一、背景介绍二、模型介绍2.1 模型结构2.2 模型超参数2.3 SwiGLU 三、代码分析3.1 模型结构代码3.2 FairScale库介绍 四、LLaMA家族模型4.1 Alpaca4.2 Vicuna4.3 Koala(考拉)4.4 Baize (白泽)4.5 Luotuo (骆驼，Chinese)4.6 其他 参考资料 LLaMA（Large Language Model Meta AI）模型，是由 Meta AI 发布的一个开放且高效的大型基础语言模型， LLaMA-1 共有 7B、 13B、 33B、 65B（650 亿）四种版本。其数据集来源都是公开数据集，无任何定制数据集，保证了其工作与开源兼容和可复现，整个训练数据集在 token 化之后大约包含 1.4T 的 token。 关于模型性能，LLaMA 的性能非常优异：具有 130 亿参数的 LLaMA 模型「在大多数基准上」可以胜过 GPT-3（ 参数量达 1750 亿），而且可以在单块 V100 GPU 上运行；而最大的 650 亿参数的 LLaMA 模型可以媲美谷歌的 Chinchilla-70B 和 PaLM-540B。
+关于训练集，其来源都是公开数据集，无任何定制数据集，保证了其工作与开源兼容和可复现。整个训练数据集在 token 化之后大约包含 1.4T 的 token。其中，LLaMA-65B 和 LLaMA-33B 是在 1.4万亿个 token 上训练的，而最小的模型 LLaMA-7B 是在 1万亿个 token 上训练的。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-07T14:59:01+08:00">
+    <meta property="article:modified_time" content="2024-05-07T14:59:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【大模型】LLaMA-1 模型介绍</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_9" rel="nofollow">一、背景介绍</a></li><li><a href="#_17" rel="nofollow">二、模型介绍</a></li><li><ul><li><a href="#21__19" rel="nofollow">2.1 模型结构</a></li><li><a href="#22__32" rel="nofollow">2.2 模型超参数</a></li><li><a href="#23_SwiGLU_37" rel="nofollow">2.3 SwiGLU</a></li></ul> 
+  </li><li><a href="#_85" rel="nofollow">三、代码分析</a></li><li><ul><li><a href="#31__90" rel="nofollow">3.1 模型结构代码</a></li><li><a href="#32_FairScale_96" rel="nofollow">3.2 FairScale库介绍</a></li></ul> 
+  </li><li><a href="#LLaMA_117" rel="nofollow">四、LLaMA家族模型</a></li><li><ul><li><a href="#41_Alpaca_119" rel="nofollow">4.1 Alpaca</a></li><li><a href="#42_Vicuna_129" rel="nofollow">4.2 Vicuna</a></li><li><a href="#43_Koala_134" rel="nofollow">4.3 Koala(考拉)</a></li><li><a href="#44_Baize__143" rel="nofollow">4.4 Baize (白泽)</a></li><li><a href="#45_Luotuo_Chinese_150" rel="nofollow">4.5 Luotuo (骆驼，Chinese)</a></li><li><a href="#46__154" rel="nofollow">4.6 其他</a></li></ul> 
+  </li><li><a href="#_159" rel="nofollow">参考资料</a></li></ul> 
+</div> 
+<br> LLaMA（Large Language Model Meta AI）模型，是由 Meta AI 发布的一个开放且高效的大型基础语言模型， 
+<code>LLaMA-1</code> 共有 
+<code>7B</code>、 
+<code>13B</code>、 
+<code>33B</code>、 
+<code>65B</code>（650 亿）四种版本。其数据集来源都是公开数据集，无任何定制数据集，保证了其工作与开源兼容和可复现，整个训练数据集在 token 化之后大约包含 1.4T 的 token。 
+<p></p> 
+<p>关于模型性能，LLaMA 的性能非常优异：具有 130 亿参数的 LLaMA 模型「在大多数基准上」可以胜过 GPT-3（ 参数量达 1750 亿），而且可以在单块 V100 GPU 上运行；而最大的 650 亿参数的 LLaMA 模型可以媲美谷歌的 Chinchilla-70B 和 PaLM-540B。</p> 
+<p>关于训练集，其来源都是公开数据集，无任何定制数据集，保证了其工作与开源兼容和可复现。整个训练数据集在 token 化之后大约包含 1.4T 的 token。其中，LLaMA-65B 和 LLaMA-33B 是在 1.4万亿个 token 上训练的，而最小的模型 LLaMA-7B 是在 1万亿个 token 上训练的。</p> 
+<h2><a id="_9"></a>一、背景介绍</h2> 
+<p>Hoffmann 等人（2022）最近的工作表明了，在给定的计算预算下，最佳性能不是由最大的模型实现的，而是基于更多数据上的训练较小模型实现的。</p> 
+<p>和之前的工作相比，本论文的重点是<font color="red"> <strong>基于更多 tokens 的训练集，在各种推理预算下，训练出性能最佳的一系列语言模型，称为 LLaMA</strong> </font>，参数范围从 7B 到 65B 不等，与现有最佳 LLM 相比，其性能是有竞争力的。比如，LLaMA-13B 在大多数基准测试中优于 GPT-3，尽管其尺寸只有 GPT-3 的十分之一。作者相信，LLaMA 将有助于使 LLM 的使用和研究平民化，因为它可以在单个 GPU 上运行！在规模较大的情况下，LLaMA-65B 也具有与最佳大型语言模型（如 Chinchilla 或 PaLM-540B）相竞争的能力。</p> 
+<p><font color="red"> <strong>LLaMA 优势在于其只使用公开可用的数据，这可以保证论文的工作与开源兼容和可复现。</strong> </font> 之前的大模型要么使用了不公开的数据集去训练从而达到了 state-of-the-art，如 Chinchilla、PaLM 或 GPT-3；要么使用了公开数据集，但模型效果不是最佳无法和 PaLM-62B 或 Chinchilla 相竞争，如 OPT、GPT-NeoX、BLOOM 和 GLM。</p> 
+<h2><a id="_17"></a>二、模型介绍</h2> 
+<h3><a id="21__19"></a>2.1 模型结构</h3> 
+<p>主流的大语言模型都采用了Transformer架构，它是一个基于多层Self-attention的神经网络模型。</p> 
+<p>原始的Transformer由编码器（Encoder）和解码器（Decoder）两个部分构成，同时，这两个部分也可以独立使用。</p> 
+<p><img src="https://images2.imgbox.com/4e/2f/MQVkWyyu_o.png" alt="在这里插入图片描述"></p> 
+<p>和 GPT 系列一样，LLaMA 模型也是 Decoder-only 架构，但结合前人的工作做了一些改进，比如：</p> 
+<ul><li>Pre-normalization [GPT3]。为了提高训练稳定性，LLaMA 对每个 transformer 子层的输入进行归一化，使用 RMSNorm 归一化函数，Pre-normalization 由Zhang和Sennrich（2019）引入。</li><li>SwiGLU 激活函数 [PaLM]。将 ReLU 非线性替换为 SwiGLU 激活函数，且使用<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          2 
+         
+        
+          / 
+         
+        
+          3 
+         
+        
+          ∗ 
+         
+        
+          4 
+         
+        
+          d 
+         
+        
+       
+         2/3 *4d 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord">2/3</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6944em;"></span><span class="mord">4</span><span class="mord mathnormal">d</span></span></span></span></span> 而不是 PaLM 论文中的 4d，SwiGLU 由 Shazeer（2020）引入以提高性能。</li><li>Rotary Embeddings [GPTNeo]。模型的输入不再使用 positional embeddings，而是在网络的每一层添加了 positional embeddings (RoPE)，RoPE 方法由Su等人（2021）引入。</li></ul> 
+<h3><a id="22__32"></a>2.2 模型超参数</h3> 
+<p>不同模型的超参数详细信息在下表中给出：</p> 
+<p><img src="https://images2.imgbox.com/95/66/x1NX4ngw_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="23_SwiGLU_37"></a>2.3 SwiGLU</h3> 
+<p>Feed Forward 层全称是 Position-wise Feed-Forward Networks（FPN），FFN 接收一个向量 x（序列中特定位置的隐藏表示），并将其通过两个可学习的线性变换（由矩阵 W1 和 W2 以及偏置向量 b1 和 b2 表示）进行处理，在两个线性变换之间应用修正线性（ReLU）激活函数。计算过程用数学公式可表达为：<br> <img src="https://images2.imgbox.com/47/dc/tdjAv5q8_o.png" alt="在这里插入图片描述"></p> 
+<p>在 T5 模型的实现中，使用是没有偏置 bias 的版本，数学公式表达如下:<br> <img src="https://images2.imgbox.com/d0/de/muDOXlOq_o.png" alt="在这里插入图片描述"><br> 后续的研究提出了用其他非线性激活函数替换ReLU，如高斯误差线性单元 （Gaussian Error Linear Units）:<br> <img src="https://images2.imgbox.com/01/e0/pw3N7eIS_o.png" alt="在这里插入图片描述"></p> 
+<p>[Dauphin et al., 2016] 提出了门控线性单元（GLU），定义为输入的两个线性变换的逐元素乘积，其中一个经过了 sigmoid 激活。另外，他们还建议省略激活函数，称之为“双线性”（bilinear）层。</p> 
+<p><img src="https://images2.imgbox.com/75/66/9VdGW0K3_o.png" alt="在这里插入图片描述"><br> 我们还可以使用其他激活函数定义 GLU 变体，如下所示:<br> <img src="https://images2.imgbox.com/ce/e5/H53Y4Sf2_o.png" alt="在这里插入图片描述"><br> 在本论文中，作者提出了 Transformer FFN 层的其他变体，这些变体使用 GLU 或其变体代替第一个线性变换和激活函数。同样也省略了偏差项。</p> 
+<p>SwiGLU 激活函数是 Gated Linear Units (GLU) 变体之一，来源于论文 GLU Variants Improve Transformer。SwiGLU 数学表达式如下:<br> <img src="https://images2.imgbox.com/b5/20/5HzkpAkN_o.png" alt="在这里插入图片描述"><br> 其中激活函数 Swish 的定义如下:<br> <img src="https://images2.imgbox.com/e2/c4/DnvzKhDL_o.png" alt="在这里插入图片描述"></p> 
+<p>原始的的 FPN 层只有两个权重矩阵，但 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+       
+         F 
+        
+       
+         P 
+        
+        
+        
+          N 
+         
+         
+         
+           S 
+          
+         
+           w 
+          
+         
+           i 
+          
+         
+           G 
+          
+         
+           L 
+          
+         
+           U 
+          
+         
+        
+       
+      
+        FPN_{SwiGLU} 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord mathnormal" style="margin-right: 0.1389em;">FP</span><span class="mord"><span class="mord mathnormal" style="margin-right: 0.109em;">N</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3283em;"><span class="" style="top: -2.55em; margin-left: -0.109em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right: 0.0269em;">Sw</span><span class="mord mathnormal mtight">i</span><span class="mord mathnormal mtight">G</span><span class="mord mathnormal mtight" style="margin-right: 0.109em;">LU</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span></span></span></span></span> 的线性变换层<strong>有三个权重矩阵</strong>。为了保持参数数量和计算量的恒定，需要将隐藏单元的数量 d_ff（W 和 V 的第二个维度以及 W2 的第一个维度）缩小 2/3。实现代码如下所示:</p> 
+<pre><code class="prism language-python"><span class="token comment"># -*- coding  : utf-8 -*-</span>
+
+<span class="token keyword">import</span> torch
+<span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn <span class="token keyword">as</span> nn
+<span class="token keyword">import</span> torch<span class="token punctuation">.</span>nn<span class="token punctuation">.</span>functional <span class="token keyword">as</span> F
+
+<span class="token keyword">class</span> <span class="token class-name">FFNSwiGLU</span><span class="token punctuation">(</span>nn<span class="token punctuation">.</span>Module<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> input_dim<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">,</span> hidden_dim<span class="token punctuation">:</span> <span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token builtin">super</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>__init__<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        hidden_dim <span class="token operator">=</span> <span class="token builtin">int</span><span class="token punctuation">(</span><span class="token number">2</span> <span class="token operator">*</span> hidden_dim <span class="token operator">/</span> <span class="token number">3</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>gate_proj <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">,</span> bias<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>down_proj <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>hidden_dim<span class="token punctuation">,</span> input_dim<span class="token punctuation">,</span> bias<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+        self<span class="token punctuation">.</span>up_proj <span class="token operator">=</span> nn<span class="token punctuation">.</span>Linear<span class="token punctuation">(</span>input_dim<span class="token punctuation">,</span> hidden_dim<span class="token punctuation">,</span> bias<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span> 
+
+    <span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> x<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># LLaMA 官方提供的代码和模型默认是使用 F.silu() 激活函数，transformers 可通过配置指定</span>
+        <span class="token keyword">return</span> self<span class="token punctuation">.</span>down_proj<span class="token punctuation">(</span>F<span class="token punctuation">.</span>silu<span class="token punctuation">(</span>self<span class="token punctuation">.</span>gate_proj<span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">*</span> self<span class="token punctuation">.</span>up_proj<span class="token punctuation">(</span>x<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+layer <span class="token operator">=</span> FFNSwiGLU<span class="token punctuation">(</span><span class="token number">128</span><span class="token punctuation">,</span> <span class="token number">256</span><span class="token punctuation">)</span>
+x <span class="token operator">=</span> torch<span class="token punctuation">.</span>randn<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">128</span><span class="token punctuation">)</span>
+out <span class="token operator">=</span> layer<span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>out<span class="token punctuation">.</span>shape<span class="token punctuation">)</span> <span class="token comment"># torch.Size([1, 128])</span>
+</code></pre> 
+<h2><a id="_85"></a>三、代码分析</h2> 
+<ul><li>Github地址：<a href="https://github.com/meta-llama/llama">https://github.com/meta-llama/llama</a></li></ul> 
+<p>LLaMA 官方代码 只提供了模型结构和推理代码，没有提供模型训练代码。另外看了官方提供的下载脚本，是没有直接提供下载链接，是需要自己申请的！</p> 
+<h3><a id="31__90"></a>3.1 模型结构代码</h3> 
+<p>LLaMA 模型结构也只使用 Decoder 结构。</p> 
+<p>[等待更新]</p> 
+<h3><a id="32_FairScale_96"></a>3.2 FairScale库介绍</h3> 
+<p>LLaMA 模型的线性计算层都是使用了 FairScale 库的 ColumnParallelLinear 层，它是一个并行的线性层，可以在多个 GPU 上并行计算，这个计算速度比 Linear 的 nn.Linear 层速度更快。</p> 
+<p>FairScale: 用于在一台或多台机器/节点上进行高性能和大规模训练的 PyTorch库，由 Meta 发布。示例代码：</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> torch <span class="token keyword">import</span> nn
+<span class="token keyword">import</span> fairscale
+
+model <span class="token operator">=</span> nn<span class="token punctuation">.</span>Sequential<span class="token punctuation">(</span>
+    nn<span class="token punctuation">.</span>Conv2d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">,</span> out_channels<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span> kernel_size<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> padding<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    nn<span class="token punctuation">.</span>MaxPool2d<span class="token punctuation">(</span>kernel_size<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">,</span> padding<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    nn<span class="token punctuation">.</span>Conv2d<span class="token punctuation">(</span>in_channels<span class="token operator">=</span><span class="token number">6</span><span class="token punctuation">,</span> out_channels<span class="token operator">=</span><span class="token number">16</span><span class="token punctuation">,</span> kernel_size<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> padding<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    nn<span class="token punctuation">.</span>MaxPool2d<span class="token punctuation">(</span>kernel_size<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span> stride<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">,</span> padding<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+model <span class="token operator">=</span> fairscale<span class="token punctuation">.</span>nn<span class="token punctuation">.</span>Pipe<span class="token punctuation">(</span>model<span class="token punctuation">,</span> balance<span class="token operator">=</span><span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> devices<span class="token operator">=</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> chunks<span class="token operator">=</span><span class="token number">8</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>在 2 个 GPU 上运行 4 层模型。前两层在 cuda:0 上运行，后两层在 cuda:1 上运行。</p> 
+<h2><a id="LLaMA_117"></a>四、LLaMA家族模型</h2> 
+<p>以下这些项目都是基于 LLaMA finetune 的模型，可以算是 Meta 发布的 LLaMA（羊驼）模型的子子孙孙。</p> 
+<h3><a id="41_Alpaca_119"></a>4.1 Alpaca</h3> 
+<ul><li>Github地址：<a href="https://github.com/ymcui/Chinese-LLaMA-Alpaca/">https://github.com/ymcui/Chinese-LLaMA-Alpaca/</a></li></ul> 
+<p>Alpaca 是斯坦福在 LLaMA 上对 52000 条指令跟随演示进行了精细调优的模型，是后续很多中文 LLM 的基础。</p> 
+<p>对应的中文版是 Chinese-LLaMA-Alpaca。该项目在原版 LLaMA 的基础上扩充了中文词表并使用了中文数据进行二次预训练，进一步提升了中文基础语义理解能力。同时，在中文LLaMA 的基础上，本项目使用了中文指令数据进行指令精调，显著提升了模型对指令的理解和执行能力。</p> 
+<p>值得注意的是，该项目开源的不是完整模型而是 LoRA 权重，理解为原 LLaMA 模型上的一个“补丁”，两者进行合并即可获得完整版权重。提醒：仓库中的中文 LLaMA/Alpaca LoRA 模型无法单独使用，需要搭配原版 LLaMA 模型[1]。可以参考本项目给出的合并模型步骤重构模型。</p> 
+<h3><a id="42_Vicuna_129"></a>4.2 Vicuna</h3> 
+<p>Vicuna 是一款从 LLaMA 模型中对用户分享的对话进行了精细调优的聊天助手，根据的评估，这款聊天助手在 LLaMA 子孙模型中表现最佳，能达到 ChatGPT 90% 的效果。<br> <img src="https://images2.imgbox.com/32/a7/WyFcLGqe_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="43_Koala_134"></a>4.3 Koala(考拉)</h3> 
+<p>一款从 LLaMA 模型中对用户分享的对话和开源数据集进行了精细调优的聊天机器人，其表现与Vicuna 类似。</p> 
+<ul><li>blog: Koala: A Dialogue Model for Academic Research</li><li>demo: FastChat</li><li>Github地址: <a href="https://github.com/young-geng/EasyLM">https://github.com/young-geng/EasyLM</a></li></ul> 
+<h3><a id="44_Baize__143"></a>4.4 Baize (白泽)</h3> 
+<ul><li>论文：<a href="https://arxiv.org/pdf/2304.01196.pdf" rel="nofollow">https://arxiv.org/pdf/2304.01196.pdf</a></li><li>demo: Baize Lora 7B - a Hugging Face Space by project-baize</li><li>Github地址: <a href="https://github.com/project-baiz">https://github.com/project-baiz<br> </a></li></ul> 
+<h3><a id="45_Luotuo_Chinese_150"></a>4.5 Luotuo (骆驼，Chinese)</h3> 
+<ul><li>Github地址: <a href="https://github.com/LC1332/Luotuo-Chinese-LLM">https://github.com/LC1332/Luotuo-Chinese-LLM</a></li></ul> 
+<h3><a id="46__154"></a>4.6 其他</h3> 
+<p>另外，中文 LLM 的有影响力的模型还有 ChatGLM，通常指 ChatGLM-6B， 一个由清华团队开源的、支持中英双语的对话语言模型，基于 General Language Model (GLM) 架构，具有 62 亿参数。结合模型量化技术，用户可以在消费级的显卡上进行本地部署 ChatGLM（INT4 量化级别下最低只需 6GB 显存）。</p> 
+<p>整体使用下来，其基本任务没问题，但是涌现能力还是有限的，且会有事实性/数学逻辑错误，另外，Close QA 问题也很一般。GLM 模型架构与 BERT、T5 等预训练模型模型架构不同，它采用了一种自回归的空白填充方法,。</p> 
+<h2><a id="_159"></a>参考资料</h2> 
+<ul><li><a href="https://zhuanlan.zhihu.com/p/625775403" rel="nofollow">LLaMA及其子孙模型概述</a></li><li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/0f7aef3c7fc1544905e45f52caea8fd6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Spring IoC&amp;DI（3）—DI详解</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/59867f673a74599079b79f994d039b55/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">前端数据可视化基础(折线图)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

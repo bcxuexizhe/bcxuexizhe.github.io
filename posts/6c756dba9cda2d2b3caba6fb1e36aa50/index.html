@@ -1,0 +1,241 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>深入理解Java的垃圾回收机制（GC）实现原理 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/6c756dba9cda2d2b3caba6fb1e36aa50/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="深入理解Java的垃圾回收机制（GC）实现原理">
+  <meta property="og:description" content="深入理解Java的垃圾回收机制（GC）实现原理 Java的垃圾回收机制（Garbage Collection, GC）是其内存管理的核心功能之一。通过GC，Java自动管理对象的生命周期，回收不再使用的对象所占的内存空间。本文将详细探讨GC的实现原理、不同算法的细节以及其在JVM中的应用。
+1. 垃圾回收的基本原理 垃圾回收的主要任务是识别和回收不再使用的对象。GC的基本工作过程包括：
+标记阶段：标记所有存活的对象。清除阶段：回收所有未标记的对象。压缩阶段（可选）：整理内存碎片。 2. 垃圾回收算法 2.1 标记-清除（Mark-Sweep）算法 标记-清除算法是最基本的垃圾回收算法，分为两个阶段：
+标记阶段：从根集合（GC Roots）开始，递归标记所有可达的对象。清除阶段：遍历整个堆，回收未标记的对象。 标记-清除算法的主要缺点是清除后会产生内存碎片。
+// 标记阶段 void mark(Object obj) { if (obj == null || obj.isMarked()) return; obj.mark(); for (Object child : obj.getChildren()) { mark(child); } } // 清除阶段 void sweep() { for (Object obj : heap) { if (!obj.isMarked()) { heap.remove(obj); } else { obj.unmark(); } } } 2.2 复制（Copying）算法 复制算法将内存分为两个区域，每次只使用其中一个区域。当活动区域用完时，将存活的对象复制到另一块区域，然后清空当前区域。
+a. 复制阶段：将所有存活的对象从使用的区域复制到空闲区域。b. 交换区域：清空当前区域，并交换使用和空闲区域的角色。 复制算法的主要优点是没有内存碎片，缺点是需要双倍的内存空间。
+void copy() { for (Object obj : fromSpace) { if (obj.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-25T10:57:37+08:00">
+    <meta property="article:modified_time" content="2024-05-25T10:57:37+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">深入理解Java的垃圾回收机制（GC）实现原理</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="JavaGC_0"></a>深入理解Java的垃圾回收机制（GC）实现原理</h2> 
+<p>Java的垃圾回收机制（Garbage Collection, GC）是其内存管理的核心功能之一。通过GC，Java自动管理对象的生命周期，回收不再使用的对象所占的内存空间。本文将详细探讨GC的实现原理、不同算法的细节以及其在JVM中的应用。</p> 
+<h3><a id="1__2"></a>1. 垃圾回收的基本原理</h3> 
+<p>垃圾回收的主要任务是识别和回收不再使用的对象。GC的基本工作过程包括：</p> 
+<ul><li><strong>标记阶段</strong>：标记所有存活的对象。</li><li><strong>清除阶段</strong>：回收所有未标记的对象。</li><li><strong>压缩阶段（可选）</strong>：整理内存碎片。</li></ul> 
+<h3><a id="2__9"></a>2. 垃圾回收算法</h3> 
+<h5><a id="21_MarkSweep_10"></a>2.1 标记-清除（Mark-Sweep）算法</h5> 
+<p>标记-清除算法是最基本的垃圾回收算法，分为两个阶段：</p> 
+<ul><li><strong>标记阶段</strong>：从根集合（GC Roots）开始，递归标记所有可达的对象。</li><li><strong>清除阶段</strong>：遍历整个堆，回收未标记的对象。</li></ul> 
+<p>标记-清除算法的主要缺点是清除后会产生内存碎片。</p> 
+<pre><code class="prism language-java"><span class="token comment">// 标记阶段</span>
+<span class="token keyword">void</span> <span class="token function">mark</span><span class="token punctuation">(</span><span class="token class-name">Object</span> obj<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>obj <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> obj<span class="token punctuation">.</span><span class="token function">isMarked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span><span class="token punctuation">;</span>
+    obj<span class="token punctuation">.</span><span class="token function">mark</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Object</span> child <span class="token operator">:</span> obj<span class="token punctuation">.</span><span class="token function">getChildren</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">mark</span><span class="token punctuation">(</span>child<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 清除阶段</span>
+<span class="token keyword">void</span> <span class="token function">sweep</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Object</span> obj <span class="token operator">:</span> heap<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>obj<span class="token punctuation">.</span><span class="token function">isMarked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            heap<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+            obj<span class="token punctuation">.</span><span class="token function">unmark</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="22_Copying_39"></a>2.2 复制（Copying）算法</h5> 
+<p>复制算法将内存分为两个区域，每次只使用其中一个区域。当活动区域用完时，将存活的对象复制到另一块区域，然后清空当前区域。</p> 
+<ul><li><strong>a. 复制阶段</strong>：将所有存活的对象从使用的区域复制到空闲区域。</li><li><strong>b. 交换区域</strong>：清空当前区域，并交换使用和空闲区域的角色。</li></ul> 
+<p>复制算法的主要优点是没有内存碎片，缺点是需要双倍的内存空间。</p> 
+<pre><code class="prism language-java"><span class="token keyword">void</span> <span class="token function">copy</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Object</span> obj <span class="token operator">:</span> fromSpace<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj<span class="token punctuation">.</span><span class="token function">isAlive</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            toSpace<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    fromSpace<span class="token punctuation">.</span><span class="token function">clear</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 交换 fromSpace 和 toSpace</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> temp <span class="token operator">=</span> fromSpace<span class="token punctuation">;</span>
+    fromSpace <span class="token operator">=</span> toSpace<span class="token punctuation">;</span>
+    toSpace <span class="token operator">=</span> temp<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="23_MarkCompact_61"></a>2.3 标记-压缩（Mark-Compact）算法</h5> 
+<p>标记-压缩算法结合了标记-清除和复制算法的优点。它在标记阶段标记所有存活对象，然后在压缩阶段将存活对象移动到堆的一端，释放出连续的内存空间。</p> 
+<ul><li><strong>a. 标记阶段</strong>：标记所有存活对象。</li><li><strong>b. 压缩阶段</strong>：将存活对象移动到堆的一端，按顺序排列。</li></ul> 
+<pre><code class="prism language-java"><span class="token keyword">void</span> <span class="token function">markCompact</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// 标记阶段</span>
+    <span class="token function">mark</span><span class="token punctuation">(</span>root<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 压缩阶段</span>
+    <span class="token keyword">int</span> free <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">Object</span> obj <span class="token operator">:</span> heap<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj<span class="token punctuation">.</span><span class="token function">isMarked</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            heap<span class="token punctuation">[</span>free<span class="token operator">++</span><span class="token punctuation">]</span> <span class="token operator">=</span> obj<span class="token punctuation">;</span>
+            obj<span class="token punctuation">.</span><span class="token function">unmark</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">// 清除剩余的对象</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> free<span class="token punctuation">;</span> i <span class="token operator">&lt;</span> heap<span class="token punctuation">.</span>length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        heap<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="24_Generational_Collection_85"></a>2.4 分代收集（Generational Collection）算法</h5> 
+<p>分代收集算法基于对象的存活时间，将堆内存分为几代：年轻代（Young Generation）、年老代（Old Generation）和永久代（Permanent Generation）。各代使用不同的收集算法。</p> 
+<ul><li><strong>年轻代</strong>：对象生命周期短，频繁发生GC，使用复制算法。</li><li><strong>年老代</strong>：对象生命周期长，使用标记-清除或标记-压缩算法。</li><li><strong>永久代</strong>：存储类的元数据（在Java 8及以后版本中被元空间（Metaspace）替代）。</li></ul> 
+<pre><code class="prism language-java"><span class="token keyword">class</span> <span class="token class-name">GenerationalGC</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">void</span> <span class="token function">minorGC</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">copy</span><span class="token punctuation">(</span>youngGeneration<span class="token punctuation">.</span>fromSpace<span class="token punctuation">,</span> youngGeneration<span class="token punctuation">.</span>toSpace<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">void</span> <span class="token function">majorGC</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">markCompact</span><span class="token punctuation">(</span>oldGeneration<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="3_JVM_103"></a>3. JVM中的垃圾收集器</h3> 
+<p>Java虚拟机（JVM）实现了多种垃圾收集器，不同收集器适用于不同的应用场景：</p> 
+<h5><a id="31_Serial__105"></a>3.1 Serial 收集器</h5> 
+<p>Serial 收集器是单线程的，适用于单处理器环境和客户端应用。</p> 
+<pre><code class="prism language-java"><span class="token keyword">class</span> <span class="token class-name">SerialGC</span> <span class="token keyword">extends</span> <span class="token class-name">GarbageCollector</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">void</span> <span class="token function">collect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">markSweep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="32_Parallel__115"></a>3.2 Parallel 收集器</h5> 
+<p>Parallel 收集器是多线程的，适用于多处理器环境，需要高吞吐量的应用</p> 
+<pre><code class="prism language-java"><span class="token keyword">class</span> <span class="token class-name">ParallelGC</span> <span class="token keyword">extends</span> <span class="token class-name">GarbageCollector</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">void</span> <span class="token function">collect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">parallelMarkSweep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="33_CMSConcurrent_MarkSweep_125"></a>3.3 CMS（Concurrent Mark-Sweep）收集器</h5> 
+<p>CMS 收集器是低延迟收集器，目标是最小化停顿时间，适合对响应时间要求高的应用。</p> 
+<pre><code class="prism language-java"><span class="token keyword">class</span> <span class="token class-name">CMSGC</span> <span class="token keyword">extends</span> <span class="token class-name">GarbageCollector</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">void</span> <span class="token function">collect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">concurrentMarkSweep</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h5><a id="34_G1GarbageFirst_136"></a>3.4 G1（Garbage-First）收集器</h5> 
+<p>G1 收集器是分区收集器，将堆划分为多个区域，优先收集垃圾最多的区域，适合大内存、多处理器的服务器应用</p> 
+<pre><code class="prism language-java"><span class="token keyword">class</span> <span class="token class-name">G1GC</span> <span class="token keyword">extends</span> <span class="token class-name">GarbageCollector</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">void</span> <span class="token function">collect</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">initialMarking</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">concurrentMarking</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">finalMarking</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token function">liveDataCountingAndEvacuation</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h3><a id="4_GC_150"></a>4. GC的工作过程</h3> 
+<p>以G1收集器为例，详细描述其工作过程：</p> 
+<ul><li><strong>a. 初始标记（Initial Marking）</strong>：标记从GC Roots直接可达的对象。需要短暂停顿（Stop-the-World）。</li><li><strong>b. 并发标记（Concurrent Marking）</strong>：从GC Roots开始，遍历对象图，标记所有可达对象。与应用线程并发执行。</li><li><strong>c. 最终标记（Final Marking）</strong>：完成标记过程，修正并发标记期间发生变化的部分对象引用。需要短暂停顿。</li><li><strong>d. 筛选回收（Live Data Counting and Evacuation）</strong>：计算各区域的回收价值，并按价值排序。回收价值高的区域优先进行垃圾收集。需要短暂停顿。</li></ul> 
+<h3><a id="5_GC_157"></a>5. GC调优</h3> 
+<p>根据应用需求，通过调整JVM参数来优化GC性能：</p> 
+<ul><li><strong>调整堆大小</strong>：使用 -Xms 和 -Xmx 参数设置最小和最大堆大小。</li><li><strong>选择合适的收集器</strong>：根据应用场景选择合适的垃圾收集器。</li><li><strong>调整年轻代和年老代的比例</strong>：使用 -XX:NewRatio 参数设置年轻代和年老代的比例。</li><li><strong>设置GC日志</strong>：使用 -Xlog:gc 参数启用GC日志，以监控和分析GC行为。</li></ul> 
+<h3><a id="6__164"></a>6. 总结</h3> 
+<p>GC是Java虚拟机的重要组成部分，通过自动内存管理，GC提高了Java程序的稳定性和安全性。理解GC的工作原理和不同收集器的特点，有助于选择合适的GC策略，优化应用性能。通过合理配置JVM参数，可以提高GC效率，减少应用停顿时间，提升系统的整体性能。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/c822a9161d729255a0ff7ca371b18c63/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Django模板层——模板引擎配置</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d178dcf7a4d3ac8ac685d9c384243e8c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">一个普通双非女生的秋招之路</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

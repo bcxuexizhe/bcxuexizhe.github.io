@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>RabbitMQ手动ACK与死信队列 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f03c2d46c73e6fda36d1e27bee728299/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="RabbitMQ手动ACK与死信队列">
+  <meta property="og:description" content="为了保证消息从队列可靠的达到消费者，RabbitMQ 提供了消息确认机制（Message Acknowledgement）。
+默认情况下RabbitMQ在消息发出后就立即将这条消息删除,而不管消费端是否接收到,是否处理完,导致消费端消息丢失时RabbitMQ自己又没有这条消息了。所以在实际项目中会使用手动Ack。
+1、手动应答 Channel.basicAck (用于肯定确认)：RabbitMQ 已知道该消息成功被处理，可以将其丢弃了。Channel.basicNack (用于否定确认)Channel.basicReject (用于否定确认)：与 Channel.basicNack 相比少一个参数，不处理该消息了直接拒绝，可以将其丢弃了。 消费者端的配置，相关属性值改为自己的：
+server.port=8082 #rabbitmq服务器ip spring.rabbitmq.host=localhost #rabbitmq的端口 spring.rabbitmq.port=5672 #用户名 spring.rabbitmq.username=lonewalker #密码 spring.rabbitmq.password=XX #配置虚拟机 spring.rabbitmq.virtual-host=demo #设置消费端手动 ack none不确认 auto自动确认 manual手动确认 spring.rabbitmq.listener.simple.acknowledge-mode=manual 修改消费代码：请勿复制使用，会卡死
+package com.example.consumer.service; import com.alibaba.fastjson.JSONObject; import com.example.consumer.entity.User; import com.rabbitmq.client.Channel; import lombok.extern.slf4j.Slf4j; import org.springframework.amqp.core.Message; import org.springframework.amqp.rabbit.annotation.RabbitListener; import org.springframework.stereotype.Service; import java.io.IOException; /** * @description: * @author: LoneWalker * @create: 2022-04-04 **/ @Service @Slf4j public class ConsumerService { @RabbitListener(queues =&#34;publisher.addUser&#34;) public void addUser(String userStr,Channel channel,Message message){ long deliveryTag = message.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-05-27T18:33:51+08:00">
+    <meta property="article:modified_time" content="2023-05-27T18:33:51+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">RabbitMQ手动ACK与死信队列</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="ud736f6b3">为了保证消息从队列可靠的达到消费者，RabbitMQ 提供了消息确认机制（Message Acknowledgement）。</p> 
+<p id="u310837ab">默认情况下RabbitMQ在消息发出后就立即将这条消息删除,而不管消费端是否接收到,是否处理完,导致消费端消息丢失时RabbitMQ自己又没有这条消息了。所以在实际项目中会使用手动Ack。</p> 
+<h2 id="NiD99">1、手动应答</h2> 
+<ol><li id="u418e0e4b"><strong>Channel.basicAck</strong> (用于肯定确认)：RabbitMQ 已知道该消息成功被处理，可以将其丢弃了。</li><li id="u7ebd088a"><strong>Channel.basicNack</strong> (用于否定确认)</li><li id="u2816faa4"><strong>Channel.basicReject </strong>(用于否定确认)：与 Channel.basicNack 相比少一个参数，不处理该消息了直接拒绝，可以将其丢弃了。</li></ol> 
+<p id="ua0a0b449">消费者端的配置，相关属性值改为自己的：</p> 
+<pre><code class="language-XML">server.port=8082
+#rabbitmq服务器ip
+spring.rabbitmq.host=localhost
+#rabbitmq的端口
+spring.rabbitmq.port=5672
+#用户名
+spring.rabbitmq.username=lonewalker
+#密码
+spring.rabbitmq.password=XX
+#配置虚拟机
+spring.rabbitmq.virtual-host=demo
+#设置消费端手动 ack   none不确认  auto自动确认  manual手动确认
+spring.rabbitmq.listener.simple.acknowledge-mode=manual</code></pre> 
+<p id="u8a61fa19">修改消费代码：请勿复制使用，会卡死</p> 
+<pre><code class="language-java">package com.example.consumer.service;
+
+import com.alibaba.fastjson.JSONObject;
+import com.example.consumer.entity.User;
+import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+
+/**
+ * @description:
+ * @author: LoneWalker
+ * @create: 2022-04-04
+ **/
+@Service
+@Slf4j
+public class ConsumerService {
+
+
+    @RabbitListener(queues ="publisher.addUser")
+    public void addUser(String userStr,Channel channel,Message message){
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        try {
+            log.info("我一直在重试");
+            int a = 1/0;
+            User user = JSONObject.parseObject(userStr,User.class);
+            log.info(user.toString());
+            //手动ack  第二个参数为false是表示仅仅确认当前消息 true表示确认之前所有的消息
+            channel.basicAck(deliveryTag,false);
+        } catch (Exception e) {
+            //手动nack 告诉rabbitmq该消息消费失败  第三个参数：如果被拒绝的消息应该被重新请求，而不是被丢弃或变成死信，则为true
+            try {
+                channel.basicNack(deliveryTag,false,true);
+            } catch (IOException ex) {
+                ex.printStackTrace();
+            }
+        }
+    }
+}</code></pre> 
+<p id="ua76298f3">先启动发布者发送消息，查看控制台：有一条消息待消费·</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/af/75/68NWnOBl_o.png"></p> 
+<p id="ua91ec0e8">启动消费端，因为代码中有除0，所以会报错，这里就会出现一条unacked消息：</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/f6/77/AIvBgjp6_o.png"></p> 
+<p id="u10ad3459">因为设置的是将消息重新请求，所以它会陷入死循环</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/ec/ac/pwrpdnJX_o.png"></p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/6d/3e/nKIRDKBM_o.png"></p> 
+<p id="uf00d23e3">防止出现这种情况，可以将basicNack最后一个参数改为false，让消息进去<strong>死信队列</strong></p> 
+<h2 id="b0R1h">2、什么是死信队列</h2> 
+<p id="u6351b5c6">说简单点就是备胎队列，而死信的来源有以下几种：</p> 
+<ol><li id="f3e9786379d1676fce582563aaef0faf">消息被否定确认，使用 <code>channel.basicNack</code> 或 <code>channel.basicReject</code> ，并且此时<code>requeue</code> 属性被设置为<code>false</code>。</li><li id="51676a56a8d24539280eecefaf653316">消息在队列的存活时间超过设置的TTL时间。</li><li id="caec08e6391235e350e9970827e91cfd">消息队列的消息数量已经超过最大队列长度。</li></ol> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/8e/ab/DTqNbL2z_o.png"></p> 
+<p id="e81fb3e9772efb0d4d4989b5a974f7a4">“死信”消息会被RabbitMQ进行特殊处理，如果配置了死信队列信息，那么该消息将会被丢进死信队列中，如果没有配置，则该消息将会被丢弃。</p> 
+<h2 id="oAFfi">3、配置死信队列</h2> 
+<p id="013cec138eaee6854b8eb04c0633f07c">一般会为每个重要的业务队列配置一个死信队列。可以分为以下步骤：</p> 
+<ol><li id="17351cba2f261400b4bc47ffe30f89f9">配置业务队列，绑定到业务交换机上</li><li id="71b30a3057c11db5c5f02d33c52c27d7">为业务队列配置死信交换机和路由key</li><li id="7570186b57ad8f7e8314f261a9c26ccc">为死信交换机配置死信队列</li></ol> 
+<p id="u63da6624">从控制台将之前的交换机都删除，然后修改代码。</p> 
+<p id="u7d5c5268">首先看一下发布者的配置代码：</p> 
+<pre><code class="language-java">package com.example.publisher.config;
+
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.*;
+import org.springframework.amqp.rabbit.connection.CachingConnectionFactory;
+import org.springframework.amqp.rabbit.connection.CorrelationData;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+import org.springframework.amqp.support.converter.Jackson2JsonMessageConverter;
+import org.springframework.amqp.support.converter.MessageConverter;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * @author LoneWalker
+ * @date 2023/4/8
+ * @description
+ */
+@Slf4j
+@Configuration
+public class RabbitMqConfig implements RabbitTemplate.ConfirmCallback, RabbitTemplate.ReturnsCallback {
+
+    @Bean
+    public RabbitTemplate rabbitTemplate(CachingConnectionFactory connectionFactory) {
+        RabbitTemplate rabbitTemplate = new RabbitTemplate(connectionFactory);
+        rabbitTemplate.setMessageConverter(jackson2JsonMessageConverter());
+        //设置给rabbitTemplate
+        rabbitTemplate.setConfirmCallback(this);
+        rabbitTemplate.setReturnsCallback(this);
+        rabbitTemplate.setMandatory(true);
+        return rabbitTemplate;
+    }
+
+    @Bean
+    public MessageConverter jackson2JsonMessageConverter() {
+        return new Jackson2JsonMessageConverter();
+    }
+    /************ 正常配置 ******************/
+    /**
+     * 正常交换机，开启持久化
+     */
+    @Bean
+    DirectExchange normalExchange() {
+        return new DirectExchange("normalExchange", true, false);
+    }
+
+    @Bean
+    public Queue normalQueue() {
+        // durable: 是否持久化,默认是false,持久化队列：会被存储在磁盘上，当消息代理重启时仍然存在，暂存队列：当前连接有效
+        // exclusive: 默认也是false，只能被当前创建的连接使用，而且当连接关闭后队列即被删除。
+        // autoDelete: 是否自动删除，当没有生产者或者消费者使用此队列，该队列会自动删除。
+        Map&lt;String, Object&gt; args = deadQueueArgs();
+        // 队列设置最大长度
+        args.put("x-max-length", 5);
+        return new Queue("normalQueue", true, false, false, args);
+    }
+
+    @Bean
+    public Queue ttlQueue() {
+        Map&lt;String, Object&gt; args = deadQueueArgs();
+        // 队列设置消息过期时间 60 秒
+        args.put("x-message-ttl", 60 * 1000);
+        return new Queue("ttlQueue", true, false, false, args);
+    }
+
+    @Bean
+    Binding normalRouteBinding() {
+        return BindingBuilder.bind(normalQueue())
+                .to(normalExchange())
+                .with("normalRouting");
+    }
+
+    @Bean
+    Binding ttlRouteBinding() {
+        return BindingBuilder.bind(ttlQueue())
+                .to(normalExchange())
+                .with("ttlRouting");
+    }
+
+
+    /**************** 死信配置 *****************/
+    /**
+     * 死信交换机
+     */
+    @Bean
+    DirectExchange deadExchange() {
+        return new DirectExchange("deadExchange", true, false);
+    }
+
+    /**
+     * 死信队列
+     */
+    @Bean
+    public Queue deadQueue() {
+        return new Queue("deadQueue", true, false, false);
+    }
+
+    @Bean
+    Binding deadRouteBinding() {
+        return BindingBuilder.bind(deadQueue())
+                .to(deadExchange())
+                .with("deadRouting");
+    }
+
+    /**
+     * 转发到 死信队列，配置参数
+     */
+    private Map&lt;String, Object&gt; deadQueueArgs() {
+        Map&lt;String, Object&gt; map = new HashMap&lt;&gt;();
+        // 绑定该队列到死信交换机
+        map.put("x-dead-letter-exchange", "deadExchange");
+        map.put("x-dead-letter-routing-key", "deadRouting");
+        return map;
+    }
+
+
+    /**
+     * 消息成功到达交换机会触发
+     * @param correlationData
+     * @param ack
+     * @param cause
+     */
+    @Override
+    public void confirm(CorrelationData correlationData, boolean ack, String cause) {
+        if (ack) {
+            log.info("交换机收到消息成功：" + correlationData.getId());
+        }else {
+            log.error("交换机收到消息失败：" + correlationData.getId() + "原因：" + cause);
+        }
+    }
+
+    /**
+     * 消息未成功到达队列会触发
+     * @param returnedMessage
+     */
+    @Override
+    public void returnedMessage(ReturnedMessage returnedMessage) {
+        log.error("{}--消息未成功到达队列",returnedMessage.getMessage().getMessageProperties().getMessageId());
+    }
+}</code></pre> 
+<p id="ub724018b">properties</p> 
+<pre><code class="language-XML">server.port=8081
+#rabbitmq服务ip
+spring.rabbitmq.host=localhost
+#rabbitmq端口号
+spring.rabbitmq.port=5672
+#用户名
+spring.rabbitmq.username=用户名改为自己的
+#密码
+spring.rabbitmq.password=密码改为自己的
+#虚拟机
+spring.rabbitmq.virtual-host=demo
+
+spring.rabbitmq.publisher-confirm-type=correlated
+spring.rabbitmq.publisher-returns=true
+spring.rabbitmq.template.mandatory=true</code></pre> 
+<p id="u6967eb9f">发送消息：</p> 
+<pre><code class="language-java">@RequiredArgsConstructor
+@Service
+public class PublisherServiceImpl implements PublisherService{
+
+    private final RabbitTemplate rabbitTemplate;
+
+    @Override
+    public void addUser(User user) {
+
+        CorrelationData correlationData = new CorrelationData();
+        correlationData.setId(UUID.randomUUID().toString());
+
+        rabbitTemplate.convertAndSend("normalExchange","normalRouting",user,correlationData);
+    }
+}</code></pre> 
+<h2 id="ndYHX">4、模拟场景</h2> 
+<h3 id="f7JIJ">4.1消息处理异常</h3> 
+<p id="uaea588eb">文章开篇说到的消息手动ack，一旦出现异常会陷入死循环，那么不把消息放回原队列，而是放入死信队列，然后抛异常由人工处理：</p> 
+<pre><code class="language-java">package com.example.consumer.service;
+
+import com.alibaba.fastjson.JSONObject;
+import com.example.consumer.entity.User;
+import com.rabbitmq.client.Channel;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.rabbit.annotation.RabbitListener;
+import org.springframework.stereotype.Service;
+
+import java.io.IOException;
+
+/**
+ * @description:
+ * @author: LoneWalker
+ * @create: 2022-04-04
+ **/
+@Service
+@Slf4j
+public class ConsumerService {
+
+
+    @RabbitListener(queues ="normalQueue")
+    public void addUser(String userStr,Channel channel,Message message){
+        long deliveryTag = message.getMessageProperties().getDeliveryTag();
+        try {
+            int a = 1/0;
+            User user = JSONObject.parseObject(userStr,User.class);
+            log.info(user.toString());
+            //手动ack  第二个参数为false是表示仅仅确认当前消息 true表示确认之前所有的消息
+            channel.basicAck(deliveryTag,false);
+        } catch (Exception e) {
+            //手动nack 告诉rabbitmq该消息消费失败  第三个参数：如果被拒绝的消息应该被重新请求，而不是被丢弃或变成死信，则为true
+            try {
+                channel.basicNack(deliveryTag,false,false);
+            } catch (IOException ex) {
+                throw new RuntimeException("消息处理失败");
+            }
+        }
+    }
+}</code></pre> 
+<p id="u0cfa0868">注意basicNack的第三个参数，设置为false后就不会重新请求。</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/27/4d/txaEP1d6_o.png"></p> 
+<h3 id="zkpMB">4.2队列达到最大长度</h3> 
+<p id="ue043d99d">配置上面的代码已经有过了：</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/05/7e/JE5F7m5P_o.png"></p> 
+<p id="u9d774e3b">测试的话我们发6条消息，加上4.1测试产生的死信，预期死信队列中应该会有两条：</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/69/28/B8jaB2Wq_o.png"></p> 
+<h3 id="n9cxZ">4.3消息TTL过期</h3> 
+<p id="u5ad59baf">过期时间TTL表示可以对消息设置预期的时间，超过这个时间就删除或者放入死信队列。修改routingKey为ttlRouting。上述代码中配置过期时间为60s</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/db/57/J6byJASp_o.png"></p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/3f/af/e9WiHH1U_o.png"></p> 
+<p id="uf750fcc1">死信队列中的消息处理和正常的队列没什么区别，就不赘述了。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d67be89b5d04b7cbc71525ca973174b5/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【头歌】数据结构-队列的应用</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/4b7f0c67d020c7fe32c4a08fd2595a94/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">springboot基础篇(快速入门&#43;要点总结)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>(12)Hive调优——count distinct去重优化 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b4d4cae971fd20ad79431959c2a96144/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="(12)Hive调优——count distinct去重优化">
+  <meta property="og:description" content="离线数仓开发过程中经常会对数据去重后聚合统计，count distinct使得map端无法预聚合，容易引发reduce端长尾，以下是count distinct去重调优的几种方式。
+解决方案一：group by 替代 原sql 如下：
+#=====7日、14日的app点击的用户数（user_id去重统计） select group_id, app_id, -- 7日内UV count(distinct case when dt &gt;= &#39;${7d_before}&#39; then user_id else null end) as 7d_uv, --14日内UV count(distinct case when dt &gt;= &#39;${14d_before}&#39; then user_id else null end) as 14d_uv from tbl where dt &gt;= &#39;${14d_before}&#39; group by group_id, --渠道 app_id; --app 优化思路：group by两阶段聚合
+#=====7日、14日的app点击的用户数（user_id去重统计） select group_id, app_id, -- 7日内UV sum(case when 7d_cnt &gt; 0 then 1 else 0 end) as 7d_uv, --14日内UV sum(case when 14d_uv &gt; 0 then 1 else 0 end) as 14d_uv from (select group_id, app_id, -- 7日内各渠道各app下的每个用户的点击量 count(case when dt &gt;= &#39;${7d_before}&#39; then user_id else null end) as 7d_cnt, -- 14日内各渠道各app下的每个用户点击量 count(case when dt &gt;= &#39;${14d_before}&#39; then user_id else null end) as 14d_uv from tbl where dt &gt;= &#39;${14d_before}&#39; group by group_id, app_id, user_id) tmp1 group by group_id, app_id; 方案一弊端：数据倾斜风险 解决方案一通过两阶段group by(分组聚合) 对count (distinct) 进行改造调优，需要注意的是：如果分组字段user_id在tbl 表中存在大量的重复值，group by底层走shuffle，会有数据倾斜的风险，因此方案一还可以进一步优化。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-15T19:28:54+08:00">
+    <meta property="article:modified_time" content="2024-02-15T19:28:54+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">(12)Hive调优——count distinct去重优化</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>   离线数仓开发过程中经常会对数据去重后聚合统计，count distinct使得map端无法预聚合，容易引发reduce端长尾，以下是count distinct去重调优的几种方式。</p> 
+<h3><strong>解决方案一：group by 替代</strong></h3> 
+<p>原sql 如下：</p> 
+<pre><code class="language-sql">#=====7日、14日的app点击的用户数（user_id去重统计）
+select
+    group_id,
+    app_id,
+-- 7日内UV
+    count(distinct case when dt &gt;= '${7d_before}' then user_id else null end)  as 7d_uv, 
+--14日内UV
+    count(distinct case when dt &gt;= '${14d_before}' then user_id else null end) as 14d_uv 
+from tbl
+where dt &gt;= '${14d_before}'
+group by group_id, --渠道
+         app_id;  --app</code></pre> 
+<p><strong>优化思路：group by两阶段聚合</strong></p> 
+<pre><code class="language-sql">#=====7日、14日的app点击的用户数（user_id去重统计）
+select
+    group_id,
+    app_id,
+-- 7日内UV
+    sum(case when 7d_cnt &gt; 0 then 1 else 0 end) as 7d_uv,
+--14日内UV
+    sum(case when 14d_uv &gt; 0 then 1 else 0 end) as 14d_uv
+
+from (select
+          group_id,
+          app_id,
+          -- 7日内各渠道各app下的每个用户的点击量
+          count(case when dt &gt;= '${7d_before}' then user_id else null end)  as 7d_cnt,
+          -- 14日内各渠道各app下的每个用户点击量
+          count(case when dt &gt;= '${14d_before}' then user_id else null end) as 14d_uv
+      from tbl
+      where dt &gt;= '${14d_before}'
+      group by group_id,
+               app_id,
+               user_id) tmp1
+group by group_id,
+         app_id;</code></pre> 
+<h3>方案一弊端：数据倾斜风险</h3> 
+<p>  解决方案一通<strong>过两阶段group by(分组聚合) </strong>对count (distinct) 进行改造调优，需要注意的是：如果分组字段user_id在tbl 表中存在大量的重复值，group by底层走shuffle，会有数据倾斜的风险，因此方案一还可以进一步优化。</p> 
+<h3><strong>解决方案二：group by调优</strong></h3> 
+<h4><strong>1）添加随机数，两阶段聚合（<span style="color:#fe2c24;">推荐</span>）</strong></h4> 
+<pre><code class="language-sql">#===============优化前
+insert overwrite table tblB partition (dt = '2022-10-19')
+select
+    cookie_id,
+    event_query,
+    count(*)  as cnt
+from tblA
+where dt &gt;= '20220718'
+  and dt &lt;= '20221019'
+  and event_query is not null
+group by cookie_id, event_query
+
+
+
+#===============优化后
+insert overwrite table tblB partition (dt = '2022-10-19')
+select
+    split(tkey, '_')[1] as cookie_id,
+    event_query,
+ #--- 求出最终的聚合值
+    sum(cnt)   as cnt
+from (
+         select
+             concat_ws('_', cast(ceiling(rand() * 99) as string), cookie_id) as tkey,
+             event_query,
+      #---将热点Key值：cookie_id 进行打散后，先局部聚合得到cnt
+             count(*)  as cnt
+         from tblA
+         where dt &gt;= '20220718'
+           and dt &lt;= '20221019'
+           and event_query is not null
+        #--- 第一阶段：添加[0-99]随机整数，将热点Key值：cookie_id 进行打散（ M --&gt;R）
+         group by concat_ws('_', cast(ceiling(rand() * 99) as string), cookie_id),
+                  event_query
+     ) temp
+ #--- 第二阶段：对拼接的key值进行切分，还原原本的key值split(tkey, '_')[1] =cookie_id （ R --&gt;R）
+group by split(tkey, '_')[1], event_que</code></pre> 
+<p><span style="color:#fe2c24;"> <strong>优化思路为：</strong></span></p> 
+<ul><li><strong>  </strong>第一阶段：对需要聚合的Key值添加随机后缀进行打散，基于加工后的key值进行初步聚合（M--&gt;R1）</li><li><strong>  </strong>第二阶段：对加工后的key值进行切分还原，对第一阶段的聚合值进行再次聚合，求出最终结果值（R1--&gt;R2）</li></ul> 
+<h4><strong>2）</strong>开启Map端聚合</h4> 
+<pre><code class="language-sql">#--开启Map端聚合，默认为true
+set hive.map.aggr = true;
+#--在Map 端预先聚合操作的条数
+set hive.groupby.mapaggr.checkinterval = 100000;
+</code></pre> 
+<p>    该参数可以将顶层的聚合操作放在 Map 阶段执行，从而减轻shuffle清洗阶段的数据传输和 Reduce阶段的执行时间，提升总体性能。</p> 
+<h4><strong>3）</strong>数据倾斜时自动负载均衡</h4> 
+<pre><code class="language-sql">#---有数据倾斜的时候自动负载均衡（默认是 false）
+set hive.groupby.skewindata = true;
+</code></pre> 
+<p>  开启该参数后，当前程序会自动通过两个MapReduce来运行，将M-&gt;R阶段 拆解成 M-&gt;R-&gt;R阶段</p> 
+<ul><li>第一个MapReduce自动进行随机分布到Reducer中（负载均衡），每个Reducer做部分聚合操作，输出结果</li><li>第二个MapReduce将上一步聚合的结果再按照业务（group by key）进行处理，保障相同的key分发到同一个reduce做最终聚合。</li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/91decfbff1dc4b49f75fc789db36a589/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Java——Swing详解</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/34ec0299f66d4d70265ece423cf3c3f6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">(14)Hive调优——合并小文件</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

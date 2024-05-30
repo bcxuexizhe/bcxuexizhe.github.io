@@ -1,0 +1,274 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>微调llama 3 — PEFT微调和全量微调 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/45928ea0c7fb643f997c0b0f83d91afa/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="微调llama 3 — PEFT微调和全量微调">
+  <meta property="og:description" content="1. llama 3 微调基础 1.1 llama 3 简介 官方blog
+llama 3 目前有两个版本：8B版和70B版。8B版本拥有8.03B参数，其尺寸较小，可以在消费者硬件上本地运行。
+meta-llama/Meta-Llama-3-8Bmeta-llama/Meta-Llama-3-70B超过400B个参数的第三个版本目前仍在训练中…… Llama 3与Llama 2具有相同的架构，但词汇表要大得多，包含128k entries，而Llama 2只有32k entries，根据Meta的说法，词汇表的扩展显著提高了模型表现。Llama 3的预训练数据包含5%的高质量非英语数据。注意：Meta在model card中仍然提到Llama 3更适合用于英语任务。
+另一方面，词汇表的扩展意味着token embeddings需要更多的数据才能被训练的更准确。Meta在15T tokens上训练Llama 3。相比之下，Llama 2只在2T tokens上训练，Google Gemma在6T tokens训练，这在当时似乎已经很多了。
+模型的性能表现如下图所示：
+1.2 llama 3 8b Fully Fine-tuning内存占用分析 Fully Fine-tuning an LLM需要更新其所有参数，这种微调需要大量的内存。
+模型需要被完全加载到 GPU 内存中此外，通常用于微调 LLMs 的优化器 AdamW 会为模型中的每个参数创建并存储 2 个参数在 GPU 内存中并且我们还需要存储在微调过程中创建的张量，即激活值，以便在反向传播过程中用于更新模型参数的梯度。 对Llama 3 8B进行微调，例如，批量大小为8，序列长度为512，将消耗128.87GB的显存。注意：这个内存消耗是一个估计值，没有考虑任何的优化，比如梯度检查点和张量并行。
+modelloading the modeloptimizer statesactivationstotalllama 3 8b14.96GB59.83GB54.08GB128.87GB （估算大型语言模型（LLM）内存消耗的计算方法）
+幸运的是，我们可以很容易地减少这三种参数的内存消耗：
+Optimizer states：默认情况下，AdamW 的参数为 float32，每项占用 4 字节。AdamW-8bit 是另一种不错的选择，它将参数量化为 8 位，即减少了内存消耗从 59.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-05T15:52:55+08:00">
+    <meta property="article:modified_time" content="2024-05-05T15:52:55+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">微调llama 3 — PEFT微调和全量微调</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="1_llama_3__0"></a>1. llama 3 微调基础</h2> 
+<h3><a id="11_llama_3__2"></a>1.1 llama 3 简介</h3> 
+<p><a href="https://ai.meta.com/blog/meta-llama-3/" rel="nofollow">官方blog</a><br> llama 3 目前有两个版本：8B版和70B版。8B版本拥有8.03B参数，其尺寸较小，可以在消费者硬件上本地运行。</p> 
+<ul><li><a href="https://huggingface.co/meta-llama/Meta-Llama-3-8B" rel="nofollow">meta-llama/Meta-Llama-3-8B</a></li><li><a href="https://huggingface.co/meta-llama/Meta-Llama-3-70B" rel="nofollow">meta-llama/Meta-Llama-3-70B</a></li><li>超过400B个参数的第三个版本目前仍在训练中……</li></ul> 
+<p>Llama 3与Llama 2具有相同的架构，但词汇表要大得多，包含128k entries，而Llama 2只有32k entries，根据Meta的说法，词汇表的扩展显著提高了模型表现。Llama 3的预训练数据包含5%的高质量非英语数据。注意：Meta在model card中仍然提到Llama 3更适合用于英语任务。</p> 
+<p>另一方面，词汇表的扩展意味着token embeddings需要更多的数据才能被训练的更准确。Meta在15T tokens上训练Llama 3。相比之下，Llama 2只在2T tokens上训练，Google Gemma在6T tokens训练，这在当时似乎已经很多了。</p> 
+<p>模型的性能表现如下图所示：<br> <img src="https://images2.imgbox.com/0b/51/KeT1NnD5_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="12_llama_3_8b_Fully_Finetuning_16"></a>1.2 llama 3 8b Fully Fine-tuning内存占用分析</h3> 
+<p>Fully Fine-tuning an LLM需要更新其所有参数，这种微调需要大量的内存。</p> 
+<ul><li>模型需要被完全加载到 GPU 内存中</li><li>此外，通常用于微调 LLMs 的优化器 AdamW 会为模型中的每个参数创建并存储 2 个参数在 GPU 内存中</li><li>并且我们还需要存储在微调过程中创建的张量，即激活值，以便在反向传播过程中用于更新模型参数的梯度。</li></ul> 
+<p>对Llama 3 8B进行微调，例如，批量大小为8，序列长度为512，将消耗<strong>128.87GB的显存</strong>。注意：这个内存消耗是一个估计值，没有考虑任何的优化，比如梯度检查点和张量并行。</p> 
+<table><thead><tr><th>model</th><th>loading the model</th><th>optimizer states</th><th>activations</th><th>total</th></tr></thead><tbody><tr><td>llama 3 8b</td><td>14.96GB</td><td>59.83GB</td><td>54.08GB</td><td>128.87GB</td></tr></tbody></table> 
+<p>（<a href="https://blog.csdn.net/guojiajiajiu/article/details/138466134?spm=1001.2014.3001.5502">估算大型语言模型（LLM）内存消耗的计算方法</a>）</p> 
+<p>幸运的是，我们可以很容易地减少这三种参数的内存消耗：</p> 
+<ul><li><strong>Optimizer states</strong>：默认情况下，AdamW 的参数为 float32，每项占用 4 字节。AdamW-8bit 是另一种不错的选择，它将参数量化为 8 位，即减少了内存消耗从 59.8 GB 到 15 GB。如果使用的框架不复制模型参数，内存消耗会大大减少。</li><li><strong>Model</strong>：我们可以将模型量化为4位。它将内存消耗分成近4份，即从15 GB到4 GB。在实践中，为了保持其性能，并不是所有的LLM模块都会被量化。</li><li><strong>Activations</strong>：我们需要存储激活来计算梯度。然而，使用gradient checkpointing，我们可以在反向传播过程中动态地重新计算激活值，而不是在整个训练过程中都存储这些激活值。它大大减少了激活的内存消耗，从54GB减少到10 GB。</li></ul> 
+<p>在应用了所有这些优化措施之后，微调过程需要29GB的内存。虽然这仍然太多，但至少现在可以使用两个24GB的GPU来对模型进行微调了。</p> 
+<h3><a id="13__llama_3_8b_PEFT_Finetuning_39"></a>1.3 llama 3 8b PEFT Fine-tuning内存占用分析</h3> 
+<p>使用PEFT方法，如LoRA，我们可以在模型顶部微调一个适配器，不需要完全重新训练模型。为了进一步降低内存消耗。</p> 
+<ol><li>使用LoRA，需要一个带有24 GB RAM的GPU来微调Llama 3；</li><li>使用QLoRA，只需要一个带有16 GB RAM的GPU。</li></ol> 
+<h2><a id="2_PEFTllama_3_45"></a>2. PEFT方法微调llama 3</h2> 
+<p>1、QLoRA 是量化的 LoRA 与 LLMs 的结合。要使用这种方法对 Llama 3 8B 进行微调，我们需要安装</p> 
+<pre><code class="prism language-python">pip install <span class="token operator">-</span><span class="token operator">-</span>upgrade bitsandbytes transformers peft accelerate datasets trl
+</code></pre> 
+<p>2、然后导入需要的pkgs</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> torch<span class="token punctuation">,</span> os
+<span class="token keyword">from</span> datasets <span class="token keyword">import</span> load_dataset
+<span class="token keyword">from</span> peft <span class="token keyword">import</span> LoraConfig<span class="token punctuation">,</span> prepare_model_for_kbit_training
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> <span class="token punctuation">(</span>
+    AutoModelForCausalLM<span class="token punctuation">,</span>
+    AutoTokenizer<span class="token punctuation">,</span>
+    BitsAndBytesConfig<span class="token punctuation">,</span>
+    TrainingArguments<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">from</span> trl <span class="token keyword">import</span> SFTTrainer
+</code></pre> 
+<p>3、如果你拥有较新的GPU，就可以使用<code>bfloat16</code>数据类型以获得更好的训练稳定性，并使用<code>FlashAttention</code>来减少处理长序列时的内存消耗。下面的代码会自动检测GPU是否兼容<code>bfloat16</code>、<code>FlashAttention</code>：</p> 
+<pre><code class="prism language-python"><span class="token comment">#use bf16 and FlashAttention if supported</span>
+<span class="token keyword">if</span> torch<span class="token punctuation">.</span>cuda<span class="token punctuation">.</span>is_bf16_supported<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+  os<span class="token punctuation">.</span>system<span class="token punctuation">(</span><span class="token string">'pip install flash_attn'</span><span class="token punctuation">)</span>
+  compute_dtype <span class="token operator">=</span> torch<span class="token punctuation">.</span>bfloat16
+  attn_implementation <span class="token operator">=</span> <span class="token string">'flash_attention_2'</span>
+<span class="token keyword">else</span><span class="token punctuation">:</span>
+  compute_dtype <span class="token operator">=</span> torch<span class="token punctuation">.</span>float16
+  attn_implementation <span class="token operator">=</span> <span class="token string">'sdpa'</span>
+</code></pre> 
+<p>4、然后，我们需要初始化并配置Tokenizer。通常，LLMs在预训练时不包含pad_token。然而，在微调过程中，由于我们的训练示例长度不相同，我们需要将其填充到batch中。我们可以创建并添加一个pad_token到词汇表中，但更简单的选择是将eos_token指定为pad_token。</p> 
+<pre><code class="prism language-python">model_name <span class="token operator">=</span> <span class="token string">"meta-llama/Meta-Llama-3-8B"</span>
+<span class="token comment">#Tokenizer</span>
+tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_name<span class="token punctuation">,</span> add_eos_token<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> use_fast<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+tokenizer<span class="token punctuation">.</span>pad_token <span class="token operator">=</span> tokenizer<span class="token punctuation">.</span>eos_token
+tokenizer<span class="token punctuation">.</span>pad_token_id <span class="token operator">=</span>  tokenizer<span class="token punctuation">.</span>eos_token_id
+tokenizer<span class="token punctuation">.</span>padding_side <span class="token operator">=</span> <span class="token string">'left'</span>
+</code></pre> 
+<p>注意，我们使用的是左边填充。如果想使用flash_attention，右填充是不兼容的。</p> 
+<p>5、至于微调数据集，可以选择了 timdettmers/openassistant-guanaco，因为这个数据集足够小。</p> 
+<p>6、然后，我们创建bnb_config并加载模型：</p> 
+<pre><code class="prism language-python">bnb_config <span class="token operator">=</span> BitsAndBytesConfig<span class="token punctuation">(</span>
+        load_in_4bit<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+        bnb_4bit_quant_type<span class="token operator">=</span><span class="token string">"nf4"</span><span class="token punctuation">,</span>
+        bnb_4bit_compute_dtype<span class="token operator">=</span>compute_dtype<span class="token punctuation">,</span>
+        bnb_4bit_use_double_quant<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+model <span class="token operator">=</span> AutoModelForCausalLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>
+          model_name<span class="token punctuation">,</span> quantization_config<span class="token operator">=</span>bnb_config<span class="token punctuation">,</span> device_map<span class="token operator">=</span><span class="token punctuation">{<!-- --></span><span class="token string">""</span><span class="token punctuation">:</span> <span class="token number">0</span><span class="token punctuation">}</span><span class="token punctuation">,</span> attn_implementation<span class="token operator">=</span>attn_implementation
+<span class="token punctuation">)</span>
+</code></pre> 
+<p>7、bnb_config定义了在4位精度下加载模型，并对量化常数进行量化（即双重量化）。在前向传递过程中，如果你的GPU支持bfloat16数据类型，则将创建bfloat16张量。请注意：如果你的GPU不支持bfloat16，则笔记本将使用float16。然而，这可能会导致训练不稳定。如果你发现训练损失降至0或NaN，请将compute_dtype更改为torch.float32。</p> 
+<p>8、为了减少激活的内存消耗，我们还需要启用梯度检查点，这是通过</p> 
+<pre><code class="prism language-python">model <span class="token operator">=</span> prepare_model_for_kbit_training<span class="token punctuation">(</span>model<span class="token punctuation">)</span>
+</code></pre> 
+<p>9、对于 LoRA 的配置，可以使用：</p> 
+<pre><code class="prism language-python">peft_config <span class="token operator">=</span> LoraConfig<span class="token punctuation">(</span>
+        lora_alpha<span class="token operator">=</span><span class="token number">16</span><span class="token punctuation">,</span>
+        lora_dropout<span class="token operator">=</span><span class="token number">0.05</span><span class="token punctuation">,</span>
+        r<span class="token operator">=</span><span class="token number">16</span><span class="token punctuation">,</span>
+        bias<span class="token operator">=</span><span class="token string">"none"</span><span class="token punctuation">,</span>
+        task_type<span class="token operator">=</span><span class="token string">"CAUSAL_LM"</span><span class="token punctuation">,</span>
+        target_modules<span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'k_proj'</span><span class="token punctuation">,</span> <span class="token string">'q_proj'</span><span class="token punctuation">,</span> <span class="token string">'v_proj'</span><span class="token punctuation">,</span> <span class="token string">'o_proj'</span><span class="token punctuation">,</span> <span class="token string">"gate_proj"</span><span class="token punctuation">,</span> <span class="token string">"down_proj"</span><span class="token punctuation">,</span> <span class="token string">"up_proj"</span><span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+</code></pre> 
+<p>可以增加rank来获得更好的结果。增加rank也会增加内存消耗，因为rank增大，适配器的参数也会增加。</p> 
+<p>10、接下来，定义训练参数和超参数：</p> 
+<pre><code class="prism language-python">training_arguments <span class="token operator">=</span> TrainingArguments<span class="token punctuation">(</span>
+        output_dir<span class="token operator">=</span><span class="token string">"./Llama3_8b_QLoRA"</span><span class="token punctuation">,</span>
+        evaluation_strategy<span class="token operator">=</span><span class="token string">"steps"</span><span class="token punctuation">,</span>
+        do_eval<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>
+        optim<span class="token operator">=</span><span class="token string">"paged_adamw_8bit"</span><span class="token punctuation">,</span>
+        per_device_train_batch_size<span class="token operator">=</span><span class="token number">8</span><span class="token punctuation">,</span>
+        gradient_accumulation_steps<span class="token operator">=</span><span class="token number">4</span><span class="token punctuation">,</span>
+        per_device_eval_batch_size<span class="token operator">=</span><span class="token number">8</span><span class="token punctuation">,</span>
+        log_level<span class="token operator">=</span><span class="token string">"debug"</span><span class="token punctuation">,</span>
+        save_strategy<span class="token operator">=</span><span class="token string">"epoch"</span><span class="token punctuation">,</span>
+        logging_steps<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">,</span>
+        learning_rate<span class="token operator">=</span><span class="token number">1e-4</span><span class="token punctuation">,</span>
+        fp16 <span class="token operator">=</span> <span class="token keyword">not</span> torch<span class="token punctuation">.</span>cuda<span class="token punctuation">.</span>is_bf16_supported<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        bf16 <span class="token operator">=</span> torch<span class="token punctuation">.</span>cuda<span class="token punctuation">.</span>is_bf16_supported<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+        eval_steps<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">,</span>
+        num_train_epochs<span class="token operator">=</span><span class="token number">3</span><span class="token punctuation">,</span>
+        warmup_ratio<span class="token operator">=</span><span class="token number">0.1</span><span class="token punctuation">,</span>
+        lr_scheduler_type<span class="token operator">=</span><span class="token string">"linear"</span><span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+</code></pre> 
+<p>11、使用"paged_adamw_8bit"，会在需要时将一些优化器状态存储到CPU RAM中，以进一步减少GPU内存消耗。</p> 
+<blockquote> 
+ <p>补充：QLoRA其实是核心就是在LoRA的技术加上深度的量化过程。核心优化思想包括以下三点：</p> 
+ <ul><li>4bit NoramlFloat Quantization：一种新的数据类型，只用4字节表征参数并且保证整个模型的精度损失极小.（和我们之前的Int8，int4量化方式不同, 原理这篇先不展开了)</li><li>Double Quantization：对第一次量化后的那些常量再进行一次量化，减少存储空间。</li><li>Paged optimizers：使用NVIDIA统一内存功能，该功能在CPU和GPU之间进行自动page对page传输，以便在GPU偶尔OOM的情况下进行。可以从现象上理解成出现训练过程中偶发OOM时能够自动处理，保证训练正常训练下去。</li></ul> 
+</blockquote> 
+<p>对于批量大小，随机选择了一个批量大小为32（每个设备的批量大小为8，梯度累积步骤为4（8x4=32）的配置）。该配置消耗了16.6 GB的GPU内存。如果你只有16 GB的GPU，请将每个设备的批量大小减少到4。</p> 
+<p>12、最后，开始微调时，运行以下命令：</p> 
+<pre><code class="prism language-python">trainer <span class="token operator">=</span> SFTTrainer<span class="token punctuation">(</span>
+        model<span class="token operator">=</span>model<span class="token punctuation">,</span>
+        train_dataset<span class="token operator">=</span>ds<span class="token punctuation">[</span><span class="token string">'train'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        eval_dataset<span class="token operator">=</span>ds<span class="token punctuation">[</span><span class="token string">'test'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        peft_config<span class="token operator">=</span>peft_config<span class="token punctuation">,</span>
+        dataset_text_field<span class="token operator">=</span><span class="token string">"text"</span><span class="token punctuation">,</span>
+        max_seq_length<span class="token operator">=</span><span class="token number">512</span><span class="token punctuation">,</span>
+        tokenizer<span class="token operator">=</span>tokenizer<span class="token punctuation">,</span>
+        args<span class="token operator">=</span>training_arguments<span class="token punctuation">,</span>
+<span class="token punctuation">)</span>
+
+trainer<span class="token punctuation">.</span>train<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>13、使用Google Colab的L4实例完成这3个epoch大约需要10个小时。</p> 
+<h2><a id="3_adapterLlama_3_178"></a>3. 将微调后的adapter集成到Llama 3中</h2> 
+<p>为了避免每次使用时都加载adapter，你可以将其合并到 Llama 3 中。当适配器已经使用 QLoRA 进行微调时，必须小心进行合并，以保持adapter的大部分准确性。我们必须遵循以下步骤：</p> 
+<ol><li>加载并量化Llama 3</li><li>Dequantize Llama 3 to the compute dtype used during QLoRA fine-tuning</li><li>Merge the adapter into the dequantized model</li><li>Save the resulting model<br> 最后得到一个没有量化的模型。我们不能像微调那样用bitsandbytes量化它，否则会严重降低模型的性能。使用AWQ或GPTQ来代替即可。</li></ol> 
+<h2><a id="4_AWQllama_34_186"></a>4. 使用AWQ对llama 3进行4位量化</h2> 
+<p>AWQ是一种量化方案，它保留了模型的重要权重。AWQ很准确，也受到高效的推理核的支持。首先需要安装AutoAWQ：</p> 
+<pre><code class="prism language-python">pip install autoawq
+</code></pre> 
+<p>然后，用几行代码执行量化，例如，要量化前一节合并后得到的模型：</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> awq <span class="token keyword">import</span> AutoAWQForCausalLM
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> AutoTokenizer
+
+tokenizer_path <span class="token operator">=</span> <span class="token string">"meta-llama/Meta-Llama-3-8B"</span>
+model_path <span class="token operator">=</span> <span class="token string">'./dqz_merge/'</span>
+quant_path <span class="token operator">=</span> <span class="token string">'llama-3-oasstguanaco3e-awq-4bit'</span>
+quant_config <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token string">"zero_point"</span><span class="token punctuation">:</span> <span class="token boolean">True</span><span class="token punctuation">,</span> <span class="token string">"q_group_size"</span><span class="token punctuation">:</span> <span class="token number">128</span><span class="token punctuation">,</span> <span class="token string">"w_bit"</span><span class="token punctuation">:</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token string">"version"</span><span class="token punctuation">:</span> <span class="token string">"GEMM"</span> <span class="token punctuation">}</span>
+
+<span class="token comment"># Load model and tokenizer</span>
+model <span class="token operator">=</span> AutoAWQForCausalLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_path<span class="token punctuation">,</span> safetensors<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>tokenizer_path<span class="token punctuation">,</span> use_fast<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+<span class="token comment"># Quantize</span>
+model<span class="token punctuation">.</span>quantize<span class="token punctuation">(</span>tokenizer<span class="token punctuation">,</span> quant_config<span class="token operator">=</span>quant_config<span class="token punctuation">)</span>
+
+<span class="token comment"># Save quantized model with safetensors</span>
+model<span class="token punctuation">.</span>save_quantized<span class="token punctuation">(</span><span class="token string">"./"</span><span class="token operator">+</span>quant_path<span class="token punctuation">,</span> safetensors<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+tokenizer<span class="token punctuation">.</span>save_pretrained<span class="token punctuation">(</span><span class="token string">"./"</span><span class="token operator">+</span>quant_path<span class="token punctuation">)</span>
+</code></pre> 
+<p>这将把量化模型保存到一个名为“llama-3-oasstguanaco3e-awq-4bit”的目录中。</p> 
+<h2><a id="5__217"></a>5. 完全微调模型</h2> 
+<p>QLoRA和LoRA只是微调适配器。如果你真的想微调整个模型，你可以尝试GaLore。GaLore将梯度投影到低秩子空间，以显著减少它们的维数，从而减少它们的内存消耗。虽然GaLore大大降低了优化器状态的内存需求，但你仍然需要48GB的GPU RAM。</p> 
+<h2><a id="CODE_220"></a>CODE</h2> 
+<p>具体的<a href="https://github.com/XY2323819551/trained_models">notebook代码</a>可以在github仓库中拿到。</p> 
+<p>notebook中包含了4个部分:</p> 
+<ol><li>QLoRA fine-tuning</li><li>Merging the fine-tuned adapter into the base model</li><li>Quantization the Llama 3 with AWQ</li><li>Appendices: LoRA and GaLore fine-tuning</li></ol>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b705657fca673fdfa92fd2600e5d478e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">（二十一）springboot实战——Spring AI劲爆来袭</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/047cfa4448b03692f9c8955ad9b23c83/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python-VBA函数之旅-open函数</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

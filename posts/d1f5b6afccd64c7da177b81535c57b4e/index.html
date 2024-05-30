@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SpringBoot实战——个人博客项目 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d1f5b6afccd64c7da177b81535c57b4e/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="SpringBoot实战——个人博客项目">
+  <meta property="og:description" content="目录
+一、项目简介
+二、项目整体架构
+数据库模块
+后端模块
+前端模块
+三、项目具体展示
+四、项目的具体实现
+1、一些准备工作
+🍎数据库、数据表的创建
+🍎设置数据库和MyBatis的配置
+🍎将前端项目引入到当前项目中
+2、登录注册模块
+🍑实体类的创建
+🍑前端后端交互
+🍑后端流程
+🍑 登录功能的实现和注册大同小异
+3、统一功能的处理
+🍎统一异常处理
+🍎统一数据格式返回
+🍎统一用户的登录验证（用户登录拦截器）
+🍎过程中遇到的bug
+4、博客列表页面的实现（更新中...)
+5、博客详情页面的实现
+6、博客的修改和删除功能
+7、博客列表分页功能的实现
+8、随机加盐的实现
+一、项目简介 项目名称：个人博客系统
+主要操作的对象是：文章和用户，用户可在该系统上发表自己的博客，查看自己或别人已经发表的文章
+需要用到两张表：userinfo(用户表）、articleinfo（文章表）
+需要实现的功能：
+登录&#43;注册
+博客的分页列表功能
+新增发表博客
+修改、删除自己的博客
+项目技术栈
+SSM（SpringBoot &#43; SpringMVC &#43; MyBatis）
+MySQL
+jQuery
+项目亮点
+手动对用户密码实现随机加盐
+统一异常处理、拦截器
+用户登录持久化（session内存）
+分页功能
+二、项目整体架构 数据库模块 两张表：用户表 &#43; 文章表
+后端模块 控制层（controller包）——》控制器
+服务层（service包）——》服务类
+持久层--数据访问层（java目录下mapper类 &#43; resources目录下的mapper.xml）——》mapper
+实体层（model包）——》实体类
+工具层（config包&#43;util包）——》统一异常处理、统一返回、随机加盐
+前端模块 前端设计到7个页面
+login.html登录页
+reg.html注册页
+blog_list.html总的博客列表页——》用到了blog_l
+myblog_list.html个人博客列表页">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-02-19T19:21:35+08:00">
+    <meta property="article:modified_time" content="2023-02-19T19:21:35+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">SpringBoot实战——个人博客项目</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80%E3%80%81%E9%A1%B9%E7%9B%AE%E7%AE%80%E4%BB%8B-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E9%A1%B9%E7%9B%AE%E7%AE%80%E4%BB%8B" rel="nofollow">一、项目简介</a></p> 
+<p id="%C2%A0%E4%BA%8C%E3%80%81%E9%A1%B9%E7%9B%AE%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%BA%8C%E3%80%81%E9%A1%B9%E7%9B%AE%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84" rel="nofollow"> 二、项目整体架构</a></p> 
+<p id="%E6%95%B0%E6%8D%AE%E5%BA%93%E6%A8%A1%E5%9D%97-toc" style="margin-left:40px;"><a href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E6%A8%A1%E5%9D%97" rel="nofollow">数据库模块</a></p> 
+<p id="%E5%90%8E%E7%AB%AF%E6%A8%A1%E5%9D%97-toc" style="margin-left:40px;"><a href="#%E5%90%8E%E7%AB%AF%E6%A8%A1%E5%9D%97" rel="nofollow">后端模块</a></p> 
+<p id="%E5%89%8D%E7%AB%AF%E6%A8%A1%E5%9D%97-toc" style="margin-left:40px;"><a href="#%E5%89%8D%E7%AB%AF%E6%A8%A1%E5%9D%97" rel="nofollow">前端模块</a></p> 
+<p id="%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E5%85%B7%E4%BD%93%E5%B1%95%E7%A4%BA-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E5%85%B7%E4%BD%93%E5%B1%95%E7%A4%BA" rel="nofollow"> 三、项目具体展示</a></p> 
+<p id="%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0" rel="nofollow"> 四、项目的具体实现</a></p> 
+<p id="1%E3%80%81%E4%B8%80%E4%BA%9B%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E4%B8%80%E4%BA%9B%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C" rel="nofollow">1、一些准备工作</a></p> 
+<p id="%E6%95%B0%E6%8D%AE%E5%BA%93%E3%80%81%E6%95%B0%E6%8D%AE%E8%A1%A8%E7%9A%84%E5%88%9B%E5%BB%BA-toc" style="margin-left:80px;"><a href="#%E6%95%B0%E6%8D%AE%E5%BA%93%E3%80%81%E6%95%B0%E6%8D%AE%E8%A1%A8%E7%9A%84%E5%88%9B%E5%BB%BA" rel="nofollow">🍎数据库、数据表的创建</a></p> 
+<p id="%C2%A0%E8%AE%BE%E7%BD%AE%E6%95%B0%E6%8D%AE%E5%BA%93%E5%92%8CMyBatis%E7%9A%84%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#%C2%A0%E8%AE%BE%E7%BD%AE%E6%95%B0%E6%8D%AE%E5%BA%93%E5%92%8CMyBatis%E7%9A%84%E9%85%8D%E7%BD%AE" rel="nofollow">🍎设置数据库和MyBatis的配置</a></p> 
+<p id="%E5%B0%86%E5%89%8D%E7%AB%AF%E9%A1%B9%E7%9B%AE%E5%BC%95%E5%85%A5%E5%88%B0%E5%BD%93%E5%89%8D%E9%A1%B9%E7%9B%AE%E4%B8%AD-toc" style="margin-left:80px;"><a href="#%E5%B0%86%E5%89%8D%E7%AB%AF%E9%A1%B9%E7%9B%AE%E5%BC%95%E5%85%A5%E5%88%B0%E5%BD%93%E5%89%8D%E9%A1%B9%E7%9B%AE%E4%B8%AD" rel="nofollow">🍎将前端项目引入到当前项目中</a></p> 
+<p id="2%E3%80%81%E7%99%BB%E5%BD%95%E6%B3%A8%E5%86%8C%E6%A8%A1%E5%9D%97-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E7%99%BB%E5%BD%95%E6%B3%A8%E5%86%8C%E6%A8%A1%E5%9D%97" rel="nofollow">2、登录注册模块</a></p> 
+<p id="%F0%9F%8D%91%E5%AE%9E%E4%BD%93%E7%B1%BB%E7%9A%84%E5%88%9B%E5%BB%BA-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%91%E5%AE%9E%E4%BD%93%E7%B1%BB%E7%9A%84%E5%88%9B%E5%BB%BA" rel="nofollow">🍑实体类的创建</a></p> 
+<p id="%F0%9F%8D%91%E5%89%8D%E7%AB%AF%E5%90%8E%E7%AB%AF%E4%BA%A4%E4%BA%92-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%91%E5%89%8D%E7%AB%AF%E5%90%8E%E7%AB%AF%E4%BA%A4%E4%BA%92" rel="nofollow">🍑前端后端交互</a></p> 
+<p id="%F0%9F%8D%91%E5%90%8E%E7%AB%AF%E6%B5%81%E7%A8%8B-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%91%E5%90%8E%E7%AB%AF%E6%B5%81%E7%A8%8B" rel="nofollow">🍑后端流程</a></p> 
+<p id="%F0%9F%8D%91%20%E7%99%BB%E5%BD%95%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%92%8C%E6%B3%A8%E5%86%8C%E5%A4%A7%E5%90%8C%E5%B0%8F%E5%BC%82-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%91%20%E7%99%BB%E5%BD%95%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%92%8C%E6%B3%A8%E5%86%8C%E5%A4%A7%E5%90%8C%E5%B0%8F%E5%BC%82" rel="nofollow">🍑 登录功能的实现和注册大同小异</a></p> 
+<p id="3%E3%80%81%E7%BB%9F%E4%B8%80%E5%8A%9F%E8%83%BD%E7%9A%84%E5%A4%84%E7%90%86-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E7%BB%9F%E4%B8%80%E5%8A%9F%E8%83%BD%E7%9A%84%E5%A4%84%E7%90%86" rel="nofollow">3、统一功能的处理</a></p> 
+<p id="%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86" rel="nofollow">🍎统一异常处理</a></p> 
+<p id="%C2%A0%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F%E8%BF%94%E5%9B%9E-toc" style="margin-left:80px;"><a href="#%C2%A0%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F%E8%BF%94%E5%9B%9E" rel="nofollow">🍎统一数据格式返回</a></p> 
+<p id="%E7%BB%9F%E4%B8%80%E7%94%A8%E6%88%B7%E7%9A%84%E7%99%BB%E5%BD%95%E9%AA%8C%E8%AF%81-toc" style="margin-left:80px;"><a href="#%E7%BB%9F%E4%B8%80%E7%94%A8%E6%88%B7%E7%9A%84%E7%99%BB%E5%BD%95%E9%AA%8C%E8%AF%81" rel="nofollow">🍎统一用户的登录验证（用户登录拦截器）</a></p> 
+<p id="%F0%9F%8D%8E%E8%BF%87%E7%A8%8B%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84bug-toc" style="margin-left:80px;"><a href="#%F0%9F%8D%8E%E8%BF%87%E7%A8%8B%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84bug" rel="nofollow">🍎过程中遇到的bug</a></p> 
+<p id="4%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0" rel="nofollow">4、博客列表页面的实现（更新中...)</a></p> 
+<p id="5%E3%80%81%E5%8D%9A%E5%AE%A2%E8%AF%A6%E6%83%85%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E5%8D%9A%E5%AE%A2%E8%AF%A6%E6%83%85%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0" rel="nofollow">5、博客详情页面的实现</a></p> 
+<p id="6%E3%80%81%E5%8D%9A%E5%AE%A2%E7%9A%84%E4%BF%AE%E6%94%B9%E5%92%8C%E5%88%A0%E9%99%A4%E5%8A%9F%E8%83%BD-toc" style="margin-left:40px;"><a href="#6%E3%80%81%E5%8D%9A%E5%AE%A2%E7%9A%84%E4%BF%AE%E6%94%B9%E5%92%8C%E5%88%A0%E9%99%A4%E5%8A%9F%E8%83%BD" rel="nofollow">6、博客的修改和删除功能</a></p> 
+<p id="7%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E5%88%86%E9%A1%B5%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0-toc" style="margin-left:40px;"><a href="#7%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E5%88%86%E9%A1%B5%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0" rel="nofollow">7、博客列表分页功能的实现</a></p> 
+<p id="8%E3%80%81%E9%9A%8F%E6%9C%BA%E5%8A%A0%E7%9B%90%E7%9A%84%E5%AE%9E%E7%8E%B0-toc" style="margin-left:40px;"><a href="#8%E3%80%81%E9%9A%8F%E6%9C%BA%E5%8A%A0%E7%9B%90%E7%9A%84%E5%AE%9E%E7%8E%B0" rel="nofollow">8、随机加盐的实现</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E9%A1%B9%E7%9B%AE%E7%AE%80%E4%BB%8B">一、项目简介</h2> 
+<p><strong>项目名称：个人博客系统</strong></p> 
+<blockquote> 
+ <p>主要操作的对象是：文章和用户，用户可在该系统上发表自己的博客，查看自己或别人已经发表的文章</p> 
+</blockquote> 
+<p><strong>需要用到两张表：userinfo(用户表）、articleinfo（文章表）</strong></p> 
+<p><strong>需要实现的功能：</strong></p> 
+<blockquote> 
+ <p>登录+注册</p> 
+ <p>博客的分页列表功能</p> 
+ <p>新增发表博客</p> 
+ <p>修改、删除自己的博客</p> 
+</blockquote> 
+<p><strong>项目技术栈</strong></p> 
+<blockquote> 
+ <p>SSM（SpringBoot + SpringMVC + MyBatis）</p> 
+ <p>MySQL</p> 
+ <p>jQuery</p> 
+</blockquote> 
+<p><strong> 项目亮点</strong></p> 
+<blockquote> 
+ <p>手动对用户密码实现随机加盐</p> 
+ <p>统一异常处理、拦截器</p> 
+ <p>用户登录持久化（session内存）</p> 
+ <p>分页功能</p> 
+</blockquote> 
+<h2 id="%C2%A0%E4%BA%8C%E3%80%81%E9%A1%B9%E7%9B%AE%E6%95%B4%E4%BD%93%E6%9E%B6%E6%9E%84"> 二、项目整体架构</h2> 
+<h3 id="%E6%95%B0%E6%8D%AE%E5%BA%93%E6%A8%A1%E5%9D%97">数据库模块</h3> 
+<p>两张表：用户表 + 文章表</p> 
+<p><img alt="" height="626" src="https://images2.imgbox.com/2f/7b/JPcy5BUg_o.png" width="1011"></p> 
+<h3 id="%E5%90%8E%E7%AB%AF%E6%A8%A1%E5%9D%97">后端模块</h3> 
+<blockquote> 
+ <p>控制层（controller包）——》控制器</p> 
+ <p></p> 
+ <p>服务层（service包）——》服务类</p> 
+ <p></p> 
+ <p>持久层--数据访问层（java目录下mapper类 + resources目录下的mapper.xml）——》mapper</p> 
+ <p></p> 
+ <p>实体层（model包）——》实体类</p> 
+ <p></p> 
+ <p>工具层（config包+util包）——》统一异常处理、统一返回、随机加盐</p> 
+</blockquote> 
+<p><img alt="" height="989" src="https://images2.imgbox.com/42/62/SXsWJzNc_o.png" width="799"></p> 
+<p> <img alt="" src="https://images2.imgbox.com/c0/25/xctzrjRr_o.png"></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h3 id="%E5%89%8D%E7%AB%AF%E6%A8%A1%E5%9D%97">前端模块</h3> 
+<p>前端设计到7个页面</p> 
+<blockquote> 
+ <p>login.html登录页</p> 
+ <p>reg.html注册页</p> 
+ <p>blog_list.html总的博客列表页——》用到了blog_l</p> 
+ <p>myblog_list.html个人博客列表页</p> 
+ <p>blog_content.html博客详情页</p> 
+ <p>blog_edit.html博客编辑页</p> 
+ <p>blog_update.html博客修改页</p> 
+</blockquote> 
+<p> <img alt="" height="659" src="https://images2.imgbox.com/a5/2e/g2xQ1mHK_o.png" width="445"></p> 
+<h2 id="%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E5%85%B7%E4%BD%93%E5%B1%95%E7%A4%BA"> 三、项目具体展示</h2> 
+<blockquote> 
+ <p><strong>项目公网地址：<a href="http://49.235.66.46:9000/login.html" rel="nofollow" title="登陆页面">登陆页面</a></strong></p> 
+</blockquote> 
+<p><strong> 登录页面、注册页面</strong></p> 
+<p><img alt="" height="886" src="https://images2.imgbox.com/02/23/NfWYwfL0_o.png" width="1200"></p> 
+<p> <img alt="" height="870" src="https://images2.imgbox.com/a3/20/4zHeFm4K_o.png" width="1200"></p> 
+<p><strong> 总的博客列表页面</strong></p> 
+<p><img alt="" height="885" src="https://images2.imgbox.com/b3/8b/tbVpE4Tt_o.png" width="1200"></p> 
+<p><strong> 博客详情页</strong></p> 
+<p><img alt="" height="865" src="https://images2.imgbox.com/6a/ef/4C61szBp_o.png" width="1200"></p> 
+<p><strong>个人博客主页</strong></p> 
+<p><img alt="" height="878" src="https://images2.imgbox.com/79/14/Ux2uBOO8_o.png" width="1200"> </p> 
+<p><strong> 博客修改页面</strong></p> 
+<p><img alt="" height="861" src="https://images2.imgbox.com/28/36/YnIuYkfH_o.png" width="1200"></p> 
+<p><strong>博客编辑页面</strong></p> 
+<p><img alt="" height="861" src="https://images2.imgbox.com/80/9b/vPhdkDFK_o.png" width="1200"> </p> 
+<p> </p> 
+<blockquote> 
+ <p> <strong>项目源码：<a href="https://gitee.com/shen-xiao-yu/java104_spring/tree/master/mycnblog-ssm" rel="nofollow" title="java_spring: SpringMVC、SpringBoot、MyBatis学习 - Gitee.com">java_spring: SpringMVC、SpringBoot、MyBatis学习 - Gitee.com</a></strong></p> 
+</blockquote> 
+<p> </p> 
+<h2 id="%C2%A0%E4%B8%89%E3%80%81%E9%A1%B9%E7%9B%AE%E7%9A%84%E5%85%B7%E4%BD%93%E5%AE%9E%E7%8E%B0"> 四、项目的具体实现</h2> 
+<h3 id="1%E3%80%81%E4%B8%80%E4%BA%9B%E5%87%86%E5%A4%87%E5%B7%A5%E4%BD%9C">1、一些准备工作</h3> 
+<p>首先我们新建一个springboot项目，项目具体的创建流程我这里就不在赘述。</p> 
+<blockquote> 
+ <p><strong>详见：<a class="link-info" href="https://blog.csdn.net/weixin_61061381/article/details/128034315" title="SpringBoot项目的创建">SpringBoot项目的创建</a></strong></p> 
+</blockquote> 
+<p> <img alt="" height="962" src="https://images2.imgbox.com/eb/54/apep00HR_o.png" width="1200"></p> 
+<p><span style="background-color:#ff9900;">接下来我们就要数据库引入该项目。</span></p> 
+<h4 id="%E6%95%B0%E6%8D%AE%E5%BA%93%E3%80%81%E6%95%B0%E6%8D%AE%E8%A1%A8%E7%9A%84%E5%88%9B%E5%BB%BA">🍎数据库、数据表的创建</h4> 
+<p><strong> 用户表的创建</strong><img alt="" height="547" src="https://images2.imgbox.com/fd/7a/Hkb9aLut_o.png" width="790"></p> 
+<p><strong> 文章表的创建</strong></p> 
+<p><img alt="" height="551" src="https://images2.imgbox.com/c2/68/Cx5xGZyt_o.png" width="795"></p> 
+<h4 id="%C2%A0%E8%AE%BE%E7%BD%AE%E6%95%B0%E6%8D%AE%E5%BA%93%E5%92%8CMyBatis%E7%9A%84%E9%85%8D%E7%BD%AE">🍎设置数据库和MyBatis的配置</h4> 
+<p><strong><u>🍑配置数据库的连接信息</u></strong></p> 
+<p><img alt="" height="484" src="https://images2.imgbox.com/09/e5/SA6ecuXP_o.png" width="1200"></p> 
+<p> 这里的很多内容是固定的</p> 
+<pre><code class="language-XML"># 数据库连接配置
+Spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/你要连接的数据库名?characterEncoding=utf8&amp;useSSL=false
+    username: 用户名
+    password: 自己的密码
+    driver-class-name: com.mysql.cj.jdbc.Driver #只要你数据库用的是mysql这个是固定的</code></pre> 
+<p><u><strong> 🍑配置MyBatis XML存放位置和命名规则</strong></u></p> 
+<p><img alt="" height="607" src="https://images2.imgbox.com/ee/ee/M4oeMxCi_o.png" width="1200"></p> 
+<p> 此时我们已经在通过maven将MySQL Driver和MyBatis Framework这两个包导入了进来，此时启动项目，项目依然能够正常运行，说明我们数据库连接是正常的。</p> 
+<p><img alt="" height="905" src="https://images2.imgbox.com/f2/e1/CiwNQssn_o.png" width="1200"></p> 
+<h4 id="%E5%B0%86%E5%89%8D%E7%AB%AF%E9%A1%B9%E7%9B%AE%E5%BC%95%E5%85%A5%E5%88%B0%E5%BD%93%E5%89%8D%E9%A1%B9%E7%9B%AE%E4%B8%AD">🍎将前端项目引入到当前项目中</h4> 
+<p>下面的前端的静态资源复制到我们resource/static目录下面：</p> 
+<p></p> 
+<p><a class="has-card" href="https://download.csdn.net/download/weixin_61061381/87459276" title="springboot项目-个人博客系统静态页面"><span class="link-card-box"><span class="link-title">springboot项目-个人博客系统静态页面</span><span class="link-link"><img alt="" class="link-link-icon" src="https://images2.imgbox.com/ef/04/0K4FGprr_o.png">https://download.csdn.net/download/weixin_61061381/87459276</span></span></a></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p><img alt="" height="899" src="https://images2.imgbox.com/c6/92/qd6SwqDu_o.png" width="1155"></p> 
+<p></p> 
+<p></p> 
+<h3 id="2%E3%80%81%E7%99%BB%E5%BD%95%E6%B3%A8%E5%86%8C%E6%A8%A1%E5%9D%97">2、登录注册模块</h3> 
+<h4 id="%F0%9F%8D%91%E5%AE%9E%E4%BD%93%E7%B1%BB%E7%9A%84%E5%88%9B%E5%BB%BA">🍑实体类的创建</h4> 
+<p>登录和注册不就是对用户表进行操作吗？这个我们首先创建用户表对应的实体类</p> 
+<blockquote> 
+ <p>首先根据我们数据库的表，在我们的程序中创建想对应的实体类——我们的MyBatis是ORM框架，我们的程序对象与关系数据库数据之间有响应的映射关系</p> 
+ <p></p> 
+ <ul><li>一个数据库中的数据表对应我们程序中的一个实体类</li><li>数据表中的一行数据对应该实体类的一个实例化对象</li><li>该数据表中的各个属性对应该实体类的成员变量（属性）</li></ul> 
+</blockquote> 
+<p> 对了，还记我们springboot的扫描路径吗？</p> 
+<p><span style="background-color:#ffd900;">只有在启动类的同级目录下，springboot才会对该目录下的类进行扫描，配合类注解存到spring容器中。</span></p> 
+<p><img alt="" height="1005" src="https://images2.imgbox.com/47/3a/NAayKgK4_o.png" width="1141"></p> 
+<p>接下来我们就尝试给我们的用户表插入一条数据。</p> 
+<p><img alt="" height="522" src="https://images2.imgbox.com/33/ba/faPprqQ2_o.png" width="1200"></p> 
+<p><span style="background-color:#ffd900;"> 如上图所示：我们从前端的login.html中获取到数据后，经过控制层——》服务层——》数据持久层，最后才作用到我们的数据库上。</span></p> 
+<p>废话不多说，让我们跟着流程来走一遍吧！</p> 
+<p></p> 
+<p> controller层</p> 
+<p><img alt="" src="https://images2.imgbox.com/e5/d9/izPXC7MS_o.png"></p> 
+<p>上图描述的是，我们通过url直接调用了我们控制层的sayHi()方法，并且把我们sayHi()方法返回的的结果展现在了浏览器上。</p> 
+<blockquote> 
+ <p><strong>🍎但是现在我们有前端了，我们前端提交数据（调用我们的后端controller层的登录方法），然后把结果返回给前端不就行了吗（用户是登录失败了，还是成功了，交由我们的前端来处理）</strong></p> 
+</blockquote> 
+<h4 id="%F0%9F%8D%91%E5%89%8D%E7%AB%AF%E5%90%8E%E7%AB%AF%E4%BA%A4%E4%BA%92">🍑前端后端交互</h4> 
+<p>首先用户在前端页面输入了用户信息</p> 
+<p><img alt="" height="877" src="https://images2.imgbox.com/46/9a/o9VgiDiw_o.png" width="1200"></p> 
+<p></p> 
+<p>然后前端紧接着就把用户输入的信息传递给后端（提交到后端指定的接口上，比如登录提交的就是/user/reg </p> 
+<p><img alt="" height="699" src="https://images2.imgbox.com/27/84/a4D14NZ1_o.png" width="1020"></p> 
+<p><img alt="" height="248" src="https://images2.imgbox.com/16/62/yuq7rKUE_o.png" width="885"></p> 
+<p></p> 
+<p>后端接收到用户信息，存到数据库中，并返回注册的结果（成功了？还是失败了？） </p> 
+<p><img alt="" height="716" src="https://images2.imgbox.com/17/b9/YQdSPiHE_o.png" width="1174"></p> 
+<p></p> 
+<p> 前端接受到后端返回的结果后做进一步的处理</p> 
+<p><img alt="" height="533" src="https://images2.imgbox.com/df/05/PUmGFPGv_o.png" width="627"></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h4 id="%F0%9F%8D%91%E5%90%8E%E7%AB%AF%E6%B5%81%E7%A8%8B">🍑后端流程</h4> 
+<p>还是先来看这张图</p> 
+<p><img alt="" height="522" src="https://images2.imgbox.com/d4/96/2YYnAUU5_o.png" width="1200"></p> 
+<p>下面是根据上图流程构建的目录</p> 
+<p><img alt="" height="540" src="https://images2.imgbox.com/da/c8/Is7eOF9u_o.png" width="513"></p> 
+<p></p> 
+<p><strong> controller层代码</strong></p> 
+<pre><code class="language-java">package com.example.demo.controller;
+
+import com.example.demo.model.UserInfo;
+import com.example.demo.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import java.util.HashMap;
+/**
+ * 而Spring Boot框架项目接口返回 JSON格式的数据比较简单：
+ * 在 Controller 类中使用@RestController注解即可返回 JSON格式的数据。
+ */
+@RestController
+@RequestMapping("/user")
+public class UserController {
+    // 属性注入service服务层的userService类
+    @Autowired
+    public UserService userService;
+    @RequestMapping("/reg")
+    public HashMap&lt;String, Object&gt; reg(String username, String password1, String password2) {
+        HashMap&lt;String, Object&gt; result = new HashMap&lt;&gt;();
+        if (!StringUtils.hasLength(username) || !StringUtils.hasLength(password1) || !StringUtils.hasLength(password2)) {
+            result.put("status", -1);
+            result.put("msg", "参数输入错误");
+            result.put("data", "");
+            return result;
+        }
+        else {
+            if (!password1.equals(password2)) {
+                result.put("status", -1);
+                result.put("msg", "前后密码不一致");
+                result.put("data", "");
+                return result;
+            }
+            else {
+                UserInfo userInfo = new UserInfo();
+                userInfo.setUsername(username);
+                userInfo.setPassword(password1);
+                int ret = userService.reg(userInfo);
+                if (ret != 1) {
+                    result.put("status", -1);
+                    result.put("msg", "数据库添加出错");
+                    result.put("data", "");
+                    return result;
+                }
+                else {
+                    result.put("status", 200);
+                    result.put("msg", "注册成功");
+                    result.put("data", ret);
+                    return result;
+                }
+            }
+        }
+    }
+}
+</code></pre> 
+<p></p> 
+<p><strong>在controller层中调用了service服务层的reg方法</strong></p> 
+<p><img alt="" height="732" src="https://images2.imgbox.com/b4/70/PcAQGDQG_o.png" width="1164"></p> 
+<p></p> 
+<p> <strong>service服务层又调用了持久层中的mapper接口</strong></p> 
+<p><img alt="" height="623" src="https://images2.imgbox.com/64/cc/Kqxsny7h_o.png" width="1107"></p> 
+<p></p> 
+<p><strong> mapper接口的实现：UserMapper.xml文件</strong></p> 
+<pre><code class="language-XML">&lt;?xml version="1.0" encoding="UTF-8"?&gt;
+&lt;!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN" "http://mybatis.org/dtd/mybatis-3-mapper.dtd"&gt;
+&lt;mapper namespace="com.example.demo.mapper.UserMapper"&gt;
+    &lt;insert id="reg"&gt;
+        insert into userinfo(username, password) values(#{userinfo.username}, #{userinfo.password});
+    &lt;/insert&gt;
+&lt;/mapper&gt;</code></pre> 
+<p><span style="background-color:#f9eda6;"> 到此，关于注册整个前后端的流程就走完了，下面我们来验证一下</span></p> 
+<p><img alt="" height="878" src="https://images2.imgbox.com/a0/66/B0JoNNdO_o.png" width="1200"></p> 
+<p></p> 
+<p><img alt="" height="719" src="https://images2.imgbox.com/00/78/jVXloYar_o.png" width="1200"></p> 
+<p> <img alt="" height="374" src="https://images2.imgbox.com/d1/2a/shzllyai_o.png" width="870"></p> 
+<p></p> 
+<p><span style="background-color:#ffd900;">但是当我们重复注册张三这个用户名</span></p> 
+<p><img alt="" height="751" src="https://images2.imgbox.com/59/2a/0EIfBhpZ_o.png" width="1200"></p> 
+<blockquote> 
+ <p><strong> 这个异常我们前端是不知道的，我们不知道发生了什么，是注册成功了？还是失败了？</strong></p> 
+ <p><strong>在后端我们应该统一对异常进行处理，并把具体的异常情况告诉前端</strong></p> 
+</blockquote> 
+<p><span style="background-color:#ff9900;">这就是我们下面要说的统一处理功能的实现</span></p> 
+<blockquote> 
+ <p>关于前后端参数的传递，详见：<a href="https://blog.csdn.net/weixin_61061381/article/details/128051604?spm=1001.2014.3001.5502" title="SpringMVC学习笔记（获取参数，传递参数——关于前后端传参交互的总结、from表单、Ajax数据提交）_是小鱼儿哈的博客-CSDN博客">SpringMVC学习笔记（获取参数，传递参数——关于前后端传参交互的总结、from表单、Ajax数据提交）_是小鱼儿哈的博客-CSDN博客</a></p> 
+</blockquote> 
+<blockquote> 
+ <p> 关于MyBatis实现数据库的增删改查，详见：<a href="https://blog.csdn.net/weixin_61061381/article/details/128191188" title="第一个MyBatis程序_是小鱼儿哈的博客-CSDN博客">第一个MyBatis程序_是小鱼儿哈的博客-CSDN博客</a></p> 
+</blockquote> 
+<blockquote> 
+ <p>关于spring更简单的存取用户对象，详见：</p> 
+ <p> <a class="link-info" href="https://blog.csdn.net/weixin_61061381/article/details/127823096?spm=1001.2014.3001.5502" title="spring更简单的对象存取">spring更简单的对象存取</a></p> 
+</blockquote> 
+<h4 id="%F0%9F%8D%91%20%E7%99%BB%E5%BD%95%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0%E5%92%8C%E6%B3%A8%E5%86%8C%E5%A4%A7%E5%90%8C%E5%B0%8F%E5%BC%82">🍑 登录功能的实现和注册大同小异</h4> 
+<p><span style="background-color:#ffd900;">后端流程</span></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/ed/ec/nw1IiJhN_o.png" width="1200"></p> 
+<p></p> 
+<p><span style="background-color:#ffd900;"> 前后端交互的流程</span></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/eb/46/miBfvkXO_o.png" width="1200"></p> 
+<p></p> 
+<p><span style="background-color:#ffd900;">下面我们通过浏览器验证一下我们的登录功能</span></p> 
+<p></p> 
+<p><img alt="" height="1050" src="https://images2.imgbox.com/da/fc/3dp05u6b_o.png" width="1200"></p> 
+<p><strong><span style="background-color:#ff9900;">一点补充 </span></strong></p> 
+<p>通过controller层的代码，可以看到我们返回给前端的好像是hashmap，这样肯定是不行的。</p> 
+<p>这个时候就用到了我们的@RestController注解了</p> 
+<blockquote> 
+ <pre>*@RestController是@Controller和@ResponseBody两者的结合，使用这个注解后该controller的所有方法都会返回json格式的数据
+
+<strong>*  因为@ResponseBody的作用就是把返回的对象转换为json格式，并把json数据写入response的body中，前台收到response时就可以获取其body中的json数据了。</strong>
+* 如果在整个controller类上方添加@RestController，其作用就相当于把该controller下的所有方法都加上@ResponseBody，使每个方法直接返回response对象</pre> 
+</blockquote> 
+<p></p> 
+<h3 id="3%E3%80%81%E7%BB%9F%E4%B8%80%E5%8A%9F%E8%83%BD%E7%9A%84%E5%A4%84%E7%90%86">3、统一功能的处理</h3> 
+<p>上面我们说了，当程序出现了异常获取其他情况，我们不统一处理（把结果告诉前端）我们其实是不知道发生了什么的。</p> 
+<h4 id="%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86">🍎统一异常处理</h4> 
+<p>所以我们需要单独在工具层中（我们的common包下面，建一个统一异常处理的类）</p> 
+<p><img alt="" height="675" src="https://images2.imgbox.com/7c/5c/XlqPkwHK_o.png" width="1200"></p> 
+<h4 id="%C2%A0%F0%9F%8D%8E%E7%BB%9F%E4%B8%80%E6%95%B0%E6%8D%AE%E6%A0%BC%E5%BC%8F%E8%BF%94%E5%9B%9E">🍎统一数据格式返回</h4> 
+<p>一般在web项目中，我们前后端都是通过json这种数据格式来交换数据格式——》我们后端需要给前端返回json格式的数据。</p> 
+<p>总之，我们前后端用户交互的数据个数一般是统一的，不会出现你一个接口用一种数据格式，而那个接口又换了，这样就会有很多问题，不利于开发。</p> 
+<p><strong>统一数据的优点</strong></p> 
+<blockquote> 
+ <ul><li>方便前端程序员更好的接受和解析后端数据接口返回的数据。</li><li>降低前端程序员和后端程序员的沟通成本，按照某个格式实现就可以了，因为所有接口都是这样返回的。</li><li>有利于项目统一数据的维护和修改。</li><li>有利于后端技术部门的统一规范的标准制定，不会出现稀奇古怪的返回内容。</li></ul> 
+</blockquote> 
+<p>统一数据格式的返回有两种实现方式，返回一个公共对象或者重写。</p> 
+<p>这里我们采用第二种重写（不过他的灵活性有待提升） </p> 
+<p>具体的我们可以使用@ControllerAdvice+ResponseBodyAdvice的方式实现，具体实现代码如下：</p> 
+<p><img alt="" height="801" src="https://images2.imgbox.com/de/8f/bePDBURF_o.png" width="1200"></p> 
+<p></p> 
+<p>但是正如我们上面所说的，通过重写来进行统一数据格式的返回，他的灵活性的确有待提高。你看我们上面只是处理了成功的情况，但要是失败的情况呢？——》并且即使失败，也是分好几种情况呢！！！</p> 
+<p><strong><span style="background-color:#ffd900;"> 我们不如再创建一个工具类，用来自定义返回hashmap数据（再通过@ResponseBody转成json格式）</span></strong></p> 
+<p><img alt="" height="922" src="https://images2.imgbox.com/51/ca/fbo1q6pk_o.png" width="999"></p> 
+<p></p> 
+<p> 那么对应的我们的统一数据格式返回类就发生了变化</p> 
+<pre><code class="language-java">package com.example.demo.common;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import org.springframework.core.MethodParameter;
+import org.springframework.http.MediaType;
+import org.springframework.http.server.ServerHttpRequest;
+import org.springframework.http.server.ServerHttpResponse;
+import org.springframework.web.bind.annotation.ControllerAdvice;
+import org.springframework.web.bind.annotation.ResponseBody;
+import org.springframework.web.servlet.mvc.method.annotation.ResponseBodyAdvice;
+
+import java.util.HashMap;
+
+/**
+ * 统一数据格式返回（灵活性有待提高）
+ *  通过统一数据格式的返回，不管我们控制层的方法返回了什么类型的数据
+ *  通过重写末尾都能把他转成hashmap格式的数据，然后又通过@ResponseBody注解，将java对象转成了json对象。
+ */
+@ControllerAdvice
+@ResponseBody
+public class ResponseAdvice implements ResponseBodyAdvice {
+    @Override
+    public boolean supports(MethodParameter returnType, Class converterType) {
+        return true; // 这个值为true的时候，才会对返回的数据进行重写
+    }
+    @Override
+    public Object beforeBodyWrite(Object body, MethodParameter returnType, MediaType selectedContentType, Class selectedConverterType, ServerHttpRequest request, ServerHttpResponse response) {
+        // 在有了我们自定义数据返回后，我们的这个统一数据格式返回类就像是一个托地的。
+        // 因为controller层可以直接调用AjaxResult，来返回hashmap(通过@ResponseBody转成json)
+        // 但如果controller没有调用AjaxResult，直接返回了
+        if (body instanceof HashMap) {
+            return body;  // 此时已经是hashmap格式了
+        }
+        if (body instanceof Integer){ // 当controller层中的方法直接返回int类型时候
+            int num = (int) body;
+            if (num &lt;= 0) {
+                // 应对int类型错误返回(查询文章列表，新增和删除博客可能会用到）——》也可能用不到，如果新增或查询失败，我直接就在controller就返回了（通过调用AjaxResult)
+                // 新增、删除或查询失败（非得在controller返回int值，再通过这里返回json对象的话，不灵活（出错信息显示的不具体
+                // 所以说这里我们只是以防万一，我们还是选择再controller层直接返回json对象，这样更信息具体，更有怎针对性）
+                return AjaxResult.fail("抱歉，本次操作失败，请稍后再试！"); // 这里无法区分是新增失败还是删除失败
+                // 这里我们本来返回的是一个hashmap格式的对象，但加了@ResponseBody，把我们的java对象转成的了json格式
+            }
+        }
+
+        if (body == null) { // （比如查询操作，直接返回查询到的UserInfo对象，然后直接返回该对象）
+            // 这里我们本来返回的是一个hashmap格式的对象，但加了@ResponseBody，把我们的java对象转成的了json格式
+            return AjaxResult.fail("抱歉，查询失败！"); // 这时对查询当前用户的特判
+        }
+        // 这里我们本来返回的是一个hashmap格式的对象，但加了@ResponseBody，把我们的java对象转成的了json格式
+        return AjaxResult.success("操作成功", body);
+        // 前端是通过result中的status值来判断操作是否成功的，这个类用来处理操作成功的情况（为操作成功的情况兜底）
+        // 但这可能存在问题，如果操作失败，并且在controller层没有调用AjaxResult中的fail方法（而是直接返回，通过这个类来返回统一的数据格式，就会出现问题——》在这个类我们都是按成功的处理的）
+        // 解决方案，在该类中提前判断body(判断操作失败的情况）---&gt;我们约定如果操作失败就返回负数（在controller层调用AjaxResult的情况）
+    }
+}
+</code></pre> 
+<p>那么与之对应的我们在controller层的类也就发生了改变</p> 
+<pre><code class="language-java">package com.example.demo.controller;
+
+import com.example.demo.common.AjaxResult;
+import com.example.demo.model.UserInfo;
+import com.example.demo.service.UserService;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.util.StringUtils;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import javax.jws.soap.SOAPBinding;
+import javax.servlet.http.HttpSession;
+import java.util.HashMap;
+/**
+ * 而Spring Boot框架项目接口返回 JSON格式的数据比较简单：
+ * 在 Controller 类中使用@RestController注解即可返回 JSON格式的数据。
+ *  @RestController是@Controller和@ResponseBody两者的结合，使用这个注解后该controller的所有方法都会返回json格式的数据，
+ *  因为@ResponseBody的作用就是把返回的对象转换为json格式，并把json数据写入response的body中，前台收到response时就可以获取其body中的json数据了。
+ * 如果在整个controller类上方添加@RestController，其作用就相当于把该controller下的所有方法都加上@ResponseBody，使每个方法直接返回response对象。
+ */
+@RestController
+@RequestMapping("/user")
+public class UserController {
+    @Autowired
+    public UserService userService;
+    @RequestMapping("/reg")
+    public Object reg(String username, String password1, String password2) {
+        HashMap&lt;String, Object&gt; result = new HashMap&lt;&gt;();
+        if (!StringUtils.hasLength(username) || !StringUtils.hasLength(password1) || !StringUtils.hasLength(password2)) {
+
+            return AjaxResult.fail("你输入的参数有误，请重新输入！");
+        }
+        else {
+            if (!password1.equals(password2)) {
+                return AjaxResult.fail("前后密码不一致，请重新输入！");
+            }
+            else {
+                UserInfo userInfo = new UserInfo();
+                userInfo.setUsername(username);
+                userInfo.setPassword(password1);
+                int ret = userService.reg(userInfo);
+                if (ret != 1) {
+                   return AjaxResult.fail("数据库添加用户失败，请稍后再试！");
+                }
+                else {
+                    return AjaxResult.success("恭喜，注册成功！", ret);
+                }
+            }
+        }
+    }
+    @RequestMapping("/login")
+    public Object login(String username, String password) {
+        HashMap&lt;String, Object&gt; result = new HashMap&lt;&gt;();
+        if (!StringUtils.hasLength(username) || !StringUtils.hasLength(password)) {
+            return AjaxResult.fail("你输入的参数有误，请重新输入！");
+        }
+        else {
+            // 需要在数据库中查询当前登录的用户是否存在
+            UserInfo userInfo = userService.selectByUsername(username);
+            if (userInfo == null || !password.equals(userInfo.getPassword())) {
+               return AjaxResult.fail("你当前的用户名或密码错误，请重新输入！");
+            }
+            else  {
+                return AjaxResult.success("恭喜，登录成功！", "");
+            }
+        }
+    }
+}
+</code></pre> 
+<blockquote></blockquote> 
+<h4 id="%E7%BB%9F%E4%B8%80%E7%94%A8%E6%88%B7%E7%9A%84%E7%99%BB%E5%BD%95%E9%AA%8C%E8%AF%81">🍎统一用户的登录验证（用户登录拦截器）</h4> 
+<p>spring拦截器</p> 
+<blockquote> 
+ <p>对于以上问题Spring中提供了具体的实现拦截器：HandlerInterceptor,拦截器的实现分为以下两个步骤：</p> 
+ <p></p> 
+ <p>1、创建自定义拦截器，实现 HandlerInterceptor 接口的perHandle（执行具体方法之前的预处理）方法。</p> 
+ <p>2、将自定义拦截器加入 WebMvcConfiger的 addInterceptors方法中。<br>  </p> 
+</blockquote> 
+<p><span style="background-color:#ffd900;">创建用户登录拦截器</span></p> 
+<p><img alt="" height="690" src="https://images2.imgbox.com/de/9a/5ssnUdIP_o.png" width="1200"></p> 
+<p><span style="background-color:#ffd900;"> 将该自定义拦截器放到系统的配置文件中</span></p> 
+<p>（将自定义拦截器加入 WebMvcConfiger的 addInterceptors方法中）</p> 
+<p><img alt="" height="830" src="https://images2.imgbox.com/98/b9/jm0Vf5g9_o.png" width="1200"></p> 
+<p> 用浏览器测试一下是否真的拦截了</p> 
+<p><img alt="" height="666" src="https://images2.imgbox.com/9b/e7/DT29iWUK_o.png" width="999"></p> 
+<p></p> 
+<p>可以看到因为我们没有放行login.html，登录页面直接显示不出来了。</p> 
+<p>我们改下拦截规则 </p> 
+<p><img alt="" height="394" src="https://images2.imgbox.com/48/90/FJnmUNF6_o.png" width="933"></p> 
+<p> <img alt="" height="643" src="https://images2.imgbox.com/98/c6/84rRF0MZ_o.png" width="850"></p> 
+<p>然后你发现，咦，怎么还是不行。</p> 
+<p>当然不行呀，你虽然运行了login.html通行，但是login.html还用到了css/js/image图片呢！这些东西你还没放行呢！！！</p> 
+<p> <img alt="" height="513" src="https://images2.imgbox.com/4b/78/BBtYyCZn_o.png" width="836"></p> 
+<p><img alt="" height="842" src="https://images2.imgbox.com/fd/86/Pmz2wYY1_o.png" width="1200"></p> 
+<p></p> 
+<h4 id="%F0%9F%8D%8E%E8%BF%87%E7%A8%8B%E4%B8%AD%E9%81%87%E5%88%B0%E7%9A%84bug">🍎过程中遇到的bug</h4> 
+<p>一开始，当我把自定义的用户登录拦截器放到了系统配置文件，我欢欢喜喜的启动项目，结果——</p> 
+<p><img alt="" height="553" src="https://images2.imgbox.com/74/a4/mapcZg5g_o.png" width="1200"></p> 
+<p></p> 
+<p><img alt="" height="756" src="https://images2.imgbox.com/35/e6/XYuDNLV6_o.png" width="1200"></p> 
+<p> 加上类注解后问题就解决了。</p> 
+<p>关于统一功能的处理，详见：<a href="https://blog.csdn.net/weixin_61061381/article/details/128732930?spm=1001.2014.3001.5502" title="SpringBoot统一功能处理_是小鱼儿哈的博客-CSDN博客">SpringBoot统一功能处理_是小鱼儿哈的博客-CSDN博客</a></p> 
+<h3 id="4%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0">4、博客列表页面的实现（更新中...)</h3> 
+<h3 id="5%E3%80%81%E5%8D%9A%E5%AE%A2%E8%AF%A6%E6%83%85%E9%A1%B5%E9%9D%A2%E7%9A%84%E5%AE%9E%E7%8E%B0">5、博客详情页面的实现</h3> 
+<h3 id="6%E3%80%81%E5%8D%9A%E5%AE%A2%E7%9A%84%E4%BF%AE%E6%94%B9%E5%92%8C%E5%88%A0%E9%99%A4%E5%8A%9F%E8%83%BD">6、博客的修改和删除功能</h3> 
+<h3 id="7%E3%80%81%E5%8D%9A%E5%AE%A2%E5%88%97%E8%A1%A8%E5%88%86%E9%A1%B5%E5%8A%9F%E8%83%BD%E7%9A%84%E5%AE%9E%E7%8E%B0">7、博客列表分页功能的实现</h3> 
+<h3 id="8%E3%80%81%E9%9A%8F%E6%9C%BA%E5%8A%A0%E7%9B%90%E7%9A%84%E5%AE%9E%E7%8E%B0">8、随机加盐的实现</h3>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/97a65c0a3ecef9bd792a30b9af016977/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">eclipse创建第一个java web项目并运行</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/74ef8ffa24b1c6c63b66be4ad546285f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">滤波算法 | 无迹卡尔曼滤波（UKF）算法及其MATLAB实现</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

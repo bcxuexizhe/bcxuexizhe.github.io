@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【研发日记】Matlab/Simulink自动生成代码(二)——五种选择结构实现方法 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/67c8126247153bc51e861395d7295dcc/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【研发日记】Matlab/Simulink自动生成代码(二)——五种选择结构实现方法">
+  <meta property="og:description" content="文章目录 前言
+Simulink实现选择结构
+自动生成C代码
+变式一
+变式二
+变式三
+变式四
+总结
+前言 见《深入拆解Simulink自动生成代码（一）——数据流处理》
+Simulink实现选择结构 用Simulink实现选择结构的一个最简单编程举例如下：
+自动生成C代码 上述选择结构的Simulink自动生成的对应C代码如下：
+/* Switch: &#39;&lt;S2&gt;/Switch&#39; incorporates: * UnitDelay: &#39;&lt;S3&gt;/Output&#39; */ if (CodeGenerate_DW.Output_DSTATE &gt; 0) { /* Outport: &#39;&lt;Root&gt;/y1&#39; incorporates: * Constant: &#39;&lt;S2&gt;/Constant&#39; */ CodeGenerate_Y.y1 = 5.0; } else { /* Outport: &#39;&lt;Root&gt;/y1&#39; incorporates: * Constant: &#39;&lt;S2&gt;/Constant2&#39; */ CodeGenerate_Y.y1 = 10.0; } /* End of Switch: &#39;&lt;S2&gt;/Switch&#39; */ /* Switch: &#39;&lt;S5&gt;/FixPt Switch&#39; incorporates: * Constant: &#39;&lt;S4&gt;/FixPt Constant&#39; * Constant: &#39;&lt;S5&gt;/Constant&#39; * Sum: &#39;&lt;S4&gt;/FixPt Sum1&#39; * UnitDelay: &#39;&lt;S3&gt;/Output&#39; */ if ((uint8_T)(CodeGenerate_DW.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-26T19:11:16+08:00">
+    <meta property="article:modified_time" content="2024-05-26T19:11:16+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【研发日记】Matlab/Simulink自动生成代码(二)——五种选择结构实现方法</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p class="img-center"><img alt="" height="513" src="https://images2.imgbox.com/39/f9/fKskKVfP_o.png" width="1200"></p> 
+<h2 id="main-toc"><span style="color:#1a439c;"><strong>文章目录</strong></span></h2> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E4%B8%80%E3%80%81Simulink%E5%AE%9E%E7%8E%B0%E9%80%89%E6%8B%A9%E7%BB%93%E6%9E%84-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81Simulink%E5%AE%9E%E7%8E%B0%E9%80%89%E6%8B%A9%E7%BB%93%E6%9E%84" rel="nofollow">Simulink实现选择结构</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90C%E4%BB%A3%E7%A0%81-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90C%E4%BB%A3%E7%A0%81" rel="nofollow">自动生成C代码</a></p> 
+<p id="%E4%B8%89%E3%80%81%E5%8F%98%E5%BC%8F1-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81%E5%8F%98%E5%BC%8F1" rel="nofollow">变式一</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2" rel="nofollow">变式二</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2" rel="nofollow">变式三</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2" rel="nofollow">变式四</a></p> 
+<p id="%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E6%80%BB%E7%BB%93" rel="nofollow">总结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E5%89%8D%E8%A8%80"><span style="color:#1a439c;">前言</span></h2> 
+<p>        见《<a class="link-info" href="https://blog.csdn.net/CSSUST/article/details/128414910?spm=1001.2014.3001.5501" title="深入拆解Simulink自动生成代码（一）——数据流处理">深入拆解Simulink自动生成代码（一）——数据流处理</a>》</p> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81Simulink%E5%AE%9E%E7%8E%B0%E9%80%89%E6%8B%A9%E7%BB%93%E6%9E%84" style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">Simulink实现选择结构</span></h2> 
+<p style="margin-left:0;text-align:justify;">         用Simulink实现选择结构的一个<span style="color:#fe2c24;">最简单</span>编程举例如下：</p> 
+<p class="img-center"><img alt="" height="188" src="https://images2.imgbox.com/5c/26/qS2ygtRK_o.png" width="400"></p> 
+<p></p> 
+<h2 id="%E4%BA%8C%E3%80%81%E8%87%AA%E5%8A%A8%E7%94%9F%E6%88%90C%E4%BB%A3%E7%A0%81"><span style="color:#1a439c;">自动生成C代码</span></h2> 
+<p style="margin-left:0;text-align:justify;">         上述选择结构的Simulink自动生成的对应<span style="color:#fe2c24;">C代码</span>如下：</p> 
+<pre><code class="language-cpp">  /* Switch: '&lt;S2&gt;/Switch' incorporates:
+   *  UnitDelay: '&lt;S3&gt;/Output'
+   */
+  if (CodeGenerate_DW.Output_DSTATE &gt; 0) {
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant'
+     */
+    CodeGenerate_Y.y1 = 5.0;
+  } else {
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant2'
+     */
+    CodeGenerate_Y.y1 = 10.0;
+  }
+
+  /* End of Switch: '&lt;S2&gt;/Switch' */
+
+  /* Switch: '&lt;S5&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S4&gt;/FixPt Constant'
+   *  Constant: '&lt;S5&gt;/Constant'
+   *  Sum: '&lt;S4&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S3&gt;/Output'
+   */
+  if ((uint8_T)(CodeGenerate_DW.Output_DSTATE + 1U) &gt; 7) {
+    CodeGenerate_DW.Output_DSTATE = 0U;
+  } else {
+    CodeGenerate_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S5&gt;/FixPt Switch' */</code></pre> 
+<p></p> 
+<h2 id="%E4%B8%89%E3%80%81%E5%8F%98%E5%BC%8F1" style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">变式一</span></h2> 
+<p style="margin-left:0;text-align:justify;">         基于上述举例，增加选择结构的<span style="color:#fe2c24;">选项</span>，生成的对应代码如下所示：</p> 
+<p class="img-center"><img alt="" height="286" src="https://images2.imgbox.com/62/c9/qJzaXbco_o.png" width="800"></p> 
+<p></p> 
+<pre><code class="language-cpp">  /* SwitchCase: '&lt;S2&gt;/Switch Case' incorporates:
+   *  UnitDelay: '&lt;S3&gt;/Output'
+   */
+  switch (CodeGenerate_DW.Output_DSTATE) {
+   case 1:
+    /* Outputs for IfAction SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem' incorporates:
+     *  ActionPort: '&lt;S4&gt;/Action Port'
+     */
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant1'
+     *  Inport: '&lt;S4&gt;/In1'
+     */
+    CodeGenerate_Y.y1 = 5.0;
+
+    /* End of Outputs for SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem' */
+    break;
+
+   case 2:
+    /* Outputs for IfAction SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem1' incorporates:
+     *  ActionPort: '&lt;S5&gt;/Action Port'
+     */
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant3'
+     *  Inport: '&lt;S5&gt;/In1'
+     */
+    CodeGenerate_Y.y1 = 10.0;
+
+    /* End of Outputs for SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem1' */
+    break;
+
+   case 3:
+    /* Outputs for IfAction SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem2' incorporates:
+     *  ActionPort: '&lt;S6&gt;/Action Port'
+     */
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant4'
+     *  Inport: '&lt;S6&gt;/In1'
+     */
+    CodeGenerate_Y.y1 = 15.0;
+
+    /* End of Outputs for SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem2' */
+    break;
+
+   default:
+    /* Outputs for IfAction SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem3' incorporates:
+     *  ActionPort: '&lt;S7&gt;/Action Port'
+     */
+    /* Outport: '&lt;Root&gt;/y1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant5'
+     *  Inport: '&lt;S7&gt;/In1'
+     */
+    CodeGenerate_Y.y1 = 0.0;
+
+    /* End of Outputs for SubSystem: '&lt;S2&gt;/Switch Case Action Subsystem3' */
+    break;
+  }
+
+  /* End of SwitchCase: '&lt;S2&gt;/Switch Case' */
+
+  /* Switch: '&lt;S9&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S8&gt;/FixPt Constant'
+   *  Constant: '&lt;S9&gt;/Constant'
+   *  Sum: '&lt;S8&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S3&gt;/Output'
+   */
+  if ((uint8_T)(CodeGenerate_DW.Output_DSTATE + 1U) &gt; 7) {
+    CodeGenerate_DW.Output_DSTATE = 0U;
+  } else {
+    CodeGenerate_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S9&gt;/FixPt Switch' */</code></pre> 
+<p></p> 
+<h2 id="%E5%9B%9B%E3%80%81%E5%8F%98%E5%BC%8F2" style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">变式二</span></h2> 
+<p style="margin-left:0;text-align:justify;">         基于上述举例，升级选择结构的<span style="color:#fe2c24;">判断条件</span>，生成的对应代码如下所示：</p> 
+<p class="img-center"><img alt="" height="292" src="https://images2.imgbox.com/70/6d/9TgVOcKl_o.png" width="900"></p> 
+<pre><code class="language-cpp">  real_T tmp;
+
+  /* Math: '&lt;S2&gt;/Mod' incorporates:
+   *  Constant: '&lt;S2&gt;/Constant6'
+   *  DataTypeConversion: '&lt;S2&gt;/Data Type Conversion'
+   *  Math: '&lt;S2&gt;/Mod1'
+   *  Math: '&lt;S2&gt;/Mod2'
+   *  UnitDelay: '&lt;S6&gt;/Output'
+   */
+  tmp = rt_modd_snf((real_T)CodeGenerate_DW.Output_DSTATE, 3.0);
+
+  /* Outputs for Enabled SubSystem: '&lt;S2&gt;/Subsystem' incorporates:
+   *  EnablePort: '&lt;S7&gt;/Enable'
+   */
+  /* RelationalOperator: '&lt;S3&gt;/Compare' incorporates:
+   *  Constant: '&lt;S3&gt;/Constant'
+   *  Math: '&lt;S2&gt;/Mod'
+   */
+  if (tmp == 0.0) {
+    /* Merge: '&lt;S2&gt;/Merge1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant7'
+     *  Inport: '&lt;S7&gt;/In1'
+     */
+    CodeGenerate_B.Merge1 = 5.0;
+  }
+
+  /* End of RelationalOperator: '&lt;S3&gt;/Compare' */
+  /* End of Outputs for SubSystem: '&lt;S2&gt;/Subsystem' */
+
+  /* Outputs for Enabled SubSystem: '&lt;S2&gt;/Subsystem1' incorporates:
+   *  EnablePort: '&lt;S8&gt;/Enable'
+   */
+  /* RelationalOperator: '&lt;S4&gt;/Compare' incorporates:
+   *  Constant: '&lt;S4&gt;/Constant'
+   */
+  if (tmp == 1.0) {
+    /* Merge: '&lt;S2&gt;/Merge1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant9'
+     *  Inport: '&lt;S8&gt;/In1'
+     */
+    CodeGenerate_B.Merge1 = 10.0;
+  }
+
+  /* End of RelationalOperator: '&lt;S4&gt;/Compare' */
+  /* End of Outputs for SubSystem: '&lt;S2&gt;/Subsystem1' */
+
+  /* Outputs for Enabled SubSystem: '&lt;S2&gt;/Subsystem2' incorporates:
+   *  EnablePort: '&lt;S9&gt;/Enable'
+   */
+  /* RelationalOperator: '&lt;S5&gt;/Compare' incorporates:
+   *  Constant: '&lt;S5&gt;/Constant'
+   */
+  if (tmp == 2.0) {
+    /* Merge: '&lt;S2&gt;/Merge1' incorporates:
+     *  Constant: '&lt;S2&gt;/Constant11'
+     *  Inport: '&lt;S9&gt;/In1'
+     */
+    CodeGenerate_B.Merge1 = 15.0;
+  }
+
+  /* End of RelationalOperator: '&lt;S5&gt;/Compare' */
+  /* End of Outputs for SubSystem: '&lt;S2&gt;/Subsystem2' */
+
+  /* Switch: '&lt;S11&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S10&gt;/FixPt Constant'
+   *  Constant: '&lt;S11&gt;/Constant'
+   *  Sum: '&lt;S10&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S6&gt;/Output'
+   */
+  if ((uint8_T)(CodeGenerate_DW.Output_DSTATE + 1U) &gt; 7) {
+    CodeGenerate_DW.Output_DSTATE = 0U;
+  } else {
+    CodeGenerate_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S11&gt;/FixPt Switch' */
+
+  /* Outport: '&lt;Root&gt;/y1' incorporates:
+   *  MATLAB Function: '&lt;Root&gt;/MATLAB Function2'
+   */
+  CodeGenerate_Y.y1 = CodeGenerate_B.Merge1;</code></pre> 
+<p></p> 
+<h2 style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">变式三</span></h2> 
+<p style="margin-left:0;text-align:justify;">         基于上述举例，用<span style="color:#fe2c24;">MATLAB Function</span>来实现，生成的对应代码如下所示：</p> 
+<p class="img-center"><img alt="" height="489" src="https://images2.imgbox.com/e6/e1/iXTVwZ3E_o.png" width="644"></p> 
+<pre><code class="language-cpp">#include "untitled.h"
+#include "untitled_private.h"
+
+/* Block states (default storage) */
+DW_untitled_T untitled_DW;
+
+/* External outputs (root outports fed by signals with default storage) */
+ExtY_untitled_T untitled_Y;
+
+/* Real-time model */
+static RT_MODEL_untitled_T untitled_M_;
+RT_MODEL_untitled_T *const untitled_M = &amp;untitled_M_;
+
+/* Model step function */
+void untitled_step(void)
+{
+  uint8_T rtb_Output;
+
+  /* UnitDelay: '&lt;S1&gt;/Output' */
+  rtb_Output = untitled_DW.Output_DSTATE;
+
+  /* Switch: '&lt;S4&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S3&gt;/FixPt Constant'
+   *  Constant: '&lt;S4&gt;/Constant'
+   *  Sum: '&lt;S3&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S1&gt;/Output'
+   */
+  if ((uint8_T)(untitled_DW.Output_DSTATE + 1U) &gt; 7) {
+    untitled_DW.Output_DSTATE = 0U;
+  } else {
+    untitled_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S4&gt;/FixPt Switch' */
+
+  /* MATLAB Function: '&lt;Root&gt;/MATLAB Function' */
+  switch (rtb_Output) {
+   case 1:
+    /* Outport: '&lt;Root&gt;/y' */
+    untitled_Y.y = 5.0;
+    break;
+
+   case 2:
+    /* Outport: '&lt;Root&gt;/y' */
+    untitled_Y.y = 10.0;
+    break;
+
+   case 3:
+    /* Outport: '&lt;Root&gt;/y' */
+    untitled_Y.y = 15.0;
+    break;
+
+   default:
+    /* Outport: '&lt;Root&gt;/y' */
+    untitled_Y.y = 0.0;
+    break;
+  }
+
+  /* End of MATLAB Function: '&lt;Root&gt;/MATLAB Function' */
+}</code></pre> 
+<p></p> 
+<h2 style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">变式四</span></h2> 
+<p style="margin-left:0;text-align:justify;">        基于上述举例，用<span style="color:#fe2c24;">Stateflow</span>配合<span style="color:#fe2c24;">Simulink Function</span>来实现选择结构，参见《<a class="link-info" href="https://blog.csdn.net/CSSUST/article/details/139160266" title="【研发日记】嵌入式处理器技能解锁(一)——多任务异步执行调度的三种方法">【研发日记】嵌入式处理器技能解锁(一)——多任务异步执行调度的三种方法</a>》，示例如下：</p> 
+<p class="img-center"><img alt="" height="503" src="https://images2.imgbox.com/df/30/y7pvQ5w5_o.png" width="658"></p> 
+<p></p> 
+<h2 id="%E6%80%BB%E7%BB%93" style="margin-left:0px;text-align:justify;"><span style="color:#1a439c;">总结</span></h2> 
+<p style="margin-left:0;text-align:justify;">         以上就是本人拆解Simulink模块<span style="color:#fe2c24;">自动生成代码</span>时，讲解的第二部分。主要针对Simulink的选择结构，展示了这类模块的使用方法，并对比了相应的C代码。</p> 
+<p style="margin-left:0;text-align:justify;">         后续还会更新Simulink其他的几种模块，欢迎评论区留言、点赞、收藏和关注，这些鼓励和支持都将成为笔者持续分享的动力。</p> 
+<p style="margin-left:0;text-align:justify;">         另外，上述例程使用的Demo工程可以到笔者的主页查找和下载。</p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<hr> 
+<p style="margin-left:0;text-align:justify;">         版权声明：原创文章，转载和引用请注明出处和链接，<span style="color:#fe2c24;">侵权必究！</span></p> 
+<p class="img-center"><img alt="" height="209" src="https://images2.imgbox.com/d0/27/UPe54huy_o.png" width="1000"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/155d5c1e4d8819a3121228f6add43375/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Rust之函数、单元测试</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d6873bd88f62c4f5e00551af2f9343e6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">面试2. c&#43;&#43;面试（领为军融）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

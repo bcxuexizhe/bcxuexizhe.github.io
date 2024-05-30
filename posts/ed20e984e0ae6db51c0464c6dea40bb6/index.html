@@ -1,0 +1,365 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>XGBoost详解（原理篇） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ed20e984e0ae6db51c0464c6dea40bb6/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="XGBoost详解（原理篇）">
+  <meta property="og:description" content="入门小菜鸟，希望像做笔记记录自己学的东西，也希望能帮助到同样入门的人，更希望大佬们帮忙纠错啦~侵权立删。
+目录
+一、XGBoost简介
+二、XGBoost原理
+1、基本组成元素
+2、整体思路
+（1）训练过程——构建XGBoost模型 （2）测试过程
+3、目标函数
+（1）最初的目标函数
+（2）推导
+4、从目标函数到特征划分准则 &#43; 叶子节点的值的确定
+（1） ​编辑 的定义
+（2）引入真实的​编辑和正则化项代换
+（3）求出 ​编辑 —— 定下该叶子结点的值
+（4）目标函数的最优解——与信息增益的连接
+（5）特征划分准则——“信息增益”
+5、从目标函数到加权分位法（实现对每个特征具体的划分）
+（1）引入原因
+（2）“特征值重要性”的提出
+（3）目标函数到平方损失
+（4）特征值重要性排序函数
+（5）切分点寻找
+（6）计算分裂点的策略
+三、XGBoost对缺失值的处理
+四、XGBoost的优缺点
+1、优点
+（1）精度高
+（2）灵活性强
+（3）防止过拟合
+（4）缺失值处理
+（5）并行化操作
+2、缺点
+一、XGBoost简介 XGBoost全称为eXtreme Gradient Boosting，即极致梯度提升树。
+XGBoost是Boosting算法的其中一种，Boosting算法的思想是将许多弱分类器集成在一起，形成一个强分类器（个体学习器间存在强依赖关系，必须串行生成的序列化方法）。
+Note：关于Boosting算法详见博文集成学习详解_tt丫的博客-CSDN博客
+XGBoost是一种提升树模型，即它将许多树模型集成在一起，形成一个很强的分类器。其中所用到的树模型则是CART回归树模型。
+Note：CART回归树模型详见博文决策树详解_tt丫的博客-CSDN博客
+二、XGBoost原理 1、基本组成元素 XGBoost的基本组成元素是：决策树。
+这些决策树即为“弱学习器”，它们共同组成了XGBoost；
+并且这些组成XGBoost的决策树之间是有先后顺序的：后一棵决策树的生成会考虑前一棵决策树的预测结果，即将前一棵决策树的偏差考虑在内，使得先前决策树做错的训练样本在后续受到更多的关注，然后基于调整后的样本分布来训练下一棵决策树。
+2、整体思路 （1）训练过程——构建XGBoost模型 从目标函数出发，可以推导出“每个叶子节点应该赋予的权值”，”分裂节点后的信息增益“，以及”特征值重要性排序函数“。
+与之前决策树的建立方法类似。当前决策树的建立首先根据贪心算法进行划分，通过计算目标函数增益（及上面所说的”分裂节点后的信息增益“），选择该结点使用哪个特征。
+选择好哪个特征后，就要确定分左右子树的条件了（比如选择特征A，条件是A&lt;7）：为了提高算法效率（不用一个一个特征值去试），使用“加权分位法”，计算分裂点（这里由”特征值重要性排序函数“得出分裂点）。
+并且对应叶子节点的权值就由上述的“每个叶子节点应该赋予的权值”给出。
+不断进行上述算法，直至所有特征都被使用或者已经达到限定的层数，则完整的决策树构建完成。
+（2）测试过程 将输入的特征，依次输入进XGBoost的每棵决策树。每棵决策树的相应节点都有对应的预测权值w，将“在每一棵决策树中的预测权值”全部相加，即得到最后预测结果，看谁大，谁大谁是最后的预测结果。
+3、目标函数 （1）最初的目标函数 设定第 t 个决策树的目标函数公式如下：
+符号定义：
+n表示样本数目；">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-03-20T15:04:32+08:00">
+    <meta property="article:modified_time" content="2023-03-20T15:04:32+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">XGBoost详解（原理篇）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><span style="color:#a5a5a5;">入门小菜鸟，希望像做笔记记录自己学的东西，也希望能帮助到同样入门的人，更希望大佬们帮忙纠错啦~侵权立删。</span></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80%E3%80%81XGBoost%E7%AE%80%E4%BB%8B-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81XGBoost%E7%AE%80%E4%BB%8B" rel="nofollow">一、XGBoost简介</a></p> 
+<p id="%E4%BA%8C%E3%80%81XGBoost%E5%8E%9F%E7%90%86-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81XGBoost%E5%8E%9F%E7%90%86" rel="nofollow">二、XGBoost原理</a></p> 
+<p id="1%E3%80%81%E5%9F%BA%E6%9C%AC%E7%BB%84%E6%88%90%E5%85%83%E7%B4%A0-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E5%9F%BA%E6%9C%AC%E7%BB%84%E6%88%90%E5%85%83%E7%B4%A0" rel="nofollow">1、基本组成元素</a></p> 
+<p id="2%E3%80%81%E6%95%B4%E4%BD%93%E6%80%9D%E8%B7%AF-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E6%95%B4%E4%BD%93%E6%80%9D%E8%B7%AF" rel="nofollow">2、整体思路</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E2%80%94%E2%80%94%E6%9E%84%E5%BB%BAXGBoost%E6%A8%A1%E5%9E%8B%C2%A0%20%C2%A0%20%C2%A0%20%C2%A0-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E2%80%94%E2%80%94%E6%9E%84%E5%BB%BAXGBoost%E6%A8%A1%E5%9E%8B%C2%A0%20%C2%A0%20%C2%A0%20%C2%A0" rel="nofollow">（1）训练过程——构建XGBoost模型       </a></p> 
+<p id="%EF%BC%882%EF%BC%89%E6%B5%8B%E8%AF%95%E8%BF%87%E7%A8%8B-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E6%B5%8B%E8%AF%95%E8%BF%87%E7%A8%8B" rel="nofollow">（2）测试过程</a></p> 
+<p id="3%E3%80%81%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0" rel="nofollow">3、目标函数</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E6%9C%80%E5%88%9D%E7%9A%84%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E6%9C%80%E5%88%9D%E7%9A%84%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0" rel="nofollow">（1）最初的目标函数</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E6%8E%A8%E5%AF%BC-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E6%8E%A8%E5%AF%BC" rel="nofollow">（2）推导</a></p> 
+<p id="4%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%20%2B%20%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E7%9A%84%E5%80%BC%E7%9A%84%E7%A1%AE%E5%AE%9A-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%20%2B%20%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E7%9A%84%E5%80%BC%E7%9A%84%E7%A1%AE%E5%AE%9A" rel="nofollow">4、从目标函数到特征划分准则 + 叶子节点的值的确定</a></p> 
+<p id="%EF%BC%881%EF%BC%89%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E7%9A%84%E5%AE%9A%E4%B9%89-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E7%9A%84%E5%AE%9A%E4%B9%89" rel="nofollow">（1） ​编辑 的定义</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E5%BC%95%E5%85%A5%E7%9C%9F%E5%AE%9E%E7%9A%84%E2%80%8B%E7%BC%96%E8%BE%91%E5%92%8C%E6%AD%A3%E5%88%99%E5%8C%96%E9%A1%B9%E4%BB%A3%E6%8D%A2-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E5%BC%95%E5%85%A5%E7%9C%9F%E5%AE%9E%E7%9A%84%E2%80%8B%E7%BC%96%E8%BE%91%E5%92%8C%E6%AD%A3%E5%88%99%E5%8C%96%E9%A1%B9%E4%BB%A3%E6%8D%A2" rel="nofollow">（2）引入真实的​编辑和正则化项代换</a></p> 
+<p id="%EF%BC%883%EF%BC%89%E6%B1%82%E5%87%BA%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E2%80%94%E2%80%94%20%E5%AE%9A%E4%B8%8B%E8%AF%A5%E5%8F%B6%E5%AD%90%E7%BB%93%E7%82%B9%E7%9A%84%E5%80%BC-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89%E6%B1%82%E5%87%BA%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E2%80%94%E2%80%94%20%E5%AE%9A%E4%B8%8B%E8%AF%A5%E5%8F%B6%E5%AD%90%E7%BB%93%E7%82%B9%E7%9A%84%E5%80%BC" rel="nofollow">（3）求出 ​编辑 —— 定下该叶子结点的值</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E7%9A%84%E6%9C%80%E4%BC%98%E8%A7%A3%E2%80%94%E2%80%94%E4%B8%8E%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E7%9A%84%E8%BF%9E%E6%8E%A5-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E7%9A%84%E6%9C%80%E4%BC%98%E8%A7%A3%E2%80%94%E2%80%94%E4%B8%8E%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E7%9A%84%E8%BF%9E%E6%8E%A5" rel="nofollow">（4）目标函数的最优解——与信息增益的连接</a></p> 
+<p id="%EF%BC%885%EF%BC%89%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%E2%80%94%E2%80%94%E2%80%9C%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E2%80%9D-toc" style="margin-left:80px;"><a href="#%EF%BC%885%EF%BC%89%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%E2%80%94%E2%80%94%E2%80%9C%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E2%80%9D" rel="nofollow">（5）特征划分准则——“信息增益”</a></p> 
+<p id="5%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%8A%A0%E6%9D%83%E5%88%86%E4%BD%8D%E6%B3%95%EF%BC%88%E5%AE%9E%E7%8E%B0%E5%AF%B9%E6%AF%8F%E4%B8%AA%E7%89%B9%E5%BE%81%E5%85%B7%E4%BD%93%E7%9A%84%E5%88%92%E5%88%86%EF%BC%89-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%8A%A0%E6%9D%83%E5%88%86%E4%BD%8D%E6%B3%95%EF%BC%88%E5%AE%9E%E7%8E%B0%E5%AF%B9%E6%AF%8F%E4%B8%AA%E7%89%B9%E5%BE%81%E5%85%B7%E4%BD%93%E7%9A%84%E5%88%92%E5%88%86%EF%BC%89" rel="nofollow">5、从目标函数到加权分位法（实现对每个特征具体的划分）</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E5%BC%95%E5%85%A5%E5%8E%9F%E5%9B%A0-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E5%BC%95%E5%85%A5%E5%8E%9F%E5%9B%A0" rel="nofollow">（1）引入原因</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E2%80%9C%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E2%80%9D%E7%9A%84%E6%8F%90%E5%87%BA-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E2%80%9C%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E2%80%9D%E7%9A%84%E6%8F%90%E5%87%BA" rel="nofollow">（2）“特征值重要性”的提出</a></p> 
+<p id="%EF%BC%883%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%B9%B3%E6%96%B9%E6%8D%9F%E5%A4%B1-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%B9%B3%E6%96%B9%E6%8D%9F%E5%A4%B1" rel="nofollow">（3）目标函数到平方损失</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E6%8E%92%E5%BA%8F%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E6%8E%92%E5%BA%8F%E5%87%BD%E6%95%B0" rel="nofollow">（4）特征值重要性排序函数</a></p> 
+<p id="%C2%A0%EF%BC%885%EF%BC%89%E5%88%87%E5%88%86%E7%82%B9%E5%AF%BB%E6%89%BE-toc" style="margin-left:80px;"><a href="#%C2%A0%EF%BC%885%EF%BC%89%E5%88%87%E5%88%86%E7%82%B9%E5%AF%BB%E6%89%BE" rel="nofollow"> （5）切分点寻找</a></p> 
+<p id="%EF%BC%886%EF%BC%89%E8%AE%A1%E7%AE%97%E5%88%86%E8%A3%82%E7%82%B9%E7%9A%84%E7%AD%96%E7%95%A5-toc" style="margin-left:80px;"><a href="#%EF%BC%886%EF%BC%89%E8%AE%A1%E7%AE%97%E5%88%86%E8%A3%82%E7%82%B9%E7%9A%84%E7%AD%96%E7%95%A5" rel="nofollow">（6）计算分裂点的策略</a></p> 
+<p id="%E4%B8%89%E3%80%81XGBoost%E5%AF%B9%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%9A%84%E5%A4%84%E7%90%86-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81XGBoost%E5%AF%B9%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%9A%84%E5%A4%84%E7%90%86" rel="nofollow">三、XGBoost对缺失值的处理</a></p> 
+<p id="%E5%9B%9B%E3%80%81XGBoost%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81XGBoost%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9" rel="nofollow">四、XGBoost的优缺点</a></p> 
+<p id="1%E3%80%81%E4%BC%98%E7%82%B9-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E4%BC%98%E7%82%B9" rel="nofollow">1、优点</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E7%B2%BE%E5%BA%A6%E9%AB%98-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E7%B2%BE%E5%BA%A6%E9%AB%98" rel="nofollow">（1）精度高</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E7%81%B5%E6%B4%BB%E6%80%A7%E5%BC%BA-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E7%81%B5%E6%B4%BB%E6%80%A7%E5%BC%BA" rel="nofollow">（2）灵活性强</a></p> 
+<p id="%EF%BC%883%EF%BC%89%E9%98%B2%E6%AD%A2%E8%BF%87%E6%8B%9F%E5%90%88-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89%E9%98%B2%E6%AD%A2%E8%BF%87%E6%8B%9F%E5%90%88" rel="nofollow">（3）防止过拟合</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E7%BC%BA%E5%A4%B1%E5%80%BC%E5%A4%84%E7%90%86-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E7%BC%BA%E5%A4%B1%E5%80%BC%E5%A4%84%E7%90%86" rel="nofollow">（4）缺失值处理</a></p> 
+<p id="%EF%BC%885%EF%BC%89%E5%B9%B6%E8%A1%8C%E5%8C%96%E6%93%8D%E4%BD%9C-toc" style="margin-left:80px;"><a href="#%EF%BC%885%EF%BC%89%E5%B9%B6%E8%A1%8C%E5%8C%96%E6%93%8D%E4%BD%9C" rel="nofollow">（5）并行化操作</a></p> 
+<p id="2%E3%80%81%E7%BC%BA%E7%82%B9-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E7%BC%BA%E7%82%B9" rel="nofollow">2、缺点</a></p> 
+<hr> 
+<h2 id="%E4%B8%80%E3%80%81XGBoost%E7%AE%80%E4%BB%8B">一、XGBoost简介</h2> 
+<p>XGBoost全称为eXtreme Gradient Boosting，即极致梯度提升树。</p> 
+<p>XGBoost是Boosting算法的其中一种，Boosting算法的思想是将许多弱分类器集成在一起，形成一个强分类器（个体学习器间存在强依赖关系，必须串行生成的序列化方法）。</p> 
+<blockquote> 
+ <p>Note：关于Boosting算法详见博文<a href="https://blog.csdn.net/weixin_55073640/article/details/126952292" title="集成学习详解_tt丫的博客-CSDN博客">集成学习详解_tt丫的博客-CSDN博客</a></p> 
+</blockquote> 
+<p>XGBoost是一种提升树模型，即它将许多树模型集成在一起，形成一个很强的分类器。其中所用到的树模型则是CART回归树模型。</p> 
+<blockquote> 
+ <p>Note：CART回归树模型详见博文<a href="https://blog.csdn.net/weixin_55073640/article/details/125826023" title="决策树详解_tt丫的博客-CSDN博客">决策树详解_tt丫的博客-CSDN博客</a></p> 
+</blockquote> 
+<hr> 
+<h2 id="%E4%BA%8C%E3%80%81XGBoost%E5%8E%9F%E7%90%86">二、XGBoost原理</h2> 
+<h3 id="1%E3%80%81%E5%9F%BA%E6%9C%AC%E7%BB%84%E6%88%90%E5%85%83%E7%B4%A0">1、基本组成元素</h3> 
+<p>       XGBoost的基本组成元素是：决策树。</p> 
+<p>       这些决策树即为“弱学习器”，它们共同组成了XGBoost；</p> 
+<p>       并且这些组成XGBoost的决策树之间是有先后顺序的：后一棵决策树的生成会考虑前一棵决策树的预测结果，即将前一棵决策树的偏差考虑在内，使得先前决策树做错的训练样本在后续受到更多的关注，然后基于调整后的样本分布来训练下一棵决策树。</p> 
+<h3 id="2%E3%80%81%E6%95%B4%E4%BD%93%E6%80%9D%E8%B7%AF">2、整体思路</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E8%AE%AD%E7%BB%83%E8%BF%87%E7%A8%8B%E2%80%94%E2%80%94%E6%9E%84%E5%BB%BAXGBoost%E6%A8%A1%E5%9E%8B%C2%A0%20%C2%A0%20%C2%A0%20%C2%A0">（1）训练过程——构建XGBoost模型       </h4> 
+<p>       从目标函数出发，可以推导出“每个叶子节点应该赋予的权值”，”分裂节点后的信息增益“，以及”特征值重要性排序函数“。</p> 
+<p>       与之前决策树的建立方法类似。当前决策树的建立首先根据贪心算法进行划分，通过计算目标函数增益（及上面所说的”分裂节点后的信息增益“），选择该结点使用哪个特征。</p> 
+<p>       选择好哪个特征后，就要确定分左右子树的条件了（比如选择特征A，条件是A&lt;7）：为了提高算法效率（不用一个一个特征值去试），使用“加权分位法”，计算分裂点（这里由”特征值重要性排序函数“得出分裂点）。</p> 
+<p>      并且对应叶子节点的权值就由上述的“每个叶子节点应该赋予的权值”给出。</p> 
+<p>      不断进行上述算法，直至所有特征都被使用或者已经达到限定的层数，则完整的决策树构建完成。</p> 
+<h4 id="%EF%BC%882%EF%BC%89%E6%B5%8B%E8%AF%95%E8%BF%87%E7%A8%8B">（2）测试过程</h4> 
+<p>      将输入的特征，依次输入进XGBoost的每棵决策树。每棵决策树的相应节点都有对应的预测权值w，将“在每一棵决策树中的预测权值”全部相加，即得到最后预测结果，看谁大，谁大谁是最后的预测结果。</p> 
+<h3 id="3%E3%80%81%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0">3、目标函数</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E6%9C%80%E5%88%9D%E7%9A%84%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0">（1）最初的目标函数</h4> 
+<p>设定第 t 个决策树的目标函数公式如下：</p> 
+<p><img alt="\mathcal{L}^{(t)}=\sum_{i=1}^{n} l\left(y_{i}, \hat{y}_{i}^{(t)}\right)+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/00/6b/M7jIXF7f_o.png"></p> 
+<blockquote> 
+ <p>符号定义：</p> 
+ <p>n表示样本数目；</p> 
+ <p></p> 
+ <p><img alt="l\left(y_{i}, \hat{y}_{i}^{(t)}\right)" class="mathcode" src="https://images2.imgbox.com/5a/c0/EEZPELaw_o.png"> 表示与有关的损失函数，这个损失函数是可以根据需要自己定义的；</p> 
+ <p></p> 
+ <p><img alt="y_{i}" class="mathcode" src="https://images2.imgbox.com/f8/bf/QP5DgzAL_o.png"> 表示样本 i 的实际值；</p> 
+ <p><img alt="\hat{y_{i}}^{(t)}" class="mathcode" src="https://images2.imgbox.com/d1/bd/WgUdcxdG_o.png"> 表示前 t 棵决策树一起对样本 i 的预测值；</p> 
+ <p></p> 
+ <p><img alt="\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/60/78/V6xSMco7_o.png"> 表示第t棵树的模型复杂度，这里是正则化项，为了惩罚更复杂的模型（通过减小树的深度和单个叶子节点的权重值），减缓过拟合。</p> 
+ <p><img alt="\Omega(f)=\gamma T+\frac{1}{2} \lambda\|\omega\|^{2}" class="mathcode" src="https://images2.imgbox.com/7e/72/Vydqup4Z_o.png"></p> 
+ <p>T为当前子树的深度，w为叶子节点的节点值。</p> 
+</blockquote> 
+<h4 id="%EF%BC%882%EF%BC%89%E6%8E%A8%E5%AF%BC">（2）推导</h4> 
+<p>A、根据Boosting的原理简化</p> 
+<p>根据Boosting的原理：第 t 棵树对样本 i 的预测值=前 t-1 棵预测树的预测值 + 第 t 棵树的预测值</p> 
+<p>即：<img alt="\hat{y}_{i}^{(t)} = \hat{y}_{i}^{(t-1)}+f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/bd/31/BV08P90Q_o.png"></p> 
+<blockquote> 
+ <p>这里补充一下：Shrinkage(收缩过程)：</p> 
+ <p>       Shrinkage即：每次走一小步逐渐逼近结果的效果，要比每次迈一大步很快逼近结果的方式更容易避免过拟合。就是说它不完全信任每一个棵残差树（达到防止过拟合的效果），它认为每棵树只学到了真理的一小部分，累加的时候只累加一小部分，通过多学几棵树弥补不足。即给每棵数的输出结果乘上一个步长η （收缩率），如下公式所示：</p> 
+ <p><img alt="\hat{y}_{i}^{(t)}=\hat{y}_{i}^{(t-1)}+\eta f_{t}\left(\mathbf{x}_{i}\right) , 0&lt; \eta \leq 1" class="mathcode" src="https://images2.imgbox.com/0d/02/IrqcAr2m_o.png"></p> 
+ <p>后续的公式推导都默认 η = 1。</p> 
+</blockquote> 
+<p>那么最初的目标函数就可以化为：<img alt="\mathcal{L}^{(t)}=\sum_{i=1}^{n} l\left(y_{i}, \hat{y}_{i}^{(t-1)}+f_{t}\left(\mathbf{x}_{i}\right)\right)+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/cd/f8/H9r6YKM2_o.png"></p> 
+<blockquote> 
+ <p>符号定义：</p> 
+ <p><img alt="f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/54/41/yLuUy1jd_o.png"> 表示第 t 棵决策树对样本 i 的预测值</p> 
+</blockquote> 
+<p>B、根据二阶泰勒展开</p> 
+<blockquote> 
+ <p>分析：</p> 
+ <p>我们知道，二阶泰勒展开公式：<img alt="f(x+\Delta x) \approx f(x) + f'(x)\Delta x + \frac{f''(x)(\Delta x)^{2}}{2}" class="mathcode" src="https://images2.imgbox.com/c7/1e/HLOq40zG_o.png"></p> 
+ <p></p> 
+ <p>将上面的 <img alt="\mathcal{L}^{(t)}=\sum_{i=1}^{n} l\left(y_{i}, \hat{y}_{i}^{(t-1)}+f_{t}\left(\mathbf{x}_{i}\right)\right)+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/24/82/ZgrOak8J_o.png"> 当成 <img alt="f(x+\Delta x)" class="mathcode" src="https://images2.imgbox.com/58/ce/ALf0Q4R2_o.png">，即把 <img alt="\hat{y}_{i}^{(t-1)}" class="mathcode" src="https://images2.imgbox.com/df/99/PdLKtEau_o.png"> 当作 x ，把<img alt="f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/5c/e9/4yEjQrzv_o.png"> 当作 <img alt="\Delta x" class="mathcode" src="https://images2.imgbox.com/32/6c/2Z3MemND_o.png">。</p> 
+ <p></p> 
+ <p>这样一来，<img alt="\sum_{i=1}^{n} l\left(y_{i}, \hat{y}_{i}^{(t-1)}\right)+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/88/90/5RoxCh8b_o.png"> 就是<img alt="f(x)" class="mathcode" src="https://images2.imgbox.com/71/b7/yHtWhEW8_o.png">啦。</p> 
+</blockquote> 
+<p>那么就有：</p> 
+<p><img alt="\mathcal{L}^{(t)} =\sum_{i=1}^{n}\left[l\left(y_{i}, \hat{y}_{i}^{(t-1)}\right)+g_{i} f_{t}\left(x_{i}\right)+\frac{1}{2} h_{i} f_{t}^{2}\left(x_{i}\right)\right]+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/46/45/QDl9LolA_o.png"></p> 
+<blockquote> 
+ <p>其中：</p> 
+ <p><img alt="\mathrm{g}_{\mathrm{i}}=\frac{\partial l\left(\mathrm{y}_{\mathrm{i}}, \hat{\mathrm{y}}_{\mathrm{i}}^{\mathrm{t}-1}\right)}{\partial \hat{\mathrm{y}}_{\mathrm{i}}^{\mathrm{t}-1}}" class="mathcode" src="https://images2.imgbox.com/5f/78/9XFdE6gt_o.png"> ——表示一阶导数，是可以求出来的已知数</p> 
+ <p><img alt="\mathrm{h}_{\mathrm{i}}=\frac{\partial^{2} l\left(\mathrm{y}_{\mathrm{i}}, \hat{\mathrm{y}}_{\mathrm{i}}^{\mathrm{t}-1}\right)}{({\partial\hat{\mathrm{y}}_{\mathrm{i}}^{\mathrm{t}-1}})^{2}}" class="mathcode" src="https://images2.imgbox.com/f2/98/YOUccYRS_o.png"> ——表示二阶导数，是可以求出来的已知数</p> 
+</blockquote> 
+<p>C、去掉常数项</p> 
+<p>因为我们的目的是要最小化目标函数，那些常数项我们可以把它们暂时搁置。</p> 
+<p><img alt="\mathcal{L}^{(t)} =\sum_{i=1}^{n}\left[g_{i} f_{t}\left(x_{i}\right)+\frac{1}{2} h_{i} f_{t}^{2}\left(x_{i}\right)\right]+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/eb/4f/RwP0ZIqO_o.png"></p> 
+<h3 id="4%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%20%2B%20%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E7%9A%84%E5%80%BC%E7%9A%84%E7%A1%AE%E5%AE%9A">4、从目标函数到特征划分准则 + 叶子节点的值的确定</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E7%9A%84%E5%AE%9A%E4%B9%89">（1） <img alt="f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/5e/af/eeC1uySP_o.png"> 的定义</h4> 
+<p>XGBoost把 <img alt="f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/f8/46/bD8Qgske_o.png"> 定义为<img alt="w_{q(x_{i})}" class="mathcode" src="https://images2.imgbox.com/4a/ab/YzABeCnT_o.png"></p> 
+<p>其中<img alt="q(x_{i})" class="mathcode" src="https://images2.imgbox.com/21/30/d23JtaQW_o.png">代表了样本 i 在哪个叶子节点上，w表示叶子结点的权重（即决策树的预测值）</p> 
+<h4 id="%EF%BC%882%EF%BC%89%E5%BC%95%E5%85%A5%E7%9C%9F%E5%AE%9E%E7%9A%84%E2%80%8B%E7%BC%96%E8%BE%91%E5%92%8C%E6%AD%A3%E5%88%99%E5%8C%96%E9%A1%B9%E4%BB%A3%E6%8D%A2">（2）引入真实的<img alt="f_{t}\left(\mathbf{x}_{i}\right)" class="mathcode" src="https://images2.imgbox.com/74/af/ih8lqbDh_o.png">和正则化项代换</h4> 
+<p><img alt="\mathcal{L}^{(t)} \approx \sum_{i=1}^{n}\left[g_{i} w_{q\left(x_{i}\right)}+\frac{1}{2} h_{i} w_{q\left(x_{i}\right)}^{2}\right]+\gamma T+\frac{1}{2} \lambda \sum_{j=1}^{T} w_{j}^{2}" class="mathcode" src="https://images2.imgbox.com/1d/40/gfp9LStN_o.png"></p> 
+<p>进一步化为：<img alt="\mathcal{L}^{(t)}=\sum_{j=1}^{T}\left[\left(\sum_{i \in I_{j}} g_{i}\right) w_{j}+\frac{1}{2}\left(\sum_{i \in I_{j}} h_{i}+\lambda\right) w_{j}^{2}\right]+\gamma T" class="mathcode" src="https://images2.imgbox.com/d0/4d/uFsNcxoM_o.png"></p> 
+<blockquote> 
+ <p>其中：</p> 
+ <p><img alt="I_{j}=\left\{i \mid q\left(x_{i}\right)=j\right\}" class="mathcode" src="https://images2.imgbox.com/0a/92/pL4zX1aT_o.png"> 代表决策树 q 在叶子节点 j 上的取值（即表示位于第j个叶子结点有哪些样本）</p> 
+</blockquote> 
+<p>这样就把累加项从样本总数变为了针对当前决策树的叶子节点。</p> 
+<p>再令<img alt="G_{j}=\sum_{i \in I_{j}} g_{i}" class="mathcode" src="https://images2.imgbox.com/fc/97/pdeBCeg8_o.png"> 和 <img alt="H_{j}=\sum_{i \in I_{j}} h_{i}" class="mathcode" src="https://images2.imgbox.com/db/0d/KFyWFCNZ_o.png">，</p> 
+<p>再次化简为：</p> 
+<p><img alt="\mathcal{L}^{(t)}=\sum_{j=1}^{T}\left[G_{j} w_{j}+\frac{1}{2}\left(H_{j}+\lambda\right) w_{j}^{2}\right]+\gamma T" class="mathcode" src="https://images2.imgbox.com/e7/3d/o0RuKOc5_o.png"></p> 
+<h4 id="%EF%BC%883%EF%BC%89%E6%B1%82%E5%87%BA%C2%A0%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E2%80%94%E2%80%94%20%E5%AE%9A%E4%B8%8B%E8%AF%A5%E5%8F%B6%E5%AD%90%E7%BB%93%E7%82%B9%E7%9A%84%E5%80%BC">（3）求出 <img alt="w_{j}" class="mathcode" src="https://images2.imgbox.com/cf/09/bsCUvMP7_o.png"> —— 定下该叶子结点的值</h4> 
+<p>因为我们的目的是最小化目标函数，因此我们对上式求导，令其为0。</p> 
+<p><img alt="w_{j}^{*}=-\frac{G_{j}}{H_{j}+\lambda}" class="mathcode" src="https://images2.imgbox.com/be/bb/dmHxxej7_o.png"></p> 
+<p>即我们应该将叶子结点的值<img alt="w_{j}" class="mathcode" src="https://images2.imgbox.com/32/05/kX0373w4_o.png">设为<img alt="-\frac{G_{j}}{H_{j}+\lambda}" class="mathcode" src="https://images2.imgbox.com/bb/64/Aa1Ekv6t_o.png"></p> 
+<h4 id="%EF%BC%884%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E7%9A%84%E6%9C%80%E4%BC%98%E8%A7%A3%E2%80%94%E2%80%94%E4%B8%8E%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E7%9A%84%E8%BF%9E%E6%8E%A5">（4）目标函数的最优解——与信息增益的连接</h4> 
+<p><img alt="{\mathcal{L}^{(t)}}^{*}=-\frac{1}{2} \sum_{j=1}^{T} \frac{G_{j}^{2}}{H_{j}+\lambda}+\gamma T" class="mathcode" src="https://images2.imgbox.com/84/0a/be7PD0HC_o.png"></p> 
+<p>这个<img alt="{\mathcal{L}^{(t)}}^{*}" class="mathcode" src="https://images2.imgbox.com/e6/58/VNKcZFce_o.png">又叫结构分数，类似于信息增益，可以对树的结构进行打分。</p> 
+<p>信息增益：更能确定多少——目标函数：预测对了多少</p> 
+<h4 id="%EF%BC%885%EF%BC%89%E7%89%B9%E5%BE%81%E5%88%92%E5%88%86%E5%87%86%E5%88%99%E2%80%94%E2%80%94%E2%80%9C%E4%BF%A1%E6%81%AF%E5%A2%9E%E7%9B%8A%E2%80%9D">（5）特征划分准则——“信息增益”</h4> 
+<p><img alt="\operatorname{Gain}=\frac{1}{2}\left[\frac{G_{L}^{2}}{H_{L}+\lambda}+\frac{G_{R}^{2}}{H_{R}+\lambda}-\frac{\left(G_{L}+G_{R}\right)^{2}}{H_{L}+H_{R}+\lambda}\right]-\gamma" class="mathcode" src="https://images2.imgbox.com/70/1f/l9rWZVKn_o.png"></p> 
+<blockquote> 
+ <p>其中 L 下标是值划分到左子树时的目标函数最优值，R 下标是值划分到右子树时的目标函数最优值。在实际划分时，XGBoost会基于“Gain最大”的节点进行划分。</p> 
+</blockquote> 
+<p>       第一部分是新的左子叶的分数（即该节点进行特征分裂后左子叶的目标函数）；第二部分是新的右子叶的分数（即该节点进行特征分裂后右子叶的目标函数）；第三部分是原来叶子的分数（即该节点未进行特征分裂前的目标函数）；第四部分是新增叶子的正则系数。</p> 
+<p>      体现的意义即为：判断分裂节点后的信息增益（第一部分+第二部分）是否大于未分裂的情况，并且考虑到模型会不会太复杂的问题（如果增加的分数小于正则项，节点不再分裂）。</p> 
+<h3 id="5%E3%80%81%E4%BB%8E%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%8A%A0%E6%9D%83%E5%88%86%E4%BD%8D%E6%B3%95%EF%BC%88%E5%AE%9E%E7%8E%B0%E5%AF%B9%E6%AF%8F%E4%B8%AA%E7%89%B9%E5%BE%81%E5%85%B7%E4%BD%93%E7%9A%84%E5%88%92%E5%88%86%EF%BC%89">5、从目标函数到加权分位法（实现对每个特征具体的划分）</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E5%BC%95%E5%85%A5%E5%8E%9F%E5%9B%A0">（1）引入原因</h4> 
+<p>       比如说，有一个特征A是一个离散的连续变量，有100个不同的值，范围是[1,100]。那么如果选择特征D来分裂节点时，需要尝试100种不同的划分，一个一个算然后再对比Gain，可以是可以，但会导致算法的效率很低。</p> 
+<p>      XGBoost为了实现可以不用尝试每一种的划分，只选取几个值进行尝试，提出了加权分位法。</p> 
+<h4 id="%EF%BC%882%EF%BC%89%E2%80%9C%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E2%80%9D%E7%9A%84%E6%8F%90%E5%87%BA">（2）“特征值重要性”的提出</h4> 
+<p>       为了得到值得进行尝试的划分点，我们需要建立一个函数对该特征的特征值进行"重要性"排序。根据排序的结果，再选出值得进行尝试的特征值。</p> 
+<h4 id="%EF%BC%883%EF%BC%89%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%88%B0%E5%B9%B3%E6%96%B9%E6%8D%9F%E5%A4%B1">（3）目标函数到平方损失</h4> 
+<p>我们前面得到的目标函数长这样：</p> 
+<p><img alt="\mathcal{L}^{(t)} =\sum_{i=1}^{n}\left[g_{i} f_{t}\left(x_{i}\right)+\frac{1}{2} h_{i} f_{t}^{2}\left(x_{i}\right)\right]+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/c8/29/FdVayuYN_o.png"></p> 
+<p>我们把<img alt="\frac{1}{2}h_{i}" class="mathcode" src="https://images2.imgbox.com/cb/7f/YBM1JkCa_o.png"> 提出来，变成：</p> 
+<p><img alt="\mathcal{L}^{(t)} =\sum_{i=1}^{n}\frac{1}{2} h_{i}\left[2\frac{g_{i}}{h_{i}} f_{t}\left(x_{i}\right)+ f_{t}^{2}\left(x_{i}\right)\right]+\Omega\left(f_{t}\right)" class="mathcode" src="https://images2.imgbox.com/d2/d4/rEWZPzYK_o.png"></p> 
+<p>然后因为 <img alt="g_{i}" class="mathcode" src="https://images2.imgbox.com/1c/0a/FnB1meCS_o.png"> 和 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/b5/0f/G8MZydIe_o.png"> 都是已知数，相当于常量，我们给他加上它们的相关运算，在后面再给他减掉一个常数，结果不变。</p> 
+<p><img alt="\mathcal{L}^{(t)} =\sum_{i=1}^{n}\frac{1}{2} h_{i}\left[f_{t}(x_{i}) - \frac{g_{i}}{h_{i}}\right]^{2}+\Omega\left(f_{t}\right) + C" class="mathcode" src="https://images2.imgbox.com/ab/5c/cnrTlqFh_o.png"></p> 
+<blockquote> 
+ <p>C为常数项</p> 
+</blockquote> 
+<p>现在我们得到的式子即为：真实值为 <img alt="\frac{g_{i}}{h_{i}}" class="mathcode" src="https://images2.imgbox.com/26/8f/Bv1BtoCd_o.png"> ，权重为<img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/09/76/MVsa2wNz_o.png">的平方损失项+正则化项+常数项</p> 
+<h4 id="%EF%BC%884%EF%BC%89%E7%89%B9%E5%BE%81%E5%80%BC%E9%87%8D%E8%A6%81%E6%80%A7%E6%8E%92%E5%BA%8F%E5%87%BD%E6%95%B0">（4）特征值重要性排序函数</h4> 
+<p>       因此，我们可以得出结论：一个样本对于目标函数值的贡献，在于其 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/6f/67/7iX59YOa_o.png"> 。因此可以根据 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/0f/28/3cNlmg5l_o.png"> 对特征值的“重要性”进行排序。XGBoost提出了一个新的函数，这个函数用于表示一个特征值的"重要性"排名：（这里的特征值表示：某个等待判断分裂的节点属性，中的某个取值）</p> 
+<p><img alt="" height="82" src="https://images2.imgbox.com/3e/8c/udhGYlJ5_o.png" width="319"></p> 
+<blockquote> 
+ <p> 其中：</p> 
+ <p><img alt="D_{k}" class="mathcode" src="https://images2.imgbox.com/1b/34/LX3ITdkc_o.png">：第k个特征的每个样本的特征值（<img alt="x_{nk}" class="mathcode" src="https://images2.imgbox.com/a2/33/c3eoQVPE_o.png">）与其相应的 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/c6/84/PUjvUj3P_o.png"> 组成的集合；</p> 
+ <p><img alt="(x_{ik},h_{i})" class="mathcode" src="https://images2.imgbox.com/c5/70/dYOfdYbO_o.png">：表示第 i 个样本对于第k个特征的特征值，和其对应的 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/08/03/kK5O3UZc_o.png"> ；</p> 
+ <p><img alt="D_{k} = \left \{(x_{1k},h1), ... ,(x_{nk},h_{n}) \right \}" class="mathcode" src="https://images2.imgbox.com/f2/a5/HcQLBb3P_o.png"><br><img alt="r_{k}(z)" class="mathcode" src="https://images2.imgbox.com/73/83/Y774DwJu_o.png"> 的分母：第k个特征的所有样本的 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/28/ab/4iong8lr_o.png"> 的总和；<br><img alt="r_{k}(z)" class="mathcode" src="https://images2.imgbox.com/b5/bf/LDmqSBgf_o.png"> 的分子：所有特征值小于z的样本的 <img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/bf/9c/cZn94mdg_o.png"> 总和；</p> 
+</blockquote> 
+<p>式子表示的意义是：特征值小于z的样本特征重要性分布占比</p> 
+<h4 id="%C2%A0%EF%BC%885%EF%BC%89%E5%88%87%E5%88%86%E7%82%B9%E5%AF%BB%E6%89%BE"> （5）切分点寻找</h4> 
+<p>       之后对一个特征的所有特征值进行排序。在排序之后，设置一个值 ϵ （采样频率）。这个值用于对要划分的点进行规范。对于特征k的特征值的划分点<img alt="\left \{s_{k1},s_{k2},...,s_{kl} \right \}" class="mathcode" src="https://images2.imgbox.com/2c/5d/i4GINAYL_o.png">有，两个相连划分点的<img alt="r_{k}" class="mathcode" src="https://images2.imgbox.com/65/2f/fBjjKkUX_o.png">值之差的绝对值要小于 ϵ （为了让相邻的划分点的贡献度都差不多）。同时，为了增大算法的效率，也可以选择每个切分点包含的特征值数量尽可能多。</p> 
+<p><img alt="" height="74" src="https://images2.imgbox.com/69/d0/egOxiH9Q_o.png" width="408"></p> 
+<h4 id="%EF%BC%886%EF%BC%89%E8%AE%A1%E7%AE%97%E5%88%86%E8%A3%82%E7%82%B9%E7%9A%84%E7%AD%96%E7%95%A5">（6）计算分裂点的策略</h4> 
+<p>基于加权分位法，我们有两种策略进行分裂点的计算：全局策略和局部策略。</p> 
+<p>A、全局策略</p> 
+<blockquote> 
+ <p>       即在一棵树的生成之前，就已经计算好每个特征的分裂点。在整个树的生成过程当中，用的都是一开始计算的分裂点。这也就代表了使用全局策略的开销更低，但如果分裂点不够多的话，准确率是不够高的。</p> 
+</blockquote> 
+<p>B、局部策略</p> 
+<blockquote> 
+ <p>       根据每一个节点所包含的样本，重新计算其所有特征的分裂点（即边建立树边重新更新分裂点）。</p> 
+ <p>       因为在一棵树的分裂的时候，样本会逐渐被划分到不同的结点中（即每个结点所包含的样本，以及这些样本有的特征值是不一样的）。因此，我们可以对每个结点重新计算分裂点，以保证准确性，但这样会使局部策略的开销更大，但分裂点数目不用太多，也能够达到一定的准确率。</p> 
+</blockquote> 
+<p>（1）在分裂点数目相同，即 ϵ 相同的时候，全局策略的效果比局部策略的效果差；</p> 
+<p>（2）全局策略可以通过增加分裂点数目，达到逼近局部策略的效果</p> 
+<hr> 
+<h2 id="%E4%B8%89%E3%80%81XGBoost%E5%AF%B9%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%9A%84%E5%A4%84%E7%90%86">三、XGBoost对缺失值的处理</h2> 
+<p>       对于特征A，我们首先将样本中特征A的特征值为缺失值的样本全部剔除。然后我们正常进行样本划分。</p> 
+<p>       最后，我们做两个假设：一个是缺失值全部归在左子节点；一个是归在右子节点。哪一个得到的增益大，就代表这个特征最好的划分。</p> 
+<blockquote> 
+ <p>Note：对于加权分位法中对于特征值的排序，缺失值不参与（即缺失值不会作为分裂点，gblinear将缺失值视为0）</p> 
+</blockquote> 
+<hr> 
+<h2 id="%E5%9B%9B%E3%80%81XGBoost%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9">四、XGBoost的优缺点</h2> 
+<h3 id="1%E3%80%81%E4%BC%98%E7%82%B9">1、优点</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E7%B2%BE%E5%BA%A6%E9%AB%98">（1）精度高</h4> 
+<p>XGBoost对损失函数进行了二阶泰勒展开， 一方面为了增加精度， 另一方面也为了能够自定义损失函数，二阶泰勒展开可以近似许多损失函数。（对比只用到一阶泰勒的GBDT）</p> 
+<h4 id="%EF%BC%882%EF%BC%89%E7%81%B5%E6%B4%BB%E6%80%A7%E5%BC%BA"><br> （2）灵活性强</h4> 
+<p>XGBoost不仅支持CART，还支持线性分类器；</p> 
+<p>XGBoost还支持自定义损失函数，只要损失函数有一二阶导数。</p> 
+<h4 id="%EF%BC%883%EF%BC%89%E9%98%B2%E6%AD%A2%E8%BF%87%E6%8B%9F%E5%90%88">（3）防止过拟合</h4> 
+<p>A、正则化</p> 
+<p>       XGBoost在目标函数中加入了正则项，用于惩罚过大的模型复杂度，有助于降低模型方差，防止过拟合。<br> B、Shrinkage（缩减）</p> 
+<p>       主要是为了削弱每棵树的影响，让后面有更大的学习空间，学习过程更加的平缓。</p> 
+<p>C、列抽样</p> 
+<p>      在建立决策树的时候，不用再遍历所有的特征了，可以进行抽样。</p> 
+<p>      一方面简化了计算，另一方面也有助于降低过拟合。</p> 
+<h4 id="%EF%BC%884%EF%BC%89%E7%BC%BA%E5%A4%B1%E5%80%BC%E5%A4%84%E7%90%86"><br> （4）缺失值处理</h4> 
+<h4 id="%EF%BC%885%EF%BC%89%E5%B9%B6%E8%A1%8C%E5%8C%96%E6%93%8D%E4%BD%9C">（5）并行化操作</h4> 
+<p>有一些不相关可以很好的支持并行计算</p> 
+<h3 id="2%E3%80%81%E7%BC%BA%E7%82%B9">2、缺点</h3> 
+<p>时间复杂度和空间复杂度都较高（预排序过程）。</p> 
+<hr> 
+<p>欢迎大家在评论区批评指正，谢谢~</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/0950876d7bb37c0196556698c1178f93/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">人脸识别经典网络-MTCNN（含Python源码实现）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/767d39602873f69faf0b13ec7592955d/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">如何把自有数据接入GPT大模型？</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

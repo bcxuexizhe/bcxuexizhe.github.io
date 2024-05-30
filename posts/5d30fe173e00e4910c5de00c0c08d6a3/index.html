@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android中华为手机三态位置权限申请理解 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/5d30fe173e00e4910c5de00c0c08d6a3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android中华为手机三态位置权限申请理解">
+  <meta property="og:description" content="博主前些天发现了一个巨牛的人工智能学习网站，通俗易懂，风趣幽默，忍不住也分享一下给大家，
+👉点击跳转到教程
+前言：
+使用的华为MATE 20,Android10的系统。
+&lt;!--精准定位权限，如：GPS定位--&gt; &lt;uses-permission android:name=&#34;android.permission.ACCESS_FINE_LOCATION&#34; /&gt; &lt;!--近似定位权限 如：网络定位 注：这个权限会在应用安装时由用户授予，并且不需要动态请求--&gt; &lt;uses-permission android:name=&#34;android.permission.ACCESS_COARSE_LOCATION&#34; /&gt; 下面我们进行GPS定位权限的获取，在AndroidManifest.xml文件中声明相应的权限，之后在Activity中中进行动态申请。
+以下是三个选项的含义：
+仅使用期间允许：
+当用户选择&#34;仅使用期间允许&#34;选项时，应用程序将仅在用户正在使用应用程序的时候才能获取位置信息。一旦用户退出应用程序，应用程序将立即失去对位置信息的访问权限。这意味着应用程序无法在后台继续获取位置信息，即使它仍在运行。这种设置有效保护了用户在离开应用程序后的隐私。
+允许本次使用：
+当用户选择&#34;允许本次使用&#34;选项时，应用程序将在接下来的一段时间内（通常为5分钟左右）持续获取位置信息，即使用户已经退出了应用程序。在这段时间内，应用程序可以在前台或后台继续获取位置信息。这种设置适用于需要在用户离开应用程序后仍然持续使用位置信息的场景，但也会增加一定程度上的隐私风险。
+总的来说，&#34;仅使用期间允许&#34;更加严格，确保应用程序只能在用户使用应用程序的时候获取位置信息，而&#34;允许本次使用&#34;则允许应用程序在一定时间内持续获取位置信息，即使用户已经离开应用程序。在实际使用中，用户可以根据自己的隐私偏好和安全需求选择适合的权限控制选项。
+禁止：设备的位置信息绝不会向应用显示。
+以下是博主本人实际验证：
+1、点击仅使用期间允许，在该应用的位置信息权限页面，显示仅使用期间允许被选中。
+2、点击允许本次使用，在该应用的位置信息权限页面，显示每次使用询问被选中。
+3、点击禁止，在该应用的位置信息权限页面，显示禁止被选中
+思考：如果我们点击了允许本次使用，那我们在位置信息权限页面则会看到每次使用询问被选中，那是不是每次进入APP如果需要用到位置权限，岂不是每次都要申请权限，但是我测试发现并不是这样，并不需要再去获取权限了。
+解惑：
+对于某些应用程序，当用户首次访问时，可能会要求用户授予一些权限或许可，比如访问摄像头、麦克风、位置等。如果用户选择了&#34;允许&#34;，应用程序可能会将这些权限信息保存在用户设备上。这样，在下次用户再次打开应用程序时，应用程序可以直接使用之前获得的权限，而不需要再次请求用户的授权。
+这种行为是由操作系统和应用程序的权限管理机制共同实现的。操作系统会为每个应用程序分配一个唯一的标识符（如包名或应用ID），并在用户授权时将该标识符与所授权的权限绑定。应用程序在后续启动时，操作系统会检查该应用程序的标识符和之前已授权的权限，如果匹配，则应用程序可以直接使用权限而无需再次请求授权。
+需要注意的是，这种自动授权的行为仅限于相同设备上的同一应用程序。如果用户在不同的设备上或者使用不同的应用程序版本，可能仍然需要重新授权。此外，某些敏感权限（如通讯录、短信等）可能会更加严格，需要用户每次都进行授权。
+总结来说，点击允许本次使用并保存权限的行为是为了提供更好的用户体验，避免在每次应用程序启动时都要求用户重复授权。这是操作系统和应用程序的一种权限管理机制，旨在简化用户的操作流程。
+如果我们想要APP在后台能持续获取位置信息，应该怎么做呢？
+在Android 10之前，应用程序可以通过ACCESS_FINE_LOCATION权限或使用后台服务来获取后台位置权限。但是，从Android 10开始，需要使用更精确的后台位置权限（ACCESS_BACKGROUND_LOCATION）来在后台获取位置信息。
+这里指的是Android 10指的是手机系统，和项目的targetSdk无关，这个一定要注意。
+我们要在ACCESS_FINE_LOCATION权限申请后，再申请ACCESS_BACKGROUND_LOCATION
+因为在targetSdkVersion=android11,在android11手机上，同时申请，普通定位权限和后台定位权限，将不会弹窗，直接授权失败。
+比如这样写，申请权限弹窗都没有，android11之后的的手机，都是这样。
+requestPermissions(arrayOf(Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION), 100) 点击保持每次使用询问设置，在该应用的位置信息权限页面，每次使用询问被选中。
+如果我们点击了，权限管理，会跳转到位置信息权限页面，如果点击了始终允许，则表示APP在后台也可以持续获取位置信息(前提是APP一直是活着的，没有被系统kill掉)。
+点击了始终允许后，我们会在权限申请页面，回调到该方法onRequestPermissionsResult。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T10:20:29+08:00">
+    <meta property="article:modified_time" content="2024-05-22T10:20:29+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android中华为手机三态位置权限申请理解</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <blockquote> 
+ <p>博主前些天发现了一个巨牛的人工智能学习网站，通俗易懂，风趣幽默，忍不住也分享一下给大家，<br> 👉<a href="https://www.captainai.net/qcsj" rel="nofollow">点击跳转到教程</a></p> 
+</blockquote> 
+<p>前言：</p> 
+<p>使用的华为MATE 20,Android10的系统。</p> 
+<pre><code class="prism language-bash">	<span class="token operator">&lt;</span><span class="token operator">!</span>--精准定位权限，如：GPS定位--<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>uses-permission android:name<span class="token operator">=</span><span class="token string">"android.permission.ACCESS_FINE_LOCATION"</span> /<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span>--近似定位权限 如：网络定位 注：这个权限会在应用安装时由用户授予，并且不需要动态请求--<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>uses-permission android:name<span class="token operator">=</span><span class="token string">"android.permission.ACCESS_COARSE_LOCATION"</span> /<span class="token operator">&gt;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/1b/e9/QYxzcmTa_o.png" alt="在这里插入图片描述"><br> 下面我们进行GPS定位权限的获取，在AndroidManifest.xml文件中声明相应的权限，之后在Activity中中进行动态申请。</p> 
+<p><img src="https://images2.imgbox.com/2d/b7/Tzy5gtw1_o.png" alt="在这里插入图片描述"><br> 以下是三个选项的含义：</p> 
+<p>仅使用期间允许：<br> 当用户选择"仅使用期间允许"选项时，应用程序将仅在用户正在使用应用程序的时候才能获取位置信息。一旦用户退出应用程序，应用程序将立即失去对位置信息的访问权限。这意味着应用程序无法在后台继续获取位置信息，即使它仍在运行。这种设置有效保护了用户在离开应用程序后的隐私。</p> 
+<p>允许本次使用：<br> 当用户选择"允许本次使用"选项时，应用程序将在接下来的一段时间内（通常为5分钟左右）持续获取位置信息，即使用户已经退出了应用程序。在这段时间内，应用程序可以在前台或后台继续获取位置信息。这种设置适用于需要在用户离开应用程序后仍然持续使用位置信息的场景，但也会增加一定程度上的隐私风险。<br> 总的来说，"仅使用期间允许"更加严格，确保应用程序只能在用户使用应用程序的时候获取位置信息，而"允许本次使用"则允许应用程序在一定时间内持续获取位置信息，即使用户已经离开应用程序。在实际使用中，用户可以根据自己的隐私偏好和安全需求选择适合的权限控制选项。</p> 
+<p>禁止：设备的位置信息绝不会向应用显示。</p> 
+<p>以下是博主本人实际验证：</p> 
+<p>1、点击<code>仅使用期间允许</code>，在该应用的位置信息权限页面，显示仅使用期间允许被选中。</p> 
+<p><img src="https://images2.imgbox.com/58/42/qFrjwR6N_o.png" alt="在这里插入图片描述"><br> 2、点击<code>允许本次使用</code>，在该应用的位置信息权限页面，显示每次使用询问被选中。</p> 
+<p><img src="https://images2.imgbox.com/39/af/rnVgYfv9_o.png" alt="在这里插入图片描述"><br> 3、点击禁止，在该应用的位置信息权限页面，显示禁止被选中</p> 
+<p><img src="https://images2.imgbox.com/ed/74/qHc29prg_o.png" alt="在这里插入图片描述"><br> 思考：如果我们点击了允许本次使用，那我们在位置信息权限页面则会看到每次使用询问被选中，那是不是每次进入APP如果需要用到位置权限，岂不是每次都要申请权限，但是我测试发现并不是这样，并不需要再去获取权限了。</p> 
+<p>解惑：</p> 
+<p>对于某些应用程序，当用户首次访问时，可能会要求用户授予一些权限或许可，比如访问摄像头、麦克风、位置等。如果用户选择了"允许"，应用程序可能会将这些权限信息保存在用户设备上。这样，在下次用户再次打开应用程序时，应用程序可以直接使用之前获得的权限，而不需要再次请求用户的授权。</p> 
+<p>这种行为是由操作系统和应用程序的权限管理机制共同实现的。操作系统会为每个应用程序分配一个唯一的标识符（如包名或应用ID），并在用户授权时将该标识符与所授权的权限绑定。应用程序在后续启动时，操作系统会检查该应用程序的标识符和之前已授权的权限，如果匹配，则应用程序可以直接使用权限而无需再次请求授权。</p> 
+<p>需要注意的是，这种自动授权的行为仅限于相同设备上的同一应用程序。如果用户在不同的设备上或者使用不同的应用程序版本，可能仍然需要重新授权。此外，某些敏感权限（如通讯录、短信等）可能会更加严格，需要用户每次都进行授权。</p> 
+<p>总结来说，点击允许本次使用并保存权限的行为是为了提供更好的用户体验，避免在每次应用程序启动时都要求用户重复授权。这是操作系统和应用程序的一种权限管理机制，旨在简化用户的操作流程。</p> 
+<p>如果我们想要APP在后台能持续获取位置信息，应该怎么做呢？<br> 在Android 10之前，应用程序可以通过ACCESS_FINE_LOCATION权限或使用后台服务来获取后台位置权限。但是，从Android 10开始，需要使用更精确的后台位置权限（ACCESS_BACKGROUND_LOCATION）来在后台获取位置信息。</p> 
+<p>这里指的是Android 10指的是手机系统，和项目的targetSdk无关，这个一定要注意。</p> 
+<p>我们要在ACCESS_FINE_LOCATION权限申请后，再申请ACCESS_BACKGROUND_LOCATION<br> 因为在targetSdkVersion=android11,在android11手机上，同时申请，普通定位权限和后台定位权限，将不会弹窗，直接授权失败。<br> 比如这样写，申请权限弹窗都没有，android11之后的的手机，都是这样。</p> 
+<pre><code class="prism language-bash">requestPermissions<span class="token punctuation">(</span>arrayOf<span class="token punctuation">(</span>Manifest.permission.ACCESS_FINE_LOCATION, Manifest.permission.ACCESS_BACKGROUND_LOCATION<span class="token punctuation">)</span>, <span class="token number">100</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/19/79/lp325HNo_o.png" alt="在这里插入图片描述"><br> 点击保持每次使用询问设置，在该应用的位置信息权限页面，每次使用询问被选中。</p> 
+<p><img src="https://images2.imgbox.com/30/e8/CUQtN0qx_o.png" alt="在这里插入图片描述"><br> 如果我们点击了，权限管理，会跳转到位置信息权限页面，如果点击了始终允许，则表示APP在后台也可以持续获取位置信息(前提是APP一直是活着的，没有被系统kill掉)。<br> 点击了始终允许后，我们会在权限申请页面，回调到该方法onRequestPermissionsResult。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fd0157c7209cfcc62d9f01da987fc46a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">经典面试题：MySQL如何调优？</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/df34a47041ce6c93d6125b4c3d3c910e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Lua常用C Api接口</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

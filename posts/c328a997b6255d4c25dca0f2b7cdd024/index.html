@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>超级好用的C&#43;&#43;实用库之DNS解析 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c328a997b6255d4c25dca0f2b7cdd024/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="超级好用的C&#43;&#43;实用库之DNS解析">
+  <meta property="og:description" content="💡 需要该C&#43;&#43;实用库源码的大佬们，可扫码关注文章末尾的微信公众号二维码，或搜索微信公众号“希望睿智”。添加关注后，输入消息“超级好用的C&#43;&#43;实用库”，即可获得源码的下载链接。
+概述 DNS（Domain Name System，域名系统）是一种分布式数据库服务，用于将人们容易记忆的域名与计算机网络中用于寻址和定位的IP地址进行映射。在互联网上，每一台设备都有一个唯一的IP地址。但由于IP地址通常是一串难以记忆的数字，因此DNS系统应运而生，它提供了一种将人类可读的、具有一定逻辑结构的域名转换为IP地址的服务。
+当用户在浏览器中输入一个网址时，实际上是触发了一个DNS解析过程，这个过程包括如下步骤。
+查询本地DNS缓存：首先检查本机是否有该域名对应的IP地址记录。
+递归查询：如果没有命中缓存，则请求发送到用户的ISP提供的本地DNS服务器，由本地DNS服务器负责发起递归查询流程，逐级向上询问根域名服务器、顶级域名服务器以及权威域名服务器，直到找到目标域名的IP地址。
+响应并缓存：一旦权威域名服务器返回了域名对应的IP地址，这个信息会沿着查询路径返回给用户，并被沿途的DNS服务器缓存起来，以加快后续相同域名的查询速度。
+CHP_DNS类 在C&#43;&#43;中，获取DNS域名对应的IP地址通常不直接通过编写原始的DNS查询协议来实现（虽然理论上可以这样做），而是调用操作系统提供的网络库或API来进行解析。这是因为直接处理DNS协议细节相当复杂且容易出错，而操作系统和标准库已经封装好了这些功能。
+gethostbyname函数和getaddrinfo函数用于获取域名对应的IP地址，但这两个函数都是阻塞的。在非阻塞的使用场景下，直接使用这两个函数不太合适。为了方便应用层使用，我们封装了异步DNS解析类CHP_DNS。CHP_DNS类是一个单实例类，从CHP_BaseThread类派生。CHP_DNS类的头文件，可参考下面的示例代码。
+#pragma once #include &lt;string&gt; #include &lt;map&gt; #include &#34;HP_BaseThread.h&#34; #include &#34;HP_Mutex.h&#34; class CHP_DNS : public CHP_BaseThread { public: static void Open(); static CHP_DNS *&amp;Singleton(); static void Close(); unsigned int FetchIP(const char *pszIP); void DefetchIP(const char *pszIP); static int GetIP(const char *pszIP, unsigned int &amp;uiIP); protected: CHP_DNS(); virtual ~CHP_DNS(); virtual unsigned int Run(); private: typedef struct _TDNSInfo { _TDNSInfo() { uiIP = 0; uiLastGotTick = 0; uiLastActiveTick = 0; } unsigned int uiIP; unsigned int uiLastGotTick; unsigned int uiLastActiveTick; }TDNSInfo; typedef std::map&lt;std::string, TDNSInfo&gt; IPToDNSInfoMap; static CHP_DNS *m_pThis; IPToDNSInfoMap m_mapIPToDNSInfo; bool m_bMapChanged; CHP_Mutex m_mutexMap; }; CHP_DNS类导出了两个实例成员函数和一个静态成员函数，下面分别进行介绍。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-19T10:13:20+08:00">
+    <meta property="article:modified_time" content="2024-05-19T10:13:20+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">超级好用的C&#43;&#43;实用库之DNS解析</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <blockquote> 
+ <p>💡 需要该C++实用库源码的大佬们，可扫码关注文章末尾的微信公众号二维码，或搜索微信公众号“<span style="color:#4da8ee;">希望睿智</span>”。添加关注后，输入消息“<span style="color:#4da8ee;">超级好用的C++实用库</span>”，即可获得源码的下载链接。</p> 
+</blockquote> 
+<h4>概述</h4> 
+<p>        DNS（Domain Name System，域名系统）是一种分布式数据库服务，用于将人们容易记忆的域名与计算机网络中用于寻址和定位的IP地址进行映射。在互联网上，每一台设备都有一个唯一的IP地址。但由于IP地址通常是一串难以记忆的数字，因此DNS系统应运而生，它提供了一种将人类可读的、具有一定逻辑结构的域名转换为IP地址的服务。</p> 
+<p>        当用户在浏览器中输入一个网址时，实际上是触发了一个DNS解析过程，这个过程包括如下步骤。</p> 
+<p>        <span style="color:#4da8ee;">查询本地DNS缓存</span>：首先检查本机是否有该域名对应的IP地址记录。</p> 
+<p>        <span style="color:#4da8ee;">递归查询</span>：如果没有命中缓存，则请求发送到用户的ISP提供的本地DNS服务器，由本地DNS服务器负责发起递归查询流程，逐级向上询问根域名服务器、顶级域名服务器以及权威域名服务器，直到找到目标域名的IP地址。</p> 
+<p>        <span style="color:#4da8ee;">响应并缓存</span>：一旦权威域名服务器返回了域名对应的IP地址，这个信息会沿着查询路径返回给用户，并被沿途的DNS服务器缓存起来，以加快后续相同域名的查询速度。</p> 
+<p></p> 
+<h4>CHP_DNS类</h4> 
+<p>        在C++中，获取DNS域名对应的IP地址通常不直接通过编写原始的DNS查询协议来实现（虽然理论上可以这样做），而是调用操作系统提供的网络库或API来进行解析。这是因为直接处理DNS协议细节相当复杂且容易出错，而操作系统和标准库已经封装好了这些功能。</p> 
+<p>        gethostbyname函数和getaddrinfo函数用于获取域名对应的IP地址，但这两个函数都是阻塞的。在非阻塞的使用场景下，直接使用这两个函数不太合适。为了方便应用层使用，我们封装了异步DNS解析类CHP_DNS。CHP_DNS类是一个单实例类，从CHP_BaseThread类派生。CHP_DNS类的头文件，可参考下面的示例代码。</p> 
+<pre><code class="language-cpp">#pragma once
+
+#include &lt;string&gt;
+#include &lt;map&gt;
+
+#include "HP_BaseThread.h"
+#include "HP_Mutex.h"
+
+class CHP_DNS : public CHP_BaseThread
+{
+public:
+    static void Open();
+    static CHP_DNS *&amp;Singleton();
+    static void Close();
+    
+    unsigned int FetchIP(const char *pszIP);
+    
+    void DefetchIP(const char *pszIP);
+
+    static int GetIP(const char *pszIP, unsigned int &amp;uiIP);
+
+protected:
+    CHP_DNS();
+    virtual ~CHP_DNS();
+
+    virtual unsigned int Run();
+
+private:
+    typedef struct _TDNSInfo
+    {
+        _TDNSInfo()
+        {
+            uiIP = 0;
+            uiLastGotTick = 0;
+            uiLastActiveTick = 0;
+        }
+
+        unsigned int uiIP;
+        unsigned int uiLastGotTick;
+        unsigned int uiLastActiveTick;
+    }TDNSInfo;
+
+    typedef std::map&lt;std::string, TDNSInfo&gt; IPToDNSInfoMap;
+
+    static CHP_DNS *m_pThis;
+    IPToDNSInfoMap m_mapIPToDNSInfo;
+    bool m_bMapChanged;
+    CHP_Mutex m_mutexMap;
+};</code></pre> 
+<p>        CHP_DNS类导出了两个实例成员函数和一个静态成员函数，下面分别进行介绍。</p> 
+<p>        <span style="color:#4da8ee;">FetchIP</span>：非阻塞获取DNS。参数pszIP为IP地址或域名；返回值为0时，表示没有解析成功，需要继续调用本函数，其他表示解析成功的IP地址。</p> 
+<p>        <span style="color:#4da8ee;">DefetchIP</span>：取消非阻塞获取DNS。当FetchIP一直返回0，上层判断超时后，最好调用本接口进行释放。否则，底层会一直尝试去解析，进而影响其他地址的解析过程。参数pszIP为IP地址或域名。</p> 
+<p>        <span style="color:#4da8ee;">GetIP</span>：阻塞获取DNS，静态函数。参数pszIP为IP地址或域名，参数uiIP为解析成功的IP地址，返回值为0表示成功，其他表示错误码。</p> 
+<p></p> 
+<h4>总结</h4> 
+<p>        DNS解析是一种将域名（比如：www.example.com）转换为相应的IP地址（比如：192.168.1.100）的过程，这个过程是由DNS服务器完成的。DNS解析是互联网上的一个关键服务，它使得人们可以通过易记的域名来访问网站，而不需要记住复杂的IP地址。</p> 
+<p>        总的来说，DNS解析是互联网上的一个关键服务，它使得人们可以通过易记的域名来访问网站，而不需要记住复杂的IP地址。同时，DNS解析也是分布式存储的，通过多个服务器之间的协作，实现了快速、准确的域名到IP地址的转换。</p> 
+<p></p> 
+<blockquote> 
+ <p> 💡 需要该源码的大佬们，可以移步至这里下载：<a href="https://download.csdn.net/download/hope_wisdom/89325427" title="【免费】超级好用的C++实用库+跨平台资源-CSDN文库">【免费】超级好用的C++实用库+跨平台资源-CSDN文库</a></p> 
+</blockquote> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/adcabcfc264d425e848a3c6eb985cb93/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">AIGC从入门到实战：基建：人工智能时代的变迁</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/004df8915c5efe0845dbb39e0358e25f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">轻松拿捏C语言——【保姆级·指针讲解】期末C语言＜指针＞急救包，全是干货，诚意满满！</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

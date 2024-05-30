@@ -1,0 +1,287 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>web网页连接MQTT，显示数据与下发控制命令 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f833ff52b19757eb60caaf7303d52b61/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="web网页连接MQTT，显示数据与下发控制命令">
+  <meta property="og:description" content="web网页连接MQTT，显示数据与下发控制命令 零、前言 在完成一些设备作品后，常常会因为没有一个上位机用来实时检测数据和下发命令而苦恼，在上一篇文章中提到了怎么白嫖阿里云服务器，并且在上面搭建了属于自己的web网站。那么现在就可以利用这个公网web来实现一个上位机，这样就可以在有网的地方随时对设备进行监控和下发控制指令。以下就是完成这样一个可以连接MQTT服务器的web的制作过程。
+一、body部分 html网页具有很多部分，其中最重要的是body部分，这部分决定了网站显示什么东西，stye部分就是对这部分进行美化。今天只完成功能，不对样式进行美化，有需要自行学习。
+1.显示部分 用于显示数据，常用的有标签、文本框、标题等。显示部分我写了一个大标题，还有几个用于显示一些数据的文本，例如温度、湿度、光照强度等，这部分代码如下：
+&lt;h1&gt;物联网Web界面示例&lt;/h1&gt; &lt;h2&gt;示例参数&lt;/h2&gt; &lt;p&gt;温度：&lt;span id=&#34;temperature&#34;&gt;25°C&lt;/span&gt;&lt;/p&gt; &lt;p&gt;湿度：&lt;span id=&#34;humidity&#34;&gt;50%&lt;/span&gt;&lt;/p&gt; &lt;p&gt;光照强度：&lt;span id=&#34;light&#34;&gt;800 lux&lt;/span&gt;&lt;/p&gt; 温度、湿度、光照强度这三部分需要有自己唯一的id，以便于后续可以通过id来索引到，进而对显示内容进行修改。
+2.按钮部分 除了有显示以外，还需要有控制，控制最常用的就是按钮的形式。举例了三个按钮，分别是控制灯光、打开设备、关闭设备
+&lt;h2&gt;示例按钮&lt;/h2&gt; &lt;button onclick=&#34;toggleLight()&#34;&gt;控制灯光&lt;/button&gt; &lt;button onclick=&#34;sendCommand(&#39;turnOn&#39;)&#34;&gt;打开设备&lt;/button&gt; &lt;button onclick=&#34;sendCommand(&#39;turnOff&#39;)&#34;&gt;关闭设备&lt;/button&gt; 其中的onclick就是点击按钮后，会触发执行的函数。
+二、script部分 在这部分中主要写的是处理逻辑相关的代码，包括MQTT连接、数据监听、发送消息等等。
+1.连接MQTT 要在web中使用MQTT服务，需要引入MQTT相关的库，使用如下代码即可引入：
+&lt;script src=&#34;https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js&#34;&gt;&lt;/script&gt; 随后就可以使用MQTT的服务了，首先需要设置连接参数，例如使用的MQTT的服务器地址、端口、主题等等。例如使用开源免费的emqx服务器为例，设置一下发布主题和订阅主题：
+// MQTT 连接配置 const mqttBroker = &#39;ws://broker-cn.emqx.io:8083/mqtt&#39;; const publish_Topic = &#39;iot/my_pub&#39;; const subscribe_Topic = &#39;iot/my_sub&#39;; 随后调用connect函数即可连接MQTT服务器了：
+// 创建 MQTT 客户端实例 const mqttClient = mqtt.connect(mqttBroker); 这样就可以尝试连接到开源的emqx服务器上了，那到底有没有连接上呢，还需要写点代码来验证，我们就让web连接上后打印一下连接成功。代码如下：
+// 连接事件处理 mqttClient.on(&#39;connect&#39;, function () { console.log(&#39;连接成功&#39;); // 订阅主题 mqttClient.subscribe(subscribe_Topic); }); 这样网页成功连接上MQTT服务器后，就会在浏览器控制台打印连接成功，如图所示：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-28T21:32:17+08:00">
+    <meta property="article:modified_time" content="2024-04-28T21:32:17+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">web网页连接MQTT，显示数据与下发控制命令</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="webMQTT_0"></a>web网页连接MQTT，显示数据与下发控制命令</h2> 
+<h3><a id="_1"></a>零、前言</h3> 
+<p>在完成一些设备作品后，常常会因为没有一个上位机用来实时检测数据和下发命令而苦恼，在上一篇文章中提到了怎么<a href="https://blog.csdn.net/m0_52749295/article/details/138268483">白嫖阿里云服务器</a>，并且在上面搭建了属于自己的web网站。那么现在就可以利用这个公网web来实现一个上位机，这样就可以在有网的地方随时对设备进行监控和下发控制指令。以下就是完成这样一个可以连接MQTT服务器的web的制作过程。</p> 
+<h3><a id="body_3"></a>一、body部分</h3> 
+<p>html网页具有很多部分，其中最重要的是body部分，这部分决定了网站显示什么东西，stye部分就是对这部分进行美化。今天只完成功能，不对样式进行美化，有需要自行学习。</p> 
+<h4><a id="1_5"></a>1.显示部分</h4> 
+<p>用于显示数据，常用的有标签、文本框、标题等。显示部分我写了一个大标题，还有几个用于显示一些数据的文本，例如<strong>温度、湿度、光照强度</strong>等，这部分代码如下：</p> 
+<pre><code>    &lt;h1&gt;物联网Web界面示例&lt;/h1&gt;
+    &lt;h2&gt;示例参数&lt;/h2&gt;
+    &lt;p&gt;温度：&lt;span id="temperature"&gt;25°C&lt;/span&gt;&lt;/p&gt;
+    &lt;p&gt;湿度：&lt;span id="humidity"&gt;50%&lt;/span&gt;&lt;/p&gt;
+    &lt;p&gt;光照强度：&lt;span id="light"&gt;800 lux&lt;/span&gt;&lt;/p&gt;
+</code></pre> 
+<p>温度、湿度、光照强度这三部分需要有自己唯一的id，以便于后续可以通过id来索引到，进而对显示内容进行修改。</p> 
+<h4><a id="2_15"></a>2.按钮部分</h4> 
+<p>除了有显示以外，还需要有控制，控制最常用的就是按钮的形式。举例了三个按钮，分别是<strong>控制灯光、打开设备、关闭设备</strong></p> 
+<pre><code>    &lt;h2&gt;示例按钮&lt;/h2&gt;
+    &lt;button onclick="toggleLight()"&gt;控制灯光&lt;/button&gt;
+    &lt;button onclick="sendCommand('turnOn')"&gt;打开设备&lt;/button&gt;
+    &lt;button onclick="sendCommand('turnOff')"&gt;关闭设备&lt;/button&gt;
+</code></pre> 
+<p>其中的onclick就是点击按钮后，会触发执行的函数。</p> 
+<h3><a id="script_24"></a>二、script部分</h3> 
+<p>在这部分中主要写的是处理逻辑相关的代码，包括<strong>MQTT连接、数据监听、发送消息</strong>等等。</p> 
+<h4><a id="1MQTT_26"></a>1.连接MQTT</h4> 
+<p>要在web中使用MQTT服务，需要引入MQTT相关的库，使用如下代码即可引入：</p> 
+<pre><code>&lt;script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"&gt;&lt;/script&gt;
+</code></pre> 
+<p>随后就可以使用MQTT的服务了，首先需要设置连接参数，例如使用的MQTT的<strong>服务器地址、端口、主题</strong>等等。例如使用开源免费的<mark>emqx</mark>服务器为例，设置一下发布主题和订阅主题：</p> 
+<pre><code>// MQTT 连接配置
+const mqttBroker = 'ws://broker-cn.emqx.io:8083/mqtt';
+const publish_Topic = 'iot/my_pub';
+const subscribe_Topic = 'iot/my_sub';
+</code></pre> 
+<p>随后调用connect函数即可连接MQTT服务器了：</p> 
+<pre><code>// 创建 MQTT 客户端实例
+const mqttClient = mqtt.connect(mqttBroker);
+</code></pre> 
+<p>这样就可以尝试连接到开源的emqx服务器上了，那到底有没有连接上呢，还需要写点代码来验证，我们就让web连接上后打印一下连接成功。代码如下：</p> 
+<pre><code>// 连接事件处理
+mqttClient.on('connect', function () {
+    console.log('连接成功');
+    // 订阅主题
+    mqttClient.subscribe(subscribe_Topic);
+});
+</code></pre> 
+<p>这样网页成功连接上MQTT服务器后，就会在浏览器控制台打印连接成功，如图所示：<br> <img src="https://images2.imgbox.com/c0/17/uZarOreS_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="2_54"></a>2.监听信息</h4> 
+<p>在使用过程中，web界面需要一直监听<strong>订阅主题</strong>上有没有新的消息，如果有消息，就要及时根据新的消息更新web显示的内容。代码如下：</p> 
+<pre><code>// 监听消息
+mqttClient.on('message', function (topic, message) {
+    console.log("收到信息：" + message)
+    update_Status(message.toString());
+});
+
+//更新消息
+function update_Status(msg) {
+    try {
+        const data = JSON.parse(msg); // 尝试解析收到的 JSON 格式消息
+        const temperature = data.temperature; // 假设 JSON 数据中有 temperature 字段
+        const humidity = data.humidity; // 假设 JSON 数据中有 humidity 字段
+        const light = data.light; // 假设 JSON 数据中有 light 字段
+        document.getElementById('temperature').textContent = temperature + '°C'; //更新temperature
+        document.getElementById('humidity').textContent = humidity + '%';        //更新humidity
+        document.getElementById('light').textContent = light + ' lux';            //更新light
+    } catch (error) {
+        console.error('解析 MQTT 消息时出错：', error);
+    }
+}
+</code></pre> 
+<p>在监听函数中，一旦收到消息了，会将信息打印出来，然后会执行<strong>update_Status</strong>函数来更新web上的内容。这边接收到的信息的json格式的，所以要对json格式的数据进行解析。举例如下，原始界面如下：<br> <img src="https://images2.imgbox.com/75/4a/t2fhNGrz_o.png" alt="在这里插入图片描述"><br> 使用MQTT.fx软件连接上<strong>broker-cn.emqx.io</strong>后，往<strong>iot/my_sub</strong>主题发布一个json格式的信息，信息如下：</p> 
+<pre><code>{"temperature":"23","humidity":"60","light":"500"}
+</code></pre> 
+<p><img src="https://images2.imgbox.com/7d/a6/X9A7Cpdj_o.png" alt="在这里插入图片描述"><br> 发送后，就可以看到web界面的数值发送了变化，变成如下：<br> <img src="https://images2.imgbox.com/30/c8/LdOrFDaS_o.png" alt="在这里插入图片描述"><br> 同时在控制台也输出了对应的信息，如图所示：<br> <img src="https://images2.imgbox.com/3c/c3/XanSmt20_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="3_89"></a>3.发送信息</h4> 
+<p>web除了有监听信息，接收信息的能力外，还应当具备发送消息的能力，通过按键点击后，就会执行对应的函数，在函数内向发布主题发送一些消息，代码实现如下：</p> 
+<pre><code>// 发布 MQTT 消息
+function sendCommand(command) {
+    mqttClient.publish(publish_Topic, command);
+    console.log('已发送 MQTT 消息：', command);
+}
+</code></pre> 
+<p>实际效果可以在MQTT.fx中订阅<strong>iot/my_pub</strong>主题，来查看web发出的信息，当<strong>打开设备</strong>按键被按下后，就会向<strong>iot/my_pub</strong>主题发送<strong>turnOn</strong>的文本信息，如图所示：<br> <img src="https://images2.imgbox.com/bb/04/cWdH0FVz_o.png" alt="在这里插入图片描述"><br> 同时在web的控制台也能看到对应的日志。<br> <img src="https://images2.imgbox.com/b6/c1/UiudX8ic_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_102"></a>三、整体代码</h3> 
+<p>整体代码中也是只做了简单的实现，没有对界面进行美化，仅供参考。整体的代码实现如下：</p> 
+<pre><code>&lt;!DOCTYPE html&gt;
+&lt;html lang="en"&gt;
+
+&lt;head&gt;
+    &lt;meta charset="UTF-8"&gt;
+    &lt;meta name="viewport" content="width=device-width, initial-scale=1.0"&gt;
+    &lt;title&gt;物联网Web界面&lt;/title&gt;
+&lt;/head&gt;
+
+&lt;body&gt;
+    &lt;h1&gt;物联网Web界面示例&lt;/h1&gt;
+
+    &lt;h2&gt;示例参数&lt;/h2&gt;
+    &lt;p&gt;温度：&lt;span id="temperature"&gt;25°C&lt;/span&gt;&lt;/p&gt;
+    &lt;p&gt;湿度：&lt;span id="humidity"&gt;50%&lt;/span&gt;&lt;/p&gt;
+    &lt;p&gt;光照强度：&lt;span id="light"&gt;800 lux&lt;/span&gt;&lt;/p&gt;
+
+    &lt;h2&gt;示例按钮&lt;/h2&gt;
+    &lt;button onclick="toggleLight()"&gt;控制灯光&lt;/button&gt;
+    &lt;button onclick="sendCommand('turnOn')"&gt;打开设备&lt;/button&gt;
+    &lt;button onclick="sendCommand('turnOff')"&gt;关闭设备&lt;/button&gt;
+
+    &lt;script src="https://cdnjs.cloudflare.com/ajax/libs/mqtt/4.2.8/mqtt.min.js"&gt;&lt;/script&gt;
+
+    &lt;script&gt;
+        // MQTT 连接配置
+        const mqttBroker = 'ws://broker-cn.emqx.io:8083/mqtt';
+        const publish_Topic = 'iot/my_pub';
+        const subscribe_Topic = 'iot/my_sub';
+
+        // 创建 MQTT 客户端实例
+        const mqttClient = mqtt.connect(mqttBroker);
+
+        // 连接事件处理
+        mqttClient.on('connect', function () {
+            console.log('连接成功');
+            // 订阅主题
+            mqttClient.subscribe(subscribe_Topic);
+        });
+
+        // 监听消息
+        mqttClient.on('message', function (topic, message) {
+            console.log("收到信息：" + message)
+            update_Status(message.toString());
+        });
+
+        //更新消息
+        function update_Status(msg) {
+            try {
+                const data = JSON.parse(msg); // 尝试解析收到的 JSON 格式消息
+                const temperature = data.temperature; // 假设 JSON 数据中有 temperature 字段
+                const humidity = data.humidity; // 假设 JSON 数据中有 humidity 字段
+                const light = data.light; // 假设 JSON 数据中有 light 字段
+                document.getElementById('temperature').textContent = temperature + '°C'; //更新temperature
+                document.getElementById('humidity').textContent = humidity + '%';        //更新humidity
+                document.getElementById('light').textContent = light + ' lux';            //更新light
+            } catch (error) {
+                console.error('解析 MQTT 消息时出错：', error);
+            }
+        }
+
+        // 发布 MQTT 消息
+        function sendCommand(command) {
+            mqttClient.publish(publish_Topic, command);
+            console.log('已发送 MQTT 消息：', command);
+        }
+
+        // 模拟函数，用于切换灯光状态
+        function toggleLight() {
+            const lightElement = document.getElementById('light');
+            if (lightElement.textContent === '800 lux') {
+                lightElement.textContent = '0 lux';
+            } else {
+                lightElement.textContent = '800 lux';
+            }
+        }
+    &lt;/script&gt;
+&lt;/body&gt;
+
+&lt;/html&gt;
+
+</code></pre> 
+<p>至此，教程结束，祝编程愉快！73</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f1b4258cd52c158727637fbb2dcbf404/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">算法——双指针</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d2766452ababd2bf778a4d52eabaa090/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">SpringMVC进阶（自定义拦截器以及异常处理）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

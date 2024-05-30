@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>基于Zookeeper 简单实现分布式任务协调组件 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b9bb53f6c6cff7e59242299f372ab856/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="基于Zookeeper 简单实现分布式任务协调组件">
+  <meta property="og:description" content="优质博文：IT-BLOG-CN
+一、什么是 Zookeeper ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。
+它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。ZooKeeper的目标就是封装好复杂易出错的关键服务，将简单易用的接口和性能高效、功能稳定的系统提供给用户。
+二 、 分布式任务协调组件的需求是什么 【1】现在有名称为ECAS的应用并集群运行在两台服务器上，分别为ECAS_1和CAS_2。而我们希望有一个任务TASK_1可以在两台ECAS应用中的任何一个应用来运行，可以是ECAS_1也可以是ECAS_2。
+【2】假设TASK_1运行在ECAS_1上，而此时ECAS_1所在的服务器由于某些原因宕机了，ECAS_2需要接管任务TASK_1，使其可以继续运行。
+需求分析：
+a) 任务TASK_1既可以运行在ECAS_1上，也可以运行在ECAS_2上，任务吭启动时，由ECAS_1和CAS_2竞争运行权
+b) 当ECAS集群中某台服务器宕机了，原来运行在这台服务器上的ECAS运行的应用应该由另外一台接管运行
+三、基于Zookeeper实现需求 【1】可能需要使用到的Zookeeper的特性：监听节点发化，当有节点被增加、删除、修改时，通知关注节点发化的客户端
+【2】实现需求一
+a) 在Zookeeper上新增ROOT/Tasks节点，用于存放任务子节点（PS：ROOT节点是根节点，用于存放本次功能实现相关的子节点）
+b) 所有客户端客户端关注节点ROOT/Tasks的子节点变化情况。
+1、当有节点被新增进来时，触发竞争任务执行权操作
+2、当有节点被移除时，触发任务停止操作
+c) 如何竞争子任务，Zookeeper提供了基于Version的乐观锁操作，多个客户端尝试修改任务节点的属性时，叧有一个客户端可以修改成功，修改成功的客户端既竞争到了任务的执行权
+【3】实现需求二
+a）在Zookeeper上新增ROOT/Workers节点，用于存放当前存活的客户端实例（PS：ROOT节点是根节点，用于存放本次功能实现相关的子节点）
+b) 所有客户端在Workers节点下添加代表自身的临时子节点，在Zookeeper中，临时子节点的特性是，当所属客户端断开了与Zookeeper的连接，子节点会被移除。
+c) 所有客户端关注节点ROOT/Workers的子节点发化情况
+1. 当有新的节点添加进来时，表示集群中有新的客户端启动了
+2. 当有节点被移除时，表示有客户端离开了集群，此时遍历ROOT/Tasks下所有子节点，接管离开客户端所属的任务。
+【4】下面是一个简单的 Zookeeper上的节点层次图
+四、更强大的分布式调组件 4.1 可灵活定制任务负载策略
+4.2 宕机应用返回集群后，任务的重新负载">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-20T12:34:53+08:00">
+    <meta property="article:modified_time" content="2024-04-20T12:34:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">基于Zookeeper 简单实现分布式任务协调组件</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <blockquote> 
+ <p>优质博文：<a href="https://it-blog-cn.com/" rel="nofollow">IT-BLOG-CN</a></p> 
+</blockquote> 
+<h3><a id="_Zookeeper_1"></a>一、什么是 Zookeeper</h3> 
+<p>ZooKeeper是一个分布式的，开放源码的分布式应用程序协调服务，是Google的Chubby一个开源的实现，是Hadoop和Hbase的重要组件。</p> 
+<p>它是一个为分布式应用提供一致性服务的软件，提供的功能包括：配置维护、域名服务、分布式同步、组服务等。ZooKeeper的目标就是封装好复杂易出错的关键服务，将简单易用的接口和性能高效、功能稳定的系统提供给用户。</p> 
+<h3><a id="___6"></a>二 、 分布式任务协调组件的需求是什么</h3> 
+<p>【1】现在有名称为ECAS的应用并集群运行在两台服务器上，分别为ECAS_1和CAS_2。而我们希望有一个任务TASK_1可以在两台ECAS应用中的任何一个应用来运行，可以是ECAS_1也可以是ECAS_2。</p> 
+<p>【2】假设TASK_1运行在ECAS_1上，而此时ECAS_1所在的服务器由于某些原因宕机了，ECAS_2需要接管任务TASK_1，使其可以继续运行。</p> 
+<p><strong>需求分析：</strong><br> a) 任务TASK_1既可以运行在ECAS_1上，也可以运行在ECAS_2上，任务吭启动时，由ECAS_1和CAS_2竞争运行权<br> b) 当ECAS集群中某台服务器宕机了，原来运行在这台服务器上的ECAS运行的应用应该由另外一台接管运行</p> 
+<h3><a id="Zookeeper_15"></a>三、基于Zookeeper实现需求</h3> 
+<p>【1】可能需要使用到的Zookeeper的特性：监听节点发化，当有节点被增加、删除、修改时，通知关注节点发化的客户端</p> 
+<p>【2】实现需求一<br>     a) 在Zookeeper上新增ROOT/Tasks节点，用于存放任务子节点（PS：ROOT节点是根节点，用于存放本次功能实现相关的子节点）<br>     b) 所有客户端客户端关注节点ROOT/Tasks的子节点变化情况。<br>      1、当有节点被新增进来时，触发竞争任务执行权操作<br>       2、当有节点被移除时，触发任务停止操作<br>     c) 如何竞争子任务，Zookeeper提供了基于Version的乐观锁操作，多个客户端尝试修改任务节点的属性时，叧有一个客户端可以修改成功，修改成功的客户端既竞争到了任务的执行权</p> 
+<p>【3】实现需求二<br>     a）在Zookeeper上新增ROOT/Workers节点，用于存放当前存活的客户端实例（PS：ROOT节点是根节点，用于存放本次功能实现相关的子节点）<br>     b) 所有客户端在Workers节点下添加代表自身的临时子节点，在Zookeeper中，临时子节点的特性是，当所属客户端断开了与Zookeeper的连接，子节点会被移除。<br>     c) 所有客户端关注节点ROOT/Workers的子节点发化情况<br>       1. 当有新的节点添加进来时，表示集群中有新的客户端启动了<br>       2. 当有节点被移除时，表示有客户端离开了集群，此时遍历ROOT/Tasks下所有子节点，接管离开客户端所属的任务。</p> 
+<p>【4】下面是一个简单的 Zookeeper上的节点层次图<br> <img src="https://images2.imgbox.com/e4/a1/VZQBTW2i_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_35"></a>四、更强大的分布式调组件</h3> 
+<p>4.1 可灵活定制任务负载策略<br> 4.2 宕机应用返回集群后，任务的重新负载</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/cf04a3facc2ac2fa2dfa1ddf2ac966d5/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">图像生成模型浅析（Stable Diffusion、DALL-E、Imagen）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d5a077f4205302d41a8389b9101bc458/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">RK3588 &amp; Android13 调试RTL8852BS（WIFI&amp;BT）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

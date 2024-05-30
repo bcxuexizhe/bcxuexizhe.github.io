@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>LOAM、Lego-liom、Lio-sam轨迹保存，与Kitti数据集真值进行评估 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/8aa7e408c6096bee6cd824e9201d0093/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="LOAM、Lego-liom、Lio-sam轨迹保存，与Kitti数据集真值进行评估">
+  <meta property="og:description" content="一 首先需要保存轨迹，轨迹保存参考下面的代码，最好自己添加一个节点（如下图），用新节点来订阅和保存轨迹至txt文件,因为直接在算法的线程中加入此步骤我试了好像保存不了，好像是在不同线程间的参数传递格式的问题（也可能是我个人的问题）。
+与Kitti数据集真值评估需要将kitti 类型轨迹转化为tum格式的轨迹，用evo转化需要下载evo源码。
+(223条消息) KITTI数据集基准、转换成tum以及十个groundtruth对应图_kitti转tum_小海盗haner的博客-CSDN博客
+(223条消息) 【KITTI】KITTI数据集简介（四） — 标定校准数据calib_tr_velo_to_cam_Coding的叶子的博客-CSDN博客
+a_loam在节点中订阅话题/aft_mapped_to_init，如下。lego同样操作订阅话题 /aft_mapped_to_init，lio-sam要订阅lio_sam/mapping/odometry话题（或者lio_sam/mapping/odometry_incremental，这两个都行，odometry_incremental是odometry使用IMU加权过的，差别不大），这些都可以在算法的Map节点里找到。我看很多博客上对lego/lio的欧拉角进行了转化再保存，实际上它们都有自己发布的odom信息，直接订阅就可以保存了。
+void path_save(nav_msgs::Odometry odomAftMapped ){ //保存轨迹，path_save是文件目录,txt文件提前建好,/home/xxx/xxx.txt, std::ofstream pose1(“path_save”, std::ios::app); pose1.setf(std::ios::scientific, std::ios::floatfield); pose1.precision(9); static double timeStart = odomAftMapped.header.stamp.toSec(); auto T1 =ros::Time().fromSec(timeStart) ; pose1&lt;&lt; odomAftMapped.header.stamp -T1&lt;&lt; &#34; &#34; &lt;&lt; -odomAftMapped.pose.pose.position.y &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.position.z &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.position.x &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.orientation.x &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.orientation.y &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.orientation.z &lt;&lt; &#34; &#34; &lt;&lt; odomAftMapped.pose.pose.orientation.w &lt;&lt; std::endl; pose1.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-05-05T12:02:51+08:00">
+    <meta property="article:modified_time" content="2023-05-05T12:02:51+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">LOAM、Lego-liom、Lio-sam轨迹保存，与Kitti数据集真值进行评估</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h3>   一</h3> 
+<p>        首先需要保存轨迹，轨迹保存参考下面的代码，最好自己<strong>添加一个节点</strong>（如下图），用新节点来订阅和保存轨迹至txt文件,因为直接在算法的线程中加入此步骤我试了好像保存不了，好像是在不同线程间的参数传递格式的问题（也可能是我个人的问题）。</p> 
+<p>        <img alt="" height="120" src="https://images2.imgbox.com/7a/2a/DquXu0WY_o.png" width="199"></p> 
+<p>与Kitti数据集真值评估需要将kitti 类型轨迹转化为tum格式的轨迹，用evo转化需要下载evo源码。</p> 
+<p><a href="https://blog.csdn.net/haner27/article/details/121158911?spm=1001.2101.3001.6650.3&amp;utm_medium=distribute.pc_relevant.none-task-blog-2~default~CTRLIST~Rate-3-121158911-blog-123346633.pc_relevant_multi_platform_whitelistv3&amp;depth_1-utm_source=distribute.pc_relevant.none-task-blog-2~default~CTRLIST~Rate-3-121158911-blog-123346633.pc_relevant_multi_platform_whitelistv3&amp;utm_relevant_index=5" title="(223条消息) KITTI数据集基准、转换成tum以及十个groundtruth对应图_kitti转tum_小海盗haner的博客-CSDN博客">(223条消息) KITTI数据集基准、转换成tum以及十个groundtruth对应图_kitti转tum_小海盗haner的博客-CSDN博客</a></p> 
+<p><a href="https://blog.csdn.net/suiyingy/article/details/124787636" title="(223条消息) 【KITTI】KITTI数据集简介（四） — 标定校准数据calib_tr_velo_to_cam_Coding的叶子的博客-CSDN博客">(223条消息) 【KITTI】KITTI数据集简介（四） — 标定校准数据calib_tr_velo_to_cam_Coding的叶子的博客-CSDN博客</a></p> 
+<p>     a_loam在节点中订阅话题/aft_mapped_to_init，如下。lego同样操作订阅话题 /aft_mapped_to_init，lio-sam要订阅lio_sam/mapping/odometry话题（或者lio_sam/mapping/odometry_incremental，这两个都行，odometry_incremental是odometry使用IMU加权过的，差别不大），这些都可以在算法的Map节点里找到。我看很多博客上对lego/lio的欧拉角进行了转化再保存，实际上它们都有自己发布的odom信息，直接订阅就可以保存了。</p> 
+<pre><code>void path_save(nav_msgs::Odometry odomAftMapped ){
+
+	    //保存轨迹，path_save是文件目录,txt文件提前建好,/home/xxx/xxx.txt,
+   			std::ofstream pose1(“path_save”, std::ios::app);
+			pose1.setf(std::ios::scientific, std::ios::floatfield);
+			pose1.precision(9);
+	
+			static double timeStart = odomAftMapped.header.stamp.toSec();
+			auto T1 =ros::Time().fromSec(timeStart) ;
+			pose1&lt;&lt; odomAftMapped.header.stamp -T1&lt;&lt; " "
+              &lt;&lt; -odomAftMapped.pose.pose.position.y &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.position.z &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.position.x &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.orientation.x &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.orientation.y &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.orientation.z &lt;&lt; " "
+              &lt;&lt; odomAftMapped.pose.pose.orientation.w &lt;&lt; std::endl;
+			pose1.close();
+            
+}
+
+int main(int argc, char **argv){
+    ros::init(argc, argv, "path_save");
+    ros::NodeHandle nh;
+    ros::Subscriber save_path = nh.subscribe&lt;nav_msgs::Odometry&gt;("/aft_mapped_to_init",     100, path_save);	    //保存轨迹，a_loam直接订阅话题/aft_mapped_to_init。
+
+    ros::spin();
+     }</code></pre> 
+<p>        轨迹文件的时间戳得按(xxx.header.stamp -T1)这样写，<strong>保存的是当前时间与第一帧位置时间的差值</strong>，因为Kitti真值的轨迹时间戳是这样保存的，与真值时间戳不同步之后没法评估。数据的z、y、z写入顺序是人为的将坐标轴与Kitti数据集的对齐了（也可以按原来的写，或者用左乘外参矩阵进行调整，因为之后会用evo按时间戳对齐进行评估），如下图一KItti真值是x_z轴的，你跑出来可能是横着的，但是只要时间戳没问题你还是可以把它们对齐（图二）。对齐命令如下，具体评估可以看以下博客。 </p> 
+<p><a href="https://blog.csdn.net/hhaowang/article/details/105225595" title="(223条消息) 轨迹评估工具使用总结（一） evo从安装到入门_evo评估工具怎么对齐起点_Techblog of HaoWANG的博客-CSDN博客">(223条消息) 轨迹评估工具使用总结（一） evo从安装到入门_evo评估工具怎么对齐起点_Techblog of HaoWANG的博客-CSDN博客</a></p> 
+<pre><code>evo_traj tum 07_tum.txt lego_07.txt  --ref=07_tum.txt -p -a
+</code></pre> 
+<p><img alt="" height="520" src="https://images2.imgbox.com/d5/84/jaMBgyBf_o.png" width="494"></p> 
+<p>图一</p> 
+<p> <img alt="" height="454" src="https://images2.imgbox.com/9b/81/aoTkTOfK_o.png" width="430"></p> 
+<p> 图二</p> 
+<h3>二</h3> 
+<p>        Kitti数据集是有外参标定信息的就是lidar-&gt;camera(world)的参数矩阵，也可以使用输出值左乘外参矩阵，参数如下，R为旋转，T为位移。</p> 
+<pre><code>R: 7.027555e-03 -9.999753e-01 2.599616e-05 -2.254837e-03 -4.184312e-05 -9.999975e-01 9.999728e-01 7.027479e-03 -2.255075e-03
+T: -7.137748e-03 -7.482656e-02 -3.336324e-01</code></pre> 
+<p> 然后把要输出的位置同样放进矩阵里，用外参矩阵进行调整就行了。也可以不旋转，只进行平移，因为evo可以根据时间戳对齐，不需要坐标轴一致。<strong>实际测试后发现加不加外参差别好像不大。</strong></p> 
+<pre><code>(lidar-&gt;camera(world))  
+Eigen::Vector3d pose_t;  
+Eigen::Matrix3d  pose_R;            
+  pose_t &lt;&lt;-7.137748e-03 ,-7.482656e-02, -3.336324e-01;
+  pose_R &lt;&lt;7.027555e-03, -9.999753e-01, 2.599616e-05,
+           -2.254837e-03, -4.184312e-05 ,-9.999975e-01,
+           9.999728e-01 ,7.027479e-03 ,  -2.255075e-03
+  
+Eigen::Vector3d pose;
+        pose(0)=odomAftMapped.pose.pose.position.x;
+        pose(1)=odomAftMapped.pose.pose.position.y;
+        pose(2)=odomAftMapped.pose.pose.position.z;
+Eigen::Vector3d pose_s;
+   //可以只 +pose_t
+        pose_s = pose_R * pose + pose_t;</code></pre> 
+<h3><strong> 总结</strong></h3> 
+<p>                其实整体步骤并不多，但中间测试时遇到过很多问题，比如主线程中无法将位姿写入轨迹文件，保存的归家与真值时间戳的对齐问题，轨迹图不在一个平面上的问题等。但后来发现只要将<strong>轨迹时间戳相互对齐</strong>，就不用管轨迹坐标轴角度的不同，直接用evo根据时间戳对齐即可。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4bbf70c063e0621dda07dfa1fa2f3ae9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/608560fca70429a038f2d6d27ab3f212/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Stable Diffusion 本地部署教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

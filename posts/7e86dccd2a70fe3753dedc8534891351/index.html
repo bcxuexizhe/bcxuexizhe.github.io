@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AI大模型探索之路-应用篇17：GLM大模型-大数据自助查询平台架构实践 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7e86dccd2a70fe3753dedc8534891351/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="AI大模型探索之路-应用篇17：GLM大模型-大数据自助查询平台架构实践">
+  <meta property="og:description" content="文章目录 前言一、技术架构设计二、本地知识库准备三、SQLServer服务1. 数据库准备步骤1：安装MySQL数据库步骤2：启动MySQL数据库步骤3：登录MySQL数据库步骤4：创建数据库用户glm步骤5：给数据库用户赋权限步骤6：创建数据库 2. 数据准备3. SQL服务封装 四、核心代码落地1.模型加载2.本地知识库读取3.function call函数封装4.工具函数封装5. 调用查询测试 五、结束思考 前言 在众多大型企业中，数据资产庞大无比，因此它们纷纷构建了多种大数据平台。然而，关键在于如何高效地利用这些数据，例如，将数据有效地提供给产品经理或数据分析师以供他们进行设计和分析。在传统工作流程中，由于这些角色通常不是技术专家，他们往往无法直接使用和操控SQL，导致必须依赖技术人员来编写SQL查询并返回结果，然后才能由产品经理、数据分析师或其他相关人员进一步处理。
+然而，随着强大的大模型]的出现，我们对自然语言的理解能力得到了极大的提升，同时通过支持的插件式扩展（允许自主调用相关外部方法或API），为我们解决这一难题提供了全新的思路。这些大模型不仅能够理解复杂的自然语言查询，还能够与现有的数据处理工具无缝集成，从而使得非技术用户也能够直接参与到数据分析的过程中，无需通过技术人员作为中介，极大地提高了工作效率和决策的速度。
+一、技术架构设计 用户输入说明要查询的信息，LLM基于本地知识库生成SQL，调用不同的Funcation Call，每个一个Funcation call中都封装一个不同的数据服务的调用；比如Mysql、Hive、Spark、Flink。
+二、本地知识库准备 大模型擅长将输出转化为不同格式，比如从一种语言翻译成另一种语言，帮助拼写、语法纠正以及编写正则表达式；整个平台有两个基础支持的部分，第一部分就是数据字典，我们先将所有需要查询的数据库、表、字段信息结构化整理成数据字典，作为本地知识库。
+三、SQLServer服务 平台中两个核心支撑中另外一个就是数据服务的开发，基于不同的数据库类型，开发不同的数据服务，用于支撑LLM的数据查询；包括但不限于：MySQL数据服务，Hive数据服务、Spark数据服务、Flink数据服务等；
+1. 数据库准备 步骤1：安装MySQL数据库 sudo apt-get update sudo apt-get install mysql-server 步骤2：启动MySQL数据库 sudo service mysql start sudo systemctl start mysqld 步骤3：登录MySQL数据库 mysql -u root -p 步骤4：创建数据库用户glm CREATE USER &#39;glm&#39;@&#39;localhost&#39; IDENTIFIED BY &#39;glm&#39;; 步骤5：给数据库用户赋权限 GRANT ALL PRIVILEGES ON *.* TO &#39;glm&#39;@&#39;localhost&#39;; FLUSH PRIVILEGES; 步骤6：创建数据库 CREATE DATABASE glm; USE glm; 2. 数据准备 CREATE TABLE user_info ( customerID VARCHAR(255), gender VARCHAR(255), SeniorCitizen INT, Partner VARCHAR(255), Dependents VARCHAR(255) ); INSERT INTO user_info (customerID, gender, SeniorCitizen, Partner, Dependents) VALUES (&#39;1&#39;, &#39;Female&#39;, 0, &#39;Yes&#39;, &#39;No&#39;), (&#39;2&#39;, &#39;Male&#39;, 1, &#39;No&#39;, &#39;Yes&#39;), (&#39;3&#39;, &#39;Male&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;4&#39;, &#39;Female&#39;, 1, &#39;Yes&#39;, &#39;Yes&#39;), (&#39;5&#39;, &#39;Male&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;6&#39;, &#39;Female&#39;, 0, &#39;Yes&#39;, &#39;Yes&#39;), (&#39;7&#39;, &#39;Male&#39;, 1, &#39;Yes&#39;, &#39;No&#39;), (&#39;8&#39;, &#39;Female&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;9&#39;, &#39;Male&#39;, 1, &#39;Yes&#39;, &#39;Yes&#39;), (&#39;10&#39;, &#39;Female&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;11&#39;, &#39;Male&#39;, 0, &#39;Yes&#39;, &#39;Yes&#39;), (&#39;12&#39;, &#39;Female&#39;, 1, &#39;No&#39;, &#39;No&#39;), (&#39;13&#39;, &#39;Male&#39;, 0, &#39;No&#39;, &#39;Yes&#39;), (&#39;14&#39;, &#39;Female&#39;, 0, &#39;Yes&#39;, &#39;No&#39;), (&#39;15&#39;, &#39;Male&#39;, 1, &#39;Yes&#39;, &#39;Yes&#39;), (&#39;16&#39;, &#39;Female&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;17&#39;, &#39;Male&#39;, 0, &#39;No&#39;, &#39;Yes&#39;), (&#39;18&#39;, &#39;Female&#39;, 1, &#39;Yes&#39;, &#39;No&#39;), (&#39;19&#39;, &#39;Male&#39;, 0, &#39;No&#39;, &#39;No&#39;), (&#39;20&#39;, &#39;Female&#39;, 1, &#39;No&#39;, &#39;Yes&#39;); 3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-20T07:43:10+08:00">
+    <meta property="article:modified_time" content="2024-04-20T07:43:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">AI大模型探索之路-应用篇17：GLM大模型-大数据自助查询平台架构实践</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_5" rel="nofollow">前言</a></li><li><a href="#_9" rel="nofollow">一、技术架构设计</a></li><li><a href="#_14" rel="nofollow">二、本地知识库准备</a></li><li><a href="#SQLServer_18" rel="nofollow">三、SQLServer服务</a></li><li><ul><li><a href="#1__22" rel="nofollow">1. 数据库准备</a></li><li><ul><li><a href="#1MySQL_23" rel="nofollow">步骤1：安装MySQL数据库</a></li><li><a href="#2MySQL_28" rel="nofollow">步骤2：启动MySQL数据库</a></li><li><a href="#3MySQL_33" rel="nofollow">步骤3：登录MySQL数据库</a></li><li><a href="#4glm_37" rel="nofollow">步骤4：创建数据库用户glm</a></li><li><a href="#5_41" rel="nofollow">步骤5：给数据库用户赋权限</a></li><li><a href="#6_46" rel="nofollow">步骤6：创建数据库</a></li></ul> 
+   </li><li><a href="#2__51" rel="nofollow">2. 数据准备</a></li><li><a href="#3_SQL_84" rel="nofollow">3. SQL服务封装</a></li></ul> 
+  </li><li><a href="#_128" rel="nofollow">四、核心代码落地</a></li><li><ul><li><a href="#1_130" rel="nofollow">1.模型加载</a></li><li><a href="#2_146" rel="nofollow">2.本地知识库读取</a></li><li><a href="#3function_call_158" rel="nofollow">3.function call函数封装</a></li><li><a href="#4_179" rel="nofollow">4.工具函数封装</a></li><li><a href="#5__241" rel="nofollow">5. 调用查询测试</a></li></ul> 
+  </li><li><a href="#_276" rel="nofollow">五、结束思考</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="_5"></a>前言</h2> 
+<p>在众多大型企业中，数据资产庞大无比，因此它们纷纷构建了多种大数据平台。然而，关键在于如何高效地利用这些数据，例如，将数据有效地提供给产品经理或数据分析师以供他们进行设计和分析。在传统工作流程中，由于这些角色通常不是技术专家，他们往往无法直接使用和操控SQL，导致必须依赖技术人员来编写SQL查询并返回结果，然后才能由产品经理、数据分析师或其他相关人员进一步处理。</p> 
+<p>然而，随着强大的大模型]的出现，我们对自然语言的理解能力得到了极大的提升，同时通过支持的插件式扩展（允许自主调用相关外部方法或API），为我们解决这一难题提供了全新的思路。这些大模型不仅能够理解复杂的自然语言查询，还能够与现有的数据处理工具无缝集成，从而使得非技术用户也能够直接参与到数据分析的过程中，无需通过技术人员作为中介，极大地提高了工作效率和决策的速度。</p> 
+<h2><a id="_9"></a>一、技术架构设计</h2> 
+<p>用户输入说明要查询的信息，LLM基于本地知识库生成SQL，调用不同的Funcation Call，每个一个Funcation call中都封装一个不同的数据服务的调用；比如Mysql、Hive、Spark、Flink。</p> 
+<p><img src="https://images2.imgbox.com/45/4c/sgGXGc0i_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_14"></a>二、本地知识库准备</h2> 
+<p>大模型擅长将输出转化为不同格式，比如从一种语言翻译成另一种语言，帮助拼写、语法纠正以及编写正则表达式；整个平台有两个基础支持的部分，第一部分就是数据字典，我们先将所有需要查询的数据库、表、字段信息结构化整理成数据字典，作为本地知识库。<br> <img src="https://images2.imgbox.com/f4/54/SRJ4AdPM_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="SQLServer_18"></a>三、SQLServer服务</h2> 
+<p>平台中两个核心支撑中另外一个就是数据服务的开发，基于不同的数据库类型，开发不同的数据服务，用于支撑LLM的数据查询；包括但不限于：MySQL数据服务，Hive数据服务、Spark数据服务、Flink数据服务等；<br> <img src="https://images2.imgbox.com/e3/ac/yZxjTfxj_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="1__22"></a>1. 数据库准备</h3> 
+<h4><a id="1MySQL_23"></a>步骤1：安装MySQL数据库</h4> 
+<pre><code class="prism language-powershell">sudo apt-get update
+sudo apt-get install mysql-server
+</code></pre> 
+<h4><a id="2MySQL_28"></a>步骤2：启动MySQL数据库</h4> 
+<pre><code class="prism language-powershell">sudo service mysql <span class="token function">start</span>
+sudo systemctl <span class="token function">start</span> mysqld
+</code></pre> 
+<h4><a id="3MySQL_33"></a>步骤3：登录MySQL数据库</h4> 
+<pre><code class="prism language-powershell">mysql <span class="token operator">-</span>u root <span class="token operator">-</span>p 
+</code></pre> 
+<h4><a id="4glm_37"></a>步骤4：创建数据库用户glm</h4> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">USER</span> <span class="token string">'glm'</span><span class="token variable">@'localhost'</span> IDENTIFIED <span class="token keyword">BY</span> <span class="token string">'glm'</span><span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="5_41"></a>步骤5：给数据库用户赋权限</h4> 
+<pre><code class="prism language-sql"><span class="token keyword">GRANT</span> <span class="token keyword">ALL</span> <span class="token keyword">PRIVILEGES</span> <span class="token keyword">ON</span> <span class="token operator">*</span><span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">TO</span> <span class="token string">'glm'</span><span class="token variable">@'localhost'</span><span class="token punctuation">;</span>
+FLUSH <span class="token keyword">PRIVILEGES</span><span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="6_46"></a>步骤6：创建数据库</h4> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">DATABASE</span> glm<span class="token punctuation">;</span>
+<span class="token keyword">USE</span> glm<span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="2__51"></a>2. 数据准备</h3> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> user_info <span class="token punctuation">(</span>
+customerID <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+gender <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+SeniorCitizen <span class="token keyword">INT</span><span class="token punctuation">,</span>
+Partner <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+Dependents <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> user_info <span class="token punctuation">(</span>customerID<span class="token punctuation">,</span> gender<span class="token punctuation">,</span> SeniorCitizen<span class="token punctuation">,</span> Partner<span class="token punctuation">,</span> Dependents<span class="token punctuation">)</span>
+<span class="token keyword">VALUES</span>
+<span class="token punctuation">(</span><span class="token string">'1'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'2'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'3'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'4'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'5'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'6'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'7'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'8'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'9'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'10'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'11'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'12'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'13'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'14'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'15'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'16'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'17'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'18'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'19'</span><span class="token punctuation">,</span> <span class="token string">'Male'</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+<span class="token punctuation">(</span><span class="token string">'20'</span><span class="token punctuation">,</span> <span class="token string">'Female'</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token string">'No'</span><span class="token punctuation">,</span> <span class="token string">'Yes'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="3_SQL_84"></a>3. SQL服务封装</h3> 
+<p>安装依赖：! pip install pymysql<br> 封装SQL执行函数（将传入的SQL代码传输至MySQL环境中进行运行，并最终返回SQL代码运行结果）。</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> pymysql
+<span class="token keyword">import</span> json
+<span class="token keyword">def</span> <span class="token function">sql_inter</span><span class="token punctuation">(</span>sql_query<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    用于执行一段SQL代码，并最终获取SQL代码执行结果，\
+    核心功能是将输入的SQL代码传输至MySQL环境中进行运行，\
+    并最终返回SQL代码运行结果。需要注意的是，本函数是借助pymysql来连接MySQL数据库。
+    :param sql_query: 字符串形式的SQL查询语句，用于执行对MySQL中telco_db数据库中各张表进行查询，并获得各表中的各类相关信息
+    :return：sql_query在MySQL中的运行结果。
+    """</span>
+    
+    connection <span class="token operator">=</span> pymysql<span class="token punctuation">.</span>connect<span class="token punctuation">(</span>
+            host<span class="token operator">=</span><span class="token string">"localhost"</span><span class="token punctuation">,</span>  <span class="token comment"># 数据库地址</span>
+            user<span class="token operator">=</span><span class="token string">'glm'</span><span class="token punctuation">,</span>  <span class="token comment"># 数据库用户名</span>
+            passwd<span class="token operator">=</span><span class="token string">"glm"</span><span class="token punctuation">,</span>  <span class="token comment"># 数据库密码</span>
+            db<span class="token operator">=</span>glm'<span class="token punctuation">,</span>  <span class="token comment"># 数据库名</span>
+            charset<span class="token operator">=</span><span class="token string">'utf8'</span>  <span class="token comment"># 字符集选择utf8</span>
+        <span class="token punctuation">)</span>
+    
+    <span class="token keyword">try</span><span class="token punctuation">:</span>
+        <span class="token keyword">with</span> connection<span class="token punctuation">.</span>cursor<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">as</span> cursor<span class="token punctuation">:</span>
+            <span class="token comment"># SQL查询语句</span>
+            sql <span class="token operator">=</span> sql_query
+            cursor<span class="token punctuation">.</span>execute<span class="token punctuation">(</span>sql<span class="token punctuation">)</span>
+
+            <span class="token comment"># 获取查询结果</span>
+            results <span class="token operator">=</span> cursor<span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">finally</span><span class="token punctuation">:</span>
+        connection<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    
+    
+    <span class="token keyword">return</span> json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span>results<span class="token punctuation">)</span>
+<span class="token comment">#函数测试</span>
+sql_inter<span class="token punctuation">(</span><span class="token string">"select count(*) from user_info"</span><span class="token punctuation">)</span>
+<span class="token string">'[[20]]'</span>
+</code></pre> 
+<h2><a id="_128"></a>四、核心代码落地</h2> 
+<p>接收前端用户的输入信息，LLM基于本地知识库，生成SQL；自主判断（根据提示和描述信息的相关性）通过Funcation Call调用不同数据服务；返回结果给到前端用户；</p> 
+<h3><a id="1_130"></a>1.模型加载</h3> 
+<p>从huggingface拉取分词器模型和基础大模型，进行加载运行到本地服务器</p> 
+<pre><code class="prism language-python"><span class="token comment">##测试模型</span>
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> AutoTokenizer<span class="token punctuation">,</span> AutoModel
+
+tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span><span class="token string">"THUDM/chatglm3-6b"</span><span class="token punctuation">,</span>
+trust_remote_code<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+<span class="token comment">#model = AutoModel.from_pretrained("THUDM/chatglm3-6b",trust_remote_code=True).quantize(8).cuda()</span>
+model <span class="token operator">=</span> AutoModel<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span><span class="token string">"THUDM/chatglm3-6b"</span><span class="token punctuation">,</span> trust_remote_code<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span>device<span class="token operator">=</span><span class="token string">'cuda'</span><span class="token punctuation">)</span>
+
+model <span class="token operator">=</span> model<span class="token punctuation">.</span><span class="token builtin">eval</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<h3><a id="2_146"></a>2.本地知识库读取</h3> 
+<p>将数据库、表、字段等数据字典信息，整理成一个Markdown文件</p> 
+<pre><code class="prism language-python"><span class="token comment"># 打开并读取Markdown文件</span>
+<span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span><span class="token string">'user_info.md'</span><span class="token punctuation">,</span> <span class="token string">'r'</span><span class="token punctuation">,</span> encoding<span class="token operator">=</span><span class="token string">'utf-8'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f<span class="token punctuation">:</span>
+    data_dictionary <span class="token operator">=</span> f<span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token comment">## 定义一个简单的数据库测试服务</span>
+sql_inter<span class="token punctuation">(</span>sql_query<span class="token operator">=</span><span class="token string">'SELECT COUNT(*) FROM user_info;'</span><span class="token punctuation">)</span>
+</code></pre> 
+<h3><a id="3function_call_158"></a>3.function call函数封装</h3> 
+<pre><code class="prism language-python">sql_inter_function_info <span class="token operator">=</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{<!-- --></span>
+    <span class="token string">'name'</span><span class="token punctuation">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span>
+    <span class="token string">'description'</span><span class="token punctuation">:</span> <span class="token string">'用于执行一段SQL代码，并最终获取SQL代码执行结果，核心功能是将输入的SQL代码传输至MySQL环境中进行运行，并最终返回SQL代码运行结果。'</span><span class="token punctuation">,</span>
+    <span class="token string">'parameters'</span><span class="token punctuation">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'object'</span><span class="token punctuation">,</span>
+        <span class="token string">'properties'</span><span class="token punctuation">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">'sql_query'</span><span class="token punctuation">:</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token string">'type'</span><span class="token punctuation">:</span> <span class="token string">'string'</span><span class="token punctuation">,</span>
+                <span class="token string">'description'</span><span class="token punctuation">:</span> <span class="token string">'字符串形式的SQL代码，可以在MySQL中运行，并获取运行结果'</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token string">'required'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token string">'sql_query'</span><span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">]</span>
+</code></pre> 
+<h3><a id="4_179"></a>4.工具函数封装</h3> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">run_conv_glm</span><span class="token punctuation">(</span>query<span class="token punctuation">,</span>tokenizer<span class="token punctuation">,</span> history<span class="token punctuation">,</span> model<span class="token punctuation">,</span>functions_list<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">,</span> functions<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">,</span> return_function_call<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token triple-quoted-string string">"""
+    能够自动执行外部函数调用的Chat对话模型
+    :param messages: 必要参数，输入到Chat模型的messages参数对象
+    :param functions_list: 可选参数，默认为None，可以设置为包含全部外部函数的列表对象
+    :param model: Chat模型，可选参数，默认模型为chatglm3-6b
+    :return：Chat模型输出结果
+    """</span>
+
+    <span class="token comment"># 如果没有外部函数库，则执行普通的对话任务</span>
+    <span class="token keyword">if</span> functions_list <span class="token operator">==</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        response<span class="token punctuation">,</span> history <span class="token operator">=</span> model<span class="token punctuation">.</span>chat<span class="token punctuation">(</span>tokenizer<span class="token punctuation">,</span> query<span class="token punctuation">,</span> history<span class="token operator">=</span>history<span class="token punctuation">)</span>
+        final_response <span class="token operator">=</span> response
+        
+    <span class="token comment"># 若存在外部函数库，则需要灵活选取外部函数并进行回答</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token comment"># 创建调用外部函数的system_message</span>
+        system_info <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"system"</span><span class="token punctuation">,</span>
+            <span class="token string">"content"</span><span class="token punctuation">:</span> <span class="token string">"Answer the following questions as best as you can. You have access to the following tools:"</span><span class="token punctuation">,</span>
+            <span class="token string">"tools"</span><span class="token punctuation">:</span> functions<span class="token punctuation">,</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment"># 创建外部函数库字典</span>
+        available_functions <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>func<span class="token punctuation">.</span>__name__<span class="token punctuation">:</span> func <span class="token keyword">for</span> func <span class="token keyword">in</span> functions_list<span class="token punctuation">}</span>
+        history<span class="token operator">=</span><span class="token punctuation">[</span>system_info<span class="token punctuation">]</span>
+
+        <span class="token comment">## 第一次调用，目的是获取函数信息    </span>
+        response<span class="token punctuation">,</span>history <span class="token operator">=</span> model<span class="token punctuation">.</span>chat<span class="token punctuation">(</span>tokenizer<span class="token punctuation">,</span> query<span class="token punctuation">,</span> history<span class="token operator">=</span>history<span class="token punctuation">)</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span>response<span class="token punctuation">)</span>
+        <span class="token comment"># 需要调用外部函数</span>
+        function_call <span class="token operator">=</span> response
+        <span class="token comment"># 获取函数名</span>
+        function_name <span class="token operator">=</span> function_call<span class="token punctuation">[</span><span class="token string">"name"</span><span class="token punctuation">]</span>
+        <span class="token comment"># 获取函数对象</span>
+        fuction_to_call <span class="token operator">=</span> available_functions<span class="token punctuation">[</span>function_name<span class="token punctuation">]</span>
+        <span class="token comment"># 获取函数参数</span>
+        function_args <span class="token operator">=</span> function_call<span class="token punctuation">[</span><span class="token string">'parameters'</span><span class="token punctuation">]</span>
+        <span class="token comment"># 将函数参数输入到函数中，获取函数计算结果</span>
+        function_response <span class="token operator">=</span> fuction_to_call<span class="token punctuation">(</span><span class="token operator">**</span>function_args<span class="token punctuation">)</span>
+        <span class="token comment"># print("答案")</span>
+        <span class="token comment"># print(function_response)</span>
+
+        <span class="token comment"># ## 第二次调用，带入进去函数</span>
+        <span class="token comment"># history=[]</span>
+        <span class="token comment"># history.append(</span>
+        <span class="token comment">#         {<!-- --></span>
+        <span class="token comment">#             "role": "observation",</span>
+        <span class="token comment">#             "name": function_name,</span>
+        <span class="token comment">#             "content":function_response,</span>
+        <span class="token comment">#         }</span>
+        <span class="token comment"># ) </span>
+        <span class="token comment"># print(history)</span>
+        <span class="token comment"># query= "请帮我到查询一下有多少电信用户，并给出答案"</span>
+        <span class="token comment"># response, history = model.chat(tokenizer, query, history=history)</span>
+        final_response<span class="token operator">=</span>function_response
+    
+    <span class="token keyword">return</span> final_response<span class="token punctuation">,</span>history
+</code></pre> 
+<h3><a id="5__241"></a>5. 调用查询测试</h3> 
+<pre><code class="prism language-python">query <span class="token operator">=</span> data_dictionary <span class="token operator">+</span> <span class="token string">",请帮我到查询一下有多少电信用户，并给出答案？"</span>
+history<span class="token operator">=</span><span class="token punctuation">[</span><span class="token punctuation">]</span>
+functions_list <span class="token operator">=</span> <span class="token punctuation">[</span>sql_inter<span class="token punctuation">]</span>
+functions<span class="token operator">=</span>sql_inter_function_info
+response<span class="token punctuation">,</span>history <span class="token operator">=</span> run_conv_glm<span class="token punctuation">(</span>query<span class="token operator">=</span>query<span class="token punctuation">,</span>functions<span class="token operator">=</span>functions<span class="token punctuation">,</span>model<span class="token operator">=</span>model<span class="token punctuation">,</span>functions_list<span class="token operator">=</span>functions_list<span class="token punctuation">,</span>history<span class="token operator">=</span>history<span class="token punctuation">,</span>tokenizer<span class="token operator">=</span>tokenizer<span class="token punctuation">)</span>
+</code></pre> 
+<p><strong>第一次：执行输出如下：</strong> （<font color="blue">结果很正确</font>😀）</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span><span class="token string-property property">'name'</span><span class="token operator">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span> <span class="token string-property property">'parameters'</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token string-property property">'sql_query'</span><span class="token operator">:</span> <span class="token string">'SELECT COUNT(*) FROM user_info'</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre> 
+<p>打印：print(response) 输出结果正确： [[20]]<br> <strong>第二次：执行输出如下：</strong>（<font color="blue">结果也没啥问题</font>😀）</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span><span class="token string-property property">'name'</span><span class="token operator">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span> <span class="token string-property property">'parameters'</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token string-property property">'sql_query'</span><span class="token operator">:</span> <span class="token string">'SELECT COUNT(*) FROM user_info WHERE gender IN("Male", "Female")'</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>第三次：执行输出如下：</strong>（<font color="blue">条件中出现了未知字段 is_senior ，很明显翻车了</font>😂）</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span><span class="token string-property property">'name'</span><span class="token operator">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span> <span class="token string-property property">'parameters'</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token string-property property">'sql_query'</span><span class="token operator">:</span> <span class="token string">'SELECT COUNT(*) FROM user_info WHERE is_senior = 0;'</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>第四次：执行输出如下：</strong>（<font color="blue">不知道怎么查询了，彻底蒙圈了</font>🤣）</p> 
+<pre><code class="prism language-json">您好，我可以帮您查询这个问题。请问您需要使用哪种编程语言进行查询？
+</code></pre> 
+<p><strong>第五次：执行输出如下：</strong>（<font color="blue">还是回答错误</font>😂）</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span><span class="token string-property property">'name'</span><span class="token operator">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span> <span class="token string-property property">'parameters'</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token string-property property">'sql_query'</span><span class="token operator">:</span> <span class="token string">'SELECT COUNT(*) FROM user_info WHERE gender = "Male"'</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>第五次：执行输出如下：</strong>（<font color="blue">又回答对了</font>😀）</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span><span class="token string-property property">'name'</span><span class="token operator">:</span> <span class="token string">'sql_inter'</span><span class="token punctuation">,</span> <span class="token string-property property">'parameters'</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token string-property property">'sql_query'</span><span class="token operator">:</span> <span class="token string">'SELECT COUNT(*) FROM user_info'</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+</code></pre> 
+<hr> 
+<h2><a id="_276"></a>五、结束思考</h2> 
+<p>1）大模型的问世，为我们带来了前所未有的便捷性。众多传统应用正从全新的角度，借助大模型的力量进行着颠覆性的重构。然而，<font color="red">大模型的稳定性尚存变数，这一点在功能设计时必须予以充分考虑。 </font><br> 2）对于本平台的本地知识库，<font color="orange">如果采纳微调的策略来丰富和优化大模型，将显得更为合理。</font>鉴于知识库涵盖的内容广泛，数据字典信息繁多，这种微调方式有助于提升大模型的理解力和应用效果。</p> 
+<p>👉上一篇： <a href="https://xundaomalu.blog.csdn.net/article/details/137936186" rel="nofollow">AI大模型探索之路-应用篇16：GLM大模型-ChatGLM3 API开发实践</a><br> 🔖更多专栏系列文章：<a href="https://blog.csdn.net/xiaobing259/category_12628007.html?spm=1001.2014.3001.5482">AIGC-AI大模型探索之路</a></p> 
+<blockquote> 
+ <p><strong>文章若有瑕疵，恳请不吝赐教；若有所触动或助益，还望各位老铁多多关注并给予支持。</strong></p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/68e64924571bed6615ad57f9e9009de1/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">ai绘画软件哪个好用？满足你的创作需求</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7c353499a03cc044b72445abd3acbe52/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【C&#43;&#43;干货基地】面向对象核心概念 const成员函数 | 初始化列表 | explicit关键字 | 取地址重载</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

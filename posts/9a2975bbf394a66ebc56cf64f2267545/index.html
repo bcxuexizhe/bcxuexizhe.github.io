@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【SpringBoot】SpringBoot中防止接口重复提交（单机环境和分布式环境） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9a2975bbf394a66ebc56cf64f2267545/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【SpringBoot】SpringBoot中防止接口重复提交（单机环境和分布式环境）">
+  <meta property="og:description" content="📝个人主页：哈__
+期待您的关注 目录
+🌼前言 🔒单机环境下防止接口重复提交
+📕导入依赖
+📂项目结构 🚀创建自定义注解
+✈创建AOP切面 🚗创建Conotroller 💻分布式环境下防止接口重复提交
+📕导入依赖
+📂项目结构
+🚀创建自定义注解
+🚲创建key的生成工具类 🔨创建Redis工具类
+🚗创建AOP切面类
+🛵创建Controller 🌼前言 在Web应用开发过程中，接口重复提交问题一直是一个需要重点关注和解决的难题。无论是由于用户误操作、网络延迟导致的重复点击，还是由于恶意攻击者利用自动化工具进行接口轰炸，都可能对系统造成严重的负担，甚至导致数据不一致、服务不可用等严重后果。特别是在SpringBoot这样的现代化Java框架中，我们更需要一套行之有效的策略来防止接口重复提交。
+本文将从SpringBoot应用的角度出发，探讨在单机环境和分布式环境下如何有效防止接口重复提交。单机环境虽然相对简单，但基本的防护策略同样适用于分布式环境的部署。
+接下来，我们将首先分析接口重复提交的原因和危害，然后详细介绍在SpringBoot应用中可以采取的防护策略，包括前端控制、后端校验、使用令牌机制（如Token）、利用数据库的唯一约束等。对于分布式环境，我们还将探讨如何使用分布式锁、Redis等中间件来确保数据的一致性和防止接口被重复调用。
+在深入解析各种防护策略的同时，我们也将结合实际案例，展示如何在SpringBoot项目中具体实现这些策略，并给出一些优化建议，以帮助读者在实际开发中更好地应用这些技术。希望通过本文的介绍，读者能够掌握在SpringBoot应用中防止接口重复提交的有效方法，为Web应用的稳定性和安全性提供坚实的保障。
+🔒单机环境下防止接口重复提交 在这种单机的应用场景下，我并没有使用redis进行处理，而是使用了本地缓存机制。在用户对接口进行访问的时候，我们获取接口的一些参数信息，并且根据这些参数生成一个唯一的ID存储到缓存中，下一次在发送请求的时候，先判断这个缓存中是否有对应的ID，若有则阻拦，若没有那么就放行。
+📕导入依赖 &lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-aop&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;com.google.guava&lt;/groupId&gt; &lt;artifactId&gt;guava&lt;/artifactId&gt; &lt;version&gt;21.0&lt;/version&gt; &lt;/dependency&gt; 📂项目结构 🚀创建自定义注解 我们也说过了，要根据接口的一些信息来生成一个ID，在单机环境下，我定义了一个注解，这个注解里边保存着一个key作为ID，同时，在把这个注解加到接口上，那么这个接口就以这个key作为ID，在访问接口的时候，存储的也是这个ID值。
+@Target(ElementType.METHOD) @Retention(value = RetentionPolicy.RUNTIME) @Documented @Inherited public @interface LockCommit { String key() default &#34;&#34;; } ✈创建AOP切面 为了方便之后的接口限流，同时也想把这件事情做一个模块化处理，我使用的是AOP切面，这样做可以减少代码耦合，方便维护。
+看过我之前文章的朋友应该都知道我喜欢使用注解来实现AOP了，这里定义了一个pointCut()，切入点表达式是注解类型。如果你还不会AOP的话，可以来看一看我的这篇文章。【Spring】Spring中AOP的简介和基本使用，SpringBoot使用AOP-CSDN博客
+此外使用了一个Cache本地缓存用于存储我们接口的ID，同时设置缓存的最大容量和内容的过期时间，在这里我设置的是5秒钟，5秒钟过后ID就会过期，这个接口就可以继续访问。 主要的就是这个环绕通知了，我先获取了调用的接口，也就是具体的方法，之后获取加在这个方法上的注解LockCommit，也就是我们上边自定义的注解。之后拿到注解内的key作为ID传入缓存中。存入之前先判断是否有这个ID，如果有就报错，没有就加入到缓存中，这个逻辑不难。
+@Aspect @Component public class LockAspect { public static final Cache&lt;String,Object&gt; CACHES = CacheBuilder.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T14:17:21+08:00">
+    <meta property="article:modified_time" content="2024-05-22T14:17:21+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【SpringBoot】SpringBoot中防止接口重复提交（单机环境和分布式环境）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="text-align:center;"><img alt="" height="150" src="https://images2.imgbox.com/4f/3d/lyHPw7BN_o.png" width="150"></p> 
+<p style="text-align:center;"> <strong> 📝个人主页：<a class="link-info" href="https://blog.csdn.net/qq_61024956?type=blog" title="哈__">哈__</a></strong></p> 
+<p style="text-align:center;"><span style="color:#fe2c24;">期待您的关注 </span></p> 
+<p style="text-align:center;"><img alt="" height="100" src="https://images2.imgbox.com/7e/27/VypDXhBm_o.gif" width="1000"></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%F0%9F%8C%BC%E5%89%8D%E8%A8%80%C2%A0-toc" style="margin-left:0px;"><a href="#%F0%9F%8C%BC%E5%89%8D%E8%A8%80%C2%A0" rel="nofollow">🌼前言 </a></p> 
+<p id="%C2%A0%F0%9F%94%92%E5%8D%95%E6%9C%BA%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4-toc" style="margin-left:0px;"><a href="#%C2%A0%F0%9F%94%92%E5%8D%95%E6%9C%BA%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4" rel="nofollow"> 🔒单机环境下防止接口重复提交</a></p> 
+<p id="%C2%A0%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96-toc" style="margin-left:40px;"><a href="#%C2%A0%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96" rel="nofollow"> 📕导入依赖</a></p> 
+<p id="%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%C2%A0-toc" style="margin-left:40px;"><a href="#%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%C2%A0" rel="nofollow">📂项目结构 </a></p> 
+<p id="%F0%9F%9A%80%E5%88%9B%E5%BB%BA%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3-toc" style="margin-left:80px;"><a href="#%F0%9F%9A%80%E5%88%9B%E5%BB%BA%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3" rel="nofollow">🚀创建自定义注解</a></p> 
+<p id="%E2%9C%88%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%C2%A0-toc" style="margin-left:80px;"><a href="#%E2%9C%88%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%C2%A0" rel="nofollow">✈创建AOP切面 </a></p> 
+<p id="%F0%9F%9A%97%E5%88%9B%E5%BB%BAConotroller%C2%A0-toc" style="margin-left:80px;"><a href="#%F0%9F%9A%97%E5%88%9B%E5%BB%BAConotroller%C2%A0" rel="nofollow">🚗创建Conotroller </a></p> 
+<p id="%F0%9F%92%BB%E5%88%86%E5%B8%83%E5%BC%8F%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4-toc" style="margin-left:0px;"><a href="#%F0%9F%92%BB%E5%88%86%E5%B8%83%E5%BC%8F%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4" rel="nofollow">💻分布式环境下防止接口重复提交</a></p> 
+<p id="%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96-toc" style="margin-left:40px;"><a href="#%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96" rel="nofollow">📕导入依赖</a></p> 
+<p id="%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84-toc" style="margin-left:40px;"><a href="#%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84" rel="nofollow">📂项目结构</a></p> 
+<p id="%F0%9F%9A%80%E5%88%9B%E5%BB%BA%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3-toc" style="margin-left:80px;"><a href="#%F0%9F%9A%80%E5%88%9B%E5%BB%BA%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3" rel="nofollow">🚀创建自定义注解</a></p> 
+<p id="%F0%9F%9A%B2%E5%88%9B%E5%BB%BAkey%E7%9A%84%E7%94%9F%E6%88%90%E5%B7%A5%E5%85%B7%E7%B1%BB%C2%A0-toc" style="margin-left:80px;"><a href="#%F0%9F%9A%B2%E5%88%9B%E5%BB%BAkey%E7%9A%84%E7%94%9F%E6%88%90%E5%B7%A5%E5%85%B7%E7%B1%BB%C2%A0" rel="nofollow">🚲创建key的生成工具类 </a></p> 
+<p id="%F0%9F%94%A8%E5%88%9B%E5%BB%BARedis%E5%B7%A5%E5%85%B7%E7%B1%BB-toc" style="margin-left:80px;"><a href="#%F0%9F%94%A8%E5%88%9B%E5%BB%BARedis%E5%B7%A5%E5%85%B7%E7%B1%BB" rel="nofollow">🔨创建Redis工具类</a></p> 
+<p id="%F0%9F%9A%97%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%E7%B1%BB-toc" style="margin-left:80px;"><a href="#%F0%9F%9A%97%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%E7%B1%BB" rel="nofollow">🚗创建AOP切面类</a></p> 
+<p id="%F0%9F%9B%B5%E5%88%9B%E5%BB%BAController%C2%A0-toc" style="margin-left:80px;"><a href="#%F0%9F%9B%B5%E5%88%9B%E5%BB%BAController%C2%A0" rel="nofollow">🛵创建Controller </a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%F0%9F%8C%BC%E5%89%8D%E8%A8%80%C2%A0">🌼前言 </h2> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">在Web应用开发过程中，接口重复提交问题一直是一个需要重点关注和解决的难题。无论是由于用户误操作、网络延迟导致的重复点击，还是由于恶意攻击者利用自动化工具进行接口轰炸，都可能对系统造成严重的负担，甚至导致数据不一致、服务不可用等严重后果。特别是在SpringBoot这样的现代化Java框架中，我们更需要一套行之有效的策略来防止接口重复提交。</span></p> 
+ <hr> 
+ <p><span style="color:#7b7f82;">本文将从SpringBoot应用的角度出发，探讨在单机环境和分布式环境下如何有效防止接口重复提交。单机环境虽然相对简单，但基本的防护策略同样适用于分布式环境的部署。</span></p> 
+ <p><span style="color:#7b7f82;">接下来，我们将首先分析接口重复提交的原因和危害，然后详细介绍在SpringBoot应用中可以采取的防护策略，包括前端控制、后端校验、使用令牌机制（如Token）、利用数据库的唯一约束等。对于分布式环境，我们还将探讨如何使用分布式锁、Redis等中间件来确保数据的一致性和防止接口被重复调用。</span></p> 
+ <hr> 
+ <p><span style="color:#7b7f82;">在深入解析各种防护策略的同时，我们也将结合实际案例，展示如何在SpringBoot项目中具体实现这些策略，并给出一些优化建议，以帮助读者在实际开发中更好地应用这些技术。希望通过本文的介绍，读者能够掌握在SpringBoot应用中防止接口重复提交的有效方法，为Web应用的稳定性和安全性提供坚实的保障。</span></p> 
+ <p><img alt="" height="696" src="https://images2.imgbox.com/41/08/zL5Jhx9g_o.png" width="786"></p> 
+</blockquote> 
+<h2 id="%C2%A0%F0%9F%94%92%E5%8D%95%E6%9C%BA%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4"> 🔒单机环境下防止接口重复提交</h2> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">在这种单机的应用场景下，我并没有使用redis进行处理，而是使用了本地缓存机制。在用户对接口进行访问的时候，我们获取接口的一些参数信息，并且根据这些参数生成一个唯一的ID存储到缓存中，下一次在发送请求的时候，先判断这个缓存中是否有对应的ID，若有则阻拦，若没有那么就放行。</span></p> 
+ <p><img alt="" height="564" src="https://images2.imgbox.com/ef/7f/YSg2wOiz_o.png" width="1069"></p> 
+</blockquote> 
+<h3 id="%C2%A0%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96"> 📕导入依赖</h3> 
+<pre><code class="language-XML">        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-aop&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.google.guava&lt;/groupId&gt;
+            &lt;artifactId&gt;guava&lt;/artifactId&gt;
+            &lt;version&gt;21.0&lt;/version&gt;
+        &lt;/dependency&gt;</code></pre> 
+<h3 id="%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84%C2%A0">📂项目结构 </h3> 
+<h4 id="%F0%9F%9A%80%E5%88%9B%E5%BB%BA%E8%87%AA%E5%AE%9A%E4%B9%89%E6%B3%A8%E8%A7%A3">🚀创建自定义注解</h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">我们也说过了，要根据接口的一些信息来生成一个ID，在单机环境下，我定义了一个注解，这个注解里边保存着一个key作为ID，同时，在把这个注解加到接口上，那么这个接口就以这个key作为ID，在访问接口的时候，存储的也是这个ID值。</span></p> 
+ <p></p> 
+ <pre><code class="language-java">@Target(ElementType.METHOD)
+@Retention(value = RetentionPolicy.RUNTIME)
+@Documented
+@Inherited
+public @interface LockCommit {
+    String key() default "";
+}</code></pre> 
+</blockquote> 
+<h4 id="%E2%9C%88%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%C2%A0">✈创建AOP切面 </h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">为了方便之后的接口限流，同时也想把这件事情做一个模块化处理，我使用的是AOP切面，这样做可以减少代码耦合，方便维护。</span></p> 
+ <hr> 
+ <p><span style="color:#7b7f82;">看过我之前文章的朋友应该都知道我喜欢使用注解来实现AOP了，这里定义了一个pointCut()，切入点表达式是注解类型。如果你还不会AOP的话，可以来看一看我的这篇文章。<a href="https://blog.csdn.net/qq_61024956/article/details/138333607?spm=1001.2014.3001.5502" title="【Spring】Spring中AOP的简介和基本使用，SpringBoot使用AOP-CSDN博客">【Spring】Spring中AOP的简介和基本使用，SpringBoot使用AOP-CSDN博客</a></span></p> 
+ <hr> 
+ <p><span style="color:#7b7f82;">此外使用了一个Cache本地缓存用于存储我们接口的ID，同时设置缓存的最大容量和内容的过期时间，在这里我设置的是5秒钟，5秒钟过后ID就会过期，这个接口就可以继续访问。 </span></p> 
+ <p><span style="color:#7b7f82;">主要的就是这个环绕通知了，我先获取了调用的接口，也就是具体的方法，之后获取加在这个方法上的注解LockCommit，也就是我们上边自定义的注解。之后拿到注解内的key作为ID传入缓存中。存入之前先判断是否有这个ID，如果有就报错，没有就加入到缓存中，这个逻辑不难。</span></p> 
+ <pre><code class="language-java">@Aspect
+@Component
+public class LockAspect {
+    public static final Cache&lt;String,Object&gt; CACHES = CacheBuilder.newBuilder()
+            .maximumSize(50)
+            .expireAfterWrite(5, TimeUnit.SECONDS)
+            .build();
+    @Pointcut("@annotation(com.example.day_04_repeat_commit.annotation.LockCommit)&amp;&amp;execution(* com.example.day_04_repeat_commit.controller.*.*(..))")
+    public void pointCut(){}
+
+    @Around("pointCut()")
+    public Object Lock(ProceedingJoinPoint joinPoint){
+
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        LockCommit lockCommit = method.getAnnotation(LockCommit.class);
+        String key = lockCommit.key();
+        if(key!=null &amp;&amp;!"".equals(key)){
+            if(CACHES.getIfPresent(key)!=null){
+                throw new RuntimeException("请勿重复提交");
+            }
+            CACHES.put(key,key);
+        }
+        Object object = null;
+        try {
+            object = joinPoint.proceed();
+        } catch (Throwable e) {
+            e.printStackTrace();
+        }
+        return object;
+    }
+}</code></pre> 
+</blockquote> 
+<h4 id="%F0%9F%9A%97%E5%88%9B%E5%BB%BAConotroller%C2%A0">🚗创建Conotroller </h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">可以看到我在接口上加上了key是stu，对接口访问后，stu就作为ID保存到CACHE中。</span><span style="color:#fe2c24;"><strong>这里需要多加注意，如果是多个人访问这个接口，那么都会出现防止重复提交的问题，所以这个key的值并不能仅仅设置的这么简单。可以加入一些用户ID，参数的值，IP等信息作为key的构建参数。这里我仅仅是为了演示。</strong></span></p> 
+ <pre><code class="language-java">@RestController
+@RequestMapping("/student")
+public class StudentController {
+    @RequestMapping("/get-student")
+    @LockCommit(key = "stu")
+    public String getStudent(){
+        return  "张三";
+    }
+}</code></pre> 
+ <p><span style="color:#7b7f82;">如果你不想要后台报错，而是把错误的提示信息传到前端的话，那么你就可以创建一个全局的异常捕获器。我创建的这个异常捕获器捕获的是Exception异常，范围比较大，如果在真实的开发环境中，你可能需要自定义异常来抛出和捕获。</span></p> 
+ <pre><code class="language-java">@RestControllerAdvice
+public class GlobalExceptionHandler {
+    @ExceptionHandler(Exception.class)
+    public String handleException(Exception e){
+        return e.getMessage();
+    }
+}</code></pre> 
+ <p><span style="color:#7b7f82;">接着我们启动项目来测试一下。为了方便截图我就不用浏览器打开了，我是用PostMan进行测试。</span></p> 
+ <ol><li><span style="color:#7b7f82;">第一次访问结果如下<img alt="" height="683" src="https://images2.imgbox.com/66/ca/WiCnPS9J_o.png" width="1200"></span></li><li><span style="color:#7b7f82;">五秒内再次访问结果如下<img alt="" height="621" src="https://images2.imgbox.com/32/91/GKeVfvpX_o.png" width="1200"></span></li><li><span style="color:#7b7f82;">五秒后访问结果如下<img alt="" height="634" src="https://images2.imgbox.com/65/01/edYColoh_o.png" width="1200"></span></li></ol> 
+ <p></p> 
+</blockquote> 
+<h2 id="%F0%9F%92%BB%E5%88%86%E5%B8%83%E5%BC%8F%E7%8E%AF%E5%A2%83%E4%B8%8B%E9%98%B2%E6%AD%A2%E6%8E%A5%E5%8F%A3%E9%87%8D%E5%A4%8D%E6%8F%90%E4%BA%A4">💻分布式环境下防止接口重复提交</h2> 
+<h3 id="%F0%9F%93%95%E5%AF%BC%E5%85%A5%E4%BE%9D%E8%B5%96">📕导入依赖</h3> 
+<pre><code class="language-XML">         &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-data-redis&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-aop&lt;/artifactId&gt;
+        &lt;/dependency&gt;</code></pre> 
+<h3 id="%F0%9F%93%82%E9%A1%B9%E7%9B%AE%E7%BB%93%E6%9E%84">📂项目结构</h3> 
+<h4>🚀创建自定义注解</h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">分布式环境下的就要复杂一些了 </span></p> 
+ <ul><li><span style="color:#7b7f82;">创建CacheLock</span> <pre><code class="language-java">@Retention(RetentionPolicy.RUNTIME)
+@Target(ElementType.METHOD)
+@Documented
+@Inherited
+public @interface CacheLock {
+    /**
+     * 锁的前缀
+     * @return
+     */
+    String prefix() default "";
+
+    /**
+     * 过期时间
+     * @return
+     */
+    int expire() default 5;
+
+    /**
+     * 过期单位
+     * @return
+     */
+    TimeUnit timeUnit() default TimeUnit.SECONDS;
+
+    /**
+     * key的分隔符
+     * @return
+     */
+    String delimiter() default ":";
+}</code></pre> <p><span style="color:#7b7f82;">这个CacheLock也是加锁的注解，这个注解内包含了很多的信息，这些信息都要作为Redis加锁的参数。</span></p> </li><li> <p><span style="color:#7b7f82;">创建CacheParam</span></p> <pre><code class="language-java">@Retention(RetentionPolicy.RUNTIME)
+@Target({ElementType.PARAMETER,ElementType.FIELD})
+@Documented
+public @interface CacheParam {
+    /**
+     * 参数的名称
+     * @return
+     */
+    String name() default "";
+}
+</code></pre> <p><span style="color:#7b7f82;">这个参数是需要加在具体的参数上边的，代表着这个参数要作为key构建的一部分，当然也可以加在一个对象的属性上边。</span></p> </li></ul> 
+</blockquote> 
+<h4 id="%F0%9F%9A%B2%E5%88%9B%E5%BB%BAkey%E7%9A%84%E7%94%9F%E6%88%90%E5%B7%A5%E5%85%B7%E7%B1%BB%C2%A0">🚲创建key的生成工具类 </h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">看到代码的你一定慌了吧，不要急，在这之前我会先给你讲一下我的思路。我们讲的防止接口重复提交，是防止用户对一个接口多次传入相同的信息，这种情况我要进行处理。我的构建思路是想要构建一个这样的key。加了CacheParam的参数我获取参数具体的值，并且把值作为key的一部分。</span></p> 
+ <p><span style="color:#7b7f82;"><img alt="" height="139" src="https://images2.imgbox.com/a1/d8/N1YppuhY_o.png" width="697"></span></p> 
+ <p><span style="color:#7b7f82;">倘若我们的参数都没有加CacheParam呢？这个时候就会去获取这个参数的类，比如说是Student类，我们就去看看这个传来的Student类当中有没有属性是加了CacheParam注解的，如果有就获取值。 </span></p> 
+ <pre><code class="language-java">@Component
+public class RedisKeyGenerator {
+    @Autowired
+    HttpServletRequest request;
+
+    public String getKey(ProceedingJoinPoint joinPoint) throws IllegalAccessException {
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        // 获取方法
+        Method method = methodSignature.getMethod();
+        // 获取参数
+        Object [] args = joinPoint.getArgs();
+        // 获取注解
+        final Parameter [] parameters = method.getParameters();
+        CacheLock cacheLock =  method.getAnnotation(CacheLock.class);
+        String prefix = cacheLock.prefix();
+        StringBuilder sb = new StringBuilder();
+        StringBuilder sb2 = new StringBuilder();
+        sb2.append(".").append(joinPoint.getTarget().getClass().getName()).append(".").append(method.getName());
+        for(int i = 0;i&lt;args.length;i++){
+            CacheParam cacheParam = parameters[i].getAnnotation(CacheParam.class);
+            if(cacheParam == null){
+                continue;
+            }
+            sb.append(cacheLock.delimiter()).append(args[i]);
+        }
+        // 如果方法参数没有CacheParam注解 从参数类的内部尝试获取
+        if(StringUtils.isEmpty(sb.toString())){
+            for(int i = 0;i&lt; parameters.length;i++){
+                final Object object = args[i];
+                Field [] fields = object.getClass().getDeclaredFields();
+                for (Field field : fields) {
+                    final CacheParam annotation = field.getAnnotation(CacheParam.class);
+                    if(annotation==null){
+                        continue;
+                    }
+                    field.setAccessible(true);
+                    sb.append(cacheLock.delimiter()).append(field.get(object));
+                }
+            }
+        }
+        return prefix+sb2+sb;
+
+    }
+}</code></pre> 
+</blockquote> 
+<h4 id="%F0%9F%94%A8%E5%88%9B%E5%BB%BARedis%E5%B7%A5%E5%85%B7%E7%B1%BB">🔨创建Redis工具类</h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">以下工具类来自引用DDKK.com。</span></p> 
+ <pre><code class="language-java">@Component
+@Configuration
+@AutoConfigureAfter(RedisAutoConfiguration.class)
+public class RedisLockHelper {
+    private static final String DELIMITER = "|";
+
+    /**
+     * 如果要求比较高可以通过注入的方式分配
+     */
+    private static final ScheduledExecutorService EXECUTOR_SERVICE = Executors.newScheduledThreadPool(10);
+
+    private final StringRedisTemplate stringRedisTemplate;
+
+    @Autowired
+    public RedisLockHelper(StringRedisTemplate stringRedisTemplate) {
+        this.stringRedisTemplate = stringRedisTemplate;
+    }
+
+    /**
+     * 获取锁（存在死锁风险）
+     *
+     * @param lockKey lockKey
+     * @param value   value
+     * @param time    超时时间
+     * @param unit    过期单位
+     * @return true or false
+     */
+    public boolean tryLock(final String lockKey, final String value, final long time, final TimeUnit unit) {
+        return stringRedisTemplate.execute((RedisCallback&lt;Boolean&gt;) connection -&gt; connection.set(lockKey.getBytes(), value.getBytes(), Expiration.from(time, unit), RedisStringCommands.SetOption.SET_IF_ABSENT));
+    }
+
+    /**
+     * 获取锁
+     *
+     * @param lockKey lockKey
+     * @param uuid    UUID
+     * @param timeout 超时时间
+     * @param unit    过期单位
+     * @return true or false
+     */
+    public boolean lock(String lockKey, final String uuid, long timeout, final TimeUnit unit) {
+        final long milliseconds = Expiration.from(timeout, unit).getExpirationTimeInMilliseconds();
+        boolean success = stringRedisTemplate.opsForValue().setIfAbsent(lockKey, (System.currentTimeMillis() + milliseconds) + DELIMITER + uuid,timeout,TimeUnit.SECONDS);
+        if (success) {
+
+        } else {
+            String oldVal = stringRedisTemplate.opsForValue().getAndSet(lockKey, (System.currentTimeMillis() + milliseconds) + DELIMITER + uuid);
+            final String[] oldValues = oldVal.split(Pattern.quote(DELIMITER));
+            if (Long.parseLong(oldValues[0]) + 1 &lt;= System.currentTimeMillis()) {
+                return true;
+            }
+        }
+        return success;
+    }
+    /**
+     * @see &lt;a href="http://redis.io/commands/set"&gt;Redis Documentation: SET&lt;/a&gt;
+     */
+    public void unlock(String lockKey, String value) {
+        unlock(lockKey, value, 0, TimeUnit.MILLISECONDS);
+    }
+
+    /**
+     * 延迟unlock
+     *
+     * @param lockKey   key
+     * @param uuid      client(最好是唯一键的)
+     * @param delayTime 延迟时间
+     * @param unit      时间单位
+     */
+    public void unlock(final String lockKey, final String uuid, long delayTime, TimeUnit unit) {
+        if (StringUtils.isEmpty(lockKey)) {
+            return;
+        }
+        if (delayTime &lt;= 0) {
+            doUnlock(lockKey, uuid);
+        } else {
+            EXECUTOR_SERVICE.schedule(() -&gt; doUnlock(lockKey, uuid), delayTime, unit);
+        }
+    }
+
+    /**
+     * @param lockKey key
+     * @param uuid    client(最好是唯一键的)
+     */
+    private void doUnlock(final String lockKey, final String uuid) {
+        String val = stringRedisTemplate.opsForValue().get(lockKey);
+        final String[] values = val.split(Pattern.quote(DELIMITER));
+        if (values.length &lt;= 0) {
+            return;
+        }
+        if (uuid.equals(values[1])) {
+            stringRedisTemplate.delete(lockKey);
+        }
+    }
+
+}</code></pre> 
+</blockquote> 
+<h4>🔥创建Student类</h4> 
+<blockquote> 
+ <pre><code class="language-java">public class Student {
+    @CacheParam
+    private String name;
+    @CacheParam
+    private Integer age;
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+}</code></pre> 
+</blockquote> 
+<h4 id="%F0%9F%9A%97%E5%88%9B%E5%BB%BAAOP%E5%88%87%E9%9D%A2%E7%B1%BB">🚗创建AOP切面类</h4> 
+<blockquote> 
+ <p><span style="color:#7b7f82;">注意下边我注释掉的一行代码，如果加上了以后你就看不到防止重复提交的提示了，下边的代码和单机环境的思路是一样的，只不过加锁用的是Redis。</span></p> 
+ <pre><code class="language-java">@Aspect
+@Component
+public class Lock {
+    @Autowired
+    private RedisLockHelper redisLockHelper;
+    @Autowired
+    private RedisKeyGenerator redisKeyGenerator;
+    @Pointcut("execution(* com.my.controller.*.*(..))&amp;&amp;@annotation(com.my.annotation.CacheLock)")
+    public void pointCut(){}
+
+    @Around("pointCut()")
+    public Object interceptor(ProceedingJoinPoint joinPoint) throws IllegalAccessException {
+        MethodSignature methodSignature = (MethodSignature) joinPoint.getSignature();
+        Method method = methodSignature.getMethod();
+        CacheLock cacheLock = method.getAnnotation(CacheLock.class);
+        if (StringUtils.isEmpty(cacheLock.prefix())) {
+            throw new RuntimeException("锁的前缀不能为空");
+        }
+
+        int expireTime = cacheLock.expire();
+        TimeUnit timeUnit = cacheLock.timeUnit();
+        String key = redisKeyGenerator.getKey(joinPoint);
+        System.out.println(key);
+        String value = UUID.randomUUID().toString();
+        Object object;
+        try {
+            final boolean tryLock = redisLockHelper.lock(key,value,expireTime,timeUnit);
+            if(!tryLock){
+                throw new RuntimeException("重复提交");
+            }
+            try {
+                object = joinPoint.proceed();
+            }catch (Throwable e){
+                throw new RuntimeException("系统异常");
+            }
+        } finally {
+           // redisLockHelper.unlock(key,value);
+        }
+        return object;
+    }
+}</code></pre> 
+</blockquote> 
+<h4 id="%F0%9F%9B%B5%E5%88%9B%E5%BB%BAController%C2%A0">🛵创建Controller </h4> 
+<pre><code class="language-java">@RestController
+@RequestMapping("/student")
+public class StudentController {
+    @RequestMapping("/get-student")
+    @CacheLock(prefix = "stu2",expire = 5,timeUnit = TimeUnit.SECONDS)
+    public String getStudent(){
+
+        return  "张三";
+    }
+
+    @RequestMapping("/get-student2")
+    @CacheLock(prefix = "stu2",expire = 5,timeUnit = TimeUnit.SECONDS)
+    public String getStudent2(Student student){
+        return  "张三";
+    }
+}</code></pre> 
+<blockquote> 
+ <p><strong>调用get-student测试</strong></p> 
+ <ul><li><strong>第一次调用</strong><img alt="" height="646" src="https://images2.imgbox.com/d1/f3/G9AVvfsU_o.png" width="1200"></li><li><strong>第二次调用 </strong><img alt="" height="646" src="https://images2.imgbox.com/cd/d5/hl7db56v_o.png" width="1200"><img alt="" height="103" src="https://images2.imgbox.com/5a/41/kbPdVZZQ_o.png" width="672"></li></ul> 
+ <hr> 
+ <p><strong>调用get-student2测试 </strong></p> 
+ <ul><li><strong>第一次调用</strong><img alt="" height="614" src="https://images2.imgbox.com/ff/07/Fn21727U_o.png" width="1200"></li><li><strong>第二次调用</strong><img alt="" height="627" src="https://images2.imgbox.com/cf/46/TyjgBXJd_o.png" width="1200"><img alt="" height="85" src="https://images2.imgbox.com/ef/25/Lf1LyNUl_o.png" width="701"></li></ul> 
+</blockquote> 
+<p><span style="color:#fe2c24;"><strong> 最后，上边的key生成还有待商榷，分布式环境下key的生成并不是一个轻松的问题。本文的内容仅建议作为学习使用。</strong></span></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/c9ed771ae5cea7ae969e685f5d3d78db/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">关于如何创建一个可配置的 SpringBoot Web 项目的全局异常处理</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8e1e4531f9b36d7dc350b3b7eb356d5e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">spring boot3整合spring AI组件</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,800 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>uniapp 安卓，ios 相机权限，华为审核被拒解决方案 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/12bf30ec00332307042ec41021e10d9b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="uniapp 安卓，ios 相机权限，华为审核被拒解决方案">
+  <meta property="og:description" content="背景：上架华为被拒了 1.您的应用在运行时，未同步告知权限申请的使用目的，向用户索取（相机、存储）等权限，不符合华为应用市场审核标准。
+测试步骤：点击我的-投诉反馈-上传附件-拍摄/从相册选择，申请相机、存储权限。点击我的钱包-充值-上传转款凭证-拍摄/从相册选择，申请相机、存储权限。
+【文献参考】App权限判断和提示 - DCloud 插件市场
+解决方案：permission.js 和getAuth.js
+permission.js 完整代码
+var isIos // #ifdef APP-PLUS isIos = (plus.os.name == &#34;iOS&#34;) // #endif // 判断推送权限是否开启 function judgeIosPermissionPush() { var result = false; var UIApplication = plus.ios.import(&#34;UIApplication&#34;); var app = UIApplication.sharedApplication(); var enabledTypes = 0; if (app.currentUserNotificationSettings) { var settings = app.currentUserNotificationSettings(); enabledTypes = settings.plusGetAttribute(&#34;types&#34;); console.log(&#34;enabledTypes1:&#34; &#43; enabledTypes); if (enabledTypes == 0) { console.log(&#34;推送权限没有开启&#34;); } else { result = true; console.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-26T17:08:19+08:00">
+    <meta property="article:modified_time" content="2024-03-26T17:08:19+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">uniapp 安卓，ios 相机权限，华为审核被拒解决方案</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>背景：上架华为被拒了 </p> 
+<p>        1.您的应用在运行时，未同步告知权限申请的使用目的，向用户索取（相机、存储）等权限，不符合华为应用市场审核标准。<br> 测试步骤：点击我的-投诉反馈-上传附件-拍摄/从相册选择，申请相机、存储权限。点击我的钱包-充值-上传转款凭证-拍摄/从相册选择，申请相机、存储权限。</p> 
+<p>【文献参考】<a href="https://ext.dcloud.net.cn/plugin?id=594" rel="nofollow" title="App权限判断和提示 - DCloud 插件市场">App权限判断和提示 - DCloud 插件市场</a></p> 
+<p>解决方案：permission.js 和getAuth.js</p> 
+<p>permission.js 完整代码</p> 
+<pre><code class="language-javascript">var isIos  
+// #ifdef APP-PLUS  
+isIos = (plus.os.name == "iOS")  
+// #endif  
+  
+// 判断推送权限是否开启  
+function judgeIosPermissionPush() {  
+    var result = false;  
+    var UIApplication = plus.ios.import("UIApplication");  
+    var app = UIApplication.sharedApplication();  
+    var enabledTypes = 0;  
+    if (app.currentUserNotificationSettings) {  
+        var settings = app.currentUserNotificationSettings();  
+        enabledTypes = settings.plusGetAttribute("types");  
+        console.log("enabledTypes1:" + enabledTypes);  
+        if (enabledTypes == 0) {  
+            console.log("推送权限没有开启");  
+        } else {  
+            result = true;  
+            console.log("已经开启推送功能!")  
+        }  
+        plus.ios.deleteObject(settings);  
+    } else {  
+        enabledTypes = app.enabledRemoteNotificationTypes();  
+        if (enabledTypes == 0) {  
+            console.log("推送权限没有开启!");  
+        } else {  
+            result = true;  
+            console.log("已经开启推送功能!")  
+        }  
+        console.log("enabledTypes2:" + enabledTypes);  
+    }  
+    plus.ios.deleteObject(app);  
+    plus.ios.deleteObject(UIApplication);  
+    return result;  
+}  
+  
+// 判断定位权限是否开启  
+function judgeIosPermissionLocation() {  
+    var result = false;  
+    var cllocationManger = plus.ios.import("CLLocationManager");  
+    var status = cllocationManger.authorizationStatus();  
+    result = (status != 2)  
+    console.log("定位权限开启：" + result);  
+    // 以下代码判断了手机设备的定位是否关闭，推荐另行使用方法 checkSystemEnableLocation  
+    /* var enable = cllocationManger.locationServicesEnabled();  
+    var status = cllocationManger.authorizationStatus();  
+    console.log("enable:" + enable);  
+    console.log("status:" + status);  
+    if (enable &amp;&amp; status != 2) {  
+        result = true;  
+        console.log("手机定位服务已开启且已授予定位权限");  
+    } else {  
+        console.log("手机系统的定位没有打开或未给予定位权限");  
+    } */  
+    plus.ios.deleteObject(cllocationManger);  
+    return result;  
+}  
+  
+// 判断麦克风权限是否开启  
+function judgeIosPermissionRecord() {  
+    var result = false;  
+    var avaudiosession = plus.ios.import("AVAudioSession");  
+    var avaudio = avaudiosession.sharedInstance();  
+    var permissionStatus = avaudio.recordPermission();  
+    console.log("permissionStatus:" + permissionStatus);  
+    if (permissionStatus == 1684369017 || permissionStatus == 1970168948) {  
+        console.log("麦克风权限没有开启");  
+    } else {  
+        result = true;  
+        console.log("麦克风权限已经开启");  
+    }  
+    plus.ios.deleteObject(avaudiosession);  
+    return result;  
+}  
+  
+// 判断相机权限是否开启  
+function judgeIosPermissionCamera() {  
+    var result = false;  
+    var AVCaptureDevice = plus.ios.import("AVCaptureDevice");  
+    var authStatus = AVCaptureDevice.authorizationStatusForMediaType('vide');  
+    console.log("authStatus:" + authStatus);  
+    if (authStatus == 3) {  
+        result = true;  
+        console.log("相机权限已经开启");  
+    } else {  
+        console.log("相机权限没有开启");  
+    }  
+    plus.ios.deleteObject(AVCaptureDevice);  
+    return result;  
+}  
+  
+// 判断相册权限是否开启  
+function judgeIosPermissionPhotoLibrary() {  
+    var result = false;  
+    var PHPhotoLibrary = plus.ios.import("PHPhotoLibrary");  
+    var authStatus = PHPhotoLibrary.authorizationStatus();  
+    console.log("authStatus:" + authStatus);  
+    if (authStatus == 3) {  
+        result = true;  
+        console.log("相册权限已经开启");  
+    } else {  
+        console.log("相册权限没有开启");  
+    }  
+    plus.ios.deleteObject(PHPhotoLibrary);  
+    return result;  
+}  
+  
+// 判断通讯录权限是否开启  
+function judgeIosPermissionContact() {  
+    var result = false;  
+    var CNContactStore = plus.ios.import("CNContactStore");  
+    var cnAuthStatus = CNContactStore.authorizationStatusForEntityType(0);  
+    if (cnAuthStatus == 3) {  
+        result = true;  
+        console.log("通讯录权限已经开启");  
+    } else {  
+        console.log("通讯录权限没有开启");  
+    }  
+    plus.ios.deleteObject(CNContactStore);  
+    return result;  
+}  
+  
+// 判断日历权限是否开启  
+function judgeIosPermissionCalendar() {  
+    var result = false;  
+    var EKEventStore = plus.ios.import("EKEventStore");  
+    var ekAuthStatus = EKEventStore.authorizationStatusForEntityType(0);  
+    if (ekAuthStatus == 3) {  
+        result = true;  
+        console.log("日历权限已经开启");  
+    } else {  
+        console.log("日历权限没有开启");  
+    }  
+    plus.ios.deleteObject(EKEventStore);  
+    return result;  
+}  
+  
+// 判断备忘录权限是否开启  
+function judgeIosPermissionMemo() {  
+    var result = false;  
+    var EKEventStore = plus.ios.import("EKEventStore");  
+    var ekAuthStatus = EKEventStore.authorizationStatusForEntityType(1);  
+    if (ekAuthStatus == 3) {  
+        result = true;  
+        console.log("备忘录权限已经开启");  
+    } else {  
+        console.log("备忘录权限没有开启");  
+    }  
+    plus.ios.deleteObject(EKEventStore);  
+    return result;  
+}  
+  
+// Android权限查询  
+function requestAndroidPermission(permissionID) {  
+    return new Promise((resolve, reject) =&gt; {  
+        plus.android.requestPermissions(  
+            permissionID.split(","),  
+            // [permissionID], // 理论上支持多个权限同时查询，但实际上本函数封装只处理了一个权限的情况。有需要的可自行扩展封装  
+            function(resultObj) {  
+                var result = 0;  
+                for (var i = 0; i &lt; resultObj.granted.length; i++) {  
+                    var grantedPermission = resultObj.granted[i];  
+                    console.log('已获取的权限：' + grantedPermission);  
+                    result = 1  
+                }  
+                for (var i = 0; i &lt; resultObj.deniedPresent.length; i++) {  
+                    var deniedPresentPermission = resultObj.deniedPresent[i];  
+                    console.log('拒绝本次申请的权限：' + deniedPresentPermission);  
+                    result = 0  
+                }  
+                for (var i = 0; i &lt; resultObj.deniedAlways.length; i++) {  
+                    var deniedAlwaysPermission = resultObj.deniedAlways[i];  
+                    console.log('永久拒绝申请的权限：' + deniedAlwaysPermission);  
+                    result = -1  
+                }  
+                resolve(result);  
+                // 若所需权限被拒绝,则打开APP设置界面,可以在APP设置界面打开相应权限  
+                // if (result != 1) {  
+                // gotoAppPermissionSetting()  
+                // }  
+            },  
+            function(error) {  
+                console.log('申请权限错误：' + error.code + " = " + error.message);  
+                resolve({  
+                    code: error.code,  
+                    message: error.message  
+                });  
+            }  
+        );  
+    });  
+}  
+  
+// 使用一个方法，根据参数判断权限  
+function judgeIosPermission(permissionID) {  
+    if (permissionID == "location") {  
+        return judgeIosPermissionLocation()  
+    } else if (permissionID == "camera") {  
+        return judgeIosPermissionCamera()  
+    } else if (permissionID == "photoLibrary") {  
+        return judgeIosPermissionPhotoLibrary()  
+    } else if (permissionID == "record") {  
+        return judgeIosPermissionRecord()  
+    } else if (permissionID == "push") {  
+        return judgeIosPermissionPush()  
+    } else if (permissionID == "contact") {  
+        return judgeIosPermissionContact()  
+    } else if (permissionID == "calendar") {  
+        return judgeIosPermissionCalendar()  
+    } else if (permissionID == "memo") {  
+        return judgeIosPermissionMemo()  
+    }  
+    return false;  
+}  
+  
+// 跳转到**应用**的权限页面  
+function gotoAppPermissionSetting() {  
+    if (isIos) {  
+        var UIApplication = plus.ios.import("UIApplication");  
+        var application2 = UIApplication.sharedApplication();  
+        var NSURL2 = plus.ios.import("NSURL");  
+        // var setting2 = NSURL2.URLWithString("prefs:root=LOCATION_SERVICES");		  
+        var setting2 = NSURL2.URLWithString("app-settings:");  
+        application2.openURL(setting2);  
+  
+        plus.ios.deleteObject(setting2);  
+        plus.ios.deleteObject(NSURL2);  
+        plus.ios.deleteObject(application2);  
+    } else {  
+        // console.log(plus.device.vendor);  
+        var Intent = plus.android.importClass("android.content.Intent");  
+        var Settings = plus.android.importClass("android.provider.Settings");  
+        var Uri = plus.android.importClass("android.net.Uri");  
+        var mainActivity = plus.android.runtimeMainActivity();  
+        var intent = new Intent();  
+        intent.setAction(Settings.ACTION_APPLICATION_DETAILS_SETTINGS);  
+        var uri = Uri.fromParts("package", mainActivity.getPackageName(), null);  
+        intent.setData(uri);  
+        mainActivity.startActivity(intent);  
+    }  
+}  
+  
+// 检查系统的设备服务是否开启  
+// var checkSystemEnableLocation = async function () {  
+function checkSystemEnableLocation() {  
+    if (isIos) {  
+        var result = false;  
+        var cllocationManger = plus.ios.import("CLLocationManager");  
+        var result = cllocationManger.locationServicesEnabled();  
+        console.log("系统定位开启:" + result);  
+        plus.ios.deleteObject(cllocationManger);  
+        return result;  
+    } else {  
+        var context = plus.android.importClass("android.content.Context");  
+        var locationManager = plus.android.importClass("android.location.LocationManager");  
+        var main = plus.android.runtimeMainActivity();  
+        var mainSvr = main.getSystemService(context.LOCATION_SERVICE);  
+        var result = mainSvr.isProviderEnabled(locationManager.GPS_PROVIDER);  
+        console.log("系统定位开启:" + result);  
+        return result  
+    }  
+}  
+  
+let permissionMap = {  
+    "android": {  
+        "CAMERA_EXTERNAL_STORAGE": {  
+            "name": "android.permission.READ_EXTERNAL_STORAGE,android.permission.WRITE_EXTERNAL_STORAGE,android.permission.CAMERA",  
+            "title": "相机/相册权限说明",  
+            "content": "便于您使用该功能上传您的图片/视频及用于更换头像、反馈问题、完善项目信息等场景中读取和写入相册和文件内容"  
+        },  
+        "CAMERA": {  
+            "name": "android.permission.CAMERA",  
+            "title": "相机权限说明",  
+            "content": "便于您使用该功能上传图片，用于更换头像、反馈问题、完善项目信息等场景中发送拍摄图片"  
+        },  
+        "EXTERNAL_STORAGE": {  
+            "name": "android.permission.READ_EXTERNAL_STORAGE,android.permission.WRITE_EXTERNAL_STORAGE",  
+            "title": "相册权限说明",  
+            "content": "便于您使用该功能上传您的照片/图片/视频及用于更换头像、反馈问题、完善项目信息等场景中读取和写入相册和文件内容"  
+        }  
+    },  
+    "ios": {}  
+}  
+  
+let view = null;  
+  
+function showViewDesc(permission) {  
+    let plat = isIos ? "ios" : "android";  
+    view = new plus.nativeObj.View('per-modal', {  
+        top: '0px',  
+        left: '0px',  
+        width: '100%',  
+        backgroundColor: 'rgba(0,0,0,0.2)',  
+        //opacity: '.9'     
+    })  
+    view.drawRect({  
+        color: '#fff',  
+        radius: '5px'  
+    }, {  
+        top: '30px',  
+        left: '5%',  
+        width: '90%',  
+        height: "100px",  
+    })  
+    view.drawText(permissionMap[plat][permission]["title"], {  
+        top: '40px',  
+        left: "8%",  
+        height: "30px"  
+    }, {  
+        align: "left",  
+        color: "#000",  
+    }, {  
+        onClick: function(e) {  
+            console.log(e);  
+        }  
+    })  
+    view.drawText(permissionMap[plat][permission]["content"], {  
+        top: '65px',  
+        height: "60px",  
+        left: "8%",  
+        width: "84%"  
+    }, {  
+        whiteSpace: 'normal',  
+        size: "14px",  
+        align: "left",  
+        color: "#656563"  
+    })  
+    view.show()  
+}  
+  
+function premissionCheck(permission) {  
+    return new Promise(async (resolve, reject) =&gt; {  
+        let plat = isIos ? "ios" : "android";  
+        if (isIos) { // ios  
+            // const camera = permission.judgeIosPermission("camera");//判断ios是否给予摄像头权限  
+            // //ios相册没权限，系统会自动弹出授权框  
+            // //let photoLibrary = permission.judgeIosPermission("photoLibrary");//判断ios是否给予相册权限  
+            // if(camera){  
+            //     resolve();  
+            // }else{  
+            //     reject('需要开启相机使用权限');  
+            // }  
+            resolve(1)  
+        } else { // android  
+            let permission_arr = permissionMap[plat][permission]["name"].split(",");  
+            let flag = true;  
+            for(let i = 0;i&lt;permission_arr.length;i++) {  
+                let status = plus.navigator.checkPermission(permission_arr[i]);  
+                if(status == "undetermined") {  
+                    flag = false;  
+                }  
+            }  
+            console.log("flag", flag)  
+            if (flag == false) { // 未完全授权  
+                showViewDesc(permission);  
+                requestAndroidPermission(permissionMap[plat][permission]["name"]).then((res) =&gt; {  
+                    view.close();  
+                    if (res == -1) {  
+                        uni.showModal({  
+                            title: '提示',  
+                            content: '操作权限已被拒绝，请手动前往设置',  
+                            confirmText: "立即设置",  
+                            success: (res) =&gt; {  
+                                if (res.confirm) {  
+                                    gotoAppPermissionSetting()  
+                                }  
+                            }  
+                        })  
+                    }  
+                    resolve(res)  
+                })  
+            } else {  
+                resolve(1)  
+            }  
+        }  
+    })  
+}  
+  
+  
+module.exports = {  
+    judgeIosPermission: judgeIosPermission,  
+    requestAndroidPermission: requestAndroidPermission,  
+    checkSystemEnableLocation: checkSystemEnableLocation,  
+    gotoAppPermissionSetting: gotoAppPermissionSetting,  
+    premissionCheck: premissionCheck  
+}</code></pre> 
+<p>getAuth.js完整代码</p> 
+<pre><code class="language-javascript">
+
+import permision from "@/js_sdk/wa-permission/permission.js"
+
+/**
+ * 获取手机摄像头和图册权限
+ * */
+const cameraAuthority = () =&gt; {
+	return new Promise(async (rel, rej) =&gt; {
+		var platform =  uni.getSystemInfoSync().platform || 'android';
+		if (platform == 'ios') {
+			let camera = permision.judgeIosPermission("camera");//判断ios是否给予摄像头权限
+			//ios相册没权限，系统会自动弹出授权框
+			//let photoLibrary = permision.judgeIosPermission("photoLibrary");//判断ios是否给予相册权限
+			if (camera) {
+				rel();
+			} else {
+				rej('需要开启相机使用权限');
+			}
+		} else {
+			// console.log('安卓')
+			let camera = await permision.requestAndroidPermission("android.permission.CAMERA");//判断安卓是否给予摄像头权限
+			let photoLibrary = await permision.requestAndroidPermission("android.permission.READ_EXTERNAL_STORAGE");//判断安卓是否给予相册权限
+			console.log('安卓',camera,photoLibrary)
+			// if (camera == 0 || photoLibrary == 0) {
+			// 	rej('请同时开启相机和相册的使用权限');
+			// } else if (camera == -1 || photoLibrary == -1) {
+			// 	//永久拒绝
+			// 	rej(false)
+			// } else {
+			// 	rel();
+			// }
+		}
+	})
+}
+
+/**
+ * 限安卓
+ * 是否打开了手机定位
+ * */
+const adressOpen = () =&gt; {
+	return permision.checkSystemEnableLocation();
+}
+
+/**
+ * 限安卓
+ * 获取位置信息权限
+ * */
+const adressAuthority = () =&gt; {
+	return new Promise(async (rel, rej) =&gt; {
+		let adress = await permision.requestAndroidPermission("android.permission.ACCESS_FINE_LOCATION");//判断安卓是否有获取位置信息权限
+		if (adress == 0) {
+			rej('请开启定位权限');
+		} else if (adress == -1) {
+			//永久拒绝
+			rej(false)
+		} else {
+			rel();
+		}
+	})
+}
+
+/**
+ * 限安卓
+ * 获取拨打电话权限
+ * */
+const cellPhoneAuthority = () =&gt; {
+	return new Promise(async (rel, rej) =&gt; {
+		let adress = await permision.requestAndroidPermission("android.permission.CALL_PHONE");//拨打电话权限
+		if (adress == 0) {
+			rej('请开启拨打电话权限');
+		} else if (adress == -1) {
+			//永久拒绝
+			rej(false)
+		} else {
+			rel();
+		}
+	})
+}
+
+/**
+ * 跳转到手机开启权限的界面
+ * */
+const permissionSetting = () =&gt; {
+	permision.gotoAppPermissionSetting();
+}
+
+export {
+	cameraAuthority,
+	permissionSetting,
+	adressAuthority,
+	adressOpen,
+	cellPhoneAuthority
+}</code></pre> 
+<p>调用：</p> 
+<pre><code class="language-javascript">&lt;template&gt;
+	&lt;view class="uploadImg"&gt;
+		&lt;view class="upload" @tap="selectImg" v-else-if="!is_limit"
+			:style="url.length &gt; 0 ? 'margin-bottom:20rpx' : ''"&gt;
+			&lt;uni-icons type="camera-filled" color="#999" size="18" class="currentIcon"&gt;                    &lt;/uni-icons&gt;
+		&lt;/view&gt;
+	&lt;/view&gt;
+&lt;/template&gt;
+&lt;script&gt;
+const app = getApp();
+import { cameraAuthority, permissionSetting } from "@/static/js/getAuth.js";
+import permision from "@/js_sdk/wa-permission/permission.js";
+
+export default {
+	props: {
+		zb_file_show: {
+			type: Boolean,
+			default: false,
+		},
+		count: {
+			type: Number,
+			default: 10000
+		},
+		is_limit: {
+			type: Boolean,
+			default: false,
+		}
+	},
+	data() {
+		return {
+			url: [],
+		};
+	},
+	created() { },
+	methods: {
+		clearImg(index) {
+			this.url.splice(index, 1);
+			this.$emit('clearImg')
+		},
+		async selectImg() {
+			// 文档参考 https://blog.csdn.net/m0_46978096/article/details/116784053
+			let _this = this;
+			let platform = uni.getSystemInfoSync().platform;
+
+			/*#ifdef APP-PLUS*/
+			console.log('APP端：', platform)
+
+
+			const isIosTrue = uni.getStorageSync('iosFirstCamera'); //是不是第一次开启相机
+			//ios要先调用一下功能后，设置的权限列表里才会有该权限 ios和android分开判断
+			if (platform == 'ios') {
+				if (isIosTrue == 'false') {
+					console.log('不是第一次')
+					cameraAuthority().then(e =&gt; {
+						console.log(e,'then')
+						_this.uploadImg();
+					}).catch(e =&gt; {
+						console.log(e, 'catch');
+						uni.showModal({
+							title: '提示',
+							content: '请先开启相机权限',
+							success: function (res) {
+								if (res.confirm) {
+									permissionSetting();
+								}
+							}
+						});
+					})
+				} else {
+					console.log('是第一次')
+					uni.setStorageSync('iosFirstCamera', 'false'); //设为false就代表不是第一次开启相机
+					_this.uploadImg();
+				}
+			} else {
+				var result = await  permision.premissionCheck("CAMERA_EXTERNAL_STORAGE");
+				console.log(result,'result')
+				if (result == 1) {
+					// 此处处理各自业务 如：uni.chooseImage  
+					console.log('有权限');
+					_this.uploadImg();
+				}
+			}
+
+			/*#endif*/
+
+
+			/*#ifdef MP*/
+			console.log('微信小程序端')
+			_this.uploadImg();
+			/*#endif*/
+		},
+		uploadImg() {
+			// 获取年月日
+			let year = new Date().getFullYear();
+			let month = new Date().getMonth() + 1;
+			let day = new Date().getDate();
+			month = month &lt; 10 ? "0" + month : month;
+			day = day &lt; 10 ? "0" + day : day;
+			var that = this;
+			uni.chooseImage({
+				sizeType: ["compressed"],
+				success(response) {
+                    console.log('你的逻辑')
+				},
+			});
+		},
+		previewImage(index) {
+			uni.previewImage({
+				urls: this.url,
+				current: index,
+			});
+		},
+		previewImage1(data) {
+			uni.previewImage({
+				urls: data,
+			});
+		}
+	},
+};
+&lt;/script&gt;
+&lt;style lang="less"&gt;
+.uploadImg {
+	display: flex;
+	align-items: center;
+	justify-content: flex-start;
+	flex-wrap: wrap;
+
+	.exampleBox {
+		position: relative;
+		margin-right: 20rpx;
+		width: 106rpx;
+		height: 106rpx;
+
+		.exampleText {
+			position: absolute;
+			bottom: 0;
+			left: 0;
+			right: 0;
+			height: 40rpx;
+			background: rgba(0, 0, 0, 0.5);
+			color: #fff;
+			text-align: center;
+			font-size: 22rpx;
+			font-weight: 400;
+		}
+	}
+
+	.imgView {
+		width: 106rpx;
+		height: 106rpx;
+		display: block;
+		position: relative;
+		margin-right: 20rpx;
+		margin-bottom: 20rpx;
+
+		image {
+			display: block;
+			width: 106rpx;
+			height: 106rpx;
+		}
+
+		.currentIcon {
+			position: absolute;
+			top: -11px;
+			right: -11px;
+		}
+	}
+
+	.upload {
+		width: 106rpx;
+		height: 106rpx;
+		border: 1px dashed #d1d1d1;
+		display: flex;
+		align-items: center;
+		justify-content: center;
+		box-sizing: border-box;
+	}
+}
+&lt;/style&gt;</code></pre> 
+<p>ios 需要修改mainfest文件：</p> 
+<pre><code class="language-javascript"> /* ios打包配置 */
+            "ios" : {
+                "dSYMs" : false,
+                "idfa" : false,
+                "privacyDescription" : {
+                    // 可选，字符串类型，系统相册读取权限描述
+                    "NSPhotoLibraryUsageDescription" : "APP需要您的同意才能访问相册,以便于上传图片",
+                    //可选，字符串类型，系统相册写入权限描述
+                    "NSPhotoLibraryAddUsageDescription" : "APP需要您的同意才能添加图片,以便于上传图片",
+                    //可选，字符串类型，摄像头使用权限描述
+                    "NSCameraUsageDescription" : "APP需要您的同意才能访问相机,以便于上传图片,若不允许,您将无法使用上传功能"
+                }
+            },</code></pre> 
+<p>运行效果：</p> 
+<div class="csdn-video-box"> 
+ <iframe id="fNGSBxot-1711433046441" frameborder="0" src="https://live.csdn.net/v/embed/373792" allowfullscreen="true" data-mediaembed="csdn"></iframe> 
+ <p>video(10)</p> 
+</div> 
+<div class="csdn-video-box"> 
+ <iframe id="Iqcms8EJ-1711428019370" frameborder="0" src="https://player.bilibili.com/player.html?aid=1052259457" allowfullscreen="true" data-mediaembed="bilibili"></iframe> 
+ <p>华为审核被拒，解决方案</p> 
+</div> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/2d36392a4f8b4124084e74501f4fb9cd/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">2024年 Java 面试八股文（20w字）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/017b1fb3775e99dd1ef6db69291e87d3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">数据结构从入门到精通——归并排序</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

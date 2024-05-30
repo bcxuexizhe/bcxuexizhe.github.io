@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>RabbitMQ---延迟消息 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b2158de4705a27a4f061034aa78be2b2/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="RabbitMQ---延迟消息">
+  <meta property="og:description" content="RabbitMQ---延迟消息 延迟消息：生产者发送消息时指定一个时间，消费者不会立刻收到消息，而是在指定时间后才收到消息。
+延迟任务：设置在一定时间之后才执行的任务。
+延迟消息有以下三种实现方案：
+死信交换机延迟消息插件 一、延迟队列 TTL
+TTL 全称 Time To Live（存活时间/过期时间）。 当消息到达存活时间后，还没有被消费，会被自动清除。 RabbitMQ可以对消息设置过期时间，也可以对整个队列（Queue）设置过期时间。 死信交换机
+成为死信（dead letter）的条件：
+消费者使用basic.reject或 basic.nack声明消费失败，并且消息的requeue参数设置为false（消费者拒接消费消息，并且不重回队列；）消息是一个过期消息(达到了队列或消息本身设置的过期时间)，超时无人消费队列消息堆积已满，最早的消息可能成为死信 如果队列通过dead-letter-exchange属性指定了一个交换机，那么该队列中的死信就会投递到这个交换机中。这个交换机称为死信交换机(Dead Letter Exchange，简称DLX）。
+1、声明延迟队列 package com.itheima.consumer.config; import org.springframework.amqp.core.*; import org.springframework.context.annotation.Bean; import org.springframework.context.annotation.Configuration; import javax.security.auth.login.CredentialNotFoundException; @Configuration public class DlxExchangeConfiguration { /** * 声明 TTL 队列 * 1. 指定消息的 TTL * 2. 指定死信交换机 * 3. 指定死信交换机的 RoutingKey */ @Bean public Queue ttlQueue() { return QueueBuilder .durable(&#34;ttl.queue&#34;) // 指定队列的名称 //.ttl(10000) // 指定 TTL 为 10 秒,这里可设置过期时间，但我这里测试在发送消息时设置过期时间 .">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-23T23:36:23+08:00">
+    <meta property="article:modified_time" content="2024-01-23T23:36:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">RabbitMQ---延迟消息</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 style="background-color:transparent;">RabbitMQ---延迟消息</h2> 
+<p><strong>延迟消息</strong>：生产者发送消息时指定一个时间，消费者不会立刻收到消息，而是在指定时间后才收到消息。</p> 
+<p><strong>延迟任务</strong>：设置在一定时间之后才执行的任务。</p> 
+<p class="img-center"><img alt="" height="792" src="https://images2.imgbox.com/10/7c/rasqeAzn_o.png" width="1200"></p> 
+<p> 延迟消息有以下三种实现方案：</p> 
+<ol><li>死信交换机</li><li>延迟消息插件</li></ol> 
+<h3>一、延迟队列</h3> 
+<p><span style="color:#000000;"><strong>TTL</strong></span></p> 
+<ul><li><span style="color:#000000;">TTL 全称 Time To Live（存活时间/过期时间）。 </span></li><li><span style="color:#000000;">当消息到达存活时间后，还没有被消费，会被自动清除。 </span></li><li><span style="color:#000000;">RabbitMQ可以对消息设置过期时间，也可以对整个队列（Queue）设置过期时间。</span></li></ul> 
+<div> 
+ <p class="img-center"><img alt="" height="316" src="https://images2.imgbox.com/de/68/R4V6CNmK_o.png" width="834"></p> 
+ <p><strong>死信交换机</strong></p> 
+ <p><img alt="" height="366" src="https://images2.imgbox.com/34/30/8c75S2cA_o.png" width="1200"></p> 
+</div> 
+<p><strong>成为死信（dead letter）的条件：</strong></p> 
+<ul><li>消费者使用basic.reject或 basic.nack声明消费失败，并且消息的requeue参数设置为false（<span style="color:#000000;">消费者拒接消费消息，并且不重回队列；</span>）</li><li>消息是一个过期消息(达到了队列或消息本身设置的过期时间)，超时无人消费</li><li>队列消息堆积已满，最早的消息可能成为死信</li></ul> 
+<p>如果队列通过dead-letter-exchange属性指定了一个交换机，那么该队列中的死信就会投递到这个交换机中。这个交换机称为死信交换机(Dead Letter Exchange，简称DLX）。</p> 
+<p><img alt="" height="487" src="https://images2.imgbox.com/7e/fa/wP5YNBiW_o.png" width="1200"></p> 
+<h4>1、声明延迟队列</h4> 
+<pre><code class="language-java">package com.itheima.consumer.config;
+
+import org.springframework.amqp.core.*;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import javax.security.auth.login.CredentialNotFoundException;
+
+
+@Configuration
+public class DlxExchangeConfiguration {
+
+    /**
+     * 声明 TTL 队列
+     * 1. 指定消息的 TTL
+     * 2. 指定死信交换机
+     * 3. 指定死信交换机的 RoutingKey
+     */
+    @Bean
+    public Queue ttlQueue() {
+        return QueueBuilder
+                .durable("ttl.queue") // 指定队列的名称
+                //.ttl(10000) // 指定 TTL 为 10 秒,这里可设置过期时间，但我这里测试在发送消息时设置过期时间
+                .deadLetterExchange("dlx.direct") // 指定死信交换机
+                .deadLetterRoutingKey("dlx") // 指定死信交换机的 RoutingKey
+                .build();
+    }
+
+    /**
+     * 声明TTl交换机
+     * @return
+     */
+    @Bean
+    public DirectExchange directExchange(){
+        return new DirectExchange("ttl.direct");
+    }
+
+    /**
+     * 声明ttl交换机与队列的关联关系
+     * @return
+     */
+    @Bean
+    public Binding directBinding(){
+        return BindingBuilder.bind(ttlQueue()).to(directExchange()).with("ttl");
+    }
+
+    /**
+     * 声明死信交换机
+     * @return
+     */
+    @Bean
+    public DirectExchange dlxDirect(){
+        return new DirectExchange("dlx.direct");
+    }
+
+    /**
+     * 声明死信队列
+     * @return
+     */
+    @Bean
+    public Queue dlxQueue(){
+        return new Queue("dlx.queue");
+    }
+
+    /**
+     * 声明死信交换机与队列关联关系
+     * @return
+     */
+    @Bean
+    public Binding tlxBinding(){
+        return BindingBuilder.bind(dlxQueue()).to(dlxDirect()).with("dlx");
+    }
+
+}
+</code></pre> 
+<h4>2、发送消息</h4> 
+<pre><code class="language-java">@Test
+    void testSendTTLMessage(){
+        rabbitTemplate.convertAndSend("ttl.direct", "ttl", "hello", new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws AmqpException {
+                message.getMessageProperties().setExpiration("10000");
+                return message;
+            }
+        });
+        log.info("消息发送成功！");
+    }</code></pre> 
+<h4>3、死信队列消费消息</h4> 
+<pre><code class="language-java">@RabbitListener(queues = "dlx.queue")  //监听的队列：dlx.queue
+public void listenDlxQueue(String msg){
+    log.info("dlx.queue的消息：【"+msg+"】");
+}</code></pre> 
+<h4>4、结果比对</h4> 
+<p>4.1、发送时间，设置10s过期</p> 
+<p><img alt="" height="37" src="https://images2.imgbox.com/68/3b/JXLbMx1z_o.png" width="970"></p> 
+<p>4.2、死信队列消费消息时间 </p> 
+<p><img alt="" height="43" src="https://images2.imgbox.com/17/0f/v3EvhWp7_o.png" width="1078"></p> 
+<h3 style="background-color:transparent;">二、延迟消息插件 </h3> 
+<p>        RabbitMQ官方推出的插件，原生支持延迟消息的功能。其原理是设计了一种支持延迟消息功能的交换机，当消息投递到交换机后可以暂存一定时间，到期后再投递到队列。</p> 
+<p>本地RabbitMQ官网下载rabbitmq_delayer_message_exchange插件地址：</p> 
+<p><a class="link-info" href="https://www.rabbitmq.com/community-plugins.html" rel="nofollow" title="https://www.rabbitmq.com/community-plugins.html">https://www.rabbitmq.com/community-plugins.html</a></p> 
+<p class="img-center"><img alt="" height="651" src="https://images2.imgbox.com/f6/9e/21AThG2Z_o.png" width="958"></p> 
+<p>代码实现：<br> 声明延迟交换机方式一：</p> 
+<pre><code class="language-java"> @Bean
+    public DirectExchange delayExchange(){
+        return ExchangeBuilder
+                .directExchange("delay.direct")
+                .delayed()  //设置delay的属性为true
+                .durable(true)
+                .build();
+    }</code></pre> 
+<p> 方式二：<br>  </p> 
+<pre><code class="language-java">    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(name = "delay.queue", durable = "true"),
+            exchange = @Exchange(value = "delay.direct",delayed = "true"), //delayed  这是延迟交换机开启
+            key = "delay"
+    ))
+    public void listenDelayMessage(String msg){
+        log.info("接收到delay.queue的延迟消息：{}",msg);
+    }</code></pre> 
+<p>测试发送消息</p> 
+<pre><code class="language-java">@Test
+    void testSendDelayMessage(){
+        rabbitTemplate.convertAndSend("delay.direct", "delay", "hello", new MessagePostProcessor() {
+            @Override
+            public Message postProcessMessage(Message message) throws AmqpException {
+                message.getMessageProperties().setDelay(1000);
+                return message;
+            }
+        });
+        log.info("消息发送成功！");
+    }</code></pre> 
+<h3>案例</h3> 
+<p>电商项目设置30分钟后检测订单支付状态，并完成取消超时订单</p> 
+<p>设置30分钟检查订单状态存在两个问题：</p> 
+<ol><li>如果并发较高，30分钟可能堆积消息过多，对MQ压力过大</li><li>大多数订单再下单后很短时间内就会支付，但是却需要在MQ内等待30分钟，浪费资源。</li></ol> 
+<p class="img-center"><img alt="" height="643" src="https://images2.imgbox.com/70/79/LUAa75TZ_o.png" width="1200"></p> 
+<p> 解决措施：设置多个延迟消息交换机，如设置不同的等待时间：10s、10s、10s、15s、15s....，这些时间相加得到30分钟，不同延迟时间过滤掉大部分的消息，给MQ减压</p> 
+<p><img alt="" height="652" src="https://images2.imgbox.com/30/79/qjCasnoj_o.png" width="1200"></p> 
+<p>首先先查询支付状态，判断是否支付，如果状态显示未支付，则获取下次延迟时间，判断是否有延迟时间，有则重发延迟消息，没有延迟消息则取消订单。如果订单显示已支付，则标记未已支付。</p> 
+<p><img alt="" height="688" src="https://images2.imgbox.com/0d/7b/01Dfsdnk_o.png" width="1200"></p> 
+<p>定义延迟时间集合及相关方法：</p> 
+<pre><code class="language-java">package com.itheima.consumer.config;
+
+import lombok.Data;
+
+import java.util.Arrays;
+import java.util.List;
+
+@Data
+public class MultiDelayMessage&lt;T&gt;{
+    //消息体
+    private T data;
+
+    //记录延迟消息时间的集合
+    private List&lt;Long&gt; delayMillis;
+
+    public  MultiDelayMessage(T data, List&lt;Long&gt; delayMillis){
+        this.data = data;
+        this.delayMillis = delayMillis;
+    }
+
+    public static &lt;T&gt; MultiDelayMessage&lt;T&gt; of(T data, Long ... delayMillis){
+        return new MultiDelayMessage&lt;&gt;(data, Arrays.asList(delayMillis));
+    }
+
+    //获取并移除下一个延迟时间
+    //Returns: 队列中的第一个延迟时间
+    public Long removeNextDelay(){
+        return delayMillis.remove(0);
+    }
+
+    //是否还有下一个延迟时间
+    public boolean hasNextDelay(){
+        return !delayMillis.isEmpty();
+    }
+}
+</code></pre> 
+<p> 定义交换机、队列名称以及key：</p> 
+<pre><code class="language-java">public interface MqConstants {
+
+    String DELAY_EXCHANGE = "trade.delay.topic";  //交换机名称
+    String DELAY_ORDER_QUEUE = "trade.order.delay.queue"; //队列名称
+    String DELAY_PRDER_ROUTING_KEY = "order.query";  //key
+}</code></pre> 
+<p>定义延迟消息体：</p> 
+<pre><code class="language-java">import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.AmqpException;
+import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessagePostProcessor;
+
+@RequiredArgsConstructor
+public class DelayMessageProcessor implements MessagePostProcessor {
+    
+    private final int delay;
+    @Override
+    public Message postProcessMessage(Message message) throws AmqpException {
+        message.getMessageProperties().setDelay(delay);
+        return null;
+    }
+}</code></pre> 
+<p>实现发送延迟消息：</p> 
+<pre><code class="language-java">/*
+     * 生成订单后，发送延迟检查订单消息
+     */
+    public void testOrderStatic(){
+       try{
+           MultiDelayMessage&lt;String&gt; msg = MultiDelayMessage.of("这里是订单ID", 1000L, 1000L, 1000L, 1500L, 1500L); //这里的消息体是订单ID，后面是延迟消息时间集合
+           rabbitTemplate.convertAndSend(
+                   MqConstants.DELAY_EXCHANGE, MqConstants.DELAY_PRDER_ROUTING_KEY,msg,
+                   new DelayMessageProcessor(msg.removeNextDelay().intValue())
+           );
+       }catch (AmqpException e){
+           log.error("延迟消息发送失败！");
+       }
+
+    }</code></pre> 
+<p>消费延迟消息的大概思路：<br>  </p> 
+<pre><code class="language-java">import com.itheima.constants.DelayMessageProcessor;
+import com.itheima.constants.MqConstants;
+import com.itheima.constants.MultiDelayMessage;
+import lombok.RequiredArgsConstructor;
+import org.springframework.amqp.core.ExchangeTypes;
+import org.springframework.amqp.rabbit.annotation.*;
+import org.springframework.amqp.rabbit.core.RabbitTemplate;
+
+@RequiredArgsConstructor
+public class OrderStatusCheckListener {
+
+    private RabbitTemplate rabbitTemplate;
+
+    @RabbitListener(bindings = @QueueBinding(
+            value = @Queue(value = MqConstants.DELAY_ORDER_QUEUE, durable = "true"),
+            exchange = @Exchange(value = MqConstants.DELAY_EXCHANGE, delayed = "true" ,type = ExchangeTypes.TOPIC),
+            key = MqConstants.DELAY_PRDER_ROUTING_KEY
+    ))
+    public void listenOderDelayMessage(MultiDelayMessage&lt;Long&gt; msg){
+        //1、查询订单状态
+
+        //2、判断是否已支付
+
+            //2.1订单不存在或者已经处理（订单显示已支付）----交易服务显示已支付，则表示已支付，直接return
+
+        //（交易服务显示未支付的情况下）3、去支付服务查询真正的支付状态   ---- 这里是在交易服务查询显示未支付，但不一定是未支付，需要去支付服务查询确定一下
+
+        //3.1、判断支付服务的订单支付状态，已支付则标记订单状态为已支付，直接return
+
+        //4、判断是否存在延迟时间
+        if (msg.hasNextDelay()){
+            //4.1、存在,则重发延迟消息
+            Long nestDelay = msg.removeNextDelay();
+            rabbitTemplate.convertAndSend(
+                    MqConstants.DELAY_EXCHANGE, MqConstants.DELAY_PRDER_ROUTING_KEY,
+                    msg, new DelayMessageProcessor(nestDelay.intValue())
+            );
+            return;
+        }
+        //5、不存在，取消订单，修改订单状态为取消订单
+
+        //6、恢复库存
+
+    }
+}
+</code></pre> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f70e76a18b53d44c9ca93422a10c93d4/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">新版Android Studio Logcat 筛选日志</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8afe54f64251de4d056d6682b671d34f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【MySQL】表的内外连接和视图</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

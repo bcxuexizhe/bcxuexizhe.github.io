@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Linux】线程的内核级理解&amp;&amp;详谈页表以及虚拟地址到物理地址之间的转化 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/6e7e7f7a7d483d42a4e9792c93c760d4/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Linux】线程的内核级理解&amp;&amp;详谈页表以及虚拟地址到物理地址之间的转化">
+  <meta property="og:description" content=" 一、线程的概念 对于进程来说，进程创建时间和空间成本较高，因为进程是承担分配系统资源的基本实体，所以线程的出现就成为了必然。Linux线程与进程非常相似，Linux设计者在设计之初觉得如果再为线程设计数据结构和调度算法就会使整个系统变得十分复杂。地址空间和地址空间上的虚拟地址，本质就是一种资源，所以线程就在进程的基础上让不同的线程看到进程地址空间上的代码区中的不同代码，并让不同线程去执行不同的代码，这样同样也实现了线程的功能。不同的线程在同一个进程地址空间中运行，共享相同的内存和其他资源。所以说线程是进程内部的一个执行分支，线程也是CPU调度的基本单位。
+每个线程都有一个与之关联的task_struct结构体，该结构体包含了线程的状态信息、调度信息、资源使用情况等。CPU在执行调度的时候，根本就不用区分进程和线程，反正你们都有task_struct结构体，都是执行流。Linux中所有的可调度执行流都叫做轻量级进程。
+二、详谈页表以及虚拟地址到物理地址之间的转化 磁盘中的数据块和内存中的数据块都是4kb大小。为了管理内存中每一块4kb大小的内存块，操作系统内核中会有描述该内存块的结构体，4GB的内存大小中就有1048576个内存块，再利用数组就能将整个内存管理起来，对于内存的管理就变成了对于数组的增删查改。所以，操作系统进行内存管理的基本单位就是4kb。
+再谈页表，其实页表并不是只有一块数据结构，而是分为了页目录，页表。一个虚拟地址有32位，32位中的前10位用来表示处于页目录中的哪一个位置，页目录中最多可以存放个页表的首地址，第11到20位用来表示处于页表的哪一个页表项，一个页表中最多也有个页表项，一个页表项就对应内存中的一个4kb大小的数据块。最后12位用来确定数据块中的字节，刚好就是4kb，正好可以确定是哪一个字节，所以后12位也叫做页内偏移。
+如果再在页表项中加入访问权限审查，有没有被使用过等等标志位，就能对用户操作进行一些审查以及拦截，来保证内存访问的安全性。
+针对页表的这一种分页存储的模式，我们所写的函数编译完就是一块一块的虚拟地址，根据函数名就可以找到函数入口地址，各个函数就分配得到了不同的虚拟地址，也就是得到了不同的页表区域。同样的，我们只要给不同的线程分配不同的页表区域，就可以让不同的线程能够访问到页表的不同子集，进一步的，就可以让不同的线程访问到不同的代码，从而实现多线程技术。 三、创建线程的小例子 thread：这是一个指向pthread_t类型的指针，用于获取新创建线程的线程ID。在调用pthread_create后，这个指针会被设置为新线程的ID。
+attr：这是一个指向pthread_attr_t类型的指针，用于设置线程的属性，如栈大小、优先级等。如果这个参数为NULL，那么线程将使用默认的属性。通常情况下，如果你不需要设置特殊的线程属性，可以传递NULL。
+start_routine：这是一个函数指针，指向线程开始执行时要调用的函数。这个函数通常被称为线程的“入口点”或“启动例程”。
+arg：用于向线程的启动例程传递参数。你可以通过这个参数向线程传递任何类型的数据。如果你的启动例程不需要任何参数，可以传递NULL。
+3.1、主函数 #include &lt;iostream&gt; #include &lt;unistd.h&gt; #include &lt;pthread.h&gt; using namespace std; void* newthread(void*) { while (true) { cout &lt;&lt; 22222222 &lt;&lt; endl; sleep(1); } } int main() { pthread_t pthread; pthread_create(&amp;pthread, nullptr, newthread, nullptr); while(true) { cout &lt;&lt; 11111111 &lt;&lt; endl; sleep(1); } return 0; } 3.2、makefile myThread:testThread.cc g&#43;&#43; -o $@ $^ -std=c&#43;&#43;11 -lpthread .PHONY:clean clean: rm -f myThread 可以看到两个线程就同时跑起来了： ">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-08T22:44:56+08:00">
+    <meta property="article:modified_time" content="2024-05-08T22:44:56+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Linux】线程的内核级理解&amp;&amp;详谈页表以及虚拟地址到物理地址之间的转化</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>一、线程的概念</h2> 
+<p>        <strong>对于进程来说，</strong><span style="color:#fe2c24;"><strong><span style="background-color:#efedf6;">进程创建时间和空间成本较高，因为进程是承担分配系统资源的基本实体</span></strong></span>，<strong>所以线程的出现就成为了必然。Linux线程与进程非常相似，Linux设计者在设计之初觉得如果再为线程设计数据结构和调度算法就会使整个系统变得十分复杂。</strong><span style="color:#956fe7;"><strong><span style="background-color:#fefcd8;">地址空间和地址空间上的虚拟地址，本质就是一种资源，所以线程就在进程的基础上让不同的线程看到进程地址空间上的代码区中的不同代码，并让不同线程去执行不同的代码，这样同样也实现了线程的功能</span></strong><span style="background-color:#fefcd8;">。</span></span><strong>不同的线程在同一个进程地址空间中运行，共享相同的内存和其他资源。所以说</strong><span style="color:#1c7892;"><strong><span style="background-color:#fefcd8;">线程是进程内部的一个执行分支，线程也是CPU调度的基本单位</span></strong></span>。</p> 
+<p>        <strong>每个线程都有一个与之关联的task_struct结构体，该结构体包含了线程的状态信息、调度信息、资源使用情况等。CPU在执行调度的时候，根本就不用区分进程和线程，反正你们都有task_struct结构体，都是执行流。</strong><span style="color:#fe2c24;"><strong><span style="background-color:#cbe0f1;">Linux中所有的可调度执行流都叫做轻量级进程</span></strong></span>。</p> 
+<h2>二、详谈页表以及虚拟地址到物理地址之间的转化</h2> 
+<p>        <strong>磁盘中的数据块和内存中的数据块都是4kb大小。为了管理内存中每一块4kb大小的内存块，操作系统内核中会有描述该内存块的结构体，4GB的内存大小中就有1048576个内存块，再利用数组就能将整个内存管理起来，对于内存的管理就变成了对于数组的增删查改。所以，</strong><span style="color:#be191c;"><strong><span style="background-color:#eaf4fc;">操作系统进行内存管理的基本单位就是4kb</span></strong></span>。</p> 
+<p>        <strong>再谈页表，其实页表并不是只有一块数据结构，而是分为了页目录，页表。一个虚拟地址有32位，32位中的前10位用来表示处于页目录中的哪一个位置，页目录中最多可以存放<img alt="2^{^{10}}" class="mathcode" src="https://images2.imgbox.com/e9/a3/BQPThvCv_o.png">个页表的首地址，第11到20位用来表示处于页表的哪一个页表项，一个页表中最多也有<img alt="2^{^{10}}" class="mathcode" src="https://images2.imgbox.com/52/2a/vBURWqSW_o.png">个页表项，</strong><span style="color:#1c7331;"><strong><span style="background-color:#c7e6ea;">一个页表项就对应内存中的一个4kb大小的数据块</span></strong></span><strong>。最后12位用来确定数据块中的字节，<img alt="2^{^{12}}" class="mathcode" src="https://images2.imgbox.com/00/ed/rO9tYFuc_o.png">刚好就是4kb，正好可以确定是哪一个字节，所以后12位也叫做</strong><span style="color:#9c8ec1;"><strong><span style="background-color:#fefcd8;">页内偏移</span></strong></span>。</p> 
+<p><img alt="" height="130" src="https://images2.imgbox.com/f6/3c/DlBZ8i2P_o.png" width="633"></p> 
+<p><img alt="" height="636" src="https://images2.imgbox.com/6e/c1/03z2ncQC_o.png" width="1200"></p> 
+<p>      <strong>  如果再在页表项中加入访问权限审查，有没有被使用过等等标志位，就能对用户操作进行一些审查以及拦截，来保证内存访问的安全性。</strong></p> 
+<p><strong>        针对页表的这一种分页存储的模式，我们所写的函数编译完就是一块一块的虚拟地址，根据函数名就可以找到函数入口地址，各个函数就分配得到了不同的虚拟地址，也就是得到了不同的页表区域。同样的，我们只要给不同的线程分配不同的页表区域，就可以让不同的线程能够访问到页表的不同子集，进一步的，就可以让不同的线程访问到不同的代码，从而实现多线程技术。   </strong></p> 
+<h2>三、创建线程的小例子</h2> 
+<p><img alt="" height="134" src="https://images2.imgbox.com/c7/01/Ybf41dgC_o.png" width="1001"></p> 
+<blockquote> 
+ <p><strong>thread：这是一个指向pthread_t类型的指针，用于获取新创建线程的线程ID。在调用pthread_create后，这个指针会被设置为新线程的ID。</strong></p> 
+ <p></p> 
+ <p><strong>attr：这是一个指向pthread_attr_t类型的指针，用于设置线程的属性，如栈大小、优先级等。如果这个参数为NULL，那么线程将使用默认的属性。通常情况下，如果你不需要设置特殊的线程属性，可以传递NULL。</strong></p> 
+ <p><strong> </strong></p> 
+ <p><strong>start_routine：这是一个函数指针，指向线程开始执行时要调用的函数。这个函数通常被称为线程的“入口点”或“启动例程”。</strong></p> 
+ <p></p> 
+ <p><strong>arg：用于向线程的启动例程传递参数。你可以通过这个参数向线程传递任何类型的数据。如果你的启动例程不需要任何参数，可以传递NULL。</strong></p> 
+</blockquote> 
+<h3>3.1、主函数</h3> 
+<pre><code class="language-cpp">#include &lt;iostream&gt;
+#include &lt;unistd.h&gt;
+#include &lt;pthread.h&gt;
+using namespace std;
+
+void* newthread(void*)
+{
+    while (true)
+    {
+        cout &lt;&lt; 22222222 &lt;&lt; endl;
+        sleep(1);
+    }
+    
+}
+
+int main()
+{
+    pthread_t pthread;
+    pthread_create(&amp;pthread, nullptr, newthread, nullptr);
+    while(true)
+    {
+        cout &lt;&lt; 11111111 &lt;&lt; endl;
+        sleep(1);
+    }
+    return 0;
+}</code></pre> 
+<h3>3.2、makefile</h3> 
+<pre><code class="language-cpp">myThread:testThread.cc
+	g++ -o $@ $^ -std=c++11 -lpthread
+.PHONY:clean
+clean:
+	rm -f myThread</code></pre> 
+<p>可以看到两个线程就同时跑起来了： </p> 
+<p><img alt="" height="200" src="https://images2.imgbox.com/37/2b/KgzokgbF_o.png" width="594"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/90d4b17b4f1fcb97ac418234013babaf/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">[MySQL数据库] Java的JDBC编程(MySQL数据库基础操作完结)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/cc7c37202ab7542f165f41c165bbefac/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Redis（主从复制搭建）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

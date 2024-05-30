@@ -1,0 +1,408 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/4bbf70c063e0621dda07dfa1fa2f3ae9/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion">
+  <meta property="og:description" content="使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion 0. 前言1. Amazon SageMaker 与机器学习1.1 机器学习流程1.2 Amazon SageMaker 简介1.3 Amazon SageMaker 优势 2. AIGC 与 Stable Diffusion2.1 步入 AIGC 时代2.2 Stable Diffusion 介绍 3. 使用 Amazon SageMaker 创建 Stable Diffusion 模型3.1 准备工作3.2 创建 Amazon SageMaker Notebook 实例3.3 端到端体验 AIGC3.4 模型生成效果 5. Amazon SageMaker 使用体验小结云上探索实验室活动 0. 前言 近来，随着新一代 AI 大型聊天机器人 ChatGPT 火遍科技圈，人工智能生成内容( Artificial Intelligence Generated Content, AIGC )这一领域开始受到学术界、工业界甚至普通用户的广泛关注。AIGC 凭借其独特的“创造力”与人类无法企及的创作生成速度掀起了一股人工智能狂潮。但是，利用人工智能模型生成图片、视频等要用到大量数据训练模型，对于算力的要求相较于简单模型也呈指数级的提升，为了快速高效的处理数据集和构建生成模型，在云中训练和部署人工智能模型成为大多数用户和公司的首选。
+最近受邀参加了亚马逊云科技的云上探索实验室活动，并基于 Amazon SageMaker 创建、部署了 Stable Diffusion 生成模型，用于生成高质量图片，在整个模型构建流程中充分体验到 Amazon SageMaker 提供的全面的机器学习工具带来的优势，能够更快速、高效地执行机器学习任务，同时还具有灵活性、扩展性和易用性等诸多优势。接下来，我们一起回顾生成模型模型构建的全部流程吧！">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-04-23T19:43:20+08:00">
+    <meta property="article:modified_time" content="2023-04-23T19:43:20+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>使用Amazon SageMaker构建高质量AI作画模型Stable Diffusion</h4> 
+ <ul><li><ul><li><a href="#0__1" rel="nofollow">0. 前言</a></li><li><a href="#1_Amazon_SageMaker__6" rel="nofollow">1. Amazon SageMaker 与机器学习</a></li><li><ul><li><a href="#11__7" rel="nofollow">1.1 机器学习流程</a></li><li><a href="#12_Amazon_SageMaker__27" rel="nofollow">1.2 Amazon SageMaker 简介</a></li><li><a href="#13_Amazon_SageMaker__48" rel="nofollow">1.3 Amazon SageMaker 优势</a></li></ul> 
+   </li><li><a href="#2_AIGC__Stable_Diffusion_58" rel="nofollow">2. AIGC 与 Stable Diffusion</a></li><li><ul><li><a href="#21__AIGC__59" rel="nofollow">2.1 步入 AIGC 时代</a></li><li><a href="#22_Stable_Diffusion__73" rel="nofollow">2.2 Stable Diffusion 介绍</a></li></ul> 
+   </li><li><a href="#3__Amazon_SageMaker__Stable_Diffusion__93" rel="nofollow">3. 使用 Amazon SageMaker 创建 Stable Diffusion 模型</a></li><li><ul><li><a href="#31__96" rel="nofollow">3.1 准备工作</a></li><li><a href="#32__Amazon_SageMaker_Notebook__110" rel="nofollow">3.2 创建 Amazon SageMaker Notebook 实例</a></li><li><a href="#33__AIGC_153" rel="nofollow">3.3 端到端体验 AIGC</a></li><li><a href="#34__391" rel="nofollow">3.4 模型生成效果</a></li></ul> 
+   </li><li><a href="#5_Amazon_SageMaker__400" rel="nofollow">5. Amazon SageMaker 使用体验</a></li><li><a href="#_407" rel="nofollow">小结</a></li><li><a href="#_409" rel="nofollow">云上探索实验室活动</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="0__1"></a>0. 前言</h3> 
+<p>近来，随着新一代 <code>AI</code> 大型聊天机器人 <code>ChatGPT</code> 火遍科技圈，人工智能生成内容( <code>Artificial Intelligence Generated Content</code>, <code>AIGC</code> )这一领域开始受到学术界、工业界甚至普通用户的广泛关注。<code>AIGC</code> 凭借其独特的“创造力”与人类无法企及的创作生成速度掀起了一股人工智能狂潮。但是，利用人工智能模型生成图片、视频等要用到大量数据训练模型，对于算力的要求相较于简单模型也呈指数级的提升，为了快速高效的处理数据集和构建生成模型，在云中训练和部署人工智能模型成为大多数用户和公司的首选。<br> 最近受邀参加了亚马逊云科技的<a href="https://dev.amazoncloud.cn/experience?trk=cndc-detail&amp;sc_medium=corecontent&amp;sc_campaign=product&amp;sc_channel=csdn" rel="nofollow">云上探索实验室活动</a>，并基于 <code>Amazon SageMaker</code> 创建、部署了 <code>Stable Diffusion</code> 生成模型，用于生成高质量图片，在整个模型构建流程中充分体验到 <code>Amazon SageMaker</code> 提供的全面的机器学习工具带来的优势，能够更快速、高效地执行机器学习任务，同时还具有灵活性、扩展性和易用性等诸多优势。接下来，我们一起回顾生成模型模型构建的全部流程吧！<br> 本文，将首先介绍 <code>AIGC</code> 的基本概念与发展进程，并介绍了当前先进的图像生成模型 <code>Stable Diffusion</code>，然后介绍 <code>Amazon SageMaker</code> 的主要组件及其如何解决人工智能模型构建过程中的痛点问题，最后通过利用 <code>Amazon SageMaker</code> 构建 <code>Stable Diffusion</code> 模型来展示 <code>Amazon SageMaker</code> 在人工智能模型构建、训练和部署过程中的优势。</p> 
+<h3><a id="1_Amazon_SageMaker__6"></a>1. Amazon SageMaker 与机器学习</h3> 
+<h4><a id="11__7"></a>1.1 机器学习流程</h4> 
+<p>人工智能 (<code>Artificial Intelligence</code>, <code>AI</code>) 是研究用于模拟和扩展人类智能的理论、方法及应用的一门系统性科学技术，其令计算机根据可用数据执行相应策略而无需以明确的编程方式执行策略，<code>AI</code> 通过使用计算机程序模拟人类行为从而使机器实现智能。人工智能的目标是创造能与人类思维相似的智能机器，或者通过人工智能技术来扩展人类智能从而解决实际问题。在过去几年里，许多人工智能系统取得了突破性进展，已经可以应用于解决各种复杂问题。<br> 一般而言，一个完整的机器学习流程通常包括以下步骤：</p> 
+<ul><li>数据收集和准备：在机器学习过程中，数据是至关重要的，需要收集相关数据，并对其进行预处理和清洗，以确保训练数据质量和一致性</li><li>特征工程：对数据进行特征选择、特征提取和特征转换等操作，以提取有用的信息，并将其转化为可用于训练模型的形式</li><li>模型构建和训练：根据实际应用场景，选择并构建合适的模型，并使用训练数据对其进行训练，通常需要进行模型选择、超参数调整、模型构建、模型训练和模型评估等过程</li><li>模型验证和优化：对模型进行验证和优化，以确保模型的准确性和稳定性，通常包括模型验证、模型优化和模型调整等过程，以进一步保证模型在实际生产环境中的鲁棒性</li><li>模型部署和监控：将模型部署到生产环境中，并对其进行监控和管理，以确保模型的可靠性和高效性，通常包括模型部署、模型监控和模型更新等过程</li></ul> 
+<p><img src="https://images2.imgbox.com/11/92/9ibpzXe0_o.png" alt="模型训练过程"><br> 总之，机器学习流程是一个非常复杂和有挑战性的过程，需要对数据、模型和算法等方面进行深入的研究和探索，通常机器学习模型从数据收集到模型部署应用的完整流程需要大约 <code>6-18</code> 个月时间，并且通常会面临以下问题：</p> 
+<ul><li>机器学习模型训练需要大量的数据，并且数据必须经过清洗和预处理，以确保数据质量及其一致性，往往需要耗费大量的时间和精力</li><li>在机器学习模型训练过程中，需要选择合适的模型，并进行超参数调优等操作，以获得最佳的模型性能，通常需要进行多次实验和测试</li><li>机器学习模型训练需要大量的计算资源，包括 <code>CPU</code>、<code>GPU</code>、内存和存储空间等，特别是在处理大规模数据集和复杂模型时，需要大量的前期投资，这对于普通用户和小公司而言并不具备可行性</li></ul> 
+<p>机器学习模型训练流程中需要多种工具配合、大量时间和精力进行数据处理等，没有集成化的工具用于整个机器学习的工作流，机器学习模型的开发将十分复杂和昂贵。<code>AWS</code> (<a href="https://aws.amazon.com/cn/" rel="nofollow">Amazon Web Services</a>) 以为每一个开发者和数据科学家打造机器学习平台为使命，为机器学习提供了诸多有力的解决方案以提高机器学习模型构建、训练、部署的效率和质量。<code>AWS</code> 是由 <code>Amazon</code> 公司提供的一种云计算服务，是一种灵活、可扩展的云平台，提供了大量的基础设施、平台和软件服务，以帮助构建和运行各种应用程序和服务，其服务包括计算、存储、数据库、分析、网络和安全等诸多方面，以提供高可靠性、高可扩展性和低成本的云计算解决方案。<br> 自从 <code>2018</code> 年起，亚马逊云科技发布了一系列的用于机器学习的产品和服务，例如 <code>Amazon SageMaker</code>、<code>Amazon Machine Learing</code> 等，极大的降低了机器学习的门槛，使得用户构建机器学习应用变得越来越容易，推动了机器学习的普及与应用。</p> 
+<p><img src="https://images2.imgbox.com/00/89/nVPmMK34_o.png" alt="AWS上的机器学习技术堆栈"></p> 
+<h4><a id="12_Amazon_SageMaker__27"></a>1.2 Amazon SageMaker 简介</h4> 
+<p><code>Amazon SageMaker</code> 是一项完全托管的机器学习服务，为数据科学家、开发人员和企业提供了一种简单的方式来构建、训练和部署机器学习模型，而无需考虑底层基础设施的复杂性。<br> <code>Amazon SageMaker</code> 提供了一整套机器学习工具，涵盖了数据标记、数据处理、模型训练、超参数调优、模型部署及持续模型监控等基本流程，也提供了自动打标签、自动机器学习、监控模型训练等高阶功能。其通过全托管的机器学习基础设施和对主流框架的支持，可以降低客户机器学习的成本。<code>Amazon SageMaker</code> 能够完全消除机器学习过程中各个步骤中繁重的工作，使得开发高质量模型变得更加轻松。<br> 用户可以选择使用 <code>Amazon SageMaker</code> 的预置算法来快速构建和训练模型，也可以使用自己的算法和框架，<code>Amazon SageMaker</code> 提供了一整套完整的机器学习工具，帮助用户构建、训练和部署高性能的机器学习模型，其包含多个功能组件。接下来，我们介绍其中一些主要的组件：</p> 
+<ul><li>模型构建 
+  <ul><li><code>Amazon SageMaker Studio</code>，作为首个适用于机器学习的集成开发环境 (<code>Integrated Development Environment</code>, <code>IDE</code>)，<code>Amazon SageMaker Studio</code> 包含完备的功能，可以在统一的可视化界面中操作 <code>Notebook</code>、创建模型、管理模型试验、调试以及检测模型偏差</li><li><code>Amazon SageMaker Notebooks</code>，用于加快模型构建与团队协作，解决了以下两个问题：1) 用户使用单台服务器运行 <code>Jupyter Notebook</code> 时需要管理底层资源；2) 在共享给其他用户时，需要修改一系列系统配置以及网络权限。支持一键启动 <code>Jupyter Notebook</code>，亚马逊云科技负责底层计算资源的托管，同时还支持一键共享 <code>Notebook</code>，推动机器学习团队无缝协作</li><li><code>Amazon SageMaker Autopilot</code>，实现模型自动构建与优化，通常在构建机器学习模型时，我们需要花费大量的时间寻找有效的算法来解决机器学习问题，<code>Amazon SageMaker Autopilot</code> 可以自动检查原始数据、选择最佳算法参数集合、训练和调优多个模型、跟踪模型性能，并根据性能对模型进行排序，从而大幅缩短了寻找最佳模型所需的时间</li><li>支持多种深度学习框架，包括 <code>TensorFlow</code>、<code>PyTorch</code>、<code>Apache MXNet</code>、<code>Chainer</code>、<code>Keras</code>、<code>Gluon</code>、<code>Horovod</code> 和 <code>Scikit-learn</code> 等，除了默认支持的框架，其他任何框架均可以通过自带容器的方式在 <code>Amazon SageMaker</code> 中训练和部署模型</li></ul> </li><li>模型训练 
+  <ul><li><code>Amazon SageMaker Experiments</code>，用于组织、跟踪和评估模型训练过程中的运行情况。通常，为了得到能够部署应用的模型，需要多次迭代和不断调优，包括尝试不同算法、超参数、调整选取的特征等，<code>Amazon SageMaker Experiments</code> 通过自动捕获输入参数、配置和结果并进行存储来管理模型迭代，结合 <code>Amazon SageMaker Studio</code> 的可视化界面来还可以浏览进行中的实验，与先前的实验结果进行直观的对比与评估</li><li><code>Amazon SageMaker Debugger</code>，用途分析、检测和提醒与机器学习相关的问题。由于目前大多数机器学习流程并不透明，而且训练模型需要花费较长时间，因此导致优化过程极其耗时，为了解决此问题，<code>Amazon SageMaker Debbuger</code> 会在训练期间自动捕获实时指标(例如混淆矩阵和学习梯度等)，其还会对常见问题发出警告并提供修复建议，令训练流程更加透明，可以更好地理解和解释模型工作原理，并最终提高模型精度</li><li>大幅降低训练成本，<code>Amazon SageMaker</code> 支持基于托管的 <code>Spot</code> 竞价实例进行训练，训练成本降低最多可达 <code>90%</code>，并且，<code>Amazon SageMaker</code> 支持周期性自动保存 <code>checkpoint</code> 以避免 <code>Spot</code> 实例中断导致模型重新开始训练</li></ul> </li><li>模型部署 
+  <ul><li>支持一键部署模型，针对实时或批量数据生成预测，可以跨多个可用区在自动扩展的实例上一键部署模型，在实现高冗余的同时无需进行任何基础设施运维操作。<code>Amazon SageMaker</code> 可以自动管理计算实例和模型部署，并为 <code>API</code> 访问提供安全的 <code>https</code> 终端节点，应用程序只需要调用这个 <code>API</code> 接口就可以实现低延迟、高吞吐量的推理</li><li><code>Amazon SageMaker Model Monitor</code>，用于保持模型在部署后的精确性，受限于训练数据集，当目标变量随着时间推移发生改变时，模型会出现不再适用的问题，这通常称为概念漂移 (<code>Concept Drift</code>)。例如，经济环境变化可能会导致利率的波动，从而影响购房模型的预测结果，<code>Amazon SageMaker Model Monitor</code> 能够检测已部署模型的概念漂移问题，提供详细的警报，同时通过 <code>Amazon SageMaker</code> 训练的模型会自动发送关键指标，以帮助确定问题根源，这为一些训练数据有限的场景提供了一个自动化机制，方便通过线上数据不断调优模型，而不必因为没有收集到足够数据或缺少自动化流程而推迟模型部署</li><li>与 <code>Kubernetes</code> 集成以进行编排和管理。目前，许多机器学习团队的工作平台基于 <code>Kubernetes</code> 平台，而且一些现有工作流编排和应用不易迁移，为了解决这些问题，<code>Amazon SageMaker</code> 提供了 <code>Kubernetes Operator</code> 来与基于 <code>Kubernetes</code> 的工作流集成</li><li><code>Amazon SageMaker Neo</code>，支持模型一次训练，多处运行。<code>Amazon SageMaker Neo</code> 实现了机器学习模型训练一次即可在云上或者边缘计算节点中的不同硬件和系统环境中运行，以便在云实例和边缘设备上进行推理，从而以更快的速度运行而不会损失准确性，该功能可优化模型以在特定的硬件上运行，为给定模型和硬件目标提供最佳可用性能，优化后的模型运行速度最多可提高两倍，并且可以消耗更少的资源</li></ul> </li></ul> 
+<p>总之，通过 <code>Amazon SageMaker</code> 提供的一系列功能组件，涵盖了机器学习流程的各个方面，可以大大提高机器学习的效率和质量，并为用户构建、训练和部署模型提供全面的支持和保障。</p> 
+<h4><a id="13_Amazon_SageMaker__48"></a>1.3 Amazon SageMaker 优势</h4> 
+<p>通过以上介绍，我们可以总结出 <code>Amazon SageMaker</code> 作为一款全面的机器学习平台具有以下优势：</p> 
+<ul><li>高效性：<code>Amazon SageMaker</code> 提供了一系列高效的功能组件，如自动化模型调优、高性能的模型训练和部署、丰富的监控和调试工具等，可以显著提高机器学习的效率和质量</li><li>灵活性：<code>Amazon SageMaker</code> 提供了多种模型部署和管理方式，用户可以根据需求选择合适的部署方式</li><li>扩展性：<code>Amazon SageMaker</code> 可以轻松地扩展计算和存储资源，以应对不同规模和复杂度的机器学习任务</li><li>安全性：<code>Amazon SageMaker</code> 提供了多种安全性措施，包括数据隐私和保护、访问控制和加密等，以确保用户数据的安全和保密性</li><li>成本效益：<code>Amazon SageMaker</code> 提供了多种付费模式，用户可以根据需求选择合适的付费方式，并通过使用 <code>Amazon SageMaker</code> 自动化优化功能，减少机器学习任务的成本</li></ul> 
+<p>总之，<code>Amazon SageMaker</code> 具有高效、灵活、可扩展、安全和成本效益等优势，可以为用户提供全面的机器学习支持和保障，帮助用户更加轻松地构建、训练和部署高质量的机器学习模型。接下来，我们将基于 <code>Amazon SageMaker</code> 创建、部署 <code>Stable Diffusion</code> 生成模型，用于生成高质量图片。</p> 
+<h3><a id="2_AIGC__Stable_Diffusion_58"></a>2. AIGC 与 Stable Diffusion</h3> 
+<h4><a id="21__AIGC__59"></a>2.1 步入 AIGC 时代</h4> 
+<p>目前人工智能模型可以分为两大类别，包括判别模型 (<code>Discriminative Model</code>) 与生成模型 (<code>Generative Model</code>)。判别模型根据一组输入数据，例如文本、X 射线图像或者游戏画面，经过一系列计算得到相应目标输出结果，例如单词翻译结果、X 光图像的诊断结果或游戏中下一时刻要执行的动作。判别模型可能是我们最熟悉的一类 AI 模型，其目的是在一组输入变量和目标输出之间创建映射。<br> 而生成模型，并不会不会对输入变量计算分数或标签，而是通过学习输入和输出之间的关系生成新的数据样本，这类模型可以接受与实际值无关的向量(甚至是随机向量)，生成复杂输出，例如文本、音乐或图像。人工智能生成( <code>Artificial Intelligence Generated Content</code>, <code>AIGC</code>) 内容泛指指利用机器学习和自然语言处理技术，让计算机生成人类可理解的文本、音频、图像等内容，主要由深度学习算法和神经网络构成，可以通过学习大量的数据来模拟人类的思维和创造力，从而产生高质量的内容。下图是使用 <code>stable diffusion</code> 模型生成的图像，可以看出生成的图像不仅具有很高的质量，同时能够很好的契合给定的输入描述。</p> 
+<p><img src="https://images2.imgbox.com/11/c4/wOyosAPh_o.png" alt="AIGC"><br> <code>AIGC</code> 通过机器学习方法从原始数据中学习数据特征，进而生成全新的、原创的数据，这些数据与训练数据保持相似，而非简单复制原始数据。<code>AIGC</code> 已经取得了重大进展，并在各个领域得到广泛应用：</p> 
+<ul><li>内容创作：可以辅助创作者完成图画、文章、小说、音乐等内容的创作</li><li>设计：可以帮助设计师进行平面设计、<code>UI</code> 设计等</li><li>游戏：可以生成游戏中的角色、道具等元素</li><li>视频制作：可以生成特效、动画等内容</li><li>智能客服：可以生成自然语言对话，实现智能客服等应用</li></ul> 
+<p><code>AIGC</code> 可以视为未来的战略技术，其将极大加速人工智能生成数据的速度，正在深刻改变人类社会，推动人类创作活动，包括写作、绘画、编程等，甚至也将推动科学研究，例如生成科学假设和科学现象等。<code>AIGC</code> 是一个快速发展的领域，将为各个行业带来革命性的变化。未来，通过学术界和工业界持续探索新的算法和技术，将进一步提高生成内容的质量和多样性。<br> 总的来说，判别模型关注的是输入和输出之间的关系，直接预测输出结果，而生成模型则关注数据的分布，通过学习数据的统计特征来生成新的样本数据。判别模型推动了人工智能前数十年的发展，而生成模型将成为人工智能未来十年的重点发展方向。</p> 
+<h4><a id="22_Stable_Diffusion__73"></a>2.2 Stable Diffusion 介绍</h4> 
+<p>最近 <code>AI</code> 作画取得如此巨大进展的原因很大程度上可以归功于开源模型 <code>Stable Diffusion</code>，<code>Stable diffusion</code> 是一个基于潜在扩散模型 (<code>Latent Diffusion Models</code>, <code>LDM</code>) 的文图生成 (<code>text-to-image</code>) 模型，经过训练可以逐步对随机高斯噪声进行去噪以获得感兴趣的数据样本，该模型使用来自 <code>LAION-5B</code> 数据库 (<code>LAION-5B</code> 是目前最大、可自由访问的多模态数据集)子集的 <code>512x512</code> 图像进行训练，使用这个模型，可以生成包括人脸在内的任何图像。在使用 <code>Stable Diffusion</code> 生成高质量图像之前，我们首先介绍该模型的原理与架构，<code>Stable Diffusion</code> 模型架构如下图所示：</p> 
+<p><img src="https://images2.imgbox.com/55/22/oyO2tsQo_o.png" alt="模型架构"><br> <code>Diffusion model</code> 相比生成对抗网络 (<code>Generative Adversarial Network</code>, <code>GAN</code>) 具有更好的图片生成效果，但由于该模型是一种自回归模型，需要反复迭代计算，因此训练和推理代价都很高，主要原因是它们在像素空间中运行，特别是在生成高分辨率图像时，需要消耗大量内存。<code>Latent diffusion</code> 通过在较低维度的潜空间上应用扩散过程而不是使用实际的像素空间来减少内存和计算成本，所以 <code>Stable Diffusion</code> 引入了 <code>Latent diffusion</code> 的方式来解决计算代价昂贵的问题，能够极大地减少计算复杂度，同时可以生成质量较高的图像，<code>Latent Diffusion</code> 的主要包括以下三个组成部分：</p> 
+<ul><li>变分自编码器 (<code>Variational autoEncoder</code>, <code>VAE</code>)<br> <code>VAE</code> 模型主要包含两个部分：编码器和解码器，其中编码器用于将图像转换为低维的潜在表示，得到的低维潜在表示将作为 <code>U-Net</code> 模型的输入，而解码器用于将潜在表示转换回图像。在 <code>Latent diffusion</code> 训练期间，编码器用于获得正向扩散过程的图像的潜在表示，正向扩散在每一步中逐步使用越来越多的噪声。在推断过程中，使用 <code>VAE</code> 解码器将反向扩散过程生成的去噪潜在表示转换回图像</li><li><code>U-Net</code><br> <code>U-Net</code> 同样包含编码器和解码器两部分，且都由 <code>ResNet</code> 块组成，编码器将图像表示压缩成较低分辨率的图像表示，解码器将较低分辨率图像表示解码回原始较高分辨率的图像表示。为了防止 <code>U-Net</code> 在下采样时丢失重要信息，通常在编码器的下采样 <code>ResNet</code> 和解码器的上采样 <code>ResNet</code> 之间添加捷径连接 (<code>Short-cut Connections</code>)，此外，<code>U-Net</code> 能够通过 <code>cross-attention</code> 层将其输出条件设置在文本嵌入上，<code>cross-attention</code> 层被添加到 <code>U-Net</code> 的编码器和解码器部分，通常用在 <code>ResNet</code> 块之间</li><li><code>Text-Encoder</code><br> <code>Text-Encoder</code> 负责将输入提示转换到 <code>U-Net</code> 可以理解的嵌入空间，它通常是一个简单的基于 <code>Transformer</code> 的编码器，将输入分词序列映射到潜在文本嵌入序列。受 <code>Imagen</code> 的启发，<code>Stable Diffusion</code> 在训练过程中并不会训练 <code>Text-Encoder</code>，只使用 <code>CLIP</code> 预训练过的 <code>Text-Encoder</code>——<code>CLIPTextModel</code></li></ul> 
+<p>但是，纵然由于 <code>Latent diffusion</code> 可以在低维潜在空间上进行操作，与像素空间扩散模型相比，它极大的降低了内存和计算需求，但如果需要生成高质量照片，模型仍然需要在 <code>16GB</code> 以上 <code>GPU</code> 上运行，具体而言，在本地计算机上搭建 <code>Stable Diffusion</code> 模型会遇到以下困难：</p> 
+<ul><li>软件环境：<code>Stable Diffusion</code> 模型的构建需要使用特定的软件和库，在本地计算机上搭建软件环境可能会遇到版本不兼容、依赖关系复杂等问题，需要花费大量时间和精力进行调试和解决</li><li>数据处理：<code>Stable Diffusion</code> 模型训练需要处理大量的高质量图像数据，在本地计算机上处理大量数据可能会导致内存不足、速度慢等问题</li><li>计算资源限制：<code>Stable Diffusion</code> 模型训练需要大量的计算资源，包括高显存 <code>GPU</code> 和大量内存，如果本地计算机的计算资源不足，将无法训练模型</li><li>超参数：<code>Stable Diffusion</code> 模型需要设置大量参数，如扩散系数、边界条件、学习率等，这些超参数的选择需要经过大量调试，否则可能会导致模型不收敛或者收敛速度过慢</li><li>模型验证：<code>Stable Diffusion</code> 模型需要进行大量模型验证和测试，以确保模型的正确性和可靠性</li></ul> 
+<p>综上所述，搭建 <code>Stable Diffusion</code> 模型需要克服计算资源限制、软件兼容问题、数据处理和超参数选择等困难。因此，选择云计算平台来简化这些工作便成为自然的选择，而 <code>Amazon SageMaker</code> 作为完全托管的机器学习服务成为构建、训练与部署复杂模型(例如 <code>Stable Diffusion</code> )的首选。</p> 
+<h3><a id="3__Amazon_SageMaker__Stable_Diffusion__93"></a>3. 使用 Amazon SageMaker 创建 Stable Diffusion 模型</h3> 
+<p>在本节中，我们将介绍基于 <code>Amazon SageMaker</code> 使用 <code>Amazon SageMaker Notebook</code> 实例测试、验证 <code>AIGC</code> 模型并<br> 部署 <code>AIGC</code> 模型至 <code>Amazon SageMaker Inference Endpoint</code>。</p> 
+<h4><a id="31__96"></a>3.1 准备工作</h4> 
+<p>为了确保能够将 <code>AIGC</code> 模型部署至 <code>Amazon SageMaker Inference Endpoint</code>，需要确保有足够的限额。为此，我们首先需要通过<a href="https://ap-northeast-1.console.aws.amazon.com/servicequotas/home/services/sagemaker/quotas" rel="nofollow">服务配额页面</a>检查配额，在搜索框中输入 <code>ml.g4dn.xlarge for endpoint usage</code>，若此配额的第二列为 <code>0</code>，则需要提高配额：</p> 
+<p><img src="https://images2.imgbox.com/db/c0/x29RtfMN_o.png" alt="提升配额"></p> 
+<p>提高限额，需首先选中 <code>ml.g4dn.xlarge for endpoint usage</code>，点击“请求增加配额”按钮：</p> 
+<p><img src="https://images2.imgbox.com/bc/27/SCGVrMYi_o.png" alt="请求增加配额"></p> 
+<p>在输入框中输入所需的限额，例如 “<code>1</code>”，填写完毕后，点击“请求”按钮提交请求：</p> 
+<p><img src="https://images2.imgbox.com/f1/b2/s5CpYcxg_o.png" alt="提交配额请求"><br> 等待配额请求通过后，就可以继续该实验过程。</p> 
+<h4><a id="32__Amazon_SageMaker_Notebook__110"></a>3.2 创建 Amazon SageMaker Notebook 实例</h4> 
+<p><code>Amazon SageMaker Notebook</code> 实例是运行 <code>Jupyter Notebook</code> 应用程序的机器学习计算实例。<code>Amazon SageMaker</code> 用于管理实例和相关资源的创建，我们可以在 <code>Notetbook</code> 实例中使用 <code>Jupyter Notebook</code> 准备和处理数据、编写代码来训练模型、或将模型部署到 <code>Amazon SageMaker</code> 中，并测试或验证模型。接下来，我们将创建 <code>Amazon SageMaker Notebook</code> 示例，用于运行相关 <code>Jupyter Notebook</code> 代码。</p> 
+<p><strong>(1)</strong> 登录<a href="https://ap-northeast-1.console.aws.amazon.com/console/home?region=ap-northeast-1" rel="nofollow"> Amazon 云科技控制台</a>，并将当前区域修改为 <code>Tokyo</code> 区域：</p> 
+<p><img src="https://images2.imgbox.com/95/02/UZFfcKTs_o.png" alt="修改当前区域"></p> 
+<p><strong>(2)</strong> 在搜索框中搜索 <code>Amazon SageMaker</code>，并点击进入 <code>Amazon SageMaker</code> 服务：</p> 
+<p><img src="https://images2.imgbox.com/88/f7/i1XaTAzI_o.png" alt="进入Amazon SageMake服务"></p> 
+<p><strong>(3)</strong> 在左侧菜单栏，首先点击“笔记本”按钮，然后点击“笔记本实例”，进入笔记本 (<code>Notebook</code>) 实例控制面板，并点击右上角”创建笔记本实例“按钮：</p> 
+<p><img src="https://images2.imgbox.com/d4/10/GEZxmyRI_o.png" alt="创建笔记本实例"></p> 
+<p><strong>(4)</strong> 配置笔记本实例设置，在创建笔记本实例详情页中，配置笔记本实例的基本信息，包括笔记本实例名称(例如 <code>stable-diffusion</code>)、笔记本实例类型(选择 <code>ml.g4dn.xlarge</code> 实例类型，该类型实例搭载 <code>NVIDIA T4 Tensor Core GPU</code> 显卡，提供了模型所需执行浮点数计算的能力)、平台标识符( <code>Amazon Linux 2, Jupyter Lab 3</code> )和在“其他配置”下的卷大小(推荐至少 <code>75GB</code> 磁盘大小，用于存储机器学习模型)：</p> 
+<p><img src="https://images2.imgbox.com/56/a7/55H316YE_o.png" alt="配置笔记本实例"></p> 
+<p><strong>(5)</strong> 配置笔记本实例权限，为笔记本实例创建一个 <code>IAM</code> 角色，用于调用包括 <code>Amazon SageMaker</code> 和 <code>S3</code> 在内的服务，例如上传模型，部署模型等。在“权限和加密”下的 <code>IAM</code> 角色中，点击下拉列表，单击“创建新角色”：</p> 
+<p><img src="https://images2.imgbox.com/4f/56/xl64d4IV_o.png" alt="创建新角色"></p> 
+<p>在配置页面中，保持默认配置，并点击“创建角色”按钮：</p> 
+<p><img src="https://images2.imgbox.com/ec/83/Y5udOnAq_o.png" alt="创建角色"></p> 
+<p>成功创建 <code>IAM</code> 角色后，可以得到类似下图的提示信息：</p> 
+<p><img src="https://images2.imgbox.com/0f/81/tpd3FV7C_o.png" alt="成功创建角色"></p> 
+<p><strong>(6)</strong> 检查配置的信息，确认无误后点击“创建笔记本实例”按钮，等待实例创建完成。</p> 
+<p><img src="https://images2.imgbox.com/38/b5/V0euuqX9_o.png" alt="创建笔记本实例"></p> 
+<p><strong>(7)</strong> 当笔记本状态变为 <code>InService</code> 后，点击“打开Jupyter”进入 <code>Jupyter Notebook</code>：</p> 
+<p><img src="https://images2.imgbox.com/92/7f/A2BnGGRD_o.png" alt="进入Jupyter Notebook"></p> 
+<h4><a id="33__AIGC_153"></a>3.3 端到端体验 AIGC</h4> 
+<p>接下来，我们可以<a href="https://static.us-east-1.prod.workshops.aws/public/73ea3a9f-37c8-4d01-ae4e-07cf6313adac/static/code/notebook-stable-diffusion-ssh-inference.ipynb" rel="nofollow">下载</a>保存 <code>Notebook</code> 代码文件，并将其上传到 <code>Jupyter Notebook</code>，然后直接运行代码，但亲手编写代码的体验是无与伦比，我们将介绍代码文件的主要内容，从头开始端到端体验 <code>AIGC</code>！需要注意的是，需要确保 <code>Kernel</code> 以 <code>conda_pytorch</code> 开头。</p> 
+<p><strong>(1)</strong> 安装相关库并进行环境配置工作：</p> 
+<pre><code class="prism language-python"><span class="token comment"># 检查环境版本</span>
+!nvcc <span class="token operator">-</span><span class="token operator">-</span>version
+!pip <span class="token builtin">list</span> <span class="token operator">|</span> grep torch
+<span class="token comment"># 安装Notebook运行模型所需的库文件</span>
+!sudo yum <span class="token operator">-</span>y install pigz
+!pip install <span class="token operator">-</span>U pip
+!pip install <span class="token operator">-</span>U transformers<span class="token operator">==</span><span class="token number">4.26</span><span class="token number">.1</span> diffusers<span class="token operator">==</span><span class="token number">0.13</span><span class="token number">.1</span> ftfy accelerate
+!pip install <span class="token operator">-</span>U torch<span class="token operator">==</span><span class="token number">1.13</span><span class="token number">.1</span><span class="token operator">+</span>cu117 <span class="token operator">-</span>f https<span class="token punctuation">:</span><span class="token operator">//</span>download<span class="token punctuation">.</span>pytorch<span class="token punctuation">.</span>org<span class="token operator">/</span>whl<span class="token operator">/</span>torch_stable<span class="token punctuation">.</span>html
+!pip install <span class="token operator">-</span>U sagemaker
+!pip <span class="token builtin">list</span> <span class="token operator">|</span> grep torch
+</code></pre> 
+<p><strong>(2)</strong> 下载模型文件，我们将使用 <code>Stable Diffusion V2</code> 版本，其包含一个具有鲁棒性的文本生成图像模型，能够极大的提高了图像生成质量，模型相关介绍参见 <a href="https://github.com/huggingface/diffusers">Github</a>：</p> 
+<pre><code class="prism language-python"><span class="token comment"># 安装git lfs以克隆模型仓库</span>
+!curl <span class="token operator">-</span>s https<span class="token punctuation">:</span><span class="token operator">//</span>packagecloud<span class="token punctuation">.</span>io<span class="token operator">/</span>install<span class="token operator">/</span>repositories<span class="token operator">/</span>github<span class="token operator">/</span>git<span class="token operator">-</span>lfs<span class="token operator">/</span>script<span class="token punctuation">.</span>rpm<span class="token punctuation">.</span>sh <span class="token operator">|</span> sudo bash
+!sudo yum install git<span class="token operator">-</span>lfs <span class="token operator">-</span>y
+<span class="token comment"># 设定模型版本的环境变量，使用 Stable Diffusion V2</span>
+SD_SPACE<span class="token operator">=</span><span class="token string">"stabilityai/"</span>
+SD_MODEL <span class="token operator">=</span> <span class="token string">"stable-diffusion-2-1"</span>
+<span class="token comment"># 克隆代码仓库</span>
+<span class="token comment"># Estimated time to spend 3min(V1), 8min(V2)</span>
+<span class="token operator">%</span>cd <span class="token operator">~</span><span class="token operator">/</span>SageMaker
+!printf <span class="token string">"=======Current Path========%s\n"</span>
+!rm <span class="token operator">-</span>rf $SD_MODEL
+<span class="token comment"># !git lfs clone https://huggingface.co/$SD_SPACE$SD_MODEL -X "*.safetensors"</span>
+!mkdir $SD_MODEL
+<span class="token operator">%</span>cd $SD_MODEL
+!git init
+!git config core<span class="token punctuation">.</span>sparseCheckout true
+!echo <span class="token string">"/*"</span> <span class="token operator">&gt;&gt;</span> <span class="token punctuation">.</span>git<span class="token operator">/</span>info<span class="token operator">/</span>sparse<span class="token operator">-</span>checkout
+!echo <span class="token string">"!**/*.safetensors"</span> <span class="token operator">&gt;&gt;</span> <span class="token punctuation">.</span>git<span class="token operator">/</span>info<span class="token operator">/</span>sparse<span class="token operator">-</span>checkout
+!git remote add <span class="token operator">-</span>f master https<span class="token punctuation">:</span><span class="token operator">//</span>huggingface<span class="token punctuation">.</span>co<span class="token operator">/</span>$SD_SPACE$SD_MODEL
+!git pull master main
+<span class="token operator">%</span>cd <span class="token operator">~</span><span class="token operator">/</span>SageMaker
+!printf <span class="token string">"=======Folder========%s\n$(ls)\n"</span>
+</code></pre> 
+<p><strong>(3)</strong> 在 <code>Notebook</code> 中配置并使用模型，首先加载相关库与模型：</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> torch
+<span class="token keyword">import</span> datetime
+<span class="token keyword">from</span> diffusers <span class="token keyword">import</span> StableDiffusionPipeline
+<span class="token comment"># Load stable diffusion</span>
+pipe <span class="token operator">=</span> StableDiffusionPipeline<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>SD_MODEL<span class="token punctuation">,</span> torch_dtype<span class="token operator">=</span>torch<span class="token punctuation">.</span>float16<span class="token punctuation">)</span>
+</code></pre> 
+<p>使用 <code>GPU</code> 进行运算并设定超参数，部分超参数如下：</p> 
+<ul><li>prompt (str 或 List[str])：引导图像生成的文本提示或文本列表</li><li>height (int, *optional, V2 默认模型可支持到 <code>768</code> 像素)：生成图像的高度(以像素为单位)</li><li>width (int, *optional, V2 默认模型可支持到 <code>768</code> 像素)：生成图像的宽度(以像素为单位)</li><li>num_inference_steps (int, *optional, 默认降噪步数为 <code>50</code>)：降噪步数，更多的降噪步数通常会以较慢的推理为代价获得更高质量的图像</li><li>guidance_scale (float, *optional, 默认指导比例为 <code>7.5</code>)：较高的指导比例会导致图像与提示密切相关，但会牺牲图像质量，当 <code>guidance_scale&lt;=1</code> 时会被忽略</li><li>negative_prompt (str or List[str], *optional)：不引导图像生成的文本或文本列表</li><li>num_images_per_prompt (int, *optional, 默认每个提示生成 <code>1</code> 张图像)：每个提示生成的图像数量</li></ul> 
+<pre><code class="prism language-python"><span class="token comment"># move Model to the GPU</span>
+torch<span class="token punctuation">.</span>cuda<span class="token punctuation">.</span>empty_cache<span class="token punctuation">(</span><span class="token punctuation">)</span>
+pipe <span class="token operator">=</span> pipe<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">"cuda"</span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+prompts <span class="token operator">=</span><span class="token punctuation">[</span>
+    <span class="token string">"Eiffel tower landing on the Mars"</span><span class="token punctuation">,</span>
+    <span class="token string">"a photograph of an astronaut riding a horse,van Gogh style"</span><span class="token punctuation">,</span>
+<span class="token punctuation">]</span>
+generated_images <span class="token operator">=</span> pipe<span class="token punctuation">(</span>
+    prompt<span class="token operator">=</span>prompts<span class="token punctuation">,</span>
+    height<span class="token operator">=</span><span class="token number">512</span><span class="token punctuation">,</span>
+    width<span class="token operator">=</span><span class="token number">512</span><span class="token punctuation">,</span>
+    num_images_per_prompt<span class="token operator">=</span><span class="token number">1</span>
+<span class="token punctuation">)</span><span class="token punctuation">.</span>images  <span class="token comment"># image here is in [PIL format](https://pillow.readthedocs.io/en/stable/)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"Prompts: </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>prompts<span class="token punctuation">}</span></span><span class="token string">\n"</span></span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+<span class="token keyword">for</span> image <span class="token keyword">in</span> generated_images<span class="token punctuation">:</span>
+    display<span class="token punctuation">(</span>image<span class="token punctuation">)</span>
+</code></pre> 
+<p><strong>(4)</strong> 将模型部署至 <code>Sagemaker Inference Endpoint</code>，构建和训练模型后，可以将模型部署至终端节点，以获取预测推理结果：</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> sagemaker
+<span class="token keyword">import</span> boto3
+sess <span class="token operator">=</span> sagemaker<span class="token punctuation">.</span>Session<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token comment"># sagemaker session bucket -&gt; used for uploading data, models and logs</span>
+<span class="token comment"># sagemaker will automatically create this bucket if it not exists</span>
+sagemaker_session_bucket<span class="token operator">=</span><span class="token boolean">None</span>
+
+<span class="token keyword">if</span> sagemaker_session_bucket <span class="token keyword">is</span> <span class="token boolean">None</span> <span class="token keyword">and</span> sess <span class="token keyword">is</span> <span class="token keyword">not</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+    <span class="token comment"># set to default bucket if a bucket name is not given</span>
+    sagemaker_session_bucket <span class="token operator">=</span> sess<span class="token punctuation">.</span>default_bucket<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+<span class="token keyword">try</span><span class="token punctuation">:</span>
+    role <span class="token operator">=</span> sagemaker<span class="token punctuation">.</span>get_execution_role<span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token keyword">except</span> ValueError<span class="token punctuation">:</span>
+    iam <span class="token operator">=</span> boto3<span class="token punctuation">.</span>client<span class="token punctuation">(</span><span class="token string">'iam'</span><span class="token punctuation">)</span>
+    role <span class="token operator">=</span> iam<span class="token punctuation">.</span>get_role<span class="token punctuation">(</span>RoleName<span class="token operator">=</span><span class="token string">'sagemaker_execution_role'</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">'Role'</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token string">'Arn'</span><span class="token punctuation">]</span>
+
+sess <span class="token operator">=</span> sagemaker<span class="token punctuation">.</span>Session<span class="token punctuation">(</span>default_bucket<span class="token operator">=</span>sagemaker_session_bucket<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"sagemaker role arn: </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>role<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"sagemaker bucket: </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>sess<span class="token punctuation">.</span>default_bucket<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"sagemaker session region: </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>sess<span class="token punctuation">.</span>boto_region_name<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+</code></pre> 
+<p>创建自定义推理脚本 <code>inference.py</code>：</p> 
+<pre><code class="prism language-python">!mkdir <span class="token punctuation">.</span><span class="token operator">/</span>$SD_MODEL<span class="token operator">/</span>code
+<span class="token comment"># 为模型创建所需依赖声明的文件</span>
+<span class="token operator">%</span><span class="token operator">%</span>writefile <span class="token punctuation">.</span><span class="token operator">/</span>$SD_MODEL<span class="token operator">/</span>code<span class="token operator">/</span>requirements<span class="token punctuation">.</span>txt
+diffusers<span class="token operator">==</span><span class="token number">0.13</span><span class="token number">.1</span>
+transformers<span class="token operator">==</span><span class="token number">4.26</span><span class="token number">.1</span>
+<span class="token comment"># 编写 inference.py 脚本</span>
+<span class="token operator">%</span><span class="token operator">%</span>writefile <span class="token punctuation">.</span><span class="token operator">/</span>$SD_MODEL<span class="token operator">/</span>code<span class="token operator">/</span>inference<span class="token punctuation">.</span>py
+<span class="token keyword">import</span> base64
+<span class="token keyword">import</span> torch
+<span class="token keyword">from</span> io <span class="token keyword">import</span> BytesIO
+<span class="token keyword">from</span> diffusers <span class="token keyword">import</span> StableDiffusionPipeline
+
+
+<span class="token keyword">def</span> <span class="token function">model_fn</span><span class="token punctuation">(</span>model_dir<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># Load stable diffusion and move it to the GPU</span>
+    pipe <span class="token operator">=</span> StableDiffusionPipeline<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_dir<span class="token punctuation">,</span> torch_dtype<span class="token operator">=</span>torch<span class="token punctuation">.</span>float16<span class="token punctuation">)</span>
+    pipe <span class="token operator">=</span> pipe<span class="token punctuation">.</span>to<span class="token punctuation">(</span><span class="token string">"cuda"</span><span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> pipe
+
+
+<span class="token keyword">def</span> <span class="token function">predict_fn</span><span class="token punctuation">(</span>data<span class="token punctuation">,</span> pipe<span class="token punctuation">)</span><span class="token punctuation">:</span>
+
+    <span class="token comment"># get prompt &amp; parameters</span>
+    prompt <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"prompt"</span><span class="token punctuation">,</span> <span class="token string">""</span><span class="token punctuation">)</span>
+    <span class="token comment"># set valid HP for stable diffusion</span>
+    height <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"height"</span><span class="token punctuation">,</span> <span class="token number">512</span><span class="token punctuation">)</span>
+    width <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"width"</span><span class="token punctuation">,</span> <span class="token number">512</span><span class="token punctuation">)</span>
+    num_inference_steps <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"num_inference_steps"</span><span class="token punctuation">,</span> <span class="token number">50</span><span class="token punctuation">)</span>
+    guidance_scale <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"guidance_scale"</span><span class="token punctuation">,</span> <span class="token number">7.5</span><span class="token punctuation">)</span>
+    num_images_per_prompt <span class="token operator">=</span> data<span class="token punctuation">.</span>pop<span class="token punctuation">(</span><span class="token string">"num_images_per_prompt"</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token comment"># run generation with parameters</span>
+    generated_images <span class="token operator">=</span> pipe<span class="token punctuation">(</span>
+        prompt<span class="token operator">=</span>prompt<span class="token punctuation">,</span>
+        height<span class="token operator">=</span>height<span class="token punctuation">,</span>
+        width<span class="token operator">=</span>width<span class="token punctuation">,</span>
+        num_inference_steps<span class="token operator">=</span>num_inference_steps<span class="token punctuation">,</span>
+        guidance_scale<span class="token operator">=</span>guidance_scale<span class="token punctuation">,</span>
+        num_images_per_prompt<span class="token operator">=</span>num_images_per_prompt<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token string">"images"</span><span class="token punctuation">]</span>
+
+    <span class="token comment"># create response</span>
+    encoded_images <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token keyword">for</span> image <span class="token keyword">in</span> generated_images<span class="token punctuation">:</span>
+        buffered <span class="token operator">=</span> BytesIO<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        image<span class="token punctuation">.</span>save<span class="token punctuation">(</span>buffered<span class="token punctuation">,</span> <span class="token builtin">format</span><span class="token operator">=</span><span class="token string">"JPEG"</span><span class="token punctuation">)</span>
+        encoded_images<span class="token punctuation">.</span>append<span class="token punctuation">(</span>base64<span class="token punctuation">.</span>b64encode<span class="token punctuation">(</span>buffered<span class="token punctuation">.</span>getvalue<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>decode<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># create response</span>
+    <span class="token keyword">return</span> <span class="token punctuation">{<!-- --></span><span class="token string">"generated_images"</span><span class="token punctuation">:</span> encoded_images<span class="token punctuation">}</span>
+</code></pre> 
+<p>打包模型并上传至 <code>S3</code> 桶：</p> 
+<pre><code class="prism language-python"><span class="token comment">#Package model, Estimated time to spend 2min(V1),5min(V2)</span>
+!echo $<span class="token punctuation">(</span>date<span class="token punctuation">)</span>
+!tar <span class="token operator">-</span><span class="token operator">-</span>exclude <span class="token punctuation">.</span>git <span class="token operator">-</span><span class="token operator">-</span>use<span class="token operator">-</span>compress<span class="token operator">-</span>program<span class="token operator">=</span>pigz <span class="token operator">-</span>pcvf <span class="token punctuation">.</span><span class="token operator">/</span>$SD_MODEL<span class="token string">'.tar.gz'</span> <span class="token operator">-</span>C <span class="token punctuation">.</span><span class="token operator">/</span>$SD_MODEL<span class="token operator">/</span> <span class="token punctuation">.</span>
+!echo $<span class="token punctuation">(</span>date<span class="token punctuation">)</span>
+
+<span class="token keyword">from</span> sagemaker<span class="token punctuation">.</span>s3 <span class="token keyword">import</span> S3Uploader
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># upload model.tar.gz to s3, Estimated time to spend 30s(V1), 1min(V2)</span>
+sd_model_uri<span class="token operator">=</span>S3Uploader<span class="token punctuation">.</span>upload<span class="token punctuation">(</span>local_path<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>SD_MODEL<span class="token punctuation">}</span></span><span class="token string">.tar.gz"</span></span><span class="token punctuation">,</span> desired_s3_uri<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"s3://</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>sess<span class="token punctuation">.</span>default_bucket<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span></span><span class="token string">/stable-diffusion"</span></span><span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"=======S3 File Location========\nmodel uploaded to:\n</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>sd_model_uri<span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>使用 <code>HuggingFace</code> 将模型部署至 <code>Amazon SageMaker</code>：</p> 
+<pre><code class="prism language-python"><span class="token comment">#init variables</span>
+huggingface_model <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+predictor <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+
+<span class="token keyword">from</span> sagemaker<span class="token punctuation">.</span>huggingface<span class="token punctuation">.</span>model <span class="token keyword">import</span> HuggingFaceModel
+<span class="token comment"># create Hugging Face Model Class</span>
+huggingface_model<span class="token punctuation">[</span>SD_MODEL<span class="token punctuation">]</span> <span class="token operator">=</span> HuggingFaceModel<span class="token punctuation">(</span>
+    model_data<span class="token operator">=</span>sd_model_uri<span class="token punctuation">,</span> <span class="token comment"># path to your model and script</span>
+    role<span class="token operator">=</span>role<span class="token punctuation">,</span> <span class="token comment"># iam role with permissions to create an Endpoint</span>
+    transformers_version<span class="token operator">=</span><span class="token string">"4.17"</span><span class="token punctuation">,</span> <span class="token comment"># transformers version used</span>
+    pytorch_version<span class="token operator">=</span><span class="token string">"1.10"</span><span class="token punctuation">,</span> <span class="token comment"># pytorch version used</span>
+    py_version<span class="token operator">=</span><span class="token string">'py38'</span><span class="token punctuation">,</span> <span class="token comment"># python version used</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment"># deploy the endpoint endpoint, Estimated time to spend 8min(V2)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+predictor<span class="token punctuation">[</span>SD_MODEL<span class="token punctuation">]</span> <span class="token operator">=</span> huggingface_model<span class="token punctuation">[</span>SD_MODEL<span class="token punctuation">]</span><span class="token punctuation">.</span>deploy<span class="token punctuation">(</span>
+    initial_instance_count<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span>
+    instance_type<span class="token operator">=</span><span class="token string">"ml.g4dn.xlarge"</span><span class="token punctuation">,</span>
+    endpoint_name<span class="token operator">=</span><span class="token string-interpolation"><span class="token string">f"</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>SD_MODEL<span class="token punctuation">}</span></span><span class="token string">-endpoint"</span></span>
+<span class="token punctuation">)</span>
+
+<span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string-interpolation"><span class="token string">f"\n</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span>datetime<span class="token punctuation">.</span>datetime<span class="token punctuation">.</span>now<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+</code></pre> 
+<p>基于推理终端节点生成自定义图片：</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> PIL <span class="token keyword">import</span> Image
+<span class="token keyword">from</span> io <span class="token keyword">import</span> BytesIO
+<span class="token keyword">import</span> base64
+
+<span class="token comment"># helper decoder</span>
+<span class="token keyword">def</span> <span class="token function">decode_base64_image</span><span class="token punctuation">(</span>image_string<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    base64_image <span class="token operator">=</span> base64<span class="token punctuation">.</span>b64decode<span class="token punctuation">(</span>image_string<span class="token punctuation">)</span>
+    <span class="token builtin">buffer</span> <span class="token operator">=</span> BytesIO<span class="token punctuation">(</span>base64_image<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> Image<span class="token punctuation">.</span><span class="token builtin">open</span><span class="token punctuation">(</span><span class="token builtin">buffer</span><span class="token punctuation">)</span>
+
+response <span class="token operator">=</span> predictor<span class="token punctuation">[</span>SD_MODEL<span class="token punctuation">]</span><span class="token punctuation">.</span>predict<span class="token punctuation">(</span>data<span class="token operator">=</span><span class="token punctuation">{<!-- --></span>
+    <span class="token string">"prompt"</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>
+        <span class="token string">"A bird is flying in space"</span><span class="token punctuation">,</span>
+        <span class="token string">"a photograph of an astronaut riding a horse"</span><span class="token punctuation">,</span>
+    <span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"height"</span> <span class="token punctuation">:</span> <span class="token number">512</span><span class="token punctuation">,</span>
+    <span class="token string">"width"</span> <span class="token punctuation">:</span> <span class="token number">512</span><span class="token punctuation">,</span>
+    <span class="token string">"num_images_per_prompt"</span><span class="token punctuation">:</span><span class="token number">1</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment">#decode images</span>
+decoded_images <span class="token operator">=</span> <span class="token punctuation">[</span>decode_base64_image<span class="token punctuation">(</span>image<span class="token punctuation">)</span> <span class="token keyword">for</span> image <span class="token keyword">in</span> response<span class="token punctuation">[</span><span class="token string">"generated_images"</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+
+<span class="token comment">#visualize generation</span>
+<span class="token keyword">for</span> image <span class="token keyword">in</span> decoded_images<span class="token punctuation">:</span>
+    display<span class="token punctuation">(</span>image<span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="34__391"></a>3.4 模型生成效果</h4> 
+<p>接下来，我们使用部署完成的模型，查看图像生成效果，例如我们使用 <code> A bird is flying in space</code> 和 <code>Photos of horseback riding under the sea</code> 可以得到以下图像：</p> 
+<p><img src="https://images2.imgbox.com/5f/5d/7tICJ9nh_o.png" alt="生成图像"></p> 
+<p>可以看到，即使我们只给出关键词也能够生成纹理清晰、质量上乘的图像，我们也可以使用其他文本测试部署完成的图像生成模型。<br> 最后，需要注意的是，在试验结束后清除本次实验开启的资源，在控制台逐一删除<a href="https://docs.aws.amazon.com/zh_cn/AmazonS3/latest/userguide/delete-bucket.html" rel="nofollow"> S3 存储桶</a>，以及 <code>SageMaker</code> 里创建的 <a href="https://docs.aws.amazon.com/zh_cn/sagemaker/latest/dg/ex1-cleanup.html" rel="nofollow">Notebook</a>、<code>Endpoint</code> 以及 <a href="https://docs.aws.amazon.com/zh_cn/AmazonS3/latest/userguide/empty-bucket.html" rel="nofollow">Model</a> 等资源</p> 
+<h3><a id="5_Amazon_SageMaker__400"></a>5. Amazon SageMaker 使用体验</h3> 
+<p>在利用 <code>Amazon SageMaker</code> 搭建和部署机器学习模型过程中，充分体验了 <code>Amazon SageMaker</code> 提供的机器学习功能和工具，能够更快速、高效地进行机器学习任务，同时还具有灵活性、扩展性和易用性等诸多优势，总体而言，使用体验如下：</p> 
+<ul><li><code>Amazon SageMaker</code> 提供了完备的机器学习工具，能够更快速地开发、训练和部署模型，<code>Amazon SageMaker</code> 的自动化功能也可以帮助用户快速优化模型和参数，减少了机器学习的复杂度和工作量</li><li><code>Amazon SageMaker</code> 提供了一个易于使用的交互式笔记本，能够更快速地探索和处理数据，也更容易地共享代码和笔记本，从而更容易地进行协作和交流</li><li><code>Amazon SageMaker</code> 提供了多种不同的模型部署和管理方式，可以满足使用过程中在不同场景下的需求</li><li><code>Amazon SageMaker</code> 平台提供了完善的监控和调试工具，能够更好地跟踪和分析模型性能，确保模型的稳定性和可靠性</li></ul> 
+<h3><a id="_407"></a>小结</h3> 
+<p>人工智能生成内容( <code>Artificial Intelligence Generated Content</code>, <code>AIGC</code> )凭借其独特的“创造力”与人类无法企及的创作生成速度掀起了一股人工智能狂潮。但是，由于生成模型构建的复杂性，在云中训练和部署人工智能模型成了大多 <code>AIGC</code> 用户和公司的首选。<code>Amazon SageMaker</code> 作为一款非常优秀的云端机器学习平台，提供了丰富的功能和工具，可以帮助我们更加高效地构建、训练和部署机器学习模型，解决了生成模型对于算力要求高昂的问题。本文主要回顾在参与亚马逊云科技的<a href="https://dev.amazoncloud.cn/experience?trk=cndc-detail&amp;sc_medium=corecontent&amp;sc_campaign=product&amp;sc_channel=csdn" rel="nofollow">云上探索实验室活动</a>过程中，基于 <code>Amazon SageMaker</code> 创建、部署 <code>Stable Diffusion</code> 模型的相关要点，充分展示了 <code>Amazon SageMaker</code> 在人工智能模型构建、训练和部署过程中的优势。</p> 
+<h3><a id="_409"></a>云上探索实验室活动</h3> 
+<p><a href="https://dev.amazoncloud.cn/experience?trk=cndc-detail&amp;sc_medium=corecontent&amp;sc_campaign=product&amp;sc_channel=csdn" rel="nofollow">云上探索实验室</a>旨在用技术实验、产品体验、案例应用等方式，让用户亲身感受最新、最热门的亚马逊云科技开发者工具与服务。<a href="https://dev.amazoncloud.cn/experience?trk=cndc-detail&amp;sc_medium=corecontent&amp;sc_campaign=product&amp;sc_channel=csdn" rel="nofollow">云上探索实验室活动</a>目前正在火热进行，通过群内指导和动手体验的形式开展，官方提供多套体验教程和快速上手资料，参与者可根据自身情况自行选择不同难度的实验进行实操，并通过提交不同形式的体验作品，通过这次活动，不仅可以探索更多机器学习和 <code>AI</code> 技术的应用场景，还可以结识更多志同道合的开发者。云上探索实验室活动地址：<a href="https://dev.amazoncloud.cn/experience?trk=cndc-detail&amp;sc_medium=corecontent&amp;sc_campaign=product&amp;sc_channel=csdn" rel="nofollow">https://dev.amazoncloud.cn/experience</a>，快来一起体验吧！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f37026e1841c751ac3784bbbbf5cf7f0/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">目录导航《100天精通Python丨快速入门到黑科技》</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8aa7e408c6096bee6cd824e9201d0093/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">LOAM、Lego-liom、Lio-sam轨迹保存，与Kitti数据集真值进行评估</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

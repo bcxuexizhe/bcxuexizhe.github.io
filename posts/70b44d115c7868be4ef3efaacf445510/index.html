@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>足够详细的java邮件发送功能（基于QQ邮箱，包含踩过的坑及解决办法！！） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/70b44d115c7868be4ef3efaacf445510/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="足够详细的java邮件发送功能（基于QQ邮箱，包含踩过的坑及解决办法！！）">
+  <meta property="og:description" content="文章目录 写在前面一、准备工作1） 需求分析2）邮箱的准备工作（正文开始！！！） 二、代码部分1）添加邮件依赖包2）方法实现 三、开发踩坑报错一报错二报错三 四、功能拓展 写在前面 由于公司最近有业务需求，需要实现批量发送邮件到指定邮箱的功能，就写了一个小的工具类，开发过程中经历了踩坑然后优化，感觉这个功能还是有些细节还是要注意的，值得写文记录一下，有在开发中碰到相同问题的各位朋友可以参考一下，希望对各位能有所帮助！ 一、准备工作 1） 需求分析 公司开展业务 ——&gt; 客户提出需求 ——&gt; 产品拆解需求 ——&gt; 领导安排开发 ——&gt; 码农负责搬砖
+程序员的工作内容大抵是如此产生的，当我们是个小码农的时候还不会过多关注诸如需求是如何产生的、开发框架为什么要这样设计等问题，而是更多地着眼于当下，想办法使用各种工具完成自己的模块开发任务，这个过程难免会因为没有吃透需求被测试打回重做；但随着对公司业务的深入理解、对开发流程的不断熟悉以及综合能力的逐渐提升，我们慢慢地对需求也有了自己的理解，学会了从用户角度理解需求，也会慢慢重视自己写出来的代码，使得代码更为精简且优雅。
+像这样，由最初的单纯为了实现某个功能点，到后来明白需求决定了代码、代码服务于需求，也知道了重视代码质量，这大概也是我们作为开发必须经历的一种成长吧！
+sorry，扯远了，言归正传，这个业务需求无非是想在平台触发某个条件的同时用邮件通知到相关人员，而想要实现发送邮件的功能，我们需要满足以下必要条件：
+1. 邮件收发平台
+顾名思义，就是提供了接口让我们能接入收发邮件功能的一些平台，大家比较熟悉的有：
+1、QQ邮箱，@qq.com
+2、网易邮箱，@163.com或@126.com
+3、新浪邮箱，@sina.cn
+4、139邮箱，@139.com
+5、谷歌邮箱，@gmail.com
+…
+还有可能不太熟悉的：tom邮箱（TOM集团公司推出）、Outlook（微软旗下）等。
+怎么选???
+首先，我们知道邮件发送是需要协议的（→关于邮件协议方面的知识可以参考这篇博文←），有： POP3（拉）：邮局协议3，特点是用户可以将服务器上的邮件保存至本地并且可以删除服务器上的邮件，主要用来从服务器上收邮件; SMTP（推）：简单邮件传输协议，特点是只有提供了账户名和密码之后才可登录 SMTP 服务器，避免收到垃圾邮件，安全性高; IMAP（拉）：交互式邮件存取协议; MIME（推）：多用途网际邮件扩充协议； ... 其次，我们要从实际需求出发，确定自己的邮件协议类型，比如我的业务是发送文本信息到其他邮箱，起到通知的作用，这用SMTP协议就能实现，那就是它。 至于选择哪家的接口，这个要看公司的选择了，由于我公司运维甩给我的是公司的QQ邮箱，因此本文是围绕QQ邮箱展开的。
+2. 邮件发送方
+也就是邮件的发件人
+3. 邮件内容
+邮件的正文内容，可以是纯文本，也可以添加包含图片、文档、音视频等格式的附件，这个要看有没有添加附件的需求，也要看当前所选邮箱在这方面的限制（主要是指附件内容格式限制、文件大小限制等）。
+4. 邮件接收方
+目标邮箱地址，你希望谁收到邮件
+2）邮箱的准备工作（正文开始！！！） 获取邮箱授权码
+我们要准备好邮箱的授权码(一般是16位)（授权码是QQ邮箱用于登录第三方客户端的专用密码，适用于登录以下服务：POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务），授权码仅用于邮件客户端登录，而不能登录你的邮箱网页后台管理端，还是考虑到安全问题，即使泄露授权码，对方也无法登录网易或腾讯系统账号后台，这样影响也相对较小，从而保证邮箱的安全。
+① 用账号密码登录QQ邮箱，然后按图配置
+② 通过短信验证然后得到邮箱授权码，在后面会用到。
+③ 下图这里可以看到已经开启
+二、代码部分 1）添加邮件依赖包 将下面的依赖包添加到你的pom文件中
+&lt;dependency&gt; &lt;groupId&gt;javax.mail&lt;/groupId&gt; &lt;artifactId&gt;mail&lt;/artifactId&gt; &lt;version&gt;1.4.7&lt;/version&gt; &lt;/dependency&gt; maven坐标：https://mvnrepository.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-07-31T16:08:18+08:00">
+    <meta property="article:modified_time" content="2023-07-31T16:08:18+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">足够详细的java邮件发送功能（基于QQ邮箱，包含踩过的坑及解决办法！！）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_3" rel="nofollow">写在前面</a></li><li><a href="#_13" rel="nofollow">一、准备工作</a></li><li><ul><li><a href="#1__14" rel="nofollow">1） 需求分析</a></li><li><a href="#2_55" rel="nofollow">2）邮箱的准备工作（正文开始！！！）</a></li></ul> 
+  </li><li><a href="#_70" rel="nofollow">二、代码部分</a></li><li><ul><li><a href="#1_71" rel="nofollow">1）添加邮件依赖包</a></li><li><a href="#2_82" rel="nofollow">2）方法实现</a></li></ul> 
+  </li><li><a href="#_238" rel="nofollow">三、开发踩坑</a></li><li><ul><li><a href="#_239" rel="nofollow">报错一</a></li><li><a href="#_249" rel="nofollow">报错二</a></li><li><a href="#_259" rel="nofollow">报错三</a></li></ul> 
+  </li><li><a href="#_270" rel="nofollow">四、功能拓展</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="_3"></a>写在前面</h2> 
+<br>   由于公司最近有业务需求，需要实现批量发送邮件到指定邮箱的功能，就写了一个小的工具类，开发过程中经历了踩坑然后优化，感觉这个功能还是有些细节还是要注意的，值得写文记录一下，有在开发中碰到相同问题的各位朋友可以参考一下，希望对各位能有所帮助！ 
+<br> 
+<p><img src="https://images2.imgbox.com/47/1f/8jtluf49_o.png" alt="在这里插入图片描述"></p> 
+<hr> 
+<h2><a id="_13"></a>一、准备工作</h2> 
+<h3><a id="1__14"></a>1） 需求分析</h3> 
+<p> <code>公司开展业务 ——&gt; 客户提出需求 ——&gt; 产品拆解需求 ——&gt; 领导安排开发 ——&gt; 码农负责搬砖</code></p> 
+<p> 程序员的工作内容大抵是如此产生的，当我们是个小码农的时候还不会过多关注诸如需求是如何产生的、开发框架为什么要这样设计等问题，而是更多地着眼于当下，想办法使用各种工具完成自己的模块开发任务，这个过程难免会因为没有吃透需求被测试打回重做；但随着对公司业务的深入理解、对开发流程的不断熟悉以及综合能力的逐渐提升，我们慢慢地对需求也有了自己的理解，学会了从用户角度理解需求，也会慢慢重视自己写出来的代码，使得代码更为精简且优雅。</p> 
+<p> 像这样，由最初的单纯为了实现某个功能点，到后来明白需求决定了代码、代码服务于需求，也知道了重视代码质量，这大概也是我们作为开发必须经历的一种成长吧！</p> 
+<p> sorry，扯远了，言归正传，这个业务需求无非是想在平台触发某个条件的同时用邮件通知到相关人员，而想要实现发送邮件的功能，我们需要满足以下必要条件：</p> 
+<p><strong>1. 邮件收发平台</strong></p> 
+<p>顾名思义，就是提供了接口让我们能接入收发邮件功能的一些平台，大家比较熟悉的有：<br> 1、QQ邮箱，@qq.com<br> 2、网易邮箱，@163.com或@126.com<br> 3、新浪邮箱，@sina.cn<br> 4、139邮箱，@139.com<br> 5、谷歌邮箱，@gmail.com<br> …<br> 还有可能不太熟悉的：tom邮箱（TOM集团公司推出）、Outlook（微软旗下）等。</p> 
+<p><mark><strong>怎么选???</strong></mark></p> 
+<ul><li>首先，我们知道邮件发送是需要协议的（<code>→</code><a href="https://blog.csdn.net/suhuaiqiang_janlay/article/details/78765613">关于邮件协议方面的知识可以参考这篇博文</a><code>←</code>），有：</li></ul> 
+<pre><code>POP3（拉）：邮局协议3，特点是用户可以将服务器上的邮件保存至本地并且可以删除服务器上的邮件，主要用来从服务器上收邮件;
+SMTP（推）：简单邮件传输协议，特点是只有提供了账户名和密码之后才可登录 SMTP 服务器，避免收到垃圾邮件，安全性高;
+IMAP（拉）：交互式邮件存取协议;
+MIME（推）：多用途网际邮件扩充协议；
+...
+</code></pre> 
+<ul><li>其次，我们要从实际需求出发，确定自己的邮件协议类型，比如我的业务是发送文本信息到其他邮箱，起到通知的作用，这用SMTP协议就能实现，那就是它。</li></ul> 
+<p><code> 至于选择哪家的接口，这个要看公司的选择了，由于我公司运维甩给我的是公司的QQ邮箱，因此本文是围绕QQ邮箱展开的。</code></p> 
+<p><strong>2. 邮件发送方</strong><br> 也就是邮件的发件人</p> 
+<p><strong>3. 邮件内容</strong><br> 邮件的正文内容，可以是纯文本，也可以添加包含图片、文档、音视频等格式的附件，这个要看有没有添加附件的需求，也要看当前所选邮箱在这方面的限制（主要是指附件内容格式限制、文件大小限制等）。</p> 
+<p><strong>4. 邮件接收方</strong><br> 目标邮箱地址，你希望谁收到邮件</p> 
+<h3><a id="2_55"></a>2）邮箱的准备工作（正文开始！！！）</h3> 
+<p><strong>获取邮箱授权码</strong></p> 
+<p>我们要准备好邮箱的<code>授权码(一般是16位)</code>（授权码是QQ邮箱用于登录第三方客户端的专用密码，适用于登录以下服务：POP3/IMAP/SMTP/Exchange/CardDAV/CalDAV服务），授权码仅用于邮件客户端登录，而不能登录你的邮箱网页后台管理端，还是考虑到安全问题，即使泄露授权码，对方也无法登录网易或腾讯系统账号后台，这样影响也相对较小，从而保证邮箱的安全。</p> 
+<p>① 用账号密码登录QQ邮箱，然后按图配置</p> 
+<p><img src="https://images2.imgbox.com/17/a6/yOTNwIJU_o.png" alt="在这里插入图片描述" width="600" height="500"><br> ② 通过短信验证然后得到邮箱授权码，在后面会用到。</p> 
+<p><img src="https://images2.imgbox.com/5b/83/vpoqwoqT_o.png" alt="在这里插入图片描述" width="600" height="300"><br> ③ 下图这里可以看到已经开启</p> 
+<p><img src="https://images2.imgbox.com/76/0a/7NXZ3anE_o.png" alt="在这里插入图片描述" width="600" height="500"></p> 
+<h2><a id="_70"></a>二、代码部分</h2> 
+<h3><a id="1_71"></a>1）添加邮件依赖包</h3> 
+<p>将下面的依赖包添加到你的pom文件中</p> 
+<pre><code class="prism language-java"><span class="token generics"><span class="token punctuation">&lt;</span>dependency<span class="token punctuation">&gt;</span></span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>groupId<span class="token punctuation">&gt;</span></span>javax<span class="token punctuation">.</span>mail<span class="token operator">&lt;</span><span class="token operator">/</span>groupId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>artifactId<span class="token punctuation">&gt;</span></span>mail<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>version<span class="token punctuation">&gt;</span></span><span class="token number">1.4</span><span class="token number">.7</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>dependency<span class="token operator">&gt;</span>
+</code></pre> 
+<p>maven坐标：<a href="https://mvnrepository.com/artifact/com.sun.mail/javax.mail" rel="nofollow">https://mvnrepository.com/artifact/javax.mail/mail</a>，<code>可以在这里找到你想要的版本的jar包</code>。</p> 
+<h3><a id="2_82"></a>2）方法实现</h3> 
+<p><strong>1. 邮箱参数配置</strong><br> <code>使用下面哪个服务地址取决于发送还是接收邮件，发送的情况下还要考虑是一般邮箱还是企业邮箱。</code></p> 
+<p><strong>QQ邮箱地址及端口号：</strong></p> 
+<p><mark>接收</mark>邮件服务器： pop.qq.com，接收端口： 110或995(<mark>使用SSL时</mark>)<br> <mark>接收</mark>邮件服务器： imap.qq.com，接收端口： 143或993(<mark>使用SSL时</mark>)<br> 一般<mark>发送</mark>邮件服务器： smtp.qq.com，发送端口： 25或465/587(<mark>使用SSL时</mark>)<br> 企业邮箱<mark>发送</mark>邮件服务器： smtp.exmail.qq.com，发送端口： 465/587(<mark>使用SSL时</mark>)</p> 
+<p><strong>注：</strong> 465端口是为SMTP SSL（SMTP-over-SSL）协议服务开放的，这是SMTP协议基于SSL安全协议之上的一种变种协议，它继承了SSL安全协议的非对称加密的高度安全可靠性，可防止邮件泄露。</p> 
+<ul><li>如果是一般邮箱：</li></ul> 
+<pre><code class="prism language-java">	<span class="token comment">// 邮件协议</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailProtocol <span class="token operator">=</span> <span class="token string">"smtp"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 发件人的SMTP服务器地址（普通QQ邮箱）</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailSMTPHost <span class="token operator">=</span> <span class="token string">"smtp.qq.com"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 端口</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPort <span class="token operator">=</span> <span class="token string">"465"</span><span class="token punctuation">;</span>
+    <span class="token comment">// 发件人邮箱地址</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailAccount <span class="token operator">=</span> <span class="token string">"1*********0@qq.com"</span><span class="token punctuation">;</span> <span class="token comment">// 这个是普通QQ邮箱</span>
+    <span class="token comment">// 发件人邮箱授权码</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPassword <span class="token operator">=</span> <span class="token string">"qvq*********if"</span><span class="token punctuation">;</span>
+</code></pre> 
+<ul><li>如果是企业邮箱：</li></ul> 
+<pre><code class="prism language-java">	<span class="token comment">// 邮件协议</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailProtocol <span class="token operator">=</span> <span class="token string">"smtp"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 发件人的SMTP服务器地址（腾讯企业邮箱）</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailSMTPHost <span class="token operator">=</span> <span class="token string">"smtp.exmail.qq.com"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 端口</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPort <span class="token operator">=</span> <span class="token string">"465"</span><span class="token punctuation">;</span>
+    <span class="token comment">// 发件人邮箱地址</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailAccount <span class="token operator">=</span> <span class="token string">"k******i@k***t.com"</span><span class="token punctuation">;</span> <span class="token comment">// 这个是企业邮箱</span>
+    <span class="token comment">// 发件人邮箱授权码</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPassword <span class="token operator">=</span> <span class="token string">"qvq***********if"</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>2. 代码部分</strong></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>myProject<span class="token punctuation">.</span>test<span class="token punctuation">.</span>util</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">lombok<span class="token punctuation">.</span>extern<span class="token punctuation">.</span>log4j<span class="token punctuation">.</span></span><span class="token class-name">Log4j2</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>mail<span class="token punctuation">.</span></span><span class="token class-name">Message</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>mail<span class="token punctuation">.</span></span><span class="token class-name">Session</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>mail<span class="token punctuation">.</span></span><span class="token class-name">Transport</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>mail<span class="token punctuation">.</span>internet<span class="token punctuation">.</span></span><span class="token class-name">InternetAddress</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>mail<span class="token punctuation">.</span>internet<span class="token punctuation">.</span></span><span class="token class-name">MimeMessage</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Date</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashSet</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Set</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Properties</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * @author TracyYang
+ * @Description: 邮件工具类
+ * @date 2023/7/22 14:15
+ */</span>
+<span class="token annotation punctuation">@Log4j2</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">MailUtils</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token comment">// 邮件协议</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailProtocol <span class="token operator">=</span> <span class="token string">"smtp"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 发件人的SMTP服务器地址（企业邮箱）</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailSMTPHost <span class="token operator">=</span> <span class="token string">"smtp.exmail.qq.com"</span><span class="token punctuation">;</span>
+	<span class="token comment">// 端口</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPort <span class="token operator">=</span> <span class="token string">"465"</span><span class="token punctuation">;</span>
+    <span class="token comment">// 发件人邮箱地址</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailAccount <span class="token operator">=</span> <span class="token string">"k******i@k***t.com"</span><span class="token punctuation">;</span> <span class="token comment">// 这个是企业邮箱</span>
+    <span class="token comment">// 发件人邮箱授权码</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> emailPassword <span class="token operator">=</span> <span class="token string">"qvq***********if"</span><span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 发送邮件
+     *
+     * @param emails  目标邮件地址
+     * @param title   邮件标题
+     * @param content 邮件内容
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">boolean</span> <span class="token function">sendEmail</span><span class="token punctuation">(</span><span class="token class-name">Set</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> emails<span class="token punctuation">,</span> <span class="token class-name">String</span> title<span class="token punctuation">,</span> <span class="token class-name">String</span> content<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 未传收件人邮箱地址则直接返回</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>emails <span class="token operator">==</span> <span class="token keyword">null</span> <span class="token operator">||</span> emails<span class="token punctuation">.</span><span class="token function">isEmpty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// 1. 创建参数配置, 用于连接邮件服务器的参数配置</span>
+            <span class="token class-name">Properties</span> props <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Properties</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.transport.protocol"</span><span class="token punctuation">,</span> emailProtocol<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 使用的协议（JavaMail规范要求）</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.host"</span><span class="token punctuation">,</span> emailSMTPHost<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 指定smtp服务器地址</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.port"</span><span class="token punctuation">,</span> emailPort<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 指定smtp端口号</span>
+            <span class="token comment">// 使用smtp身份验证</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.auth"</span><span class="token punctuation">,</span> <span class="token string">"true"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 需要请求认证</span>
+            props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.ssl.enable"</span><span class="token punctuation">,</span> <span class="token string">"true"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 开启SSL</span>
+            props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.ssl.protocols"</span><span class="token punctuation">,</span> <span class="token string">"TLSv1.2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 指定SSL版本</span>
+            props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.socketFactory.class"</span><span class="token punctuation">,</span> <span class="token string">"javax.net.ssl.SSLSocketFactory"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 由于Properties默认不限制请求时间，可能会导致线程阻塞，所以指定请求时长</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.connectiontimeout"</span><span class="token punctuation">,</span> <span class="token string">"10000"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 与邮件服务器建立连接的时间限制</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.timeout"</span><span class="token punctuation">,</span> <span class="token string">"10000"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 邮件smtp读取的时间限制</span>
+            props<span class="token punctuation">.</span><span class="token function">setProperty</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.writetimeout"</span><span class="token punctuation">,</span> <span class="token string">"10000"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 邮件内容上传的时间限制</span>
+            <span class="token comment">// 2. 根据配置创建会话对象, 用于和邮件服务器交互</span>
+            <span class="token class-name">Session</span> session <span class="token operator">=</span> <span class="token class-name">Session</span><span class="token punctuation">.</span><span class="token function">getDefaultInstance</span><span class="token punctuation">(</span>props<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            session<span class="token punctuation">.</span><span class="token function">setDebug</span><span class="token punctuation">(</span><span class="token boolean">false</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 设置为debug模式, 可以查看详细的发送log</span>
+            <span class="token comment">// 3. 创建邮件</span>
+            <span class="token class-name">MimeMessage</span> message <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">MimeMessage</span><span class="token punctuation">(</span>session<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 4. From: 发件人（昵称有广告嫌疑，避免被邮件服务器误认为是滥发广告以至返回失败，请修改昵称）</span>
+            message<span class="token punctuation">.</span><span class="token function">setFrom</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">InternetAddress</span><span class="token punctuation">(</span>emailAccount<span class="token punctuation">,</span> <span class="token string">"改成你的发件人名称"</span><span class="token punctuation">,</span> <span class="token string">"UTF-8"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 5. To: 收件人（可以增加多个收件人、抄送、密送）</span>
+            <span class="token comment">// MimeMessage.RecipientType.TO: 发送 MimeMessage.RecipientType.CC：抄送 MimeMessage.RecipientType.BCC：密送</span>
+            <span class="token keyword">int</span> size <span class="token operator">=</span> emails<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 单个目标邮箱还是多个</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>size <span class="token operator">==</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">String</span> email <span class="token operator">=</span> emails<span class="token punctuation">.</span><span class="token function">iterator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">next</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                message<span class="token punctuation">.</span><span class="token function">setRecipient</span><span class="token punctuation">(</span><span class="token class-name">Message<span class="token punctuation">.</span>RecipientType</span><span class="token punctuation">.</span><span class="token constant">TO</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">InternetAddress</span><span class="token punctuation">(</span>email<span class="token punctuation">,</span> email<span class="token punctuation">,</span> <span class="token string">"UTF-8"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">InternetAddress</span><span class="token punctuation">[</span><span class="token punctuation">]</span> addresses <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">InternetAddress</span><span class="token punctuation">[</span>emails<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+                <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+                <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">String</span> email <span class="token operator">:</span> emails<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    addresses<span class="token punctuation">[</span>i<span class="token operator">++</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">InternetAddress</span><span class="token punctuation">(</span>email<span class="token punctuation">,</span> email<span class="token punctuation">,</span> <span class="token string">"UTF-8"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                message<span class="token punctuation">.</span><span class="token function">setRecipients</span><span class="token punctuation">(</span><span class="token class-name">MimeMessage<span class="token punctuation">.</span>RecipientType</span><span class="token punctuation">.</span><span class="token constant">TO</span><span class="token punctuation">,</span> addresses<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            <span class="token comment">// 6. Subject: 邮件主题（标题有广告嫌疑，避免被邮件服务器误认为是滥发广告以至返回失败，请修改标题）</span>
+            message<span class="token punctuation">.</span><span class="token function">setSubject</span><span class="token punctuation">(</span>title<span class="token punctuation">,</span> <span class="token string">"UTF-8"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 7. Content: 邮件正文（可以使用html标签）（内容有广告嫌疑，避免被邮件服务器误认为是滥发广告以至返回失败，请修改发送内容）</span>
+            message<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span>content<span class="token punctuation">,</span> <span class="token string">"text/html;charset=UTF-8"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 8. 设置发件时间</span>
+            message<span class="token punctuation">.</span><span class="token function">setSentDate</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 9. 保存设置</span>
+            message<span class="token punctuation">.</span><span class="token function">saveChanges</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 10. 根据 Session 获取邮件传输对象</span>
+            <span class="token class-name">Transport</span> transport <span class="token operator">=</span> session<span class="token punctuation">.</span><span class="token function">getTransport</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            transport<span class="token punctuation">.</span><span class="token function">connect</span><span class="token punctuation">(</span>emailAccount<span class="token punctuation">,</span> emailPassword<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 11. 发送邮件, 发到所有的收件地址, message.getAllRecipients()获取到的是在创建邮件对象时添加的所有收件人, 抄送人, 密送人</span>
+            transport<span class="token punctuation">.</span><span class="token function">sendMessage</span><span class="token punctuation">(</span>message<span class="token punctuation">,</span> message<span class="token punctuation">.</span><span class="token function">getAllRecipients</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 12. 关闭传输连接</span>
+            transport<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"发送邮件失败,系统错误！"</span><span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+   <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Set</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> set <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashSet</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        set<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token string">"1*******0@qq.com"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token class-name">MailUtils</span><span class="token punctuation">.</span><span class="token function">sendEmail</span><span class="token punctuation">(</span>set<span class="token punctuation">,</span> <span class="token string">"测试发送邮件的接口！"</span><span class="token punctuation">,</span>
+                <span class="token string">"您好！这是我发送的一封测试发送接口的邮件，看完请删除记录。"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><strong>3. 执行结果</strong><br> <img src="https://images2.imgbox.com/b4/6c/eci4M3cQ_o.png" alt="在这里插入图片描述" width="500" height="300"></p> 
+<h2><a id="_238"></a>三、开发踩坑</h2> 
+<h3><a id="_239"></a>报错一</h3> 
+<p><strong>1. 错误信息</strong><br> javax.mail.AuthenticationFailedException: 535 Login Fail. Please enter your authorization code to login.</p> 
+<p><img src="https://images2.imgbox.com/1e/43/g49WGBIc_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>2. 可能原因及解决办法</strong></p> 
+<ol><li>可能是发件人邮箱的POP/SMTP服务没有开启或没有使用授权码，建议开启并确认使用<code>授权码</code>后再尝试</li><li>可能是发件人是<code>企业邮箱</code>却错误使用了smtp.qq.com服务地址，建议改为smtp.exmail.qq.com再尝试</li><li>可能是发件人邮箱授权码过期，建议重新申请一个再尝试</li></ol> 
+<h3><a id="_249"></a>报错二</h3> 
+<p><strong>1. 错误信息</strong><br> javax.mail.AuthenticationFailedException: 535 Error: authentication failed, system busy</p> 
+<p><img src="https://images2.imgbox.com/d8/30/SyOGIWwz_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>2. 可能原因及解决办法</strong></p> 
+<ol><li>可能是发件人邮箱的POP/SMTP服务没有开启或没有使用授权码，建议开启并确认使用<code>授权码</code>后再尝试</li><li>可能是发件人是<code>普通邮箱</code>却错误使用了smtp.exmail.qq.com服务地址，建议改为smtp.qq.com再尝试</li><li>可能是发件人邮箱授权码过期，建议重新申请一个再尝试</li></ol> 
+<h3><a id="_259"></a>报错三</h3> 
+<p><strong>1. 错误信息</strong><br> javax.mail.MessagingException: Could not connect to SMTP host: smtp.exmail.qq.com, port: 465</p> 
+<p><img src="https://images2.imgbox.com/3e/6e/doR8Cwag_o.png" alt="在这里插入图片描述"><br> <strong>2. 可能原因及解决办法</strong></p> 
+<ol><li>可能是发件人Properties开启了SSL（ props.put(“mail.smtp.ssl.enable”, “true”); ）但没有指定版本，建议指定SSL的版本，加上下面两个属性：</li></ol> 
+<pre><code class="prism language-java">props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.ssl.protocols"</span><span class="token punctuation">,</span> <span class="token string">"TLSv1.2"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+props<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token string">"mail.smtp.socketFactory.class"</span><span class="token punctuation">,</span> <span class="token string">"javax.net.ssl.SSLSocketFactory"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h2><a id="_270"></a>四、功能拓展</h2> 
+<blockquote> 
+ <p>其实java是对邮件功能有封装的，下面两个jar包是邮件发送功能另一种实现方式需要用到的，相关博文我也贴出来了（蓝字直达），感兴趣的可以看下，希望能帮助到大家！</p> 
+</blockquote> 
+<p><a href="https://www.jianshu.com/p/5c566cb191d3" rel="nofollow">关于commons-email讲解的博文</a></p> 
+<pre><code class="prism language-java"><span class="token generics"><span class="token punctuation">&lt;</span>dependency<span class="token punctuation">&gt;</span></span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>groupId<span class="token punctuation">&gt;</span></span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>commons<span class="token operator">&lt;</span><span class="token operator">/</span>groupId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>artifactId<span class="token punctuation">&gt;</span></span>commons<span class="token operator">-</span>email<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>version<span class="token punctuation">&gt;</span></span><span class="token number">1.5</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>dependency<span class="token operator">&gt;</span>
+</code></pre> 
+<p><a href="https://blog.csdn.net/qq_66991094/article/details/126415137">关于javax.activation讲解的博文</a></p> 
+<pre><code class="prism language-java"><span class="token generics"><span class="token punctuation">&lt;</span>dependency<span class="token punctuation">&gt;</span></span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>groupId<span class="token punctuation">&gt;</span></span>javax<span class="token punctuation">.</span>activation<span class="token operator">&lt;</span><span class="token operator">/</span>groupId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>artifactId<span class="token punctuation">&gt;</span></span>activation<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+    <span class="token generics"><span class="token punctuation">&lt;</span>version<span class="token punctuation">&gt;</span></span><span class="token number">1.1</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>dependency<span class="token operator">&gt;</span>
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a0204cf4683fa756a44a38d02b70dfbe/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">超详细 mysql 主键索引、唯一索引、普通索引、联合索引的区别与实例说明</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/081db2d9ab5769f06c9d647c47c80248/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">使用Gradio搭建Stable Diffusion模型生成图像：简单快捷的图像生成体验</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

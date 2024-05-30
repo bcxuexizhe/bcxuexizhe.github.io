@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【SpringBoot】SpringBoot整合jasypt进行重要数据加密 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/231a19ea5e5fc5358b534ef48b85e6ca/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【SpringBoot】SpringBoot整合jasypt进行重要数据加密">
+  <meta property="og:description" content="📝个人主页：哈__
+期待您的关注 目录
+📕jasypt简介 🔥SpringBoot使用jasypt
+📂创建我需要的数据库文件
+📕引入依赖
+🔓配置数据库文件（先不进行加密）
+🌙创建mapper接口
+🔒配置文件加密 一、通过测试获取加密后的数据
+二、通过build插件
+📕jasypt简介 Jasypt（Java Simplified Encryption）是一个专注于简化Java加密操作的开源工具。它提供了一种简单而强大的方式来处理数据的加密和解密，使开发者能够轻松地保护应用程序中的敏感信息，如数据库密码、API密钥等。
+Jasypt的设计理念是简化加密操作，使其对开发者更加友好。它采用密码学强度的加密算法，支持多种加密算法，从而平衡了性能和安全性。其中，Jasypt的核心思想之一是基于密码的加密（Password Based Encryption，PBE），通过用户提供的密码生成加密密钥，然后使用该密钥对数据进行加密和解密。此外，Jasypt还引入了盐（Salt）的概念，通过添加随机生成的盐值，提高了加密的安全性，防止相同的原始数据在不同的加密过程中产生相同的结果，有效抵御彩虹表攻击。
+Jasypt的功能非常丰富，包括加密属性文件、Spring Framework集成、加密Hibernate数据源配置、URL加密的Apache Wicket集成等。它还可以与Acegi Security（即Spring Security）整合，用于加密任务与应用程序，如加密密码、敏感信息和数据通信，以及创建完整检查数据的sums等。此外，Jasypt还提供了一个开放的API，使得任何Java Cryptography Extension都可以使用它。
+在Spring Boot应用中，Jasypt Spring Boot Starter是一个方便的集成工具，可以简化加密功能的配置。它支持多种加密算法，包括对称加密和非对称加密，可以根据实际需求选择合适的加密方式。通过使用Jasypt Spring Boot Starter，可以轻松地将加密功能集成到Spring Boot应用中，无需手动配置复杂的加密相关的代码和配置文件。
+⭐jasypt的优点 提供简单的单向（摘要）和双向加密技术。用于任何JCE提供程序的开放API，而不仅仅是默认的Java VM提供程序。为您的用户密码提供更高的安全性。二进制加密支持。Jasypt允许对二进制文件（字节数组）进行摘要和加密。数值加密支持。除了文本和二进制文件，它还允许对数值进行摘要和加密（BigInteger和BigDecimal，加密Hibernate持久性时支持其他数字类型）。完全线程安全。支持加密/摘要池，以在多处理器/多核系统中实现高性能。包括库的轻量级（“精简”）版本，以便在移动平台等大小受限的环境中具有更好的可管理性。 🔥SpringBoot使用jasypt 📂创建我需要的数据库文件 -- ---------------------------- -- Table structure for student -- ---------------------------- DROP TABLE IF EXISTS `student`; CREATE TABLE `student` ( `s_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT &#39;&#39;, `s_name` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT &#39;&#39;, `s_birth` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT &#39;&#39;, `s_sex` varchar(10) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT &#39;&#39;, PRIMARY KEY (`s_id`) USING BTREE ) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact; -- ---------------------------- -- Records of student -- ---------------------------- INSERT INTO `student` VALUES (&#39;01&#39;, &#39;赵雷&#39;, &#39;1990-01-01&#39;, &#39;男&#39;); INSERT INTO `student` VALUES (&#39;02&#39;, &#39;钱电&#39;, &#39;1990-12-21&#39;, &#39;男&#39;); INSERT INTO `student` VALUES (&#39;03&#39;, &#39;孙风&#39;, &#39;1990-05-20&#39;, &#39;男&#39;); INSERT INTO `student` VALUES (&#39;04&#39;, &#39;李云&#39;, &#39;1990-08-06&#39;, &#39;男&#39;); INSERT INTO `student` VALUES (&#39;05&#39;, &#39;周梅&#39;, &#39;1991-12-01&#39;, &#39;女&#39;); INSERT INTO `student` VALUES (&#39;06&#39;, &#39;吴兰&#39;, &#39;1992-03-01&#39;, &#39;女&#39;); INSERT INTO `student` VALUES (&#39;07&#39;, &#39;郑竹&#39;, &#39;1989-07-01&#39;, &#39;女&#39;); INSERT INTO `student` VALUES (&#39;08&#39;, &#39;王菊&#39;, &#39;1990-01-20&#39;, &#39;女&#39;); SET FOREIGN_KEY_CHECKS = 1; 📕引入依赖 &lt;dependency&gt; &lt;groupId&gt;org.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-18T21:05:02+08:00">
+    <meta property="article:modified_time" content="2024-05-18T21:05:02+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【SpringBoot】SpringBoot整合jasypt进行重要数据加密</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="text-align:center;"><img src="https://images2.imgbox.com/60/80/PIqyyIBI_o.png" alt="427ef4152dbf4b6c92618a198935cb6c.png"></p> 
+<p style="text-align:center;"> <strong> 📝个人主页：<a class="link-info" href="https://blog.csdn.net/qq_61024956?type=blog" title="哈__">哈__</a></strong></p> 
+<p style="text-align:center;">期待您的关注 </p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/63/29/aT97ZEkO_o.gif" alt="1b7335aca73b41609b7f05d1d366f476.gif"></p> 
+<p><strong>目录</strong></p> 
+<p style="margin-left:0px;"> </p> 
+<p style="margin-left:0px;"><a href="#%F0%9F%93%95jasypt%E7%AE%80%E4%BB%8B%C2%A0" rel="nofollow">📕jasypt简介 </a></p> 
+<p style="margin-left:0px;"><a href="#%C2%A0%F0%9F%94%A5SpringBoot%E4%BD%BF%E7%94%A8jasypt" rel="nofollow"> 🔥SpringBoot使用jasypt</a></p> 
+<p style="margin-left:40px;"><a href="#%F0%9F%93%82%E5%88%9B%E5%BB%BA%E6%88%91%E9%9C%80%E8%A6%81%E7%9A%84%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6" rel="nofollow">📂创建我需要的数据库文件</a></p> 
+<p style="margin-left:40px;"><a href="#%C2%A0%F0%9F%93%95%E5%BC%95%E5%85%A5%E4%BE%9D%E8%B5%96" rel="nofollow"> 📕引入依赖</a></p> 
+<p style="margin-left:40px;"><a href="#%F0%9F%94%93%E9%85%8D%E7%BD%AE%E6%95%B0%E6%8D%AE%E5%BA%93%E6%96%87%E4%BB%B6%EF%BC%88%E5%85%88%E4%B8%8D%E8%BF%9B%E8%A1%8C%E5%8A%A0%E5%AF%86%EF%BC%89" rel="nofollow">🔓配置数据库文件（先不进行加密）</a></p> 
+<p style="margin-left:40px;"><a href="#%F0%9F%8C%99%E5%88%9B%E5%BB%BAmapper%E6%8E%A5%E5%8F%A3" rel="nofollow">🌙创建mapper接口</a></p> 
+<p style="margin-left:40px;"><a href="#%F0%9F%94%92%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6%E5%8A%A0%E5%AF%86%C2%A0" rel="nofollow">🔒配置文件加密 </a></p> 
+<p style="margin-left:80px;"><a href="#%E4%B8%80%E3%80%81%E9%80%9A%E8%BF%87%E6%B5%8B%E8%AF%95%E8%8E%B7%E5%8F%96%E5%8A%A0%E5%AF%86%E5%90%8E%E7%9A%84%E6%95%B0%E6%8D%AE" rel="nofollow">一、通过测试获取加密后的数据</a></p> 
+<p style="margin-left:80px;"><a href="#%C2%A0%E4%BA%8C%E3%80%81%E9%80%9A%E8%BF%87build%E6%8F%92%E4%BB%B6" rel="nofollow"> 二、通过build插件</a></p> 
+<hr> 
+<p> </p> 
+<h2>📕jasypt简介 </h2> 
+<blockquote> 
+ <p>Jasypt（Java Simplified Encryption）是一个专注于简化Java加密操作的开源工具。它提供了一种简单而强大的方式来处理数据的加密和解密，使开发者能够轻松地保护应用程序中的敏感信息，如数据库密码、API密钥等。</p> 
+ <hr> 
+ <p>Jasypt的设计理念是简化加密操作，使其对开发者更加友好。它采用密码学强度的加密算法，支持多种加密算法，从而平衡了性能和安全性。其中，Jasypt的核心思想之一是基于密码的加密（Password Based Encryption，PBE），通过用户提供的密码生成加密密钥，然后使用该密钥对数据进行加密和解密。此外，Jasypt还引入了盐（Salt）的概念，通过添加随机生成的盐值，提高了加密的安全性，防止相同的原始数据在不同的加密过程中产生相同的结果，有效抵御彩虹表攻击。</p> 
+ <hr> 
+ <p>Jasypt的功能非常丰富，包括加密属性文件、Spring Framework集成、加密Hibernate数据源配置、URL加密的Apache Wicket集成等。它还可以与Acegi Security（即Spring Security）整合，用于加密任务与应用程序，如加密密码、敏感信息和数据通信，以及创建完整检查数据的sums等。此外，Jasypt还提供了一个开放的API，使得任何Java Cryptography Extension都可以使用它。</p> 
+ <hr> 
+ <p>在Spring Boot应用中，Jasypt Spring Boot Starter是一个方便的集成工具，可以简化加密功能的配置。它支持多种加密算法，包括对称加密和非对称加密，可以根据实际需求选择合适的加密方式。通过使用Jasypt Spring Boot Starter，可以轻松地将加密功能集成到Spring Boot应用中，无需手动配置复杂的加密相关的代码和配置文件。</p> 
+</blockquote> 
+<h2>⭐jasypt的优点</h2> 
+<blockquote> 
+ <p> </p> 
+ <ul><li>提供简单的单向（摘要）和双向加密技术。</li><li>用于任何JCE提供程序的开放API，而不仅仅是默认的Java VM提供程序。</li><li>为您的用户密码提供更高的安全性。</li><li>二进制加密支持。Jasypt允许对二进制文件（字节数组）进行摘要和加密。</li><li>数值加密支持。除了文本和二进制文件，它还允许对数值进行摘要和加密（BigInteger和BigDecimal，加密Hibernate持久性时支持其他数字类型）。</li><li>完全线程安全。</li><li>支持加密/摘要池，以在多处理器/多核系统中实现高性能。</li><li>包括库的轻量级（“精简”）版本，以便在移动平台等大小受限的环境中具有更好的可管理性。</li></ul> 
+</blockquote> 
+<h2>🔥SpringBoot使用jasypt</h2> 
+<h3>📂创建我需要的数据库文件</h3> 
+<pre><code class="language-sql">-- ----------------------------
+-- Table structure for student
+-- ----------------------------
+DROP TABLE IF EXISTS `student`;
+CREATE TABLE `student`  (
+  `s_id` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `s_name` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `s_birth` varchar(20) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  `s_sex` varchar(10) CHARACTER SET utf8 COLLATE utf8_bin NOT NULL DEFAULT '',
+  PRIMARY KEY (`s_id`) USING BTREE
+) ENGINE = InnoDB CHARACTER SET = utf8 COLLATE = utf8_bin ROW_FORMAT = Compact;
+
+-- ----------------------------
+-- Records of student
+-- ----------------------------
+INSERT INTO `student` VALUES ('01', '赵雷', '1990-01-01', '男');
+INSERT INTO `student` VALUES ('02', '钱电', '1990-12-21', '男');
+INSERT INTO `student` VALUES ('03', '孙风', '1990-05-20', '男');
+INSERT INTO `student` VALUES ('04', '李云', '1990-08-06', '男');
+INSERT INTO `student` VALUES ('05', '周梅', '1991-12-01', '女');
+INSERT INTO `student` VALUES ('06', '吴兰', '1992-03-01', '女');
+INSERT INTO `student` VALUES ('07', '郑竹', '1989-07-01', '女');
+INSERT INTO `student` VALUES ('08', '王菊', '1990-01-20', '女');
+
+SET FOREIGN_KEY_CHECKS = 1;</code></pre> 
+<h3> 📕引入依赖</h3> 
+<pre><code class="language-XML">        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-test&lt;/artifactId&gt;
+            &lt;scope&gt;test&lt;/scope&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;mysql&lt;/groupId&gt;
+            &lt;artifactId&gt;mysql-connector-java&lt;/artifactId&gt;
+            &lt;version&gt;5.1.5&lt;/version&gt;
+        &lt;/dependency&gt;
+        &lt;!--  引入核心依赖      --&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.github.ulisesbocchio&lt;/groupId&gt;
+            &lt;artifactId&gt;jasypt-spring-boot-starter&lt;/artifactId&gt;
+            &lt;version&gt;3.0.3&lt;/version&gt;
+        &lt;/dependency&gt;
+       
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+            &lt;artifactId&gt;lombok&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.baomidou&lt;/groupId&gt;
+            &lt;artifactId&gt;mybatis-plus-boot-starter&lt;/artifactId&gt;
+            &lt;version&gt;3.5.2&lt;/version&gt;
+        &lt;/dependency&gt;</code></pre> 
+<h3>🔓配置数据库文件（先不进行加密）</h3> 
+<pre><code class="language-sql">spring:
+  datasource:
+    url: jdbc:mysql://localhost:3306/test?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC&amp;useSSL=false
+    driver-class-name: com.mysql.jdbc.Driver
+    username: root
+    password: 2020</code></pre> 
+<h3>🌙创建mapper接口</h3> 
+<blockquote> 
+ <p>这里使用的是MybatisPlus，如果不会使用，可以看我另一篇文章<a href="https://blog.csdn.net/qq_61024956/article/details/137269800?spm=1001.2014.3001.5501" title="【Spring】SpringBoot整合MybatisPlus的基本应用_简单的springboot+mybatisplus的应用程序-CSDN博客">【Spring】SpringBoot整合MybatisPlus的基本应用_简单的springboot+mybatisplus的应用程序-CSDN博客</a></p> 
+ <pre><code class="language-java">@Mapper
+public interface StudentMapper extends BaseMapper&lt;Student&gt; {
+}</code></pre> 
+ <p>加下来进行进行测试。直接调用了mapper的selectList方法。</p> 
+ <pre><code class="language-java">    @Resource
+    StudentMapper studentMapper;
+    @Test
+    void findStudent(){
+        List&lt;Student&gt; students = studentMapper.selectList(null);
+        students.forEach(System.out::println);
+    }</code></pre> 
+ <p><img src="https://images2.imgbox.com/51/8c/yTEjkiCL_o.png" alt="29852bb64e7643a2af55dd41731c58f3.png"></p> 
+ <hr> 
+ <p>结果也没问题。但我们这样把数据库密码暴露出来难免是不安全的，别人以看你的配置文件就知道你的数据库密码，如果是你本地环境也就算了，但如果是你的服务器环境，一旦被别人知道了你的密码就糟糕了，所以接下来采用加密的方式展示配置文件中的一些内容。</p> 
+</blockquote> 
+<h3>🔒配置文件加密 </h3> 
+<blockquote> 
+ <p>引入依赖</p> 
+ <pre><code class="language-java">jasypt:
+  encryptor:
+    #  采用的加密算法
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    # 盐粒
+    password: 8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92
+    property:
+      prefix: ENC(
+      suffix: )
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator</code></pre> 
+ <p>把上方的依赖引入之后，我们就可以使用jasypt去进行加密了。我在这里介绍两种方式。</p> 
+</blockquote> 
+<blockquote> 
+ <h4>一、通过测试获取加密后的数据</h4> 
+ <pre><code class="language-java">    @Resource
+    StringEncryptor stringEncryptor;
+    @Test
+    void contextLoads() {
+        String url = stringEncryptor.encrypt("jdbc:mysql://localhost:3306/test");
+        String username = stringEncryptor.encrypt("root");
+        String password = stringEncryptor.encrypt("2020");
+        System.out.println("url="+url);
+        System.out.println("username="+username);
+        System.out.println("password="+password);
+    }</code></pre> 
+ <p><img src="https://images2.imgbox.com/50/77/eZChmzmH_o.png" alt="7a815997ca3b43e18a57af442bf85c93.png"></p> 
+ <p>加密后的数据我们已经能够看到了，我现在把这些数据替换到我的application配置文件中。</p> 
+ <pre><code class="language-java">spring:
+  datasource:
+    url: ENC(avXTcfv9THzOKeuZ0uo38uc+5+K1W/8YHL2Iarf0R308uIsr2x3rRwXWmEDUQvxIFn25IQjCpzHQaZ9+pwg0qOcBi+NaiF1AAVi8W9actPo=)
+    driver-class-name: com.mysql.jdbc.Driver
+    username: ENC(1u9zbtQFYbb6EiNNQrl1bfGiQ2LfuhDsQ8RPFbZSBTsetSbVmJi4jRDbTKwE8NQv)
+    password: ENC(eG38KVuezyPxMq1kcX/eZuXZZbWKYdSY0ITlZdXCh0CXnnfH5ktdWAqiqOSmaeqB)</code></pre> 
+ <p> 现在调用刚才测试mapper接口的方法看看结果。</p> 
+ <p><img src="https://images2.imgbox.com/6e/9e/FAH8fY54_o.png" alt="056ec4fc7f6b4728968f27fa8d19baa5.png"></p> 
+ <p>还是正确的，如果你不相信，可以调用下边的代码来看看，你的加密数据解密后是不是你真正的数据。方法内的参数需要你自己填写，就是你刚才生成的那些加密的数据。我就不在这里演示了。</p> 
+ <pre><code class="language-java">        String url = stringEncryptor.decrypt("...");
+        String username = stringEncryptor.decrypt("...");
+        String password = stringEncryptor.decrypt("...");
+        System.out.println("url="+url);
+        System.out.println("username="+username);
+        System.out.println("password="+password);</code></pre> 
+</blockquote> 
+<blockquote> 
+ <h4> 二、通过build插件</h4> 
+ <p>上方给出的方法，虽然我们将数据加密了，但是作为核心的“盐粒”我们却暴露了出来，如果我们不想将“盐粒”暴露呢？那么在你的pom文件中添加下边的代码。</p> 
+ <hr> 
+ <pre><code class="language-java">    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+                &lt;artifactId&gt;spring-boot-maven-plugin&lt;/artifactId&gt;
+            &lt;/plugin&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;com.github.ulisesbocchio&lt;/groupId&gt;
+                &lt;artifactId&gt;jasypt-maven-plugin&lt;/artifactId&gt;
+                &lt;version&gt;3.0.3&lt;/version&gt;
+                &lt;configuration&gt;
+                    &lt;path&gt;file:src/main/resources/application.yml&lt;/path&gt;
+                &lt;/configuration&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;</code></pre> 
+ <hr> 
+ <p>修改配置文件。</p>   
+ <pre><code class="language-java">spring:
+  datasource:
+    url: DEC(jdbc:mysql://localhost:3306/test?useUnicode=true&amp;characterEncoding=UTF-8&amp;serverTimezone=UTC&amp;useSSL=false)
+    driver-class-name: com.mysql.jdbc.Driver
+    username: DEC(root)
+    password: DEC(2020)
+jasypt:
+  encryptor:
+    algorithm: PBEWITHHMACSHA512ANDAES_256
+    property:
+      prefix: ENC(
+      suffix: )
+    iv-generator-classname: org.jasypt.iv.RandomIvGenerator</code></pre> 
+ <hr> 
+ <p>运行下方指令。后边的那一串就是你要是用的密钥，我是生成出来的。</p> 
+ <pre><code class="language-java">mvn jasypt:encrypt -Djasypt.encryptor.password=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92</code></pre> 
+ <hr> 
+ <p>之后再次点击你的配置文件查看。原始的数据已经被加密了，并且这个加密的“盐粒”只有你知道。</p> 
+ <p><img src="https://images2.imgbox.com/7b/82/qiEDUxeW_o.png" alt="ee04528c991a4c71ae13f67520bf1b5b.png"></p> 
+ <hr> 
+ <p> 那么接下来在调用mapper测试接口试试？这里会报红，因为你的配置文件是加密过的，你怎么可能直接去使用一个加密过的数据呢？你必须要先解密，但是你并没有在配置文件当中提供这个“盐粒”，所以你要通过其他的方式把这个“盐粒”添加进去。</p> 
+ <p><img src="https://images2.imgbox.com/7f/7e/1ED8UPJs_o.png" alt="5c336226467b4520bb2b0b7ac73ef232.png"></p> 
+ <hr> 
+ <p> 为了方便展示，我在这里创建一个controller，调用的是studentServiceImpl，之后在调用studentMapper。因为项目要打包，所以只能这样展示，通过前端来展示数据。</p> 
+ <p>引入web依赖。</p> 
+ <pre><code class="language-java">        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-boot-starter-web&lt;/artifactId&gt;
+        &lt;/dependency&gt;</code></pre> 
+ <hr> 
+ <p>在StudentController中添加方法。</p> 
+ <pre><code class="language-java">@RestController
+@RequestMapping("/student")
+public class StudentController {
+    @Resource
+    private StudentService studentService;
+
+    @RequestMapping("/find-student")
+    public String findStudent(){
+        return  studentService.list().toString();
+    }
+}</code></pre> 
+ <hr> 
+ <p>把项目打包。</p> 
+ <p><img src="https://images2.imgbox.com/ce/ef/Mv60hh4V_o.png" alt="618548d111e640e987bdf2d9f606340c.png"></p> 
+ <hr> 
+ <p>之后在target目录下找到我们打包好的项目，打开cmd窗口运行下方指令。(盐粒要改成你自己的)</p> 
+ <pre><code class="language-java">java -jar 你自己起的包名.jar --jasypt.encryptor.password=8d969eef6ecad3c29a3a629280e686cf0c3f5d5a86aff3ca12020c923adc6c92 </code></pre> 
+ <hr> 
+ <p> 访问网址查看，数据正确，解密成功。</p> 
+ <p><img src="https://images2.imgbox.com/6c/dc/ceGEJFmj_o.png" alt="b46fa43a27d44063909182c4bdacd5eb.png"></p> 
+ <p> </p> 
+</blockquote> 
+<p> </p> 
+<p> </p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/10de4526aafbfefcbf36f123b3d0d4bb/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【数据结构】双向循环链表专题解析</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/dfcbf0b27c52c18c550ba1171c83b91e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">大型语言模型现状发展分析</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

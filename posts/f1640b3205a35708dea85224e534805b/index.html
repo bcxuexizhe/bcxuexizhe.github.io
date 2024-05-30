@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android14 SystemUI修复进入桌面后虚拟按键图标从黑色过渡到白色 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f1640b3205a35708dea85224e534805b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android14 SystemUI修复进入桌面后虚拟按键图标从黑色过渡到白色">
+  <meta property="og:description" content="前言： 在Android14系统rom产品开发中，一些SystemUI的系统定制化开发，在对设备进入桌面后出现虚拟按键图标颜色从浅色系（黑色）过渡到深色系（白色），每每进入桌面会复现这种情况，这并不是我们好兄弟想要看到的。
+（注：虚拟按键深色系是图标为白色高亮，浅色系是图标为黑色）
+原因分析： 此情景是由于Android14 SystemUI 的锁屏页面添加了虚拟按键，并且通过代码分析，此处虚拟按键默认主题与Lancher3里面的抽屉主题相一致，即系统主题，都为浅色系。然而我们桌面的虚拟按键主题为深色系，进而导致我们好兄弟解锁进入桌面时出现桌面虚拟按键图标会从黑色过渡到白色。
+经过测试，我们在设置里进入显示（Display），通过设置深色主题（Dark theme），此时Launcher3抽屉变成深色主题，虚拟按键图标为白色高亮，锁屏页面虚拟按键也为深色主题，图标为白色高亮。再次解锁进入桌面则不会复现虚拟按键图标颜色从黑色过渡到白色。
+我只想出两种修改方法，当然我的好兄弟有千百种想法，只是不想去实现罢了，所以在此我为好兄弟实现一下。
+1.修改StatusBarKeyguardViewManager.java，只需注释几行代码即可解决 /frameworks/base/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java 2.修改锁屏界面主题为深色主题，与桌面主题相一致就行，不过这么修改的缺陷就是锁屏界面的主题将被写死，之后要是有相关的修改会造成一定的冲突，还是不太推荐好兄弟去实现的。所以我就不实现了，你们就看第一种方法就行，简单易懂好实现。 解决方案： 1.修改StatusBarKeyguardViewManager.java里面的onStartedWakingUp()，这段代码的主要功能是在唤醒过程中，启用通知阴影的动画，并在导航栏中执行一个淡入动画。这样的动画效果可以提供更好的用户体验，使得导航栏的出现更加自然和流畅。同时，启用通知阴影的动画也能更好地引起用户的注意，提高用户体验。我们只需注释掉其中对导航栏的所有视图执行淡入动画即可。 源码：
+修改后： 2. 修改StatusBarKeyguardViewManager.java里面的onStartedGoingToSleep()，这段代码的主要功能是在休眠前禁用通知阴影的动画，并在导航栏中执行一个淡出动画。这样的动画效果可以提供更好的用户体验，使得导航栏的消失更加自然和流畅。同时，禁用通知阴影的动画也能避免在休眠过程中产生不必要的动画效果，提高用户体验。同上，我们只需要注释掉其中对导航栏的所有视图执行淡入动画即可。 源码：
+修改后：
+3. 修改StatusBarKeyguardViewManager.java的mMakeNavigationBarVisibleRunnable里的run()方法。这段代码的主要功能是在后台线程中执行一个任务，将导航栏可见。这样的设计可以避免在主线程中执行这个任务，避免阻塞主线程，从而提高应用程序的性能和响应能力。同时，将导航栏显示出来也能提供更好的用户体验，使得用户能够更好地使用应用程序。只需注释掉run里面实现的代码。 源码：
+修改后：
+4. 修改StatusBarKeyguardViewManager.java里的updateNavigationBarVisibility()。这段代码主要用于更新导航栏的可见性，当 navBarVisible 为 true 时，将导航栏显示出来，当 navBarVisible 为 false 时，将导航栏隐藏。同时，这段代码还考虑了在显示导航栏时的延迟时间，以及在隐藏导航栏时的移除已经安排在队列中的任务，提高了应用程序的性能和可靠性。其实说到最后，我们的目的就是要把导航栏隐藏，这里也是最关键一处修改，保留导航隐藏的代码即可。 源码：
+修改后：
+总结： 按上面一步一步的修改即可修复好虚拟按键的bug，只不过看个人需求去，好兄弟你要是有更好实现方法也可以在评论区发出自己的见解。 最后，这里是来自至大学到工作练习两年半的个人代码生，我喜欢摸鱼，带薪拉屎，写bug。制作不易，欢迎各位的借鉴。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-16T14:44:35+08:00">
+    <meta property="article:modified_time" content="2024-05-16T14:44:35+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android14 SystemUI修复进入桌面后虚拟按键图标从黑色过渡到白色</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2><a id="_0"></a>前言：</h2> 
+<p>在Android14系统rom产品开发中，一些SystemUI的系统定制化开发，在对设备进入桌面后出现虚拟按键图标颜色从浅色系（黑色）过渡到深色系（白色），每每进入桌面会复现这种情况，这并不是我们好兄弟想要看到的。</p> 
+<p><span style="color:#ff9900;">（注：虚拟按键深色系是图标为白色高亮，浅色系是图标为黑色）</span></p> 
+<hr> 
+<h2><a id="_7"></a>原因分析：</h2> 
+<p><span style="color:#4d4d4d;">       此情景是由于Android14 SystemUI 的锁屏页面添加了虚拟按键，并且通过代码分析，此处虚拟按键默认主题与Lancher3里面的抽屉主题相一致，即系统主题，都为浅色系。然而我们桌面的虚拟按键主题为深色系，进而导致我们好兄弟解锁进入桌面时出现桌面虚拟按键图标会从黑色过渡到白色。</span></p> 
+<p><span style="color:#4d4d4d;">        经过测试，我们在设置里进入显示（Display），通过设置深色主题（Dark theme），此时Launcher3抽屉变成深色主题，虚拟按键图标为白色高亮，锁屏页面虚拟按键也为深色主题，图标为白色高亮。再次解锁进入桌面则不会复现</span><span style="color:#4d4d4d;">虚拟按键图标颜色从黑色过渡到白色。</span></p> 
+<p><span style="color:#4d4d4d;">        我只想出两种修改方法，当然我的好兄弟有千百种想法，只是不想去实现罢了，所以在此我为好兄弟实现一下。</span></p> 
+<h6>1.修改StatusBarKeyguardViewManager.java，只需注释几行代码即可解决</h6> 
+<pre><code>/frameworks/base/packages/SystemUI/src/com/android/systemui/statusbar/phone/StatusBarKeyguardViewManager.java</code></pre> 
+<h6> 2.修改锁屏界面主题为深色主题，与桌面主题相一致就行，不过这么修改的缺陷就是锁屏界面的主题将被写死，之后要是有相关的修改会造成一定的冲突，还是不太推荐好兄弟去实现的。所以我就不实现了，你们就看第一种方法就行，简单易懂好实现。</h6> 
+<hr> 
+<h2>解决方案：</h2> 
+<h6>1.修改StatusBarKeyguardViewManager.java里面的<span style="background-color:#fbd4d0;">onStartedWakingUp()</span>，这段代码的主要功能是在唤醒过程中，启用通知阴影的动画，并在导航栏中执行一个淡入动画。这样的动画效果可以提供更好的用户体验，使得导航栏的出现更加自然和流畅。同时，启用通知阴影的动画也能更好地引起用户的注意，提高用户体验。我们只需注释掉其中对导航栏的所有视图执行淡入动画即可。</h6> 
+<p>源码：</p> 
+<p><img alt="" height="250" src="https://images2.imgbox.com/e2/1f/HJVrDdPE_o.png" width="758"></p> 
+<p>修改后： </p> 
+<p><img alt="" height="253" src="https://images2.imgbox.com/4b/92/v61jn3xq_o.png" width="755"></p> 
+<h6>2. 修改StatusBarKeyguardViewManager.java里面的<span style="background-color:#fbd4d0;">onStartedGoingToSleep()</span>，这段代码的主要功能是在休眠前禁用通知阴影的动画，并在导航栏中执行一个淡出动画。这样的动画效果可以提供更好的用户体验，使得导航栏的消失更加自然和流畅。同时，禁用通知阴影的动画也能避免在休眠过程中产生不必要的动画效果，提高用户体验。同上，我们只需要注释掉其中对导航栏的所有视图执行淡入动画即可。</h6> 
+<p>源码：</p> 
+<p><img alt="" height="253" src="https://images2.imgbox.com/f1/07/BeY8Czo6_o.png" width="773"></p> 
+<p>修改后：</p> 
+<p><img alt="" height="253" src="https://images2.imgbox.com/62/af/zffwKnQo_o.png" width="743"></p> 
+<h6>3. 修改StatusBarKeyguardViewManager.java的<span style="background-color:#fbd4d0;">mMakeNavigationBarVisibleRunnable</span>里的<span style="background-color:#ffd900;">run()</span>方法。这段代码的主要功能是在后台线程中执行一个任务，将导航栏可见。这样的设计可以避免在主线程中执行这个任务，避免阻塞主线程，从而提高应用程序的性能和响应能力。同时，将导航栏显示出来也能提供更好的用户体验，使得用户能够更好地使用应用程序。只需注释掉run里面实现的代码。</h6> 
+<p>源码：</p> 
+<p><img alt="" height="215" src="https://images2.imgbox.com/42/e7/cqqfYpjX_o.png" width="844"></p> 
+<p>修改后：</p> 
+<p><img alt="" height="213" src="https://images2.imgbox.com/4b/4f/2YSCRzHM_o.png" width="801"></p> 
+<h6>4. 修改StatusBarKeyguardViewManager.java里的<span style="background-color:#fbd4d0;">updateNavigationBarVisibility()</span>。这段代码主要用于更新导航栏的可见性，当 <code><span style="background-color:#ffd900;">navBarVisible</span></code><span style="background-color:#ffd900;"> </span>为 <code><span style="background-color:#ffd900;">true</span></code><span style="background-color:#ffd900;"> </span>时，将导航栏显示出来，当 <code><span style="background-color:#ffd900;">navBarVisible</span></code><span style="background-color:#ffd900;"> </span>为 <code><span style="background-color:#ffd900;">false</span></code><span style="background-color:#ffd900;"> </span>时，将导航栏隐藏。同时，这段代码还考虑了在显示导航栏时的延迟时间，以及在隐藏导航栏时的移除已经安排在队列中的任务，提高了应用程序的性能和可靠性。其实说到最后，我们的目的就是要把导航栏隐藏，这里也是最关键一处修改，保留导航隐藏的代码即可。</h6> 
+<p>源码：</p> 
+<p><img alt="" height="405" src="https://images2.imgbox.com/7f/d5/EePu8zD4_o.png" width="884"></p> 
+<p>  修改后：</p> 
+<p><img alt="" height="403" src="https://images2.imgbox.com/6e/1f/b75mJiJr_o.png" width="885"></p> 
+<p></p> 
+<p></p> 
+<hr> 
+<h2><a id="_30"></a>总结：</h2> 
+<h6>       按上面一步一步的修改即可修复好虚拟按键的bug，只不过看个人需求去，好兄弟你要是有更好实现方法也可以在评论区发出自己的见解。</h6> 
+<p>       最后，这里是来自至大学到工作练习两年半的个人代码生，我喜欢摸鱼，带薪拉屎，写bug。制作不易，欢迎各位的借鉴。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/2bb5a9a11e08c3703efbb5119a57f550/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">C# 结合 JavaScript 对 Web 控件进行数据输入验证</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e86298d5461d6c5e5996cd58845da915/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">外卖推荐|基于SSM＋vue的外卖推荐系统的设计与实现(源码&#43;数据库&#43;文档)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

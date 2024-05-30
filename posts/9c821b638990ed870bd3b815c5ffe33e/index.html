@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>音视频--音频实时传输 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9c821b638990ed870bd3b815c5ffe33e/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="音视频--音频实时传输">
+  <meta property="og:description" content="1. 编解码 1.1 音频编解码原理 参考：https://blog.csdn.net/qq_42233059/article/details/134628085
+(1) 编码
+音频编码的基本原理是利用声学特性和听觉心理学原理对音频信号进行压缩。具体过程包括以下几个步骤：
+采样：将连续的模拟音频信号转换为离散的数字信号，即进行采样操作。量化：将采样后的信号进行量化，将连续的信号值映射为离散的取值，以减小数据量。压缩编码：对量化后的信号进行编码，将信号表示为更紧凑的形式。编码方法包括预测编码、变换编码和熵编码等。打包：将编码后的数据组织为数据包，便于传输和存储。 (2) 解码
+音频解码的过程则是编码过程的逆过程，包括解包、解码、反量化和重构等步骤。解码后的信号经过数字模拟转换，即可恢复为模拟音频信号，下面是音频解码的主要步骤和原理：
+解包（Demultiplexing）：音频解码器首先需要对编码后的音频数据进行解包。编码过程中，音频数据可能被分割成多个包或帧，并与其他相关的信息（如采样率、比特率、声道数等）一起打包在一起。解包阶段的任务是从数据流中提取出音频数据和相关信息。
+解码（Decoding）：解码是音频解码的核心步骤。在这一步骤中，音频编码器使用特定的解码算法将压缩的音频数据转换回原始的数字音频信号。解码算法根据编码过程中使用的压缩算法和编码参数，对压缩后的数据进行逆操作，还原出原始的频域或时域表示。
+反量化（Dequantization）：在编码过程中，音频信号的频域或时域表示经过了量化操作，即将连续的信号值转换为离散的数值。在解码阶段，需要对量化后的数据进行反量化操作，将离散的数值恢复为连续的近似值。反量化过程使用与编码过程相反的量化表或算法，将离散的数据重新映射到原始的数值范围内。
+重构（Synthesis）：重构是将解码和反量化后的数据转换为模拟音频信号的过程。根据音频编码的特性和算法，重构阶段可能涉及滤波、插值和合成等操作。这些操作的目标是将解码后的数据转换为与原始音频尽可能接近的模拟信号。
+数字模拟转换（Digital-to-Analog Conversion）：解码和重构后的音频数据仍然是数字形式的，需要进行数字模拟转换（DAC）以将其转换为模拟音频信号。DAC将离散的数字样本转换为连续的模拟信号，以便在扬声器或耳机等音频播放设备上播放。
+通过以上步骤，音频解码器能够逆向操作，从压缩的音频数据中还原出高质量的模拟音频信号。解码的过程需要根据所采用的音频编码标准和算法进行相应的解析和计算，以确保解码后的音频质量和准确性。
+1.2 实时音频传输常用编解码格式 PCMA、PCMU、Opus等
+1.3 OPUS编解码 1.3.1 Opus特性 Opus在实时音频传输中的抗弱网能力比较优秀，但是需要开启RTCP的支持。
+Opus编解码器具有以下显著特性，使其在多种应用场景中表现出色，尤其是在实时通信和流媒体领域：
+广泛的比特率支持：Opus可以在极低到极高的比特率范围内工作，从6kb/s至510kb/s，这使得它既适合低带宽的语音通话，也适合高质量的音乐传输。动态调整编码参数：Opus采用自适应编码算法，能够根据音频信号的内容和网络条件动态调整编码参数，包括比特率和复杂度，以优化压缩效率和音质。多采样率支持：支持从窄带（8kHz）到全频带（48kHz）的采样率，适应不同质量需求和网络环境。低延迟：Opus设计用于低延迟传输，其默认延迟仅为22.5毫秒，非常适合实时交互式通信，如VoIP、在线游戏和视频会议。带内前向纠错（FEC）：内置前向纠错功能可以在不增加额外带宽需求的情况下提高包丢失网络中的音频质量。静音检测与丢弃（DTX）：在没有声音输入时减少不必要的数据传输，进一步节省带宽。包丢失隐藏（PLC）：即使在网络丢包的情况下也能提供连续的音频体验，通过算法预测丢失的数据来减少中断感。开源免费：Opus是完全开源的，并且不受专利限制，适用于各种应用场景，无需支付许可费用。兼容性和标准化：Opus被标准化为RFC 6716，得到广泛的支持，包括WebRTC标准的一部分，以及多种操作系统和音频软件。融合编码技术：结合了Skype的SILK（擅长语音编码）和Xiph.Org的CELT（擅长音乐编码）的优点，使得Opus在不同类型的音频内容上都能表现良好。 这些特性共同构成了Opus编解码器的强大性能，使其在众多音频编解码方案中脱颖而出，尤其是在对延迟敏感和网络条件多变的环境中。
+1.3.2 Opus使用 可以基于libopus开源库实现原始音频数据的Opus编解码操作
+2. 音频质量提升 实时音频的传输中为了提升音频质量，一般要对音频做特殊处理：降噪、回声消除、自动增益（3A算法）。通过编解码器自身的的算法特性可以实现上述内容。但是也有专门的库来帮助实现对音频质量的提升。speexdsp库可以对声音数据中的高频声音和低频声音进行抑制，并进行降噪。同时speexdsp也提供了3A算法对音频增益。
+2.1 speexdsp实现降噪 参考：https://avmedia.0voice.com/?id=54262
+下面是使用speexdsp库抑制声音数据中的高频声音、低频声音并进行降噪的示例代码，假设采样率为44100Hz。
+#include &lt;stdio.h&gt; #include &lt;stdlib.h&gt; #include &lt;speex/speex_preprocess.h&gt; #define FRAME_SIZE 1024 int main() { // 创建Speex预处理器 SpeexPreprocessState *preprocess_state; preprocess_state = speex_preprocess_state_init(FRAME_SIZE, 44100); // 根据实际采样率调整 // 设置预处理参数，包括高频抑制、低频抑制和降噪 int enabled = 1; speex_preprocess_ctl(preprocess_state, SPEEX_PREPROCESS_SET_DENOISE, &amp;enabled); speex_preprocess_ctl(preprocess_state, SPEEX_PREPROCESS_SET_AGC, &amp;enabled); speex_preprocess_ctl(preprocess_state, SPEEX_PREPROCESS_SET_DEREVERB, &amp;enabled); // 打开输入文件和输出文件 FILE *input_file, *output_file; input_file = fopen(&#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-24T09:24:05+08:00">
+    <meta property="article:modified_time" content="2024-05-24T09:24:05+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">音视频--音频实时传输</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="1__0"></a>1. 编解码</h2> 
+<h3><a id="11__1"></a>1.1 音频编解码原理</h3> 
+<blockquote> 
+ <p>参考：https://blog.csdn.net/qq_42233059/article/details/134628085</p> 
+</blockquote> 
+<p><strong>(1) 编码</strong><br> 音频编码的基本原理是利用声学特性和听觉心理学原理对音频信号进行压缩。具体过程包括以下几个步骤：</p> 
+<ul><li>采样：将连续的模拟音频信号转换为离散的数字信号，即进行采样操作。</li><li>量化：将采样后的信号进行量化，将连续的信号值映射为离散的取值，以减小数据量。</li><li>压缩编码：对量化后的信号进行编码，将信号表示为更紧凑的形式。编码方法包括预测编码、变换编码和熵编码等。</li><li>打包：将编码后的数据组织为数据包，便于传输和存储。</li></ul> 
+<p><strong>(2) 解码</strong><br> 音频解码的过程则是编码过程的逆过程，包括解包、解码、反量化和重构等步骤。解码后的信号经过数字模拟转换，即可恢复为模拟音频信号，下面是音频解码的主要步骤和原理：</p> 
+<ul><li> <p>解包（Demultiplexing）：音频解码器首先需要对编码后的音频数据进行解包。编码过程中，音频数据可能被分割成多个包或帧，并与其他相关的信息（如采样率、比特率、声道数等）一起打包在一起。解包阶段的任务是从数据流中提取出音频数据和相关信息。</p> </li><li> <p>解码（Decoding）：解码是音频解码的核心步骤。在这一步骤中，音频编码器使用特定的解码算法将压缩的音频数据转换回原始的数字音频信号。解码算法根据编码过程中使用的压缩算法和编码参数，对压缩后的数据进行逆操作，还原出原始的频域或时域表示。</p> </li><li> <p>反量化（Dequantization）：在编码过程中，音频信号的频域或时域表示经过了量化操作，即将连续的信号值转换为离散的数值。在解码阶段，需要对量化后的数据进行反量化操作，将离散的数值恢复为连续的近似值。反量化过程使用与编码过程相反的量化表或算法，将离散的数据重新映射到原始的数值范围内。</p> </li><li> <p>重构（Synthesis）：重构是将解码和反量化后的数据转换为模拟音频信号的过程。根据音频编码的特性和算法，重构阶段可能涉及滤波、插值和合成等操作。这些操作的目标是将解码后的数据转换为与原始音频尽可能接近的模拟信号。</p> </li><li> <p>数字模拟转换（Digital-to-Analog Conversion）：解码和重构后的音频数据仍然是数字形式的，需要进行数字模拟转换（DAC）以将其转换为模拟音频信号。DAC将离散的数字样本转换为连续的模拟信号，以便在扬声器或耳机等音频播放设备上播放。</p> </li></ul> 
+<p>通过以上步骤，音频解码器能够逆向操作，从压缩的音频数据中还原出高质量的模拟音频信号。解码的过程需要根据所采用的音频编码标准和算法进行相应的解析和计算，以确保解码后的音频质量和准确性。</p> 
+<h3><a id="12__25"></a>1.2 实时音频传输常用编解码格式</h3> 
+<p>PCMA、PCMU、Opus等</p> 
+<h3><a id="13_OPUS_27"></a>1.3 OPUS编解码</h3> 
+<h4><a id="131_Opus_28"></a>1.3.1 Opus特性</h4> 
+<p><strong>Opus在实时音频传输中的抗弱网能力比较优秀，但是需要开启RTCP的支持。</strong><br> Opus编解码器具有以下显著特性，使其在多种应用场景中表现出色，尤其是在实时通信和流媒体领域：</p> 
+<ul><li>广泛的比特率支持：Opus可以在极低到极高的比特率范围内工作，从6kb/s至510kb/s，这使得它既适合低带宽的语音通话，也适合高质量的音乐传输。</li><li>动态调整编码参数：Opus采用自适应编码算法，能够根据音频信号的内容和网络条件动态调整编码参数，包括比特率和复杂度，以优化压缩效率和音质。</li><li>多采样率支持：支持从窄带（8kHz）到全频带（48kHz）的采样率，适应不同质量需求和网络环境。</li><li>低延迟：Opus设计用于低延迟传输，其默认延迟仅为22.5毫秒，非常适合实时交互式通信，如VoIP、在线游戏和视频会议。</li><li>带内前向纠错（FEC）：内置前向纠错功能可以在不增加额外带宽需求的情况下提高包丢失网络中的音频质量。</li><li>静音检测与丢弃（DTX）：在没有声音输入时减少不必要的数据传输，进一步节省带宽。</li><li>包丢失隐藏（PLC）：即使在网络丢包的情况下也能提供连续的音频体验，通过算法预测丢失的数据来减少中断感。</li><li>开源免费：Opus是完全开源的，并且不受专利限制，适用于各种应用场景，无需支付许可费用。</li><li>兼容性和标准化：Opus被标准化为RFC 6716，得到广泛的支持，包括WebRTC标准的一部分，以及多种操作系统和音频软件。</li><li>融合编码技术：结合了Skype的SILK（擅长语音编码）和Xiph.Org的CELT（擅长音乐编码）的优点，使得Opus在不同类型的音频内容上都能表现良好。</li></ul> 
+<p>这些特性共同构成了Opus编解码器的强大性能，使其在众多音频编解码方案中脱颖而出，尤其是在对延迟敏感和网络条件多变的环境中。</p> 
+<h4><a id="132_Opus_43"></a>1.3.2 Opus使用</h4> 
+<p>可以基于libopus开源库实现原始音频数据的Opus编解码操作</p> 
+<h2><a id="2__46"></a>2. 音频质量提升</h2> 
+<p>实时音频的传输中为了提升音频质量，一般要对音频做特殊处理：降噪、回声消除、自动增益（3A算法）。通过编解码器自身的的算法特性可以实现上述内容。但是也有专门的库来帮助实现对音频质量的提升。speexdsp库可以对声音数据中的高频声音和低频声音进行抑制，并进行降噪。同时speexdsp也提供了3A算法对音频增益。</p> 
+<h3><a id="21_speexdsp_48"></a>2.1 speexdsp实现降噪</h3> 
+<blockquote> 
+ <p>参考：https://avmedia.0voice.com/?id=54262</p> 
+</blockquote> 
+<p>下面是使用speexdsp库抑制声音数据中的高频声音、低频声音并进行降噪的示例代码，假设采样率为44100Hz。</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdlib.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;speex/speex_preprocess.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">FRAME_SIZE</span> <span class="token expression"><span class="token number">1024</span></span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// 创建Speex预处理器</span>
+    SpeexPreprocessState <span class="token operator">*</span>preprocess_state<span class="token punctuation">;</span>
+    preprocess_state <span class="token operator">=</span> <span class="token function">speex_preprocess_state_init</span><span class="token punctuation">(</span>FRAME_SIZE<span class="token punctuation">,</span> <span class="token number">44100</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 根据实际采样率调整</span>
+    
+    <span class="token comment">// 设置预处理参数，包括高频抑制、低频抑制和降噪</span>
+    <span class="token keyword">int</span> enabled <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token function">speex_preprocess_ctl</span><span class="token punctuation">(</span>preprocess_state<span class="token punctuation">,</span> SPEEX_PREPROCESS_SET_DENOISE<span class="token punctuation">,</span> <span class="token operator">&amp;</span>enabled<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">speex_preprocess_ctl</span><span class="token punctuation">(</span>preprocess_state<span class="token punctuation">,</span> SPEEX_PREPROCESS_SET_AGC<span class="token punctuation">,</span> <span class="token operator">&amp;</span>enabled<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">speex_preprocess_ctl</span><span class="token punctuation">(</span>preprocess_state<span class="token punctuation">,</span> SPEEX_PREPROCESS_SET_DEREVERB<span class="token punctuation">,</span> <span class="token operator">&amp;</span>enabled<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">// 打开输入文件和输出文件</span>
+    FILE <span class="token operator">*</span>input_file<span class="token punctuation">,</span> <span class="token operator">*</span>output_file<span class="token punctuation">;</span>
+    input_file <span class="token operator">=</span> <span class="token function">fopen</span><span class="token punctuation">(</span><span class="token string">"input.raw"</span><span class="token punctuation">,</span> <span class="token string">"rb"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    output_file <span class="token operator">=</span> <span class="token function">fopen</span><span class="token punctuation">(</span><span class="token string">"output.raw"</span><span class="token punctuation">,</span> <span class="token string">"wb"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>input_file <span class="token operator">==</span> <span class="token constant">NULL</span> <span class="token operator">||</span> output_file <span class="token operator">==</span> <span class="token constant">NULL</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"文件打开失败\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token keyword">short</span> in<span class="token punctuation">[</span>FRAME_SIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">short</span> out<span class="token punctuation">[</span>FRAME_SIZE<span class="token punctuation">]</span><span class="token punctuation">;</span>
+    
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token function">fread</span><span class="token punctuation">(</span>in<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">short</span><span class="token punctuation">)</span><span class="token punctuation">,</span> FRAME_SIZE<span class="token punctuation">,</span> input_file<span class="token punctuation">)</span> <span class="token operator">&gt;</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 处理输入数据</span>
+        <span class="token function">speex_preprocess_run</span><span class="token punctuation">(</span>preprocess_state<span class="token punctuation">,</span> in<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// 写入处理后的数据到输出文件</span>
+        <span class="token function">fwrite</span><span class="token punctuation">(</span>in<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">short</span><span class="token punctuation">)</span><span class="token punctuation">,</span> FRAME_SIZE<span class="token punctuation">,</span> output_file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+    <span class="token function">fclose</span><span class="token punctuation">(</span>input_file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">fclose</span><span class="token punctuation">(</span>output_file<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">// 清理资源</span>
+	<span class="token function">speex_preprocess_state_destroy</span><span class="token punctuation">(</span>preprocess_state<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h2><a id="_98"></a>实时传输</h2> 
+<p>在音频的实时传输中</p> 
+<h2><a id="_100"></a>抗弱网</h2> 
+<h3><a id="11__101"></a>1.1 传输层</h3> 
+<p>jitterBuffer（重组）、RTCP、自动重传</p> 
+<h3><a id="12__103"></a>1.2 编码层</h3> 
+<p>opus编解码：前向纠错（FEC）、丢包隐藏（PLC）、流量控制</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4c6d4ea80e0b2e0192e9c04aaed0a91a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【C语言】明析部分C语言内存函数</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/6d50a42539c71ac5216192acce873392/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">数据库-MySQL 实战项目——书店图书进销存管理系统数据库设计与实现（附源码）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,453 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>mysql-实战案例 （超详细版） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/4a61562dc651102bc5611e165b571811/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="mysql-实战案例 （超详细版）">
+  <meta property="og:description" content="🎉欢迎您来到我的MySQL基础复习专栏
+☆* o(≧▽≦)o *☆哈喽~我是小小恶斯法克🍹
+✨博客主页：小小恶斯法克的博客
+🎈该系列文章专栏：重拾MySQL
+🍹文章作者技术和水平很有限，如果文中出现错误，希望大家能指正🙏
+📜 感谢大家的关注！ ❤️
+​ 目录
+🚀​​​​​​多表查询综合案例
+✨查询员工的姓名、年龄、职位、部门信息 （隐式内连接，需要消除笛卡尔积）
+✨查询年龄小于29岁的员工的姓名、年龄、职位、部门信息（显式内连接）
+✨查询拥有员工的部门ID、部门名称 （难点在于有一个部门是没有员工的）
+✨查询所有年龄大于41岁的员工, 及其归属的部门名称; 如果员工没有分配部门, 也需要展示出来(因为没有部门的也要展示，只能使用外连接,外连接大部分采用左外，因为右外也可以通过调换表顺序改为左外)
+✨查询所有员工的工资等级 （发现跟部门没有关系，而员工表中只有工资，没有等级，所以涉及新表salgrade）
+✨查询 &#34;研发部&#34; 所有员工的信息及工资等级
+✨查询 &#34;研发部&#34; 员工的平均工资
+✨查询工资比 &#34;n&#34; 高的员工信息。
+✨查询比平均薪资高的员工信息
+✨查询低于本部门平均工资的员工信息
+✨查询所有的部门信息, 并统计部门的员工人数
+✨查询所有学生的选课情况, 展示出学生名称, 学号, 课程名称
+🚀​​​​​​多表查询综合案例 数据环境准备:
+create table salgrade( grade int, --工资等级 lowsal int, --这个等级的最低工资 hightsal int --这个等级的最高工资 ) comment &#39;工资等级表&#39;; insert into salgrade values (1,0,3000); insert into salgrade values (2,3001,5000); insert into salgrade values (3,5001,8000); insert into salgrade values (4,8001,10000); insert into salgrade values (5,10001,15000); insert into salgrade values (6,15001,20000); insert into salgrade values (7,20001,25000); insert into salgrade values (8,25001,30000); 在这个案例中，我们主要运用上面所讲解的多表查询的语法，完成以下的12个需求即可，而这里主要涉及到的表就三张：empcp员工表、dept部门表、salgrade工资等级表 。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-15T15:56:01+08:00">
+    <meta property="article:modified_time" content="2024-01-15T15:56:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">mysql-实战案例 （超详细版）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="text-align:center;"><strong><img alt="" src="https://images2.imgbox.com/47/0a/q1dLSHKW_o.png"></strong></p> 
+<blockquote> 
+ <p><strong> 🎉欢迎您来到我的MySQL基础复习专栏</strong></p> 
+ <p><strong>☆* o(≧▽≦)o *☆哈喽~我是小小恶斯法克🍹<br> ✨博客主页：<a href="https://blog.csdn.net/qq_69178067?spm=1011.2124.3001.5343" title="小小恶斯法克的博客">小小恶斯法克的博客</a><br> 🎈该系列文章专栏：<a href="https://blog.csdn.net/qq_69178067/category_12547549.html" title="重拾MySQL">重拾MySQL</a><br> 🍹文章作者技术和水平很有限，如果文中出现错误，希望大家能指正🙏<br> 📜 感谢大家的关注！ ❤️</strong></p> 
+</blockquote> 
+<h3 id="%E2%80%8B%E7%BC%96%E8%BE%91"><strong><img alt="" src="https://images2.imgbox.com/4f/35/fCQYIfPt_o.gif">​</strong></h3> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%F0%9F%9A%80%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2%E7%BB%BC%E5%90%88%E6%A1%88%E4%BE%8B-toc" style="margin-left:0px;"><a href="#%F0%9F%9A%80%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E2%80%8B%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2%E7%BB%BC%E5%90%88%E6%A1%88%E4%BE%8B" rel="nofollow">🚀​​​​​​多表查询综合案例</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%20%EF%BC%88%E9%9A%90%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%9C%80%E8%A6%81%E6%B6%88%E9%99%A4%E7%AC%9B%E5%8D%A1%E5%B0%94%E7%A7%AF%EF%BC%89-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%20%EF%BC%88%E9%9A%90%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%9C%80%E8%A6%81%E6%B6%88%E9%99%A4%E7%AC%9B%E5%8D%A1%E5%B0%94%E7%A7%AF%EF%BC%89" rel="nofollow">✨查询员工的姓名、年龄、职位、部门信息 （隐式内连接，需要消除笛卡尔积）</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B9%B4%E9%BE%84%E5%B0%8F%E4%BA%8E30%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%EF%BC%88%E6%98%BE%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%89-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B9%B4%E9%BE%84%E5%B0%8F%E4%BA%8E30%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%EF%BC%88%E6%98%BE%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%89" rel="nofollow">✨查询年龄小于29岁的员工的姓名、年龄、职位、部门信息（显式内连接）</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%8B%A5%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E9%83%A8%E9%97%A8ID%E3%80%81%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%20%EF%BC%88%E9%9A%BE%E7%82%B9%E5%9C%A8%E4%BA%8E%E6%9C%89%E4%B8%80%E4%B8%AA%E9%83%A8%E9%97%A8%E6%98%AF%E6%B2%A1%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%EF%BC%89-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%8B%A5%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E9%83%A8%E9%97%A8ID%E3%80%81%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%20%EF%BC%88%E9%9A%BE%E7%82%B9%E5%9C%A8%E4%BA%8E%E6%9C%89%E4%B8%80%E4%B8%AA%E9%83%A8%E9%97%A8%E6%98%AF%E6%B2%A1%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%EF%BC%89" rel="nofollow">✨查询拥有员工的部门ID、部门名称 （难点在于有一个部门是没有员工的）</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%B9%B4%E9%BE%84%E5%A4%A7%E4%BA%8E40%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%2C%20%E5%8F%8A%E5%85%B6%E5%BD%92%E5%B1%9E%E7%9A%84%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%3B%20%E5%A6%82%E6%9E%9C%E5%91%98%E5%B7%A5%E6%B2%A1%E6%9C%89%E5%88%86%E9%85%8D%E9%83%A8%E9%97%A8%2C%20%E4%B9%9F%E9%9C%80%E8%A6%81%E5%B1%95%E7%A4%BA%E5%87%BA%E6%9D%A5(%E5%9B%A0%E4%B8%BA%E6%B2%A1%E6%9C%89%E9%83%A8%E9%97%A8%E7%9A%84%E4%B9%9F%E8%A6%81%E5%B1%95%E7%A4%BA%EF%BC%8C%E5%8F%AA%E8%83%BD%E4%BD%BF%E7%94%A8%E5%A4%96%E8%BF%9E%E6%8E%A5%2C%E5%A4%96%E8%BF%9E%E6%8E%A5%E5%A4%A7%E9%83%A8%E5%88%86%E9%87%87%E7%94%A8%E5%B7%A6%E5%A4%96%EF%BC%8C%E5%9B%A0%E4%B8%BA%E5%8F%B3%E5%A4%96%E4%B9%9F%E5%8F%AF%E4%BB%A5%E9%80%9A%E8%BF%87%E8%B0%83%E6%8D%A2%E8%A1%A8%E9%A1%BA%E5%BA%8F%E6%94%B9%E4%B8%BA%E5%B7%A6%E5%A4%96)-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%B9%B4%E9%BE%84%E5%A4%A7%E4%BA%8E40%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%2C%20%E5%8F%8A%E5%85%B6%E5%BD%92%E5%B1%9E%E7%9A%84%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%3B%20%E5%A6%82%E6%9E%9C%E5%91%98%E5%B7%A5%E6%B2%A1%E6%9C%89%E5%88%86%E9%85%8D%E9%83%A8%E9%97%A8%2C%20%E4%B9%9F%E9%9C%80%E8%A6%81%E5%B1%95%E7%A4%BA%E5%87%BA%E6%9D%A5%28%E5%9B%A0%E4%B8%BA%E6%B2%A1%E6%9C%89%E9%83%A8%E9%97%A8%E7%9A%84%E4%B9%9F%E8%A6%81%E5%B1%95%E7%A4%BA%EF%BC%8C%E5%8F%AA%E8%83%BD%E4%BD%BF%E7%94%A8%E5%A4%96%E8%BF%9E%E6%8E%A5%2C%E5%A4%96%E8%BF%9E%E6%8E%A5%E5%A4%A7%E9%83%A8%E5%88%86%E9%87%87%E7%94%A8%E5%B7%A6%E5%A4%96%EF%BC%8C%E5%9B%A0%E4%B8%BA%E5%8F%B3%E5%A4%96%E4%B9%9F%E5%8F%AF%E4%BB%A5%E9%80%9A%E8%BF%87%E8%B0%83%E6%8D%A2%E8%A1%A8%E9%A1%BA%E5%BA%8F%E6%94%B9%E4%B8%BA%E5%B7%A6%E5%A4%96%29" rel="nofollow">✨查询所有年龄大于41岁的员工, 及其归属的部门名称; 如果员工没有分配部门, 也需要展示出来(因为没有部门的也要展示，只能使用外连接,外连接大部分采用左外，因为右外也可以通过调换表顺序改为左外)</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7%20%EF%BC%88%E5%8F%91%E7%8E%B0%E8%B7%9F%E9%83%A8%E9%97%A8%E6%B2%A1%E6%9C%89%E5%85%B3%E7%B3%BB%EF%BC%8C%E8%80%8C%E5%91%98%E5%B7%A5%E8%A1%A8%E4%B8%AD%E5%8F%AA%E6%9C%89%E5%B7%A5%E8%B5%84%EF%BC%8C%E6%B2%A1%E6%9C%89%E7%AD%89%E7%BA%A7%EF%BC%8C%E6%89%80%E4%BB%A5%E6%B6%89%E5%8F%8A%E6%96%B0%E8%A1%A8salgrade%EF%BC%89-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7%20%EF%BC%88%E5%8F%91%E7%8E%B0%E8%B7%9F%E9%83%A8%E9%97%A8%E6%B2%A1%E6%9C%89%E5%85%B3%E7%B3%BB%EF%BC%8C%E8%80%8C%E5%91%98%E5%B7%A5%E8%A1%A8%E4%B8%AD%E5%8F%AA%E6%9C%89%E5%B7%A5%E8%B5%84%EF%BC%8C%E6%B2%A1%E6%9C%89%E7%AD%89%E7%BA%A7%EF%BC%8C%E6%89%80%E4%BB%A5%E6%B6%89%E5%8F%8A%E6%96%B0%E8%A1%A8salgrade%EF%BC%89" rel="nofollow">✨查询所有员工的工资等级 （发现跟部门没有关系，而员工表中只有工资，没有等级，所以涉及新表salgrade）</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E4%BF%A1%E6%81%AF%E5%8F%8A%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E4%BF%A1%E6%81%AF%E5%8F%8A%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7" rel="nofollow">✨查询 "研发部" 所有员工的信息及工资等级</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E5%91%98%E5%B7%A5%E7%9A%84%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E5%91%98%E5%B7%A5%E7%9A%84%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84" rel="nofollow">✨查询 "研发部" 员工的平均工资</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B7%A5%E8%B5%84%E6%AF%94%20%22n%22%C2%A0%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF%E3%80%82-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B7%A5%E8%B5%84%E6%AF%94%20%22n%22%C2%A0%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF%E3%80%82" rel="nofollow">✨查询工资比 "n" 高的员工信息。</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%AF%94%E5%B9%B3%E5%9D%87%E8%96%AA%E8%B5%84%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%AF%94%E5%B9%B3%E5%9D%87%E8%96%AA%E8%B5%84%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF" rel="nofollow">✨查询比平均薪资高的员工信息</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E4%BD%8E%E4%BA%8E%E6%9C%AC%E9%83%A8%E9%97%A8%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E4%BD%8E%E4%BA%8E%E6%9C%AC%E9%83%A8%E9%97%A8%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF" rel="nofollow">✨查询低于本部门平均工资的员工信息</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E7%9A%84%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%2C%20%E5%B9%B6%E7%BB%9F%E8%AE%A1%E9%83%A8%E9%97%A8%E7%9A%84%E5%91%98%E5%B7%A5%E4%BA%BA%E6%95%B0-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E7%9A%84%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%2C%20%E5%B9%B6%E7%BB%9F%E8%AE%A1%E9%83%A8%E9%97%A8%E7%9A%84%E5%91%98%E5%B7%A5%E4%BA%BA%E6%95%B0" rel="nofollow">✨查询所有的部门信息, 并统计部门的员工人数</a></p> 
+<p id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%AD%A6%E7%94%9F%E7%9A%84%E9%80%89%E8%AF%BE%E6%83%85%E5%86%B5%2C%20%E5%B1%95%E7%A4%BA%E5%87%BA%E5%AD%A6%E7%94%9F%E5%90%8D%E7%A7%B0%2C%20%E5%AD%A6%E5%8F%B7%2C%20%E8%AF%BE%E7%A8%8B%E5%90%8D%E7%A7%B0-toc" style="margin-left:0px;"><a href="#%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%AD%A6%E7%94%9F%E7%9A%84%E9%80%89%E8%AF%BE%E6%83%85%E5%86%B5%2C%20%E5%B1%95%E7%A4%BA%E5%87%BA%E5%AD%A6%E7%94%9F%E5%90%8D%E7%A7%B0%2C%20%E5%AD%A6%E5%8F%B7%2C%20%E8%AF%BE%E7%A8%8B%E5%90%8D%E7%A7%B0" rel="nofollow">✨查询所有学生的选课情况, 展示出学生名称, 学号, 课程名称</a></p> 
+<hr id="hr-toc"> 
+<h2><strong>🚀​​​​​​多表查询综合案例</strong></h2> 
+<p><strong>数据环境准备:</strong></p> 
+<div> 
+ <pre><code class="language-sql">create table salgrade(
+grade int, --工资等级
+lowsal int, --这个等级的最低工资
+hightsal int --这个等级的最高工资
+) comment '工资等级表'; 
+
+insert into salgrade values (1,0,3000);
+insert into salgrade values (2,3001,5000);
+insert into salgrade values (3,5001,8000);
+insert into salgrade values (4,8001,10000);
+insert into salgrade values (5,10001,15000);
+insert into salgrade values (6,15001,20000);
+insert into salgrade values (7,20001,25000);
+insert into salgrade values (8,25001,30000);
+
+</code></pre> 
+</div> 
+<p><strong>在这个案例中，我们主要运用上面所讲解的多表查询的语法，完成以下的12个需求即可，而这里主要涉及到的表就三张：empcp员工表、dept部门表、salgrade工资等级表 。</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%20%EF%BC%88%E9%9A%90%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%8C%E9%9C%80%E8%A6%81%E6%B6%88%E9%99%A4%E7%AC%9B%E5%8D%A1%E5%B0%94%E7%A7%AF%EF%BC%89"><strong>✨查询员工的姓名、年龄、职位、部门信息 （隐式内连接，需要消除笛卡尔积） </strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件: empcp.dept_id = dept.id</strong></span></p> 
+ <p></p> 
+ <p><strong><span style="color:#be191c;"><span style="background-color:#fbd4d0;">这里再重复一下，如果给表起了别名你就必须要用别名去定义字段了</span></span></strong></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select e.name , e.age , e.job , d.name from empcp e , dept d where e.dept_id = d.id;</code></pre> 
+</div> 
+<p><strong> 执行：</strong></p> 
+<p><strong><img alt="" height="292" src="https://images2.imgbox.com/b9/fe/bEkXJ1GB_o.png" width="350">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B9%B4%E9%BE%84%E5%B0%8F%E4%BA%8E30%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%E7%9A%84%E5%A7%93%E5%90%8D%E3%80%81%E5%B9%B4%E9%BE%84%E3%80%81%E8%81%8C%E4%BD%8D%E3%80%81%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%EF%BC%88%E6%98%BE%E5%BC%8F%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%89"><strong>✨查询年龄小于29岁的员工的姓名、年龄、职位、部门信息（显式内连接） </strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件: empcp.dept_id = dept.id</strong></span></p> 
+ <p></p> 
+ <p><span style="color:#be191c;"><strong><span style="background-color:#fbd4d0;">在DQL语句中我们的查询条件在哪个关键字之后？是在where之后</span></strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select e.name , e.age , e.job , d.name from empcp e inner join dept d on e.dept_id =
+
+d.id where e.age &lt; 29;
+</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="177" src="https://images2.imgbox.com/92/3d/gUmGSMKl_o.png" width="450">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%8B%A5%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E9%83%A8%E9%97%A8ID%E3%80%81%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%20%EF%BC%88%E9%9A%BE%E7%82%B9%E5%9C%A8%E4%BA%8E%E6%9C%89%E4%B8%80%E4%B8%AA%E9%83%A8%E9%97%A8%E6%98%AF%E6%B2%A1%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%EF%BC%89"><strong>✨查询拥有员工的部门ID、部门名称 （难点在于有一个部门是没有员工的）</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件: empcp.dept_id = dept.id</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>换个思路：我们要去查拥有员工的部门，其实就是查询部门表和员工表之间的交集，怎么去查询两个表之间的交集，其实实际就是用内连接</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select  * from empcp e , dept d where e.dept_id = d.id ;</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>而我们只要返回部门id，和部门名称，所以把*改为d.id,d.name</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong><img alt="" height="252" src="https://images2.imgbox.com/82/bd/4YKFDBKF_o.png" width="150">​</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>发现重复，去重，用关键字distinct</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select distinct d.id , d.name from empcp e , dept d where e.dept_id = d.id;</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="174" src="https://images2.imgbox.com/19/62/wtijKPrz_o.png" width="274">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%B9%B4%E9%BE%84%E5%A4%A7%E4%BA%8E40%E5%B2%81%E7%9A%84%E5%91%98%E5%B7%A5%2C%20%E5%8F%8A%E5%85%B6%E5%BD%92%E5%B1%9E%E7%9A%84%E9%83%A8%E9%97%A8%E5%90%8D%E7%A7%B0%3B%20%E5%A6%82%E6%9E%9C%E5%91%98%E5%B7%A5%E6%B2%A1%E6%9C%89%E5%88%86%E9%85%8D%E9%83%A8%E9%97%A8%2C%20%E4%B9%9F%E9%9C%80%E8%A6%81%E5%B1%95%E7%A4%BA%E5%87%BA%E6%9D%A5(%E5%9B%A0%E4%B8%BA%E6%B2%A1%E6%9C%89%E9%83%A8%E9%97%A8%E7%9A%84%E4%B9%9F%E8%A6%81%E5%B1%95%E7%A4%BA%EF%BC%8C%E5%8F%AA%E8%83%BD%E4%BD%BF%E7%94%A8%E5%A4%96%E8%BF%9E%E6%8E%A5%2C%E5%A4%96%E8%BF%9E%E6%8E%A5%E5%A4%A7%E9%83%A8%E5%88%86%E9%87%87%E7%94%A8%E5%B7%A6%E5%A4%96%EF%BC%8C%E5%9B%A0%E4%B8%BA%E5%8F%B3%E5%A4%96%E4%B9%9F%E5%8F%AF%E4%BB%A5%E9%80%9A%E8%BF%87%E8%B0%83%E6%8D%A2%E8%A1%A8%E9%A1%BA%E5%BA%8F%E6%94%B9%E4%B8%BA%E5%B7%A6%E5%A4%96)"><strong>✨查询所有年龄大于41岁的员工, 及其归属的部门名称; 如果员工没有分配部门, 也需要展示出来</strong></h2> 
+<h2><strong>(因为没有部门的也要展示，只能使用外连接,外连接大部分采用左外，因为右外也可以通过调换表顺序改为左外)</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件: empcp.dept_id = dept.id</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select * from empcp e left join dept d on e.dept_id = d.id where e.age &gt; 40;</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>然后把*换成员工表的所有字段e.*，和部门名称d.name，如下</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select e.*, d.name from empcp e left join dept d on e.dept_id = d.id where e.age &gt;
+
+41 ;
+</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="238" src="https://images2.imgbox.com/0c/a0/inwSuPGt_o.png" width="1200">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7%20%EF%BC%88%E5%8F%91%E7%8E%B0%E8%B7%9F%E9%83%A8%E9%97%A8%E6%B2%A1%E6%9C%89%E5%85%B3%E7%B3%BB%EF%BC%8C%E8%80%8C%E5%91%98%E5%B7%A5%E8%A1%A8%E4%B8%AD%E5%8F%AA%E6%9C%89%E5%B7%A5%E8%B5%84%EF%BC%8C%E6%B2%A1%E6%9C%89%E7%AD%89%E7%BA%A7%EF%BC%8C%E6%89%80%E4%BB%A5%E6%B6%89%E5%8F%8A%E6%96%B0%E8%A1%A8salgrade%EF%BC%89"><strong>✨查询所有员工的工资等级 （发现跟部门没有关系，而员工表中只有工资，没有等级，所以涉及新表salgrade）</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , salgrade</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件 : empcp.salary &gt;= salgrade.lowsal and empcp.salary &lt;= salgrade.hightsal</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>1.empcp表与salgrade表进行联合查询</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.empcp表与salgrade之间有没有外键关联？没有，如果要说empcp和salgrade之间没有外键关联，怎么产生关系呢？它们之间产生关系实际上通过一个字段salary产生关系，我们要去判断员工薪资等级，就要让这个薪资介于最小值与最大值之间，这就是连接条件</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong><img alt="" height="226" src="https://images2.imgbox.com/06/ed/aiKquNUz_o.png" width="339">​</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.select *  from empcp e,salgrade s where e.salary &gt;= s.lowsal and e.salary &lt;= s.hightsal ;</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>再改细节，*变为empcp表的全部字段e*，和salgrade表中的grade字段s.grade</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">-- 方式一
+select e.* , s.grade , s.lowsal, s.hightsal from empcp e , salgrade s where e.salary &gt;= s.lowsal and e.salary &lt;= s.hightsal;
+
+-- 方式二
+select e.* , s.grade , s.lowsal, s.hightsal from empcp e , salgrade s where e.salary between s.lowsal and s.hightsal;
+</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="309" src="https://images2.imgbox.com/1d/0c/IrVTboee_o.png" width="800">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E6%89%80%E6%9C%89%E5%91%98%E5%B7%A5%E7%9A%84%E4%BF%A1%E6%81%AF%E5%8F%8A%E5%B7%A5%E8%B5%84%E7%AD%89%E7%BA%A7"><strong>✨查询 "研发部" 所有员工的信息及工资等级</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , salgrade , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件 : empcp.salary between salgrade.lowsal and salgrade.hightsal , dept.id= empcp.dept_id</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>查询条件 : dept.name = '研发部'</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>梳理：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.因为员工表中只有部门的id，而这里要根据部门的名词去查，所以这个里面涉及的表结构将会是三张表</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.那么可想而知，三张表我们连接连接的条件会有几个？2个</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.联查n张表，至少需要n-1个条件</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>4.我们去梳理连接条件的时候，不要一股脑的梳理三张表的条件，两个两个去梳理</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>5.首先empcp和salgrade的连接条件我们已经梳理过了，就是empcp.salary between salgrade.lowsal and salgrade.hightsal</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>6.再梳理第二个条件empcp表和dept表它们什么条件，不就是empcp.dept_id = dept.id</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>代码思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.select * from empcp e , dept d , salgrade s ; 这种我们称之为隐式内连接</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.连接的条件将在where之后编写 </strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.select * from empcp e , dept d , salgrade s where e.dept_id = d.id；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>4.如果是多个连接条件之间使用</strong></span><span style="color:#be191c;"><strong><span style="background-color:#fbd4d0;">and</span></strong></span><span style="color:#0d0016;"><strong>进行连接</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>5.select * from empcp e , dept d , salgrade s where e.dept_id = d.id and e.salary between s.lowsal and s.hightsal；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>6为了让语法更加清晰，可以用括号完善一下</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>7.select * from empcp e , dept d , salgrade s where e.dept_id = d.id and (e.salary between s.lowsal and s.hightsal)；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>8.还有一个查询条件，记住</strong></span><span style="color:#be191c;"><strong><span style="background-color:#fbd4d0;">如果说在连接查询中还有额外的查询条件，此时直接在where后继续跟着写就可以</span></strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>9.select * from empcp e , dept d , salgrade s where e.dept_id = d.id and (e.salary between s.lowsal and s.hightsal) and d.name = '研发部'；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>10.最后将*改动，写为需要取的字段e.*员工信息，s.grade工资等级，如下：</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select e.* , s.grade from empcp e , dept d , salgrade s where e.dept_id = d.id and (
+e.salary between s.lowsal and s.hightsal ) and d.name = '研发部';
+
+我们可以格式化一下代码更清楚
+
+--
+select e.*, s.grade
+from empcp e,
+     dept d,
+     salgrade s
+where e.dept_id = d.id
+  and (
+    e.salary between s.lowsal and s.hightsal)
+  and d.name = '研发部';
+</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="176" src="https://images2.imgbox.com/01/a0/TD0Jz0Hc_o.png" width="1200">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%20%22%E7%A0%94%E5%8F%91%E9%83%A8%22%20%E5%91%98%E5%B7%A5%E7%9A%84%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84"><strong>✨查询 "研发部" 员工的平均工资</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>需要用的表 : empcp , dept</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>需要的连接条件  : empcp.dept_id = dept.id</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>要求平均数的聚合函数是avg</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select * from empcp e , dept d where e.dept_id = d.id ; </strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>还有一个查询条件 查询研发部 d.name = "研发部"</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select * from empcp e , dept d where e.dept_id = d.id and d.name = "研发部"</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>基本的sql编写完了再对*进行优化,如下</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select avg(e.salary) from empcp e, dept d where e.dept_id = d.id and d.name = '研发部';</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="65" src="https://images2.imgbox.com/2e/b4/mS17kC7I_o.png" width="264">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E5%B7%A5%E8%B5%84%E6%AF%94%20%22n%22%C2%A0%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF%E3%80%82"><strong>✨查询工资比 "n" 高的员工信息。</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>拆解为两步</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.查询 "n" 的薪资</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select salary from empcp where name = 'n';</code></pre> 
+ </div> 
+ <p><span style="color:#0d0016;"><strong>2.查询比她工资高的员工数据</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select * from empcp where salary &gt; ( select salary from empcp where name = 'n' );
+--后面其实就是刚刚查出来的14000，这个14000就是上面那条语句查询返回的结果，所以我们要通过子查询来实现，把上面的语句放到下面，然后再加上括号</code></pre> 
+ </div> 
+</blockquote> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="56" src="https://images2.imgbox.com/80/91/3uu1wJdv_o.png" width="171">​</strong></p> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="59" src="https://images2.imgbox.com/8c/ff/XVYkIu5F_o.png" width="1200">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%AF%94%E5%B9%B3%E5%9D%87%E8%96%AA%E8%B5%84%E9%AB%98%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF"><strong>✨查询比平均薪资高的员工信息</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>拆解为两步</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.查询员工的平均薪资</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select avg(salary) from empcp;</code></pre> 
+ </div> 
+ <p><span style="color:#0d0016;"><strong>2.查询比平均薪资高的员工信息</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select * from empcp where salary &gt; ( select avg(salary) from empcp );</code></pre> 
+ </div> 
+</blockquote> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="62" src="https://images2.imgbox.com/40/a2/mpzwXLFV_o.png" width="239">​</strong></p> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="263" src="https://images2.imgbox.com/09/97/Y4crRygW_o.png" width="1200">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E4%BD%8E%E4%BA%8E%E6%9C%AC%E9%83%A8%E9%97%A8%E5%B9%B3%E5%9D%87%E5%B7%A5%E8%B5%84%E7%9A%84%E5%91%98%E5%B7%A5%E4%BF%A1%E6%81%AF"><strong>✨查询低于本部门平均工资的员工信息</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>拆解为两步</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.查询指定部门平均薪资</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>比如查询1号部门的平均薪资</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select * from emp e1 where e1.dept_id = 1</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>*改avg(e1.salary) 此时只能用别名e1</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select avg(e1.salary) from empcp e1 where e1.dept_id = 1;
+
+select avg(e1.salary) from empcp e1 where e1.dept_id = 2;
+</code></pre> 
+ </div> 
+ <p><span style="color:#0d0016;"><strong>2.查询低于本部门平均工资的员工信息</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>思路：</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>1.首先查询出所有的员工数据</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.select * from empcp；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.此时所有的员工数据都拿到了，在此基础上增加一个查询条件，salary&lt;当前部门的平均薪资</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>4.当前部门的平均薪资，只需要把当前的部门薪资传递下来，也就是上面的那句sql语句</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>select * from empcp where salary &lt; (select avg(e1.salary) from empcp e1 where e1.dept_id = 1)；</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>5.但是里面写死的部门id我们要替换掉，比如当我们去判断第一行数据时，需要传递的部门id是5，去判断第二行数据时，需要传递的部门id是1</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>6.此时我们只需要把dept_id这个字段传进来即可，我们需要把empcp起一个别名e2</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>7.这里就应该是select * from empcp e2 where e2.salary &lt; (select avg(e1.salary) from empcp e1 where e1.dept_id = 1)；e2.salary &lt; 当前部门的平均薪资，再把当前部门传进来</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>8.当前部门应该就是e2.dept_id,代码如下</strong></span></p> 
+ <div> 
+  <pre><code class="language-sql">select * from empcp e2 where e2.salary &lt; ( select avg(e1.salary) from empcp e1 where
+
+e1.dept_id = e2.dept_id );
+</code></pre> 
+ </div> 
+</blockquote> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="58" src="https://images2.imgbox.com/d8/61/5X7jgppK_o.png" width="267">​</strong></p> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="292" src="https://images2.imgbox.com/ab/51/CPvAmw3t_o.png" width="1200">​</strong></p> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>为了验证查询到的字段，我们可以在*之后增加一个输出字段， 我们可以把子查询直接粘贴过来，这个不就是当前部门的平均薪资嘛，我们再取一个别名为”当前部门的平均薪资“</strong></span></p> 
+</blockquote> 
+<pre><code class="language-sql">select e2.*, (select avg(e1.salary) from empcp e1 where e1.dept_id = e2.dept_id) '当前部门平均薪资'
+from empcp e2
+where e2.salary &lt; (select avg(e1.salary) from empcp e1 where e1.dept_id = e2.dept_id);</code></pre> 
+<p><strong><img alt="" height="295" src="https://images2.imgbox.com/a6/a2/ihleAlXr_o.png" width="1200"> 对比后发现，是正确的</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E7%9A%84%E9%83%A8%E9%97%A8%E4%BF%A1%E6%81%AF%2C%20%E5%B9%B6%E7%BB%9F%E8%AE%A1%E9%83%A8%E9%97%A8%E7%9A%84%E5%91%98%E5%B7%A5%E4%BA%BA%E6%95%B0"><strong>✨查询所有的部门信息, 并统计部门的员工人数</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>1.先查询所有部门信息</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.select id,name from dept;</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.此时查出了所有的部门id，以及部门的名称</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>4.接着考虑如何统计部门的员工数量</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>5.select count(*) from empcp where dept_id = 1;</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>6.这条语句是统计1号部门的员工数量</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>7.接下来需要考虑,在上面的语句下如何统计1号部门的员工数量，2号部门的员工数量</strong></span></p> 
+ <p><strong><span style="color:#0d0016;">8.我再添加一个查询id，此时select id,name,id '人数' from dept;</span><img alt="" height="126" src="https://images2.imgbox.com/26/41/vJsccm7a_o.png" width="250"></strong></p> 
+ <p><span style="color:#0d0016;"><strong>9.这个id本身不是查询人数，我想要后面的dept.id查询为人数，能不能根据id查询出人数呢？可以，就是这句，统计1号部门的员工数量select count(*) from empcp where dept_id = 1;</strong></span></p> 
+ <p><strong><span style="color:#0d0016;">10.变为select id,name,(select count(*) from empcp where</span> <span style="color:#be191c;"><span style="background-color:#fbd4d0;">dept_id</span></span> <span style="color:#0d0016;">=</span> <span style="color:#956fe7;"><span style="background-color:#dad5e9;">id</span></span><span style="color:#0d0016;">) '人数' from dept;  加上括号，变成一个子查询存在</span></strong></p> 
+ <p><span style="color:#be191c;"><strong><span style="background-color:#fbd4d0;">11.这里面最需要注意的是标红的dept_id是empcp表的id，紫id是dept表的id</span></strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>12.此时就要给表起对应的别名，给empcp起别名为e，给dept起名为d</strong></span></p> 
+ <p><strong><span style="color:#0d0016;">13.select d.</span><span style="color:#956fe7;"><span style="background-color:#dad5e9;">id</span></span><span style="color:#0d0016;">, d.name,(select count(*) from empcp e where</span> <span style="background-color:#38d8f0;">e.</span><span style="color:#be191c;"><span style="background-color:#fbd4d0;">dept_id</span></span> <span style="color:#0d0016;">=d.</span><span style="color:#956fe7;"><span style="background-color:#dad5e9;">id</span></span><span style="color:#0d0016;">) '人数' from dept  d;</span></strong></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">select d.id, d.name , ( select count(*) from empcp e where e.dept_id = d.id ) '人数' from dept d;</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="187" src="https://images2.imgbox.com/b6/7b/nLluyMGg_o.png" width="350">​</strong></p> 
+<hr> 
+<h2 id="%E2%9C%A8%E6%9F%A5%E8%AF%A2%E6%89%80%E6%9C%89%E5%AD%A6%E7%94%9F%E7%9A%84%E9%80%89%E8%AF%BE%E6%83%85%E5%86%B5%2C%20%E5%B1%95%E7%A4%BA%E5%87%BA%E5%AD%A6%E7%94%9F%E5%90%8D%E7%A7%B0%2C%20%E5%AD%A6%E5%8F%B7%2C%20%E8%AF%BE%E7%A8%8B%E5%90%8D%E7%A7%B0"><strong>✨查询所有学生的选课情况, 展示出学生名称, 学号, 课程名称</strong></h2> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>表 : student , course , student_course</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>连接条件: student.id = student_course.studentid , course.id = student_course.courseid</strong></span></p> 
+</blockquote> 
+<blockquote> 
+ <p><span style="color:#0d0016;"><strong>1.之前讲解表与表之间的关系时，特别说明了学生和课程的关系是多对多的关系，一个学生可以选择多个课程，一个课程也可以供多个学生选择，涉及的表有三张</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>2.这三张表会通过中间表student_course来维护它们之间的关系</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>3.三张表在消除笛卡尔积的时候需要3-1个关系</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>4.先梳理一下连接条件</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>5.student.id = student_course.studentid,course.id = student_course.courseid</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>ps:第一张是student表，第二张是student_course表，第三张是course表</strong></span></p> 
+ <p><strong><img alt="" height="70" src="https://images2.imgbox.com/5e/80/jUhefy4O_o.png" width="200">  <img alt="" height="59" src="https://images2.imgbox.com/05/36/qTjfBTyR_o.png" width="200"><img alt="" height="81" src="https://images2.imgbox.com/7e/df/K9FpsBHn_o.png" width="150"></strong></p> 
+ <p><strong><span style="color:#0d0016;">6.select * from student s,student_course sc,course c where s.id = sc.studentid</span> <span style="background-color:#fbd4d0;color:#be191c;">and </span><span style="color:#be191c;"> </span><span style="color:#0d0016;">c.id = sc.courseid ；</span></strong></p> 
+ <p><span style="color:#0d0016;"><strong>7.再对*优化</strong></span></p> 
+ <p><span style="color:#0d0016;"><strong>8.我们只需要展示学生的姓名, 学号，课程也就是s.name , s.no , c.name ,代码如下</strong></span></p> 
+</blockquote> 
+<div> 
+ <pre><code class="language-sql">
+select s.name , s.no , c.name from student s , student_course sc , course c where
+s.id = sc.studentid and sc.courseid = c.id ;
+</code></pre> 
+</div> 
+<p><strong>执行：</strong></p> 
+<p><strong><img alt="" height="146" src="https://images2.imgbox.com/3e/6b/ZqdLfUHR_o.png" width="350">​</strong></p> 
+<hr> 
+<p><strong>总结：本篇博客到这里就结束了，希望能帮到你，谢谢你这么好看还来看我</strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/595d20356a327db8e5ad26f2b33ad4d7/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Stable-diffusion-WebUI 的API调用(内含文生图和图生图实例)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b767b4f64a5972cd9396b46eeb591b4c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【数据结构】---树：中序遍历</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Flink数据流动全观察：代理技术实现细节记录与分析（附完整源码） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9941b431559d5a638e7e61cece50d448/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Flink数据流动全观察：代理技术实现细节记录与分析（附完整源码）">
+  <meta property="og:description" content="文章目录 01 前言02 背景调研03 Agent实现Flink流动数据的监听3.1 Agent的源码实现3.2 Flink sdk集成Agent jar 04 验证05 文末 01 前言 本文源码已上传至Github：https://github.com/ylw-github/flink-agent
+在当今数据驱动的时代，Apache Flink 以其卓越的有状态计算能力和对有界及无界数据流的高效处理而广受欢迎。Flink主要用来 “处理” 数据的，但其本身并不 “存储” 数据。但很多时候，用户更期待的是 “可以看到一个Flink任务里面的真实数据是怎么流动的，流动的内容有什么？
+例如“Kafka实时同步到Mysql的flink作业” ：在程序持续运行的过程中，用户期望看到实时同步有哪些数据、具体的数据内容，或可能会出现把这些数据实时写到第三方的日志系统这种需求。很遗憾，Flink并不支持该功能，也没有相应的API或提供相关的hook实现，目前只能够通过Metrics去查看数据流动的数量以及速率这些统计信息。
+因此，博主本文主要分享的是：探索在不修改Flink源码的前提下，如何通过代理技术捕捉并记录数据流动的每一个细节？
+02 背景调研 在寻找解决方案的过程中，博主发现了一些开源项目，如纯钧（原名：FlinkX），它提供了一些值得借鉴的思路。特别是关于脏数据管理的实现，具体的文档地址：《拓展功能@脏数据插件设计》
+为何要提到这一块呢？博主是想参考Chunjun是在哪里获取到脏数据？如何获取脏数据的具体内容的？以便找到监听的入口。
+通过一系列的代码review，发现Chunjun是在每个Connector里面去采集脏数据的，且Connector都需要经过二次开发，只有使用它们的Connector才能取脏数据（如下图）。显然，这是不满足本文的需求的，我期望的是：在不改变Flink的源码前提下，做到通用Connector的监听，且可以通过简单的方式就能获取到这些流动数据的内容了。
+因此，博主想到了通过代理的方式去获取Flink流动的数据，类似于阿里开源的Arthas框架实现，博主也写过相关的源码分析，有兴趣的同学可以看看：《Arthas使用与源码分析》。
+Ok，直接进入本文的主题，下面展示详细的实现。
+03 Agent实现Flink流动数据的监听 一个Flink程序的运行，会依赖到一个或多个Connector（连接器），而这些连接器分为Source（主要用于读）和Sink（主要用于写），那么如果要监听到Flink作业流动的数据，我们这里可以简单尝试去查看支持Sink的Connector(例如：flink-connector-jdbc)，看看 是否有实现一个公共的接口，然后对这个接口做监听，即可“读取”写入前的数据 ? 。
+再次经过一系列的代码review，博主发现基本所有的sink相关的Connector都继承了“org.apache.flink.api.common.io.OutputFormat”这个接口类，而这个接口类里面有个核心的方法（writeRecord），我们可以从这个方法作为监听的入口：
+public interface OutputFormat&lt;IT&gt; extends Serializable { ..... /** * Adds a record to the output. * * &lt;p&gt;When this method is called, the output format it guaranteed to be opened.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-11T20:00:00+08:00">
+    <meta property="article:modified_time" content="2024-04-11T20:00:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Flink数据流动全观察：代理技术实现细节记录与分析（附完整源码）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-dracula">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#01__2" rel="nofollow">01 前言</a></li><li><a href="#02__23" rel="nofollow">02 背景调研</a></li><li><a href="#03_AgentFlink_45" rel="nofollow">03 Agent实现Flink流动数据的监听</a></li><li><ul><li><a href="#31_Agent_76" rel="nofollow">3.1 Agent的源码实现</a></li><li><a href="#32_Flink_sdkAgent_jar_254" rel="nofollow">3.2 Flink sdk集成Agent jar</a></li></ul> 
+  </li><li><a href="#04__276" rel="nofollow">04 验证</a></li><li><a href="#05__342" rel="nofollow">05 文末</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="01__2"></a>01 前言</h2> 
+<blockquote> 
+ <p><strong>本文源码已上传至Github</strong>：<a href="https://github.com/ylw-github/flink-agent">https://github.com/ylw-github/flink-agent</a></p> 
+</blockquote> 
+<p>在当今数据驱动的时代，<a href="https://nightlies.apache.org/flink/flink-docs-master/" rel="nofollow">Apache Flink </a> 以其卓越的有状态计算能力和对有界及无界数据流的高效处理而广受欢迎。<code>Flink</code>主要用来 “<strong>处理</strong>” 数据的，但其本身并不 “<strong>存储</strong>” 数据。但很多时候，用户更期待的是 “<font color="red">可以看到一个Flink任务里面的真实数据是怎么流动的，流动的内容有什么？</font></p> 
+<p><strong>例如“Kafka实时同步到Mysql的flink作业”</strong> ：在程序持续运行的过程中，用户期望看到<font color="green">实时同步有哪些数据、具体的数据内容，或可能会出现把这些数据实时写到第三方的日志系统这种需求</font>。<em>很遗憾，<code>Flink</code>并不支持该功能，也没有相应的<code>API</code>或提供相关的<code>hook</code>实现，目前只能够通过<code>Metrics</code>去查看数据流动的<strong>数量</strong>以及<strong>速率</strong></em>这些统计信息。</p> 
+<p><img src="https://images2.imgbox.com/56/a2/oaaddBmD_o.png" alt="在这里插入图片描述"></p> 
+<p>因此，博主本文主要分享的是：<font color="orange"><strong>探索在不修改Flink源码的前提下，如何通过代理技术捕捉并记录数据流动的每一个细节？</strong></font></p> 
+<h2><a id="02__23"></a>02 背景调研</h2> 
+<p>在寻找解决方案的过程中，博主发现了一些开源项目，如<a href="https://dtstack.github.io/chunjun" rel="nofollow">纯钧</a>（原名：FlinkX），它提供了一些值得借鉴的思路。特别是关于脏数据管理的实现，具体的文档地址：<a href="https://dtstack.github.io/chunjun/documents/zh/%E6%8B%93%E5%B1%95%E5%8A%9F%E8%83%BD@%E8%84%8F%E6%95%B0%E6%8D%AE%E6%8F%92%E4%BB%B6%E8%AE%BE%E8%AE%A1" rel="nofollow">《拓展功能@脏数据插件设计》</a></p> 
+<blockquote> 
+ <p><font color="red"><strong>为何要提到这一块呢？</strong></font>博主是想参考<code>Chunjun</code>是在哪里获取到脏数据？如何获取脏数据的具体内容的？以便找到监听的入口。</p> 
+</blockquote> 
+<p>通过一系列的代码<code>review</code>，发现<strong>Chunjun</strong>是在每个<code>Connector</code>里面去采集脏数据的，且<code>Connector</code>都需要经过二次开发，只有使用它们的<code>Connector</code>才能取脏数据（如下图）。显然，这是不满足本文的需求的，我期望的是：<strong><u><font color="green">在不改变Flink的源码前提下，做到通用Connector的监听，且可以通过简单的方式就能获取到这些流动数据的内容了</font></u></strong>。<br> <img src="https://images2.imgbox.com/f9/66/lajIszDW_o.png" alt="在这里插入图片描述"></p> 
+<p>因此，博主想到了通过代理的方式去获取Flink流动的数据，类似于阿里开源的Arthas框架实现，博主也写过相关的源码分析，有兴趣的同学可以看看：<a href="https://yanglinwei.blog.csdn.net/article/details/135961544" rel="nofollow">《Arthas使用与源码分析》</a>。</p> 
+<p><img src="https://images2.imgbox.com/54/18/0OczqBxv_o.png" alt="image-20230104090359018"></p> 
+<p>Ok，直接进入本文的主题，下面展示详细的实现。</p> 
+<h2><a id="03_AgentFlink_45"></a>03 Agent实现Flink流动数据的监听</h2> 
+<p>一个Flink程序的运行，会依赖到一个或多个<code>Connector</code>（连接器），而这些连接器分为<code>Source</code>（主要用于读）和<code>Sink</code>（主要用于写），那么如果要监听到Flink作业流动的数据，我们这里可以简单尝试去查看支持<code>Sink</code>的<code>Connector</code>(例如：flink-connector-jdbc)，看看 <strong><font color="green">是否有实现一个公共的接口，然后对这个接口做监听，即可“读取”写入前的数据 ? </font></strong>。</p> 
+<p>再次经过一系列的代码review，博主发现基本所有的sink相关的Connector都继承了“<code>org.apache.flink.api.common.io.OutputFormat</code>”这个接口类，而这个接口类里面有个核心的方法（<font color="red"><strong>writeRecord</strong></font>），我们可以从这个方法作为监听的入口：</p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">OutputFormat</span><span class="token generics"><span class="token punctuation">&lt;</span>IT<span class="token punctuation">&gt;</span></span> <span class="token keyword">extends</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+    <span class="token comment">/**
+     * Adds a record to the output.
+     *
+     * &lt;p&gt;When this method is called, the output format it guaranteed to be opened.
+     *
+     * @param record The records to add to the output.
+     * @throws IOException Thrown, if the records could not be added due to an I/O problem.
+     */</span>
+    <span class="token keyword">void</span> <span class="token function">writeRecord</span><span class="token punctuation">(</span><span class="token class-name">IT</span> record<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>接下来可以开始编写一个Agent类了，这里直接上代码。</p> 
+<h3><a id="31_Agent_76"></a>3.1 Agent的源码实现</h3> 
+<blockquote> 
+ <p>Byte Buddy 是一个 Java 字节码生成和操作库，它允许在运行时创建和修改 Java 类。它可以用于在 Java 应用程序中进行动态代理、字节码增强、AOP（面向切面编程）等方面的应用。</p> 
+</blockquote> 
+<p>首先maven需要依赖byte-buddy，这里贴上完整代码：</p> 
+<pre><code>&lt;project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+         xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd"&gt;
+    &lt;modelVersion&gt;4.0.0&lt;/modelVersion&gt;
+
+    &lt;groupId&gt;com.ylw&lt;/groupId&gt;
+    &lt;artifactId&gt;flink-agent&lt;/artifactId&gt;
+    &lt;version&gt;1.0.0&lt;/version&gt;
+    &lt;packaging&gt;jar&lt;/packaging&gt;
+
+    &lt;name&gt;flink-agent&lt;/name&gt;
+    &lt;url&gt;https://yanglinwei.blog.csdn.net&lt;/url&gt;
+
+    &lt;properties&gt;
+        &lt;project.build.sourceEncoding&gt;UTF-8&lt;/project.build.sourceEncoding&gt;
+    &lt;/properties&gt;
+
+    &lt;dependencies&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;net.bytebuddy&lt;/groupId&gt;
+            &lt;artifactId&gt;byte-buddy&lt;/artifactId&gt;
+            &lt;version&gt;1.11.14&lt;/version&gt;
+        &lt;/dependency&gt;
+
+        &lt;!-- 引入这个主要是为了能使用到LOGGER，最终还是使用到 --&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.slf4j&lt;/groupId&gt;
+            &lt;artifactId&gt;slf4j-api&lt;/artifactId&gt;
+            &lt;scope&gt;provided&lt;/scope&gt;
+            &lt;version&gt;1.7.36&lt;/version&gt;
+        &lt;/dependency&gt;
+
+    &lt;/dependencies&gt;
+
+    &lt;build&gt;
+        &lt;plugins&gt;
+            &lt;plugin&gt;
+                &lt;groupId&gt;org.apache.maven.plugins&lt;/groupId&gt;
+                &lt;artifactId&gt;maven-assembly-plugin&lt;/artifactId&gt;
+                &lt;executions&gt;
+                    &lt;execution&gt;
+                        &lt;goals&gt;
+                            &lt;goal&gt;single&lt;/goal&gt;
+                        &lt;/goals&gt;
+                        &lt;phase&gt;package&lt;/phase&gt;
+                        &lt;configuration&gt;
+                            &lt;descriptorRefs&gt;
+                                &lt;descriptorRef&gt;jar-with-dependencies&lt;/descriptorRef&gt;
+                            &lt;/descriptorRefs&gt;
+                            &lt;archive&gt;
+                                &lt;manifestEntries&gt;
+                                    &lt;Premain-Class&gt;com.ylw.flink.agent.ProxyAgent&lt;/Premain-Class&gt;
+                                    &lt;Agent-Class&gt;com.ylw.flink.agent.ProxyAgent&lt;/Agent-Class&gt;
+                                    &lt;Can-Redefine-Classes&gt;true&lt;/Can-Redefine-Classes&gt;
+                                    &lt;Can-Retransform-Classes&gt;true&lt;/Can-Retransform-Classes&gt;
+                                    &lt;Specification-Title&gt;${project.name}&lt;/Specification-Title&gt;
+                                    &lt;Specification-Version&gt;${project.version}&lt;/Specification-Version&gt;
+                                    &lt;Implementation-Title&gt;${project.name}&lt;/Implementation-Title&gt;
+                                    &lt;Implementation-Version&gt;${project.version}&lt;/Implementation-Version&gt;
+                                &lt;/manifestEntries&gt;
+                            &lt;/archive&gt;
+                        &lt;/configuration&gt;
+                    &lt;/execution&gt;
+                &lt;/executions&gt;
+            &lt;/plugin&gt;
+        &lt;/plugins&gt;
+    &lt;/build&gt;
+&lt;/project&gt;
+
+</code></pre> 
+<p>接着编写Agent代码：</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>ylw<span class="token punctuation">.</span>flink<span class="token punctuation">.</span>agent</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>agent<span class="token punctuation">.</span>builder<span class="token punctuation">.</span></span><span class="token class-name">AgentBuilder</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>implementation<span class="token punctuation">.</span></span><span class="token class-name">MethodDelegation</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>matcher<span class="token punctuation">.</span></span><span class="token class-name">ElementMatchers</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">Logger</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">LoggerFactory</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>lang<span class="token punctuation">.</span>instrument<span class="token punctuation">.</span></span><span class="token class-name">Instrumentation</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * Flink proxy agent
+ *
+ * @author : YangLinWei
+ * @createTime: 2024/4/10 23:33
+ * @version: 1.0.0
+ */</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProxyAgent</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Logger</span> <span class="token constant">LOGGER</span> <span class="token operator">=</span> <span class="token class-name">LoggerFactory</span><span class="token punctuation">.</span><span class="token function">getLogger</span><span class="token punctuation">(</span><span class="token class-name">ProxyAgent</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">premain</span><span class="token punctuation">(</span><span class="token class-name">String</span> agentArgs<span class="token punctuation">,</span> <span class="token class-name">Instrumentation</span> instrumentation<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token constant">LOGGER</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"Starting flink porxy agent."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">new</span> <span class="token class-name">AgentBuilder<span class="token punctuation">.</span>Default</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                 <span class="token comment">// 监听OutputFormat这个接口类的下面所有子类</span>
+                <span class="token punctuation">.</span><span class="token function">type</span><span class="token punctuation">(</span><span class="token class-name">ElementMatchers</span><span class="token punctuation">.</span><span class="token function">hasSuperType</span><span class="token punctuation">(</span><span class="token class-name">ElementMatchers</span><span class="token punctuation">.</span><span class="token function">named</span><span class="token punctuation">(</span><span class="token string">"org.apache.flink.api.common.io.OutputFormat"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">transform</span><span class="token punctuation">(</span><span class="token punctuation">(</span>
+                        builder<span class="token punctuation">,</span> type<span class="token punctuation">,</span> classLoader<span class="token punctuation">,</span> <span class="token keyword">module</span><span class="token punctuation">)</span> <span class="token operator">-&gt;</span>
+                        <span class="token comment">// 监听OutputFormat这个接口类的下面所有子类的writeRecord方法</span>
+                        builder<span class="token punctuation">.</span><span class="token function">method</span><span class="token punctuation">(</span><span class="token class-name">ElementMatchers</span><span class="token punctuation">.</span><span class="token function">named</span><span class="token punctuation">(</span><span class="token string">"writeRecord"</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                                <span class="token punctuation">.</span><span class="token function">intercept</span><span class="token punctuation">(</span><span class="token class-name">MethodDelegation</span><span class="token punctuation">.</span><span class="token keyword">to</span><span class="token punctuation">(</span><span class="token class-name">WriteRecordInterceptor</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">installOn</span><span class="token punctuation">(</span>instrumentation<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token constant">LOGGER</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"Flink porxy agent started."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>其中里面的<strong>WriteRecordInterceptor</strong>内容如下，<strong><font color="green">我们在这里可以拦截到的参数内容打印下来（当然也可以发送到kafka或日志服务器等）</font></strong>：</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>ylw<span class="token punctuation">.</span>flink<span class="token punctuation">.</span>agent</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>implementation<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">AllArguments</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>implementation<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Origin</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>implementation<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">RuntimeType</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">net<span class="token punctuation">.</span>bytebuddy<span class="token punctuation">.</span>implementation<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">SuperCall</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">Logger</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">LoggerFactory</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>lang<span class="token punctuation">.</span>reflect<span class="token punctuation">.</span></span><span class="token class-name">Method</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">Callable</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * 拦截器
+ *
+ * @author : YangLinWei
+ * @createTime: 2024/4/10 23:32
+ * @version: 1.0.0
+ */</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">WriteRecordInterceptor</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">Logger</span> <span class="token constant">LOGGER</span> <span class="token operator">=</span> <span class="token class-name">LoggerFactory</span><span class="token punctuation">.</span><span class="token function">getLogger</span><span class="token punctuation">(</span><span class="token class-name">ProxyAgent</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@RuntimeType</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">Object</span> <span class="token function">intercept</span><span class="token punctuation">(</span><span class="token annotation punctuation">@Origin</span> <span class="token class-name">Method</span> method<span class="token punctuation">,</span> <span class="token annotation punctuation">@AllArguments</span> <span class="token class-name">Object</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">,</span> <span class="token annotation punctuation">@SuperCall</span> <span class="token class-name">Callable</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">&gt;</span></span> callable<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">String</span> clazzName <span class="token operator">=</span> method<span class="token punctuation">.</span><span class="token function">getDeclaringClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getSimpleName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> methodName <span class="token operator">=</span> method<span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token constant">LOGGER</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"Ready to {}#{} content. "</span><span class="token punctuation">,</span> clazzName<span class="token punctuation">,</span> methodName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// 获取方法的参数类型</span>
+            <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">[</span><span class="token punctuation">]</span> parameterTypes <span class="token operator">=</span> method<span class="token punctuation">.</span><span class="token function">getParameterTypes</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// 打印方法参数的名称和内容(这里可以发送到kafka等操作)</span>
+            <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> parameterTypes<span class="token punctuation">.</span>length<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token constant">LOGGER</span><span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"Parameter {}: {} = {}"</span><span class="token punctuation">,</span> i<span class="token punctuation">,</span> parameterTypes<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> args<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">return</span> callable<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token constant">LOGGER</span><span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"Record error. {}#{}"</span><span class="token punctuation">,</span> clazzName<span class="token punctuation">,</span> methodName<span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">throw</span> e<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>接下来，直接使用<code>mvn clean package</code>命令打包，打包后，使用 <code>flink-agent-1.0.0-jar-with-dependencies.jar </code>这个包，里面包含所有的依赖：</p> 
+<p><img src="https://images2.imgbox.com/37/7c/iRP7XWxZ_o.png" alt="在这里插入图片描述"></p> 
+<p>那么这个包如何与我们的flink程序配合使用呢？接下来继续介绍。</p> 
+<h3><a id="32_Flink_sdkAgent_jar_254"></a>3.2 Flink sdk集成Agent jar</h3> 
+<p>我们可以从Flink官网随便下载一个flink安装包（这里使用比较新的flink-1.18版本），下载完后解压，并把打包好Agent jar放入lib目录：<br> <img src="https://images2.imgbox.com/b4/11/IjQ3W8Db_o.png" alt="在这里插入图片描述"></p> 
+<p>接着修改<code>flink-conf.yaml</code>文件，在 “<strong>env.java.opts.all</strong>” 参数值里加上 “<strong>-javaagent:…/lib/flink-agent-1.0.0-jar-with-dependencies.jar</strong> ”：</p> 
+<p><img src="https://images2.imgbox.com/82/2a/WLVKL2LB_o.png" alt="在这里插入图片描述"></p> 
+<p>进入bin目录，启动程序：</p> 
+<pre><code>./start-cluster.sh
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c1/94/MJa015EG_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="04__276"></a>04 验证</h2> 
+<p>接下来我们要验证 “ <font color="red">是否可以拦截Sink Connector里面的writeRecord方法，并打印“流动（写入）数据”的实际内容</font>” 。这里我们可以起一个<code>sql-client</code>，并创建一张简单的<code>jdbc-connector</code>相关的表，并<code>insert</code>一些数据进去。进入bin目录并启动<code>sql-client</code>：</p> 
+<pre><code class="prism language-shell"> ./sql-client.sh
+</code></pre> 
+<p>接着，create一张jdbc相关的表：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_student_copy <span class="token punctuation">(</span>
+       id <span class="token keyword">INT</span><span class="token punctuation">,</span>
+       name STRING<span class="token punctuation">,</span>
+       age <span class="token keyword">INT</span><span class="token punctuation">,</span>
+       <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span> <span class="token operator">NOT</span> ENFORCED
+<span class="token punctuation">)</span> <span class="token keyword">WITH</span> <span class="token punctuation">(</span>
+   <span class="token string">'connector'</span> <span class="token operator">=</span> <span class="token string">'jdbc'</span><span class="token punctuation">,</span>
+   <span class="token string">'url'</span> <span class="token operator">=</span> <span class="token string">'jdbc:mysql://数据库地址:数据库端口/数据库名?serverTimezone=Asia/Shanghai&amp;useUnicode=true&amp;characterEncoding=utf8'</span><span class="token punctuation">,</span>
+   <span class="token string">'username'</span> <span class="token operator">=</span> <span class="token string">'用户名'</span><span class="token punctuation">,</span>
+   <span class="token string">'password'</span> <span class="token operator">=</span> <span class="token string">'密码'</span><span class="token punctuation">,</span>
+   <span class="token string">'table-name'</span> <span class="token operator">=</span> <span class="token string">'t_student_copy'</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>最后插入一条数据：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_student_copy <span class="token keyword">values</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token string">'DUMAS'</span><span class="token punctuation">,</span><span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/05/3f/pT7GWy7b_o.png" alt="在这里插入图片描述"></p> 
+<p>可以看到，已经成功的执行了作业。接着登录<code>flink web</code>的<code>task-manager</code>管理页：<a href="http://localhost:8081/#/task-manager" rel="nofollow">http://localhost:8081/#/task-manager</a>，这里一般选择第一个：</p> 
+<p><img src="https://images2.imgbox.com/45/99/WqWDDmdc_o.png" alt="在这里插入图片描述"></p> 
+<p>选择taskexecutor的日志：</p> 
+<p><img src="https://images2.imgbox.com/7d/77/Slr57RYD_o.png" alt="在这里插入图片描述"></p> 
+<p>从日志可以发现打印真实的记录出来了：</p> 
+<p><img src="https://images2.imgbox.com/c5/0d/hdHg8poA_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>最终我们实现了flink任务流动数据的拦截了</strong>，当然可以使用<code>log appender</code>把把拦截到的数据发送给kafka或es。类似于logback就很好的集成了ES或kafka，例如：</p> 
+<p>集成ES：<a href="https://github.com/internetitem/logback-elasticsearch-appender">https://github.com/internetitem/logback-elasticsearch-appender</a><br> <img src="https://images2.imgbox.com/37/b0/bNCGORJX_o.png" alt="在这里插入图片描述"></p> 
+<p>集成Kafka：<a href="https://github.com/danielwegener/logback-kafka-appender">https://github.com/danielwegener/logback-kafka-appender</a></p> 
+<p><img src="https://images2.imgbox.com/58/f1/mvG026wt_o.png" alt="在这里插入图片描述"></p> 
+<p>或集成至其它…</p> 
+<h2><a id="05__342"></a>05 文末</h2> 
+<blockquote> 
+ <p><strong>本文源码已上传至Github</strong>：<a href="https://github.com/ylw-github/flink-agent">https://github.com/ylw-github/flink-agent</a></p> 
+</blockquote> 
+<p>本文展示了如何通过代理技术实现对<code>Flink</code>任务中数据流动的监听和记录。当然这仅仅是思路的实现，很多细节都需要完善，比如：我们还需要知道这条记录所属的<code>jobId</code>、<code>connector</code>名、<code>timestamp</code>等等。博主最终目的是给用户 <strong><font color="red"><u>提供了一个深入了解数据流动细节的途径</u></font></strong>。</p> 
+<blockquote> 
+ <p>同时也期望<code>Flink</code>社区可以提供类似于这样的功能，就如<code>Flink</code>集成<code>Metrics</code>一样，通过在<code>flink-conf.yaml</code>简单配置<code>Prometheus push gateway</code>和引入相关的<code>jar</code>包，就能实现指标的推送。同理，也可以通过相同的操作，让用户自定义流动数据的<code>hook jar</code>（指标：<code>jobId</code>、<code>connector_type</code>、<code>in/out record</code>、<code>timestamp</code>…），来实现“<strong>流动数据或其它有业务价值的数据</strong>” 监听与记录。</p> 
+</blockquote> 
+<p>本文是博主对实现Flink任务流动数据监听的一些想法和实现思路，或许还有更好的方法，欢迎大家留言。谢谢大家的阅读，希望能帮助到大家，本文完！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9e8abbc6e1d3c442ca36f921bedb316f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">ChatGPT在日常生活与工作中的应用，以及Hulu AI 的探索之旅</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8a6c3b746a24eaffeacb53a945d87cd0/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">mysql中主键索引和联合索引的原理解析</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

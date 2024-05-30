@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【MySQL】——存储过程 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/02644c32a785fdb6e1d20dec2d90e56d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【MySQL】——存储过程">
+  <meta property="og:description" content="💻博主现有专栏：
+C51单片机（STC89C516），c语言，c&#43;&#43;，离散数学，算法设计与分析，数据结构，Python，Java基础，MySQL，linux，基于HTML5的网页设计及应用，Rust（官方文档重点总结），jQuery，前端vue.js，Javaweb开发，Python机器学习等
+🥏主页链接：
+Y小夜-CSDN博客
+学习推荐：
+在当今这个飞速发展的信息时代，人工智能（AI）已经成为了一个不可或缺的技术力量，它正在逐步改变着我们的生活、工作乃至整个社会的运作方式。从智能语音助手到自动驾驶汽车，从精准医疗到智慧城市，人工智能的应用已经渗透到了我们生活的方方面面。因此，学习和掌握人工智能相关的知识和技能，对于任何希望在这个时代保持竞争力的个人来说，都已经变得至关重要。
+然而，人工智能是一个涉及数学、计算机科学、数据科学、机器学习、神经网络等多个领域的交叉学科，其学习曲线相对陡峭，对初学者来说可能会有一定的挑战性。幸运的是，随着互联网教育资源的丰富，现在有大量优秀的在线平台和网站提供了丰富的人工智能学习材料，包括视频教程、互动课程、实战项目等，这些资源无疑为学习者打开了一扇通往人工智能世界的大门。
+前些天发现了一个巨牛的人工智能学习网站：前言 – 人工智能教程通俗易懂，风趣幽默，忍不住分享一下给大家。
+目录
+🎯程序设计基础
+🎃变量
+🎃流程控制语句
+🎃光标
+🎃异常处理（条件处理）
+🎯存储过程概述
+🎃 存储过程基本概念
+🎃存储过程的类型
+🎃存储过程的作用
+🎯创建和执行存储过程
+🎃创建和执行存储过程
+🎃创建和执行带输入参数的存储过程
+🎃创建和执行带输出参数的存储过程
+🎯管理存储过程
+🎃查看存储过程
+🎃修改存储过程
+🎃删除存储过程
+🎯存储函数
+🎃存储过程与存储函数联系与区别
+🎯程序设计基础 🎃变量 在MySQL中最常见的变量类型有局部变量和用户自定义变量两种。
+1.局部变量
+局部变量一般用在sql语句块中，比如存储过程的begin/end。其作用域仅限于该语句块，在该语句块执行完毕后，局部变量就消失了。
+要定义局部变量必须使用DECLARE来声明，定义的同时可以使用default对局部变量初始化赋值。
+value是给变量提供一个默认值，包含在一个DEFAULT子句中，它的值可以被指定为一个表达式，如果没有DEFAULT子句，初始值为NULL
+2.用户自定义变量
+用户自定义变量的声明以“@”开头，形如：@var_name。为了实现不同SQL语句中进行值的传递，可以把一些数值存储在自定义的用户变量中，不同的SQL语句都可以对它进行访问。用户变量在客户端和数据库的连接建立时被定义，当连接断开时，用户变量将会被释放。用户变量无需用DECLARE关键字进行定义，可以直接使用。
+对用户变量赋值有两种方式，一种是直接用&#34;=&#34;号，另一种是用&#34;:=&#34;号。其区别在于使用set命令对用户变量进行赋值时，两种方式都可以使用；当使用select语句对用户变量进行赋值时，只能使用&#34;:=&#34;方式，因为在select语句中，&#34;=&#34;号被看作是比较操作符。
+🎃流程控制语句 在编写存储过程和存储函数时，可以使用流程控制语句对SQL语句进行组织，使其成为符合业务逻辑的代码块。MySQL中常见的流程控制语句主要有：IF语句、CASE语句、LOOP语句、WHILE语句、ITERATE语句、REPEAT语句、leave语句等。
+1.IF语句
+IF语句可以通过判断一个逻辑条件是TRUE还是FALSE，转去执行相应的语句，它的语法格式如下：
+IF expr_condition THEN statement_list
+[ELSEIF expr_condition THEN statement_list]
+[ELSE statement_list]
+END IF
+2.CASE语句
+CASE也是一个条件判断语句，多用于多分支判断的程序结构，它的常用语法格式如下：
+CASE case_expr WHEN when_value THEN statement_list
+[WHEN when_value THEN statement_list]……">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T22:33:29+08:00">
+    <meta property="article:modified_time" content="2024-05-22T22:33:29+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【MySQL】——存储过程</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <blockquote> 
+ <p><strong>💻博主现有专栏：</strong></p> 
+ <p><strong>                C51单片机（STC89C516），c语言，c++，离散数学，算法设计与分析，数据结构，Python，Java基础，MySQL，linux，基于HTML5的网页设计及应用，Rust（官方文档重点总结），jQuery，前端vue.js，Javaweb开发，Python机器学习等<br> 🥏主页链接：</strong></p> 
+ <p><strong>                </strong><a href="https://blog.csdn.net/shsjssnn?spm=1000.2115.3001.5343" title="Y小夜-CSDN博客">Y小夜-CSDN博客</a></p> 
+ <p><strong>学习推荐：</strong></p> 
+ <p>        在当今这个飞速发展的信息时代，人工智能（AI）已经成为了一个不可或缺的技术力量，它正在逐步改变着我们的生活、工作乃至整个社会的运作方式。从智能语音助手到自动驾驶汽车，从精准医疗到智慧城市，人工智能的应用已经渗透到了我们生活的方方面面。因此，学习和掌握人工智能相关的知识和技能，对于任何希望在这个时代保持竞争力的个人来说，都已经变得至关重要。</p> 
+ <p>        然而，人工智能是一个涉及数学、计算机科学、数据科学、机器学习、神经网络等多个领域的交叉学科，其学习曲线相对陡峭，对初学者来说可能会有一定的挑战性。幸运的是，随着互联网教育资源的丰富，现在有大量优秀的在线平台和网站提供了丰富的人工智能学习材料，包括视频教程、互动课程、实战项目等，这些资源无疑为学习者打开了一扇通往人工智能世界的大门。</p> 
+ <p>        前些天发现了一个巨牛的人工智能学习网站：<a href="https://www.captainbed.cn/ysa" rel="nofollow" title="前言 – 人工智能教程">前言 – 人工智能教程</a>通俗易懂，风趣幽默，忍不住分享一下给大家。</p> 
+</blockquote> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%F0%9F%8E%AF%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E5%9F%BA%E7%A1%80-toc" style="margin-left:0px;"><a href="#%F0%9F%8E%AF%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E5%9F%BA%E7%A1%80" rel="nofollow">🎯程序设计基础</a></p> 
+<p id="%F0%9F%8E%83%E5%8F%98%E9%87%8F-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%8F%98%E9%87%8F" rel="nofollow">🎃变量</a></p> 
+<p id="%F0%9F%8E%83%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E8%AF%AD%E5%8F%A5-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E8%AF%AD%E5%8F%A5" rel="nofollow">🎃流程控制语句</a></p> 
+<p id="%F0%9F%8E%83%E5%85%89%E6%A0%87-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%85%89%E6%A0%87" rel="nofollow">🎃光标</a></p> 
+<p id="%F0%9F%8E%83%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%EF%BC%88%E6%9D%A1%E4%BB%B6%E5%A4%84%E7%90%86%EF%BC%89-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%EF%BC%88%E6%9D%A1%E4%BB%B6%E5%A4%84%E7%90%86%EF%BC%89" rel="nofollow">🎃异常处理（条件处理）</a></p> 
+<p id="%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E6%A6%82%E8%BF%B0" rel="nofollow">🎯存储过程概述</a></p> 
+<p id="%F0%9F%8E%83%C2%A0%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%C2%A0%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5" rel="nofollow">🎃 存储过程基本概念</a></p> 
+<p id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E7%B1%BB%E5%9E%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E7%B1%BB%E5%9E%8B" rel="nofollow">🎃存储过程的类型</a></p> 
+<p id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E4%BD%9C%E7%94%A8-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E4%BD%9C%E7%94%A8" rel="nofollow">🎃存储过程的作用</a></p> 
+<p id="%F0%9F%8E%AF%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:0px;"><a href="#%F0%9F%8E%AF%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎯创建和执行存储过程</a></p> 
+<p id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃创建和执行存储过程</a></p> 
+<p id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%85%A5%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%85%A5%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃创建和执行带输入参数的存储过程</a></p> 
+<p id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%87%BA%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%87%BA%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃创建和执行带输出参数的存储过程</a></p> 
+<p id="%F0%9F%8E%AF%E7%AE%A1%E7%90%86%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:0px;"><a href="#%F0%9F%8E%AF%E7%AE%A1%E7%90%86%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎯管理存储过程</a></p> 
+<p id="%F0%9F%8E%83%E6%9F%A5%E7%9C%8B%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E6%9F%A5%E7%9C%8B%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃查看存储过程</a></p> 
+<p id="%F0%9F%8E%83%E4%BF%AE%E6%94%B9%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E4%BF%AE%E6%94%B9%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃修改存储过程</a></p> 
+<p id="%F0%9F%8E%83%E5%88%A0%E9%99%A4%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%88%A0%E9%99%A4%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B" rel="nofollow">🎃删除存储过程</a></p> 
+<p id="%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0-toc" style="margin-left:0px;"><a href="#%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0" rel="nofollow">🎯存储函数</a></p> 
+<p id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0%E8%81%94%E7%B3%BB%E4%B8%8E%E5%8C%BA%E5%88%AB-toc" style="margin-left:40px;"><a href="#%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0%E8%81%94%E7%B3%BB%E4%B8%8E%E5%8C%BA%E5%88%AB" rel="nofollow">🎃存储过程与存储函数联系与区别</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%F0%9F%8E%AF%E7%A8%8B%E5%BA%8F%E8%AE%BE%E8%AE%A1%E5%9F%BA%E7%A1%80">🎯程序设计基础</h2> 
+<h3 id="%F0%9F%8E%83%E5%8F%98%E9%87%8F">🎃变量</h3> 
+<blockquote> 
+ <p>在MySQL中最常见的变量类型有局部变量和用户自定义变量两种。</p> 
+ <p><strong>1.局部变量</strong></p> 
+ <p>        局部变量一般用在sql语句块中，比如存储过程的begin/end。其作用域仅限于该语句块，在该语句块执行完毕后，局部变量就消失了。</p> 
+ <p>        要定义局部变量必须使用DECLARE来声明，定义的同时可以使用default对局部变量初始化赋值。</p> 
+ <p>        value是给变量提供一个默认值，包含在一个DEFAULT子句中，它的值可以被指定为一个表达式，如果没有DEFAULT子句，初始值为NULL</p> 
+ <p><strong>2.用户自定义变量</strong></p> 
+ <p>        用户自定义变量的声明以“@”开头，形如：@var_name。为了实现不同SQL语句中进行值的传递，可以把一些数值存储在自定义的用户变量中，不同的SQL语句都可以对它进行访问。用户变量在客户端和数据库的连接建立时被定义，当连接断开时，用户变量将会被释放。用户变量无需用DECLARE关键字进行定义，可以直接使用。</p> 
+ <p>        对用户变量赋值有两种方式，一种是直接用"="号，另一种是用":="号。其区别在于使用set命令对用户变量进行赋值时，两种方式都可以使用；当使用select语句对用户变量进行赋值时，只能使用":="方式，因为在select语句中，"="号被看作是比较操作符。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E6%B5%81%E7%A8%8B%E6%8E%A7%E5%88%B6%E8%AF%AD%E5%8F%A5">🎃流程控制语句</h3> 
+<blockquote> 
+ <p>        在编写存储过程和存储函数时，可以使用流程控制语句对SQL语句进行组织，使其成为符合业务逻辑的代码块。MySQL中常见的流程控制语句主要有：IF语句、CASE语句、LOOP语句、WHILE语句、ITERATE语句、REPEAT语句、leave语句等。</p> 
+ <p><strong>1.IF语句</strong></p> 
+ <p><strong>        </strong> IF语句可以通过判断一个逻辑条件是TRUE还是FALSE，转去执行相应的语句，它的语法格式如下：</p> 
+ <p>IF expr_condition THEN statement_list</p> 
+ <p>[ELSEIF expr_condition THEN statement_list]</p> 
+ <p>[ELSE statement_list]</p> 
+ <p>END IF</p> 
+ <p><strong>2.CASE语句</strong></p> 
+ <p>        CASE也是一个条件判断语句，多用于多分支判断的程序结构，它的常用语法格式如下：</p> 
+ <p>CASE case_expr WHEN when_value THEN statement_list</p> 
+ <p>[WHEN when_value THEN statement_list]……</p> 
+ <p>[ELSE statement_list]</p> 
+ <p>END CASE</p> 
+ <p><strong>3.LOOP语句</strong></p> 
+ <p>        LOOP是一个循环语句，用来进行一个语句块的循环操作。LOOP语句并不进行条件判断，会一直执行循环体的语句，如果要退出语句的执行，需要使用LEAVE等语句退出循环。LOOP语句的语法格式如下：</p> 
+ <p>[loop_label:] LOOP Statement_list</p> 
+ <p>END LOOt_listP [loop_label]</p> 
+ <p><strong>4.LEAVE语句</strong></p> 
+ <p>        在循环语句中，当循环条件不满足时，可以使用LEAVE语句跳出循环体。LEAVE语句用于跳出有循环标志的流程控制语句，基本语法结构如下：</p> 
+ <p>LEAVE label</p> 
+ <p><strong>5.ITERATE语句</strong></p> 
+ <p>与LEAVE语句结束整个循环不同，ITERATE语句用于无条件转到语句段的开头处。ITERATE语句的格式如下：</p> 
+ <p>ITERATE lable</p> 
+ <p><strong>该语句类似高级语言中的continue语句</strong></p> 
+ <p><strong>7.WHILE语句</strong></p> 
+ <p>        WHILE语句也用于循环执行一个语句块，但是与REPEAT语句不同，WHILE语句执行时首先判断条件表达式是否为真，如果为真则继续执行循环体内语句，否则直接退出循环体。WHILE语句的格式如下：</p> 
+ <p>[while_lable:] WHILE expr_condition DO</p> 
+ <p>Statement_list</p> 
+ <p>END WHILE [while_lable]</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%85%89%E6%A0%87">🎃光标</h3> 
+<blockquote> 
+ <p>        使用SQL语句进行查询过程中，查询结果将返回很多记录，如果记录量很大时，需要使用光标来对查询结果集中的记录进行逐条读取，它可以对多行数据进行轻松的处理。</p> 
+ <p><strong>1.光标的声明</strong></p> 
+ <p>        在使用光标对结果集中的数据进行处理时，需要首先声明光标，光标的声明必须在声明变量、条件之后，声明处理程序之前。光标的声明格式如下：</p> 
+ <p>DECLARE cursor_name CURSOR FOR select_statement 其中cursor_name表示光标的名字，select_statement代表SELECT语句的内容，返回一个用于创建光标的结果集。</p> 
+ <p><strong>2.光标的使用</strong></p> 
+ <p>        MySQL中使用OPEN关键字来打开光标,打开光标之后就可以使用光标了。其语法的基本形式如下：</p> 
+ <p>OPEN cursor_name ; FETCH cursor_name INTO var_name[,var_name…] ;</p> 
+ <p><strong>3.光标的关闭</strong></p> 
+ <p>        MySQL中使用CLOSE关键字来关闭光标。其语法的基本形式如下：</p> 
+ <p>       CLOSE cursor_name ;</p> 
+ <p>        其中，cursor_name参数表示光标的名称。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%BC%82%E5%B8%B8%E5%A4%84%E7%90%86%EF%BC%88%E6%9D%A1%E4%BB%B6%E5%A4%84%E7%90%86%EF%BC%89"><strong>🎃异常处理（条件处理）</strong></h3> 
+<blockquote> 
+ <p>当程序出错后自动触发的代码。</p> 
+ <p>MySQL允许三种处理器，</p> 
+ <ul><li>一种是EXIT处理，遇到错误马上退出。</li><li>另一种CONTINUE是遇到错误主程序仍然继续运行，</li><li>第三种是UNDO 遇到错误撤销之前的操作。</li></ul> 
+</blockquote> 
+<h2 id="%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E6%A6%82%E8%BF%B0"><strong>🎯存储过程概述</strong></h2> 
+<blockquote> 
+ <p>        存储过程是数据库服务器上一组预先编译好的SQL语句的集合，作为一个单元存储在数据库中，可以被应用程序作为一个整体来进行调用。在调用过程中，存储过程可以接收参数，执行后返回参数值。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%C2%A0%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5">🎃 存储过程基本概念</h3> 
+<blockquote> 
+ <p>        数据库开发人员在进行数据库开发时，为了实现一定的功能，经常会将负责不同功能的语句集中起来而且按照用途分别独立放置，以便能够反复调用，而这些独立放置且拥有不同功能的语句块，称之为“过程”（Procedure）。</p> 
+ <p>         存储过程（Stored Procedure）是一组完成特定功能的SQL语句集，经编译后存储在数据库中，用户通过过程名和给出参数值来调用它们。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E7%B1%BB%E5%9E%8B">🎃存储过程的类型</h3> 
+<blockquote> 
+ <p>MySQL的存储程序可分以下四大类:</p> 
+ <ul><li>(1)存储函数(stored function)。返回一个计算结果，该结果可以用在表达式里。</li><li>(2)存储过程(stored procedure)。不直接返回一个结果，但可以用来完成一般的运算或是生成一个结果集并传递回客户。</li><li>(3)触发器(trigger)。与数据表相关联，当那个数据表被INSERT、DELETE、UPDATE语句修改时，触发器将自动执行。</li><li>(4)事件(event)。根据时间表在预订时刻自动执行。         SELECT @@event_scheduler   查看是否开启事件调度器</li></ul> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E7%9A%84%E4%BD%9C%E7%94%A8">🎃存储过程的作用</h3> 
+<blockquote> 
+ <ul><li>(1)存储过程的使用，提高了程序设计的灵活性，增强了SQL语言的功能。</li><li>(2)存储过程把一组功能代码作为单位组件。</li><li>(3)使用存储过程有利于提高程序的执行速度。</li><li>(4)使用存储过程能减少网络访问的负荷。</li><li>(5) 作为一种安全机制，系统管理员可以充分利用存储过程对相应的数据的访问权限的进行限制。</li></ul> 
+</blockquote> 
+<h2 id="%F0%9F%8E%AF%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎯创建和执行存储过程</h2> 
+<h3 id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎃创建和执行存储过程</h3> 
+<blockquote> 
+ <p>CREATE PROCEDURE sp_name ([proc_parameter[,...]])</p> 
+ <p>    [characteristic ...] routine_body</p> 
+ <p>其中：</p> 
+ <p> proc_parameter:    [ IN | OUT | INOUT ] param_name type</p> 
+ <p>characteristic: LANGUAGE SQL  | [NOT] DETERMINISTIC</p> 
+ <p>| { CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA }   | SQL SECURITY { DEFINER | INVOKER }</p> 
+ <p>  | COMMENT 'string'</p> 
+ <p>routine_body: Valid SQL procedure statement or statements</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%85%A5%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎃创建和执行带输入参数的存储过程</h3> 
+<blockquote> 
+ <p><strong>创建带输入参数的存储过程</strong></p> 
+ <p>    输入参数是指由调用程序向存储过程传递的参数，在创建存储过程语句中定义输入参数，而在执行该存储过程中给出参数相应的值。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%88%9B%E5%BB%BA%E5%92%8C%E6%89%A7%E8%A1%8C%E5%B8%A6%E8%BE%93%E5%87%BA%E5%8F%82%E6%95%B0%E7%9A%84%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B"><strong>🎃创建和执行带输出参数的存储过程</strong></h3> 
+<blockquote> 
+ <p>        如果需要从存储过程中返回一个或多个值，可以通过在创建存储过程的语句中定义输出参数来实现。定义输出参数，需要在CREATE PROCEDURE语句中定义参数时在参数名后面指定OUT关键字。</p> 
+ <p>        语法格式如下：</p> 
+ <p>        OUT parameter_name datatype[=default]</p> 
+</blockquote> 
+<h2 id="%F0%9F%8E%AF%E7%AE%A1%E7%90%86%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎯管理存储过程</h2> 
+<h3 id="%F0%9F%8E%83%E6%9F%A5%E7%9C%8B%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎃查看存储过程</h3> 
+<blockquote> 
+ <p>（1）我们可以用SELECT name FROM mysql.proc WHERE db=’数据库名’，或者SELECT routine_name FROM information_schema.routines WHERE routine_schema=‘数据库名’， 或者SHOW PROCEDURE STATUS WHERE db=‘数据库名’用于显示数据库内存储过程的列表。</p> 
+ <p>（2）使用SHOW CREATE PROCEDURE 数据库.存储过程名;就可以查看当前存储过程的详细。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E4%BF%AE%E6%94%B9%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎃修改存储过程</h3> 
+<blockquote> 
+ <p><strong>修改存储过程是由ALTER PROCEDURE语句来完成的</strong>，其语法格式如下： ALTER {PROCEDURE | FUNCTION} sp_name [characteristic ...]</p> 
+ <p>characteristic:</p> 
+ <p>    { CONTAINS SQL | NO SQL | READS SQL DATA | MODIFIES SQL DATA }   | SQL SECURITY { DEFINER | INVOKER }</p> 
+ <p>  | COMMENT 'string’</p> 
+ <p></p> 
+ <p>CONTAINS SQL 表示子程序包含 SQL 语句，但不包含读或写数据的语句。</p> 
+ <p>NO SQL 表示子程序中不包含 SQL 语句。</p> 
+ <p>READS SQL DATA 表示子程序中包含读数据的语句。</p> 
+ <p>MODIFIES SQL DATA 表示子程序中包含写数据的语句。</p> 
+ <p>SQL SECURITY { DEFINER |INVOKER } 指明谁有权限来执行。</p> 
+ <p>DEFINER 表示只有定义者自己才能够执行。</p> 
+ <p>INVOKER 表示调用者可以执行。</p> 
+ <p>COMMENT 'string' 表示注释信息。</p> 
+</blockquote> 
+<h3 id="%F0%9F%8E%83%E5%88%A0%E9%99%A4%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B">🎃删除存储过程</h3> 
+<blockquote> 
+ <p><strong>存储过程的删除是通过DROP PROCEDURE语句来实现的</strong>。其语法格式为：</p> 
+ <p>        DROP {PROCEDURE | FUNCTION} [IF EXISTS] sp_name IF EXISTS子句是一个MySQL的扩展。如果程序或函数不存储，它防止发生错误。</p> 
+</blockquote> 
+<h2 id="%F0%9F%8E%AF%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0">🎯存储函数</h2> 
+<h3 id="%F0%9F%8E%83%E5%AD%98%E5%82%A8%E8%BF%87%E7%A8%8B%E4%B8%8E%E5%AD%98%E5%82%A8%E5%87%BD%E6%95%B0%E8%81%94%E7%B3%BB%E4%B8%8E%E5%8C%BA%E5%88%AB">🎃存储过程与存储函数联系与区别</h3> 
+<blockquote> 
+ <p>        存储过程与存储函数一样，都是由sql语句和过程式语句所组成的代码片段，并且可以被应用程序和其他sql语句调用。</p> 
+ <p>它们之间的区别在于：</p> 
+ <ul><li>（1）存储函数不能拥有输出参数，因为存储函数自身就是输出参数；而存储过程可以拥有输出参数。</li><li>（2）可以直接对存储函数进行调用，而不需要使用call语句;而对存储过程的调用，需要使用call语句。</li><li>（3）存储函数中必须包含一条return语句，而这条特殊的sql语句不允许包含于存储过程中。</li></ul> 
+</blockquote> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/c41378bfae37b06648cf5b570b59a9f9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【MySQL】——用户和权限管理（一）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/55bedd5bf3c223fc238317a8bca195ad/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python Django 5 Web应用开发实战</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

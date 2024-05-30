@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MPE中environment.py复盘 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0e45bc330522764e1e935adabdb0ab93/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MPE中environment.py复盘">
+  <meta property="og:description" content="1.__init__
+初始化函数参数：
+world: 一个包含环境信息和所有智能体的世界对象。reset_callback, reward_callback, observation_callback, info_callback, done_callback: 这些都是回调函数，用于在环境的特定事件发生时执行相应的操作。shared_viewer: 一个布尔值，用于决定是否共享渲染视图。 存储世界对象和智能体列表：
+self.world: 存储传入的世界对象。self.agents: 从世界对象中获取所有策略智能体（policy_agents）的列表。 设置智能体数量：
+self.n: 设置智能体的数量，等于世界中策略智能体的数量。 设置回调函数：
+将传入的回调函数赋值给类属性。 设置环境参数：
+self.discrete_action_space: 布尔值，表示动作空间是否为离散的，默认为Trueself.discrete_action_input: 布尔值，表示动作输入是否为离散的（即使动作空间是连续的），默认为Falseself.force_discrete_action: 布尔值，表示是否强制将连续动作离散化。self.shared_reward: 布尔值，表示是否所有智能体共享相同的奖励。 初始化时间和动作/观测空间列表：
+self.time: 初始化时间计数器。self.action_space 和 self.observation_space: 初始化动作空间和观测空间的列表。 配置动作和观测空间：
+遍历每个智能体，根据智能体的特性和环境参数配置其动作空间和观测空间。离散的情况下就使用spaces.Discrete函数，连续情况下就使用spaces.Box函数。 总动作空间：
+如果智能体有多个动作空间，将它们组合成一个总动作空间。如果所有动作空间都是离散的，可以使用 MultiDiscrete 动作空间简化表示。 观测空间：
+调用 observation_callback 函数来确定每个智能体的观测空间维度，并创建一个无限边界的盒子空间作为观测空间。 初始化通信动作向量：
+将每个智能体的通信动作向量初始化为零。 渲染设置：
+根据 self.shared_viewer 的值，初始化渲染视图列表 self.viewers。 重置渲染：
+调用 _reset_render 方法来重置渲染设置。 2.step
+输入动作：接受一个动作列表 action_n，其中每个元素 action_n[i] 是针对相应智能体 i 的动作。
+初始化列表：初始化用于存储每个智能体观测、奖励、完成状态和信息的列表。
+设置智能体动作：遍历每个智能体，使用 _set_action 函数为每个智能体设置动作。这个函数根据传入的动作和智能体的动作空间来更新智能体的内部状态。
+推进世界状态：调用 self.world.step() 来根据所有智能体的动作推进环境的状态。
+记录观测：再次遍历智能体，为每个智能体获取观测、奖励、完成状态和信息。
+obs_n：存储每个智能体的观测。reward_n：存储每个智能体获得的奖励。done_n：存储每个智能体的任务完成状态（例如，是否达到终止状态）。info_n：存储每个智能体的额外信息。 计算总奖励：如果环境是合作性的（self.shared_reward 为 True），则将所有智能体获得的奖励相加，然后让每个智能体都获得相同的总奖励。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-29T09:45:43+08:00">
+    <meta property="article:modified_time" content="2024-05-29T09:45:43+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MPE中environment.py复盘</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><strong><span style="color:#ad720d;">1.__init__</span></strong></p> 
+<ol><li> <p><strong>初始化函数参数</strong>：</p> 
+  <ul><li><code>world</code>: 一个包含环境信息和所有智能体的世界对象。</li><li><code>reset_callback</code>, <code>reward_callback</code>, <code>observation_callback</code>, <code>info_callback</code>, <code>done_callback</code>: 这些都是回调函数，用于在环境的特定事件发生时执行相应的操作。</li><li><code>shared_viewer</code>: 一个布尔值，用于决定是否共享渲染视图。</li></ul></li><li> <p><strong>存储世界对象和智能体列表</strong>：</p> 
+  <ul><li><code>self.world</code>: 存储传入的世界对象。</li><li><code>self.agents</code>: 从世界对象中获取所有策略智能体（<code>policy_agents</code>）的列表。</li></ul></li><li> <p><strong>设置智能体数量</strong>：</p> 
+  <ul><li><code>self.n</code>: 设置智能体的数量，等于世界中策略智能体的数量。</li></ul></li><li> <p><strong>设置回调函数</strong>：</p> 
+  <ul><li>将传入的回调函数赋值给类属性。</li></ul></li><li> <p><strong>设置环境参数</strong>：</p> 
+  <ul><li><code>self.discrete_action_space</code>: 布尔值，表示动作空间是否为离散的，默认为<span style="color:#fe2c24;">True</span></li><li><code>self.discrete_action_input</code>: 布尔值，表示动作输入是否为离散的（即使动作空间是连续的），默认为<span style="color:#fe2c24;">False</span></li><li><code>self.force_discrete_action</code>: 布尔值，表示是否强制将连续动作离散化。</li><li><code>self.shared_reward</code>: 布尔值，表示是否所有智能体共享相同的奖励。</li></ul></li><li> <p><strong>初始化时间和动作/观测空间列表</strong>：</p> 
+  <ul><li><code>self.time</code>: 初始化时间计数器。</li><li><code>self.action_space</code> 和 <code>self.observation_space</code>: 初始化动作空间和观测空间的列表。</li></ul></li><li> <p><strong>配置动作和观测空间</strong>：</p> 
+  <ul><li>遍历每个智能体，根据智能体的特性和环境参数配置其动作空间和观测空间。离散的情况下就使用<span style="color:#1a439c;">spaces.Discrete</span>函数，连续情况下就使用<span style="color:#1a439c;">spaces.Box</span>函数。</li></ul></li><li> <p><strong>总动作空间</strong>：</p> 
+  <ul><li>如果智能体有多个动作空间，将它们组合成一个总动作空间。如果所有动作空间都是离散的，可以使用 <code>MultiDiscrete</code> 动作空间简化表示。</li></ul></li><li> <p><strong>观测空间</strong>：</p> 
+  <ul><li>调用 <code>observation_callback</code> 函数来确定每个智能体的观测空间维度，并创建一个无限边界的盒子空间作为观测空间。</li></ul></li><li> <p><strong>初始化通信动作向量</strong>：</p> 
+  <ul><li>将每个智能体的通信动作向量初始化为零。</li></ul></li><li> <p><strong>渲染设置</strong>：</p> 
+  <ul><li>根据 <code>self.shared_viewer</code> 的值，初始化渲染视图列表 <code>self.viewers</code>。</li></ul></li><li> <p><strong>重置渲染</strong>：</p> 
+  <ul><li>调用 <code>_reset_render</code> 方法来重置渲染设置。</li></ul></li></ol> 
+<p><strong><span style="color:#ad720d;">2.step</span></strong></p> 
+<ol><li> <p><strong>输入动作</strong>：接受一个动作列表 <code>action_n</code>，其中每个元素 <code>action_n[i]</code> 是针对相应智能体 <code>i</code> 的动作。</p> </li><li> <p><strong>初始化列表</strong>：初始化用于存储每个智能体观测、奖励、完成状态和信息的列表。</p> </li><li> <p><strong>设置智能体动作</strong>：遍历每个智能体，使用 <code>_set_action</code> 函数为每个智能体设置动作。这个函数根据传入的动作和智能体的动作空间来更新智能体的内部状态。</p> </li><li> <p><strong>推进世界状态</strong>：调用 <code>self.world.step()</code> 来根据所有智能体的动作推进环境的状态。</p> </li><li> <p><strong>记录观测</strong>：再次遍历智能体，为每个智能体获取观测、奖励、完成状态和信息。</p> 
+  <ul><li><code>obs_n</code>：存储每个智能体的观测。</li><li><code>reward_n</code>：存储每个智能体获得的奖励。</li><li><code>done_n</code>：存储每个智能体的任务完成状态（例如，是否达到终止状态）。</li><li><code>info_n</code>：存储每个智能体的额外信息。</li></ul></li><li> <p><strong>计算总奖励</strong>：如果环境是合作性的（<code>self.shared_reward</code> 为 <code>True</code>），则将所有智能体获得的奖励相加，然后让每个智能体都获得相同的总奖励。</p> </li><li> <p><strong>返回结果</strong>：返回一个元组，包含每个智能体的观测列表、奖励列表、完成状态列表和信息字典。</p> </li></ol> 
+<p>以下是对函数中一些关键部分的详细解释：</p> 
+<ul><li> <p><code>_set_action</code>：这个函数负责根据智能体的动作空间和传入的动作来设置智能体的动作。例如，如果动作空间是离散的，它可能会将动作转换为特定的动作向量。</p> </li><li> <p><code>_get_obs</code>：这个函数负责获取智能体的观测。观测通常包括智能体对环境的感知，例如周围实体的位置、速度等。</p> </li><li> <p><code>_get_reward</code>：这个函数负责计算并返回智能体获得的奖励。奖励可以基于智能体的表现或达到的目标。</p> </li><li> <p><code>_get_done</code>：这个函数负责判断智能体的任务是否完成，或者环境是否已经达到一个终止状态。</p> </li><li> <p><code>_get_info</code>：这个函数负责提供关于智能体状态的额外信息，这可以包括任何对调试或分析有用的数据。</p> </li></ul> 
+<p><strong><span style="color:#ad720d;">3._set_action</span></strong></p> 
+<p><span style="color:#494949;">以离散动作输入和非离散动作输入两种情况进行分析。</span></p> 
+<p><span style="color:#511b78;"><strong>离散动作输入情况</strong></span></p> 
+<p>当<code>self.discrete_action_input</code>为<code>True</code>时，表示动作输入是离散的：</p> 
+<ol><li> <p><strong>初始化动作向量</strong>：</p> <p><code>agent.action.u = np.zeros(self.world.dim_p) agent.action.c = np.zeros(self.world.dim_c)</code></p> </li><li> <p><strong>处理动作</strong>： 如果动作空间是<code>MultiDiscrete</code>类型，代码将动作分解为多个离散动作，并存储在列表<code>act</code>中。否则，动作已经是列表形式。</p> </li><li> <p><strong>物理动作</strong>：</p> 
+  <ul><li>根据动作的值（1, 2, 3, 4），设置智能体在x轴和y轴上的移动方向： <p><code>if action[0] == 1: agent.action.u[0] = -1.0 if action[0] == 2: agent.action.u[0] = +1.0 if action[0] == 3: agent.action.u[1] = -1.0 if action[0] == 4: agent.action.u[1] = +1.0</code></p> </li></ul></li><li> <p><strong>通信动作</strong>：</p> 
+  <ul><li>将通信动作向量<code>agent.action.c</code>的对应位置设置为1： <p><code>agent.action.c[action[0]] = 1.0</code></p> </li></ul></li></ol> 
+<p><span style="color:#511b78;"><strong>非离散动作输入情况</strong></span></p> 
+<p>当<code>self.discrete_action_input</code>为<code>False</code>时，表示动作输入是连续的：</p> 
+<ol><li> <p><strong>初始化动作向量</strong>：</p> <p><code>agent.action.u = np.zeros(self.world.dim_p) agent.action.c = np.zeros(self.world.dim_c)</code></p> </li><li> <p><strong>物理动作</strong>：</p> 
+  <ul><li>如果<code>self.force_discrete_action</code>为<code>True</code>，则将动作向量中最大的元素设置为1，其余设置为0，以强制离散化动作。</li><li>如果<code>self.discrete_action_space</code>为<code>True</code>，则根据连续动作的值更新智能体在x轴和y轴上的移动： <p><code>agent.action.u[0] += action[0][1] - action[0][2] agent.action.u[1] += action[0][3] - action[0][4]</code></p> </li><li>否则，直接将连续动作赋值给智能体的物理动作： <p><code>agent.action.u = action[0]</code></p> </li></ul></li><li> <p><strong>通信动作</strong>：</p> 
+  <ul><li>直接将连续动作赋值给智能体的通信动作： <p><code>agent.action.c = action[0]</code></p> </li></ul></li></ol> 
+<p><strong><span style="color:#511b78;">通用步骤</span></strong></p> 
+<p>无论动作输入是离散的还是连续的，以下步骤是通用的：</p> 
+<ul><li> <p><strong>灵敏度调整</strong>： 物理动作向量<code>agent.action.u</code>乘以一个灵敏度因子<code>sensitivity</code>，以调整智能体的移动速度。</p> </li><li> <p><strong>断言检查</strong>： 最后，使用<code>assert</code>语句确保所有动作元素都已被处理，即动作列表<code>action</code>的长度为0。</p> </li></ul> 
+<p><strong><span style="color:#ad720d;">4.观测环境，在simple_tag.py里的</span></strong></p> 
+<ol><li> <p><strong>获取所有实体的位置</strong>：</p> 
+  <ul><li><code>entity_pos</code> 用于存储环境中除了智能体自身以外的其他实体（如路标或目标）相对于智能体的位置。</li><li>通过遍历 <code>world.landmarks</code>（环境中的所有地标），如果地标 <code>entity</code> 不是边界（<code>not entity.boundary</code>），则计算其相对于智能体 <code>agent</code> 的位置 <code>entity.state.p_pos - agent.state.p_pos</code>，并将其添加到 <code>entity_pos</code> 列表中。</li></ul></li><li> <p><strong>获取其他智能体的通信、位置和速度</strong>：</p> 
+  <ul><li><code>comm</code> 用于存储其他智能体的通信状态。</li><li><code>other_pos</code> 用于存储其他智能体相对于当前智能体的位置。</li><li><code>other_vel</code> 用于存储其他智能体的速度，但只包括那些不是对手（<code>adversary</code>）的智能体。</li><li>通过遍历 <code>world.agents</code>（环境中的所有智能体），如果 <code>other</code> 不是当前智能体 <code>agent</code>，则将其通信状态 <code>other.state.c</code> 添加到 <code>comm</code> 列表中，将其相对于智能体的位置添加到 <code>other_pos</code> 列表中，如果 <code>other</code> 不是对手，则将其速度添加到 <code>other_vel</code> 列表中。</li></ul></li><li> <p><strong>返回观测向量</strong>：</p> 
+  <ul><li>使用 <code>np.concatenate</code> 函数将智能体自身的速度 <code>agent.state.p_vel</code>、智能体自身的位置 <code>agent.state.p_pos</code>、所有地标的相对位置 <code>entity_pos</code>、其他智能体的相对位置 <code>other_pos</code> 以及其他智能体的速度（如果适用）<code>other_vel</code> 合并成一个观测向量。</li><li>这个合并的观测向量提供了智能体对环境的全面感知，它可以用来决定智能体的下一步动作。</li></ul></li></ol> 
+<p>总结来说，这个 <code>observation</code> 函数收集了智能体对环境的感知信息，包括：</p> 
+<ul><li>自身的速度 (<code>agent.state.p_vel</code>)</li><li>自身的位置 (<code>agent.state.p_pos</code>)</li><li>地标的相对位置 (<code>entity_pos</code>)</li><li>其他智能体的通信状态 (<code>comm</code>)</li><li>其他智能体的相对位置 (<code>other_pos</code>)</li><li>其他智能体的速度 (<code>other_vel</code>)</li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/5501557107ae81447243f145297a55a6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">一款拥有15000&#43;POC漏洞扫描工具</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/fd284d403f708ffe047e26bb47e21fce/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">WebSpoon9.0（KETTLE的WEB版本）编译 &#43; tomcat/docker部署 &#43; 远程调试教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

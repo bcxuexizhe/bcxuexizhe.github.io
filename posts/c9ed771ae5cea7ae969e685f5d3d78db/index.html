@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>关于如何创建一个可配置的 SpringBoot Web 项目的全局异常处理 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c9ed771ae5cea7ae969e685f5d3d78db/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="关于如何创建一个可配置的 SpringBoot Web 项目的全局异常处理">
+  <meta property="og:description" content="前情概要 这个问题其实困扰了我一周时间，一周都在 Google 上旅游，我要如何动态的设置 @RestControllerAdvice 里面的 basePackages 以及 baseClasses 的值呢？经过一周的时间寻求无果之后打算决定放弃的我终于找到了一些关键的线索。
+当然在此也感激这篇文章：@ControllerAdvice的用法和原理探究
+其实我们只要有调试源码的习惯，也能够发现这些东西，可能有时候就是差那么一点动力吧，比如我，就想直接看现成的解析，没有那么主动去调试源码，哈哈哈。
+发现了关键问题之后 其实从上面这篇文章里我提取到的关键信息如下：
+@Bean public HandlerExceptionResolver handlerExceptionResolver( @Qualifier(&#34;mvcContentNegotiationManager&#34;) ContentNegotiationManager contentNegotiationManager) { List&lt;HandlerExceptionResolver&gt; exceptionResolvers = new ArrayList&lt;&gt;(); configureHandlerExceptionResolvers(exceptionResolvers); if (exceptionResolvers.isEmpty()) { addDefaultHandlerExceptionResolvers(exceptionResolvers, contentNegotiationManager); } extendHandlerExceptionResolvers(exceptionResolvers); HandlerExceptionResolverComposite composite = new HandlerExceptionResolverComposite(); composite.setOrder(0); composite.setExceptionResolvers(exceptionResolvers); return composite; } PS：😓 后来我才发现这里面的 configureHandlerExceptionResolvers ，addDefaultHandlerExceptionResolvers 和extendHandlerExceptionResolvers 这三个方法是源码里面的，我还一直在找这个博主有关这两个方法的实现。
+OK 回来，这里面的关键就是我需要往 Spring IOC 里面添加一个 HandlerExceptionResolverComposite ，并且设置它的处理器列表就好了。
+于是我就顺着这个思路开始捣鼓，OK，下面是第一个版本的代码：
+版本一 Starter 配置类(关键代码)
+@Bean public HandlerExceptionResolver handlerExceptionResolver() { final HandlerExceptionResolverComposite composite = new HandlerExceptionResolverComposite(); final List&lt;HandlerExceptionResolver&gt; resolves = Collections.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T12:44:54+08:00">
+    <meta property="article:modified_time" content="2024-05-22T12:44:54+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">关于如何创建一个可配置的 SpringBoot Web 项目的全局异常处理</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="_0"></a>前情概要</h3> 
+<p>这个问题其实困扰了我一周时间，一周都在 Google 上旅游，我要如何动态的设置 @RestControllerAdvice 里面的 basePackages 以及 baseClasses 的值呢？经过一周的时间寻求无果之后打算决定放弃的我终于找到了一些关键的线索。<br> <strong>当然在此也感激这篇文章：<a href="https://blog.csdn.net/hou_ge/article/details/119295679">@ControllerAdvice的用法和原理探究</a></strong><br> 其实我们只要有调试源码的习惯，也能够发现这些东西，可能有时候就是差那么一点动力吧，比如我，就想直接看现成的解析，没有那么主动去调试源码，哈哈哈。</p> 
+<h3><a id="_5"></a>发现了关键问题之后</h3> 
+<p>其实从上面这篇文章里我提取到的关键信息如下：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token keyword">public</span> <span class="token class-name">HandlerExceptionResolver</span> <span class="token function">handlerExceptionResolver</span><span class="token punctuation">(</span>
+		<span class="token annotation punctuation">@Qualifier</span><span class="token punctuation">(</span><span class="token string">"mvcContentNegotiationManager"</span><span class="token punctuation">)</span> <span class="token class-name">ContentNegotiationManager</span> contentNegotiationManager<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">HandlerExceptionResolver</span><span class="token punctuation">&gt;</span></span> exceptionResolvers <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">configureHandlerExceptionResolvers</span><span class="token punctuation">(</span>exceptionResolvers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>exceptionResolvers<span class="token punctuation">.</span><span class="token function">isEmpty</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token function">addDefaultHandlerExceptionResolvers</span><span class="token punctuation">(</span>exceptionResolvers<span class="token punctuation">,</span> contentNegotiationManager<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token function">extendHandlerExceptionResolvers</span><span class="token punctuation">(</span>exceptionResolvers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token class-name">HandlerExceptionResolverComposite</span> composite <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HandlerExceptionResolverComposite</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	composite<span class="token punctuation">.</span><span class="token function">setOrder</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	composite<span class="token punctuation">.</span><span class="token function">setExceptionResolvers</span><span class="token punctuation">(</span>exceptionResolvers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> composite<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>PS：😓 后来我才发现这里面的 <code>configureHandlerExceptionResolvers</code> ，<code>addDefaultHandlerExceptionResolvers </code>和<code>extendHandlerExceptionResolvers</code> 这三个方法是源码里面的，我还一直在找这个博主有关这两个方法的实现。</p> 
+<p>OK 回来，这里面的关键就是我需要往 Spring IOC 里面添加一个 <code>HandlerExceptionResolverComposite</code> ，并且设置它的处理器列表就好了。<br> 于是我就顺着这个思路开始捣鼓，OK，下面是第一个版本的代码：</p> 
+<h4><a id="_27"></a>版本一</h4> 
+<p><strong>Starter 配置类(关键代码)</strong></p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token keyword">public</span> <span class="token class-name">HandlerExceptionResolver</span> <span class="token function">handlerExceptionResolver</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+  <span class="token keyword">final</span> <span class="token class-name">HandlerExceptionResolverComposite</span> composite <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HandlerExceptionResolverComposite</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">final</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">HandlerExceptionResolver</span><span class="token punctuation">&gt;</span></span> resolves <span class="token operator">=</span>
+      <span class="token class-name">Collections</span><span class="token punctuation">.</span><span class="token function">singletonList</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">RestGlobalExceptionHandler</span><span class="token punctuation">(</span>starterProperties<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  composite<span class="token punctuation">.</span><span class="token function">setOrder</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  composite<span class="token punctuation">.</span><span class="token function">setExceptionResolvers</span><span class="token punctuation">(</span>resolves<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> composite<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>Handler 处理器类(关键代码)</strong></p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">final</span> <span class="token keyword">class</span> <span class="token class-name">RestGlobalExceptionHandler</span> <span class="token keyword">extends</span> <span class="token class-name">DefaultHandlerExceptionResolver</span> <span class="token keyword">implements</span>
+    <span class="token class-name">HandlerExceptionResolver</span> <span class="token punctuation">{<!-- --></span>
+
+  <span class="token annotation punctuation">@Override</span>
+  <span class="token keyword">public</span> <span class="token class-name">ModelAndView</span> <span class="token function">resolveException</span><span class="token punctuation">(</span>
+      <span class="token keyword">final</span> <span class="token class-name">HttpServletRequest</span> request<span class="token punctuation">,</span>
+      <span class="token keyword">final</span> <span class="token class-name">HttpServletResponse</span> response<span class="token punctuation">,</span>
+      <span class="token keyword">final</span> <span class="token class-name">Object</span> handler<span class="token punctuation">,</span>
+      <span class="token keyword">final</span> <span class="token class-name">Exception</span> ex<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">ModelAndView</span> view <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ModelAndView</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">BusinessException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token function">printToResponse</span><span class="token punctuation">(</span>response<span class="token punctuation">,</span> <span class="token function">handlerError</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token class-name">BusinessException</span><span class="token punctuation">)</span> ex<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">MethodArgumentNotValidException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token function">printToResponse</span><span class="token punctuation">(</span>response<span class="token punctuation">,</span> <span class="token function">handlerError</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> <span class="token punctuation">(</span><span class="token class-name">MethodArgumentNotValidException</span><span class="token punctuation">)</span> ex<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token comment">// use default exception handler</span>
+      view <span class="token operator">=</span> <span class="token keyword">super</span><span class="token punctuation">.</span><span class="token function">doResolveException</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">,</span> ex<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">isNull</span><span class="token punctuation">(</span>view<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token comment">// use finally exception handler</span>
+      view <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ModelAndView</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token function">printToResponse</span><span class="token punctuation">(</span>response<span class="token punctuation">,</span> <span class="token function">handlerError</span><span class="token punctuation">(</span>request<span class="token punctuation">,</span> ex<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> view<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token comment">// handlerError 以及 printToResponse 方法省略</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<blockquote> 
+ <p>这里说下为什么就要继承 <code>DefaultHandlerExceptionResolver</code>以及实现<code>HandlerExceptionResolver</code>接口：<br> <strong>实现接口</strong>：因为 <code>HandlerExceptionResolverComposite</code>类的 <code>resolves</code> 列表就是一个<code>List&lt;HandlerExceptionResolver&gt;</code>, 所以我们自定义的 <code>Handler</code> 需要实现这个接口。<br> <strong>继承</strong> <code>DefaultHandlerExceptionResolver</code>类：因为可以看到我重写了 <code>resolveException</code>这个方法</p> 
+</blockquote> 
+<p><strong>但是这还存在问题：</strong></p> 
+<pre><code class="prism language-java"><span class="token comment">// 这个是 DefaultHandlerExceptionResolver 的 doResolveException 方法，你们实践第一版的时候会发现，有一些异常信息被这方法处理了，但是我发现如果使用 @RestControllerAdvice 结合 @ExceptionHandler 的话，优先是考虑我们自定义的异常处理的，于是有了下面的版本二。</span>
+<span class="token annotation punctuation">@Nullable</span>
+  <span class="token keyword">protected</span> <span class="token class-name">ModelAndView</span> <span class="token function">doResolveException</span><span class="token punctuation">(</span><span class="token class-name">HttpServletRequest</span> request<span class="token punctuation">,</span> <span class="token class-name">HttpServletResponse</span> response<span class="token punctuation">,</span> <span class="token annotation punctuation">@Nullable</span> <span class="token class-name">Object</span> handler<span class="token punctuation">,</span> <span class="token class-name">Exception</span> ex<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">HttpRequestMethodNotSupportedException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleHttpRequestMethodNotSupported</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">HttpRequestMethodNotSupportedException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">HttpMediaTypeNotSupportedException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleHttpMediaTypeNotSupported</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">HttpMediaTypeNotSupportedException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">HttpMediaTypeNotAcceptableException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleHttpMediaTypeNotAcceptable</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">HttpMediaTypeNotAcceptableException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">MissingPathVariableException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleMissingPathVariable</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">MissingPathVariableException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">MissingServletRequestParameterException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleMissingServletRequestParameter</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">MissingServletRequestParameterException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">ServletRequestBindingException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleServletRequestBindingException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">ServletRequestBindingException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">ConversionNotSupportedException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleConversionNotSupported</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">ConversionNotSupportedException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">TypeMismatchException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleTypeMismatch</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">TypeMismatchException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">HttpMessageNotReadableException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleHttpMessageNotReadable</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">HttpMessageNotReadableException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">HttpMessageNotWritableException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleHttpMessageNotWritable</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">HttpMessageNotWritableException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">MethodArgumentNotValidException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleMethodArgumentNotValidException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">MethodArgumentNotValidException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">MissingServletRequestPartException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleMissingServletRequestPartException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">MissingServletRequestPartException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">BindException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleBindException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">BindException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">NoHandlerFoundException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleNoHandlerFoundException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">NoHandlerFoundException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>ex <span class="token keyword">instanceof</span> <span class="token class-name">AsyncRequestTimeoutException</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">handleAsyncRequestTimeoutException</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token class-name">AsyncRequestTimeoutException</span><span class="token punctuation">)</span>ex<span class="token punctuation">,</span> request<span class="token punctuation">,</span> response<span class="token punctuation">,</span> handler<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> var6<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token class-name">Exception</span> handlerEx <span class="token operator">=</span> var6<span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>logger<span class="token punctuation">.</span><span class="token function">isWarnEnabled</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>logger<span class="token punctuation">.</span><span class="token function">warn</span><span class="token punctuation">(</span><span class="token string">"Failure while trying to resolve exception ["</span> <span class="token operator">+</span> ex<span class="token punctuation">.</span><span class="token function">getClass</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"]"</span><span class="token punctuation">,</span> handlerEx<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="_150"></a>版本二</h4> 
+<p>这里主要解决的是，有一些自定义的异常处理提前被 <code>DefaultHandlerExceptionResolver </code> 类的 <code>doResolveException</code> 的方法处理了，了解 Spring IOC 容器的小伙伴应该都知道，这很容易让我们联想起，Bean 的顺序问题，那么我们哪里设置了我们自定义 Bean 的顺序呢，也就是使用 @Order 或者代码里面设置了，没错，就是这里：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Bean</span>
+<span class="token keyword">public</span> <span class="token class-name">HandlerExceptionResolver</span> <span class="token function">handlerExceptionResolver</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+  <span class="token keyword">final</span> <span class="token class-name">HandlerExceptionResolverComposite</span> composite <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HandlerExceptionResolverComposite</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">final</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">HandlerExceptionResolver</span><span class="token punctuation">&gt;</span></span> resolves <span class="token operator">=</span>
+      <span class="token class-name">Collections</span><span class="token punctuation">.</span><span class="token function">singletonList</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">RestGlobalExceptionHandler</span><span class="token punctuation">(</span>starterProperties<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token comment">// 这里，这里，这里</span>
+  composite<span class="token punctuation">.</span><span class="token function">setOrder</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  composite<span class="token punctuation">.</span><span class="token function">setExceptionResolvers</span><span class="token punctuation">(</span>resolves<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">return</span> composite<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>但是我们要怎么知道我们具体要设置的值是什么呢？大家都知道在使用 Spring 的时候设置 Bean 的 Order 值越小那么它的优先级越高，所以我尝试着把 0 换成 -1，试试，结果还真成功了，我们自定义的优先执行了，但是作为一个搞技术的人，还是想摸清楚它的原理吧，为啥设置成 -1 就可以了呢？<br> 一开始没有啥头绪，不知道怎么去查找 Spring 配置异常处理这块( 主要还是源码不熟 -_-! )，但后面想一想，把目标换一下不就好了，是因为 DefaultHandlerExceptionResolver 这个 Bean 的原因，那我就找 Spring 是哪里把他放进 Spring IOC 容器的不就好了。因为我使用的框架是 SpringBoot，所以相关的配置肯定在 XXXAutoConfiguration 类里面，于是就找找找…</p> 
+<ul><li>WebMvcAutoConfiguration 没有…</li><li>DispatcherServletAutoConfiguration 没有…</li></ul> 
+<p>好吧最后还是借助 IntelliJ 这个工具，因为我们自定义的是一个 HandlerExceptionResolverComposite Bean，所以我们进入这个类：<br> <img src="https://images2.imgbox.com/85/39/1kJs9OpX_o.png" alt="在这里插入图片描述"><br> 发现它实现了 HandlerExceptionResolver 这个接口，一般 Spring 都会使用接口作为一个接收实现的变量，然后 return 回去交给 Spring IOC 容器，所以我们再进入这个接口：<br> <img src="https://images2.imgbox.com/9d/ad/VKlPde6L_o.png" alt="在这里插入图片描述"><br> 利用 IntelliJ 的工具，找到哪里注入了这个 Bean：<br> <img src="https://images2.imgbox.com/82/88/e6xLlgr5_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/09/96/1753GQ6F_o.png" alt="在这里插入图片描述"><br> 进去之后发现了跟我们类似的代码：<br> <img src="https://images2.imgbox.com/fb/e4/4zIxvPeM_o.png" alt="在这里插入图片描述"><br> 看到 618 行的 <code>this.addDefaultHandlerExceptionResolvers(exceptionResolvers, contentNegotiationManager);</code> 吗？这个就是添加 <code>DefaultHandlerExceptionResolver </code> 的地方，并且设置的 Order 是 0，如果 Debug 的话你会发现这个方法除了加入 DefaultHandlerExceptionResolver 之外，还会加入自定义使用注解的异常处理器，但是它在 List 中的顺序比 DefaultHandlerExceptionResolver 靠前，所以它会优先使用自定义的处理器处理，但是使用注解是 Spring 自己处理的，然后加入这个 List 中，我们没办法去修改这个 List，但是我们知道了可以自定义 HandlerExceptionResolverComposite 并且把它的 Order 设置成比 0 小就好了，所以这就是为什么我们设置成 -1 就可以覆盖 DefaultHandlerExceptionResolver 的行为的原因。</p> 
+<p>所有的代码已经放在我的代码仓库：<a href="https://gitee.com/peppa-qiu/custom-springboot-starter" rel="nofollow">码云</a>，欢迎来访以及给我小⭐⭐</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/db7ba364c4917716c2b333a984b6f562/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Spring Boot 3.0：未来企业应用开发的基石</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9a2975bbf394a66ebc56cf64f2267545/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【SpringBoot】SpringBoot中防止接口重复提交（单机环境和分布式环境）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

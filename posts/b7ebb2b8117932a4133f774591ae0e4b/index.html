@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL-----多表查询（二） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b7ebb2b8117932a4133f774591ae0e4b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL-----多表查询（二）">
+  <meta property="og:description" content="目录
+一.子查询概述：
+二：标量子查询：
+三：列子查询：
+四：行子查询：
+五：表子查询：
+六：练习部分：
+写在之前：本文承接上文MySQL-----多表查询（一）-CSDN博客
+一.子查询概述： 首先引出子查询的概念：子查询指一个查询语句嵌套在另一个查询语句内部的查询，即SQL语句中嵌套SELECT语句，称为嵌套查询，又称子查询
+SQL 中子查询的使用大大增强了 SELECT 查询的能力，因为很多时候查询需要从结果集中获取数据，或者需要从同一个表中先计算得出一个数据结果，然后与这个数据结果（可能是某个标量，也可能是某个集合）进行比较。
+如下面这种形式： SELECT * FROM t1 WHERE column1 = ( SELECT column1 FROM t2 ); 子查询分类：
+A. 标量子查询（子查询结果为单个值）B. 列子查询(子查询结果为一列)C. 行子查询(子查询结果为一行)D. 表子查询(子查询结果为多行多列) 查询位置可分为：
+A. WHERE之后B. FROM之后C. SELECT之后 接着，基于上面的概述，相信你对子查询有了一定了解了，首先我们导入要查询的数据，下面在根据子查询的分类一个一个说明：（在查询之前，我们先导入数据（建立表以及表之间的关系））
+-- 创建部门表 create table dept( id int auto_increment comment &#39;ID&#39; primary key, name varchar(50) not null comment &#39;部门名称&#39; )comment &#39;部门表&#39;; INSERT INTO dept (id, name) VALUES (1, &#39;研发部&#39;), (2, &#39;市场部&#39;),(3, &#39;财务部&#39;), (4, &#39;销售部&#39;), (5, &#39;总经办&#39;), (6, &#39;人事部&#39;); -- 创建员工表 create table emp( id int auto_increment comment &#39;ID&#39; primary key, name varchar(50) not null comment &#39;姓名&#39;, age int comment &#39;年龄&#39;, job varchar(20) comment &#39;职位&#39;, salary int comment &#39;薪资&#39;, entrydate date comment &#39;入职时间&#39;, managerid int comment &#39;直属领导ID&#39;, dept_id int comment &#39;部门ID&#39; )comment &#39;员工表&#39;; -- 设置外键约束 alter table emp add constraint fk_emp_dept_id foreign key (dept_id) references dept(id); -- 插入数据 INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id) VALUES (1, &#39;金庸&#39;, 66, &#39;总裁&#39;,20000, &#39;2000-01-01&#39;, null,5), (2, &#39;张无忌&#39;, 20, &#39;项目经理&#39;,12500, &#39;2005-12-05&#39;, 1,1), (3, &#39;杨逍&#39;, 33, &#39;开发&#39;, 8400,&#39;2000-11-03&#39;, 2,1), (4, &#39;韦一笑&#39;, 48, &#39;开发&#39;,11000, &#39;2002-02-05&#39;, 2,1), (5, &#39;常遇春&#39;, 43, &#39;开发&#39;,10500, &#39;2004-09-07&#39;, 3,1), (6, &#39;小昭&#39;, 19, &#39;程序员鼓励师&#39;,6600, &#39;2004-10-12&#39;, 2,1), (7, &#39;灭绝&#39;, 60, &#39;财务总监&#39;,8500, &#39;2002-09-12&#39;, 1,3), (8, &#39;周芷若&#39;, 19, &#39;会计&#39;,4800, &#39;2006-06-02&#39;, 7,3), (9, &#39;丁敏君&#39;, 23, &#39;出纳&#39;,5250, &#39;2009-05-13&#39;, 7,3), (10, &#39;赵敏&#39;, 20, &#39;市场部总监&#39;,12500, &#39;2004-10-12&#39;, 1,2), (11, &#39;鹿杖客&#39;, 56, &#39;职员&#39;,3750, &#39;2006-10-03&#39;, 10,2), (12, &#39;鹤笔翁&#39;, 19, &#39;职员&#39;,3750, &#39;2007-05-09&#39;, 10,2), (13, &#39;方东白&#39;, 19, &#39;职员&#39;,5500, &#39;2009-02-12&#39;, 10,2), (14, &#39;张三丰&#39;, 88, &#39;销售总监&#39;,14000, &#39;2004-10-12&#39;, 1,4), (15, &#39;俞莲舟&#39;, 38, &#39;销售&#39;,4600, &#39;2004-10-12&#39;, 14,4), (16, &#39;宋远桥&#39;, 40, &#39;销售&#39;,4600, &#39;2004-10-12&#39;, 14,4), (17, &#39;陈友谅&#39;, 42, null,2000, &#39;2011-10-12&#39;, 1,null); 创建好后的表中数据及其对应关系：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-29T12:56:08+08:00">
+    <meta property="article:modified_time" content="2024-04-29T12:56:08+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL-----多表查询（二）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80.%E5%AD%90%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%B8%80.%E5%AD%90%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A" rel="nofollow">一.子查询概述：</a></p> 
+<p id="%E4%BA%8C%EF%BC%9A%E6%A0%87%E9%87%8F%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%EF%BC%9A%E6%A0%87%E9%87%8F%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">二：标量子查询：</a></p> 
+<p id="%C2%A0%E4%B8%89%EF%BC%9A%E5%88%97%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%B8%89%EF%BC%9A%E5%88%97%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow"> 三：列子查询：</a></p> 
+<p id="%E5%9B%9B%EF%BC%9A%E8%A1%8C%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%EF%BC%9A%E8%A1%8C%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">四：行子查询：</a></p> 
+<p id="%E4%BA%94%EF%BC%9A%E8%A1%A8%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%BA%94%EF%BC%9A%E8%A1%A8%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">五：表子查询：</a></p> 
+<p id="%E5%85%AD%EF%BC%9A%E7%BB%83%E4%B9%A0%E9%83%A8%E5%88%86%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E5%85%AD%EF%BC%9A%E7%BB%83%E4%B9%A0%E9%83%A8%E5%88%86%EF%BC%9A" rel="nofollow">六：练习部分：</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p>写在之前：本文承接上文<a href="https://blog.csdn.net/2302_79862386/article/details/138171806?spm=1001.2014.3001.5502" title="MySQL-----多表查询（一）-CSDN博客">MySQL-----多表查询（一）-CSDN博客</a></p> 
+<h2 id="%E4%B8%80.%E5%AD%90%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A" style="background-color:transparent;">一.子查询概述：</h2> 
+<p>首先引出子查询的概念：<strong>子查询指一个查询语句嵌套在另一个查询语句内部的查询，<span style="background-color:#ffd900;">即SQL语句中嵌套SELECT语句，称为嵌套查询，又称子查询</span></strong></p> 
+<p>SQL 中子查询的使用大大增强了 SELECT 查询的能力，因为很多时候查询需要从结果集中获取数据，或者需要从同一个表中先计算得出一个数据结果，然后与这个数据结果（可能是某个标量，也可能是某个集合）进行比较。</p> 
+<p>如下面这种形式： </p> 
+<pre><code class="language-sql">SELECT * FROM t1 WHERE column1 = ( SELECT column1 FROM t2 );</code></pre> 
+<p><strong> 子查询分类：</strong></p> 
+<ul><li>A. 标量子查询（子查询结果为单个值）</li><li>B. 列子查询(子查询结果为一列)</li><li>C. 行子查询(子查询结果为一行)</li><li>D. 表子查询(子查询结果为多行多列)</li></ul> 
+<p><strong>查询位置可分为：</strong></p> 
+<ul><li>A. WHERE之后</li><li>B. FROM之后</li><li>C. SELECT之后</li></ul> 
+<p>接着，基于上面的概述，相信你对子查询有了一定了解了，首先我们导入要查询的数据，下面在根据子查询的分类一个一个说明：（<strong>在查询之前，我们先导入数据（建立表以及表之间的关系）</strong>）</p> 
+<pre><code class="language-sql">-- 创建部门表
+create table dept(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '部门名称'
+)comment '部门表';
+ 
+INSERT INTO dept (id, name) VALUES (1, '研发部'), (2, '市场部'),(3, '财务部'), (4,
+'销售部'), (5, '总经办'), (6, '人事部');
+-- 创建员工表
+create table emp(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '姓名',
+age int comment '年龄',
+job varchar(20) comment '职位',
+salary int comment '薪资',
+entrydate date comment '入职时间',
+managerid int comment '直属领导ID',
+dept_id int comment '部门ID'
+)comment '员工表';
+-- 设置外键约束
+alter table emp add constraint fk_emp_dept_id foreign key (dept_id) references
+dept(id);
+-- 插入数据
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id)
+VALUES
+(1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),
+(2, '张无忌', 20, '项目经理',12500, '2005-12-05', 1,1),
+(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),
+(4, '韦一笑', 48, '开发',11000, '2002-02-05', 2,1),
+(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),
+(6, '小昭', 19, '程序员鼓励师',6600, '2004-10-12', 2,1),
+(7, '灭绝', 60, '财务总监',8500, '2002-09-12', 1,3),
+(8, '周芷若', 19, '会计',4800, '2006-06-02', 7,3),
+(9, '丁敏君', 23, '出纳',5250, '2009-05-13', 7,3),
+(10, '赵敏', 20, '市场部总监',12500, '2004-10-12', 1,2),
+(11, '鹿杖客', 56, '职员',3750, '2006-10-03', 10,2),
+(12, '鹤笔翁', 19, '职员',3750, '2007-05-09', 10,2),
+(13, '方东白', 19, '职员',5500, '2009-02-12', 10,2),
+(14, '张三丰', 88, '销售总监',14000, '2004-10-12', 1,4),
+(15, '俞莲舟', 38, '销售',4600, '2004-10-12', 14,4),
+(16, '宋远桥', 40, '销售',4600, '2004-10-12', 14,4),
+(17, '陈友谅', 42, null,2000, '2011-10-12', 1,null);</code></pre> 
+<p>创建好后的表中数据及其对应关系：</p> 
+<p><img alt="" height="928" src="https://images2.imgbox.com/93/29/mtvcYVYo_o.png" width="1200"> </p> 
+<h2 id="%E4%BA%8C%EF%BC%9A%E6%A0%87%E9%87%8F%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" style="background-color:transparent;">二：标量子查询：</h2> 
+<p>子查询返回的结果是单个值（数字、字符串、日期等），最简单的形式，这种子查询称为标量子查询。 常用的操作符：= &lt;&gt; &gt; &gt;= &lt; &lt;=</p> 
+<p><img alt="" height="610" src="https://images2.imgbox.com/3c/42/r0K5rgrM_o.png" width="1200"></p> 
+<p> 案例演示（A,B表示查询例子，后面跟着的是查询步骤，后续一样，不再说明）：</p> 
+<pre><code class="language-sql"># 标量子查询：
+-- A: 查询“销售部”的所有员工信息：
+
+-- 第一步：查询销售部门id
+select id from dept where name = '销售部';
+
+-- 第二步：根据销售部门id，查询员工信息：
+select * from emp where dept_id = (select id from dept where name = '销售部');
+
+-- B: 查询在 "方东白" 入职之后的员工信息:
+
+-- 第一步：查询 方东白 的入职日期：
+select entrydate from emp where name = '方东白';
+
+-- 第二步：查询指定入职日期之后的员工信息：
+select * from emp where entrydate &gt; (select entrydate from emp where name = '方东白');</code></pre> 
+<p>查询结果（根据上述例A与例B展示）对比上述员工表与部门表可知，查询无误： </p> 
+<p><img alt="" height="334" src="https://images2.imgbox.com/93/09/gMlVEPYx_o.png" width="1200"></p> 
+<h2 id="%C2%A0%E4%B8%89%EF%BC%9A%E5%88%97%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" style="background-color:transparent;"> 三：列子查询：</h2> 
+<p>子查询返回的结果是一列（可以是多行），这种子查询称为列子查询。常用的操作符：IN 、NOT IN 、 ANY 、SOME 、 ALL：</p> 
+<p><img alt="" height="542" src="https://images2.imgbox.com/36/e6/SF2hx9HZ_o.png" width="1200"></p> 
+<p>案例演示：</p> 
+<pre><code class="language-sql"># 列子查询：
+
+-- A: 查询“销售部”和“市场部”的的所有员工信息：
+
+-- 第一步：查询“销售部”和“市场部”的部门id
+select id from dept where name = '销售部' or name = '市场部';
+
+-- 第二步：根据部门id，查询员工信息：
+select * from emp where dept_id in (select id from dept 
+where name = '销售部' or name = '市场部');
+
+-- B: 查询比 财务部 所有人工资都高的员工信息:
+
+-- 第一步：查询所有 财务部 人员工资：
+select id from dept where name = '财务部';
+
+select salary from emp where dept_id = (select id from dept where name = '财务部');
+
+-- 第二步：比 财务部 所有人工资都高的员工信息:
+select * from emp where salary &gt; all (select salary from emp where
+ dept_id = (select id from dept where name = '财务部'));
+ 
+ -- C:查询比研发部其中任意一人工资高的员工信息:
+ 
+ -- 第一步：查询研发部所有人工资：
+ select id from dept where name = '研发部';
+ 
+ select salary from emp where dept_id = ( select id from dept where name = '研发部');
+ 
+ -- 第二步：根据部门id查询比研发部任意一人工资都高的员工信息：
+ select * from emp where salary &gt; any( select salary from emp where 
+ dept_id = ( select id from dept where name = '研发部'));</code></pre> 
+<p>查询结果（根据上述例A与例B例C展示）：</p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/e2/6d/894QrTpn_o.png" width="1200"></p> 
+<h2 id="%E5%9B%9B%EF%BC%9A%E8%A1%8C%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A">四：行子查询：</h2> 
+<p>子查询返回的结果是一行（可以是多列），这种子查询称为行子查询。 常用的操作符：= 、&lt;&gt; 、IN 、NOT IN</p> 
+<p>案例演示：</p> 
+<pre><code class="language-sql"> # 行子查询:
+ 
+ -- A. 查询与 "张无忌" 的薪资及直属领导相同的员工信息:
+ 
+ -- 第一步：查询 "张无忌" 的薪资及直属领导：
+ select salary , managerid from emp where name = '张无忌';
+ 
+ -- 第二步：查询与 "张无忌" 的薪资及直属领导相同的员工信息:
+ select * from emp where (salary,managerid) = (select salary , managerid
+	from emp where name = '张无忌');</code></pre> 
+<p>查询结果：</p> 
+<p><img alt="" height="215" src="https://images2.imgbox.com/55/2d/QqpUpvvC_o.png" width="949"></p> 
+<h2 id="%E4%BA%94%EF%BC%9A%E8%A1%A8%E5%AD%90%E6%9F%A5%E8%AF%A2%EF%BC%9A" style="background-color:transparent;">五：表子查询：</h2> 
+<p>子查询返回的结果是多行多列，这种子查询称为表子查询。 常用的操作符：IN</p> 
+<p>案例演示：</p> 
+<pre><code class="language-sql">
+ #  表子查询:
+ 
+ -- A:查询与 "鹿杖客" , "宋远桥" 的职位和薪资相同的员工信息
+
+-- 第一步：查询 "鹿杖客" , "宋远桥" 的职位和薪资：
+select job , salary from emp where name = '鹿杖客' or name = '宋远桥';
+
+-- 第二步：查询与 "鹿杖客" , "宋远桥" 的职位和薪资相同的员工信息:
+select * from emp where (job,salary) in (select job , salary from emp 
+where name = '鹿杖客' or name = '宋远桥');
+
+-- B:查询入职日期是 "2006-01-01" 之后的员工信息 , 及其部门信息:
+
+-- 第一步： 入职日期是 "2006-01-01" 之后的员工信息：
+select * from emp where entrydate &gt; '2006-01-01';
+
+-- 第二步： 查询这部分员工信息及其对应的部门信息:
+select e.*,d.* from (select * from emp where entrydate &gt; '2006-01-01')
+e left join dept d on e.dept_id = d.id;
+</code></pre> 
+<p>查询结果：</p> 
+<p><img alt="" height="947" src="https://images2.imgbox.com/24/5d/nwE4mGfJ_o.png" width="1200"></p> 
+<p>通过上面的学习，我们对多表查询有了一定认识，接下来练习一下加深印象：</p> 
+<h2 id="%E5%85%AD%EF%BC%9A%E7%BB%83%E4%B9%A0%E9%83%A8%E5%88%86%EF%BC%9A">六：练习部分：</h2> 
+<p>此部分就不给出运行结果了，有需要可以自己尝试运行:</p> 
+<pre><code class="language-sql"># 综合练习：
+
+-- 1). 查询员工的姓名、年龄、职位、部门信息 （隐式内连接）：
+select e.name , e.age , e.job , d.name from emp e , dept d where e.dept_id = d.id;
+
+-- 2). 查询年龄小于30岁的员工的姓名、年龄、职位、部门信息（显式内连接）：
+select e.name , e.age , e.job , d.name from emp e inner join dept d on e.dept_id =
+d.id where e.age &lt; 30;
+
+-- 3). 查询拥有员工的部门ID、部门名称：
+select distinct d.id , d.name from emp e , dept d where e.dept_id = d.id;
+
+-- 4). 查询所有年龄大于40岁的员工, 及其归属的部门名称; 如果员工没有分配部门, 也需要展示出
+来(外连接)：
+select e.*, d.name from emp e left join dept d on e.dept_id = d.id where e.age &gt;
+40 ;
+
+-- 	5).查询 "研发部" 员工的平均工资:
+select avg(e.salary) from emp e, dept d where e.dept_id = d.id and d.name = '研发部';
+
+-- 6). 查询低于本部门平均工资的员工信息:
+select * from emp e2 where e2.salary &lt; ( select avg(e1.salary) from emp e1 where
+e1.dept_id = e2.dept_id );
+
+
+-- 7). 查询所有的部门信息, 并统计部门的员工人数:
+select d.id, d.name , ( select count(*) from emp e where e.dept_id = d.id ) '人数'
+from dept d;</code></pre> 
+<p> <strong>结语：</strong> <strong>写博客不仅仅是为了分享学习经历，同时这也有利于我巩固知识点，总结该知识点，由于作者水平有限，对文章有任何问题的还请指出，接受大家的批评，让我改进。同时也希望读者们不吝啬你们的点赞+收藏+关注，你们的鼓励是我创作的最大动力！</strong></p> 
+<p><img alt="" height="417" src="https://images2.imgbox.com/06/15/1ubU52vU_o.jpg" width="417"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/01eafd81206ec4747178bedc86d17aab/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">RabbitMQ的是什么？RabbitMQ的使用场景？为什么要使用RabbitMQ，它对于其他中间件优势是什么？</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c0ee35fe225f055c650e8373f77b753e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【赠书第22期】AI绘画全面精通</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

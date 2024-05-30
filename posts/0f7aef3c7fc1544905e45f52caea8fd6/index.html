@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Spring IoC&amp;DI（3）—DI详解 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0f7aef3c7fc1544905e45f52caea8fd6/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Spring IoC&amp;DI（3）—DI详解">
+  <meta property="og:description" content="目录
+一、属性注入
+二、构造方法注入
+小结：构造函数的注入
+三、Setter注入
+四、三种注入的优缺点分析（面试题）
+1、属性注入
+优点：
+缺点：
+2、构造方法注入（Spring4.X推荐）
+优点：
+缺点：
+3、Setter注入（Spring3.X推荐）
+优点：
+五、@Autowired存在问题
+1、引入Autowired的错误代码：
+（1）属性注入：
+（2）构造方法注入：
+（3）Setter方法注入：
+（4）启动类代码：
+2、Autowired查找依赖顺序：
+3、解决方案
+（1）解决方案一：根据名称去查
+（2）解决方案二：给想要拿到的对象加上@Primary注解
+（3）解决方案三：加@Qualifier注解，指定引入的依赖对象
+（4）解决方案四：加@Resource注解
+4、@Autowired 与 @Resource 的区别（常见面试题）
+六、Spring IoC&amp;DI 的总结
+1、Spring，Spring Boot 和 Spring MVC的关系以及区别
+（1）Spring
+（2）Spring MVC
+（3）Spring Boot
+（4）总结
+2、bean的命名
+（1）五大注解存储的bean
+（2）@Bean注解存储的bean
+3、常见面试题
+上篇博客学习了控制反转IoC的细节，接下来就开始学习依赖注入DI的细节。
+依赖注入是一个过程，是指IoC容器在创建Bean时，去提供运行时所依赖的资源，而资源指的就是对象。我们使用 @Autowired 注解，完成依赖注入的操作。
+简单来说，就是把对象取出来，放到某个类的属性中。在一些文章中，依赖注入也被称之为 “对象注入”、“属性装配”，具体含义需要结合文章的上下文来理解。
+关于依赖注入，Spring也给我们提供了三种方式：
+1、属性注入（Field Injection）
+2、构造方法注入（Construct Injection）
+3、Setter 注入（Setter Injection）
+一、属性注入 属性注入是使用 @Autowired 实现的，将UserService 类注入到UserController类中，UserService 类代码如下：
+@Service public class UserService { public void doService() { System.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-07T14:49:23+08:00">
+    <meta property="article:modified_time" content="2024-05-07T14:49:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Spring IoC&amp;DI（3）—DI详解</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5" rel="nofollow">一、属性注入</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5" rel="nofollow">二、构造方法注入</a></p> 
+<p id="%E5%B0%8F%E7%BB%93%EF%BC%9A%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E6%B3%A8%E5%85%A5-toc" style="margin-left:40px;"><a href="#%E5%B0%8F%E7%BB%93%EF%BC%9A%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E6%B3%A8%E5%85%A5" rel="nofollow">小结：构造函数的注入</a></p> 
+<p id="%E4%B8%89%E3%80%81Setter%E6%B3%A8%E5%85%A5-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81Setter%E6%B3%A8%E5%85%A5" rel="nofollow">三、Setter注入</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E4%B8%89%E7%A7%8D%E6%B3%A8%E5%85%A5%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9%E5%88%86%E6%9E%90%EF%BC%88%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E4%B8%89%E7%A7%8D%E6%B3%A8%E5%85%A5%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9%E5%88%86%E6%9E%90%EF%BC%88%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89" rel="nofollow">四、三种注入的优缺点分析（面试题）</a></p> 
+<p id="1%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5" rel="nofollow">1、属性注入</a></p> 
+<p id="%E4%BC%98%E7%82%B9%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E4%BC%98%E7%82%B9%EF%BC%9A" rel="nofollow">优点：</a></p> 
+<p id="%E7%BC%BA%E7%82%B9%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E7%BC%BA%E7%82%B9%EF%BC%9A" rel="nofollow">缺点：</a></p> 
+<p id="2%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%88Spring4.X%E6%8E%A8%E8%8D%90%EF%BC%89-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%88Spring4.X%E6%8E%A8%E8%8D%90%EF%BC%89" rel="nofollow">2、构造方法注入（Spring4.X推荐）</a></p> 
+<p id="%E4%BC%98%E7%82%B9%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E4%BC%98%E7%82%B9%EF%BC%9A" rel="nofollow">优点：</a></p> 
+<p id="%E7%BC%BA%E7%82%B9%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E7%BC%BA%E7%82%B9%EF%BC%9A" rel="nofollow">缺点：</a></p> 
+<p id="3%E3%80%81Setter%E6%B3%A8%E5%85%A5%EF%BC%88Spring3.X%E6%8E%A8%E8%8D%90%EF%BC%89-toc" style="margin-left:40px;"><a href="#3%E3%80%81Setter%E6%B3%A8%E5%85%A5%EF%BC%88Spring3.X%E6%8E%A8%E8%8D%90%EF%BC%89" rel="nofollow">3、Setter注入（Spring3.X推荐）</a></p> 
+<p id="%E4%BC%98%E7%82%B9%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E4%BC%98%E7%82%B9%EF%BC%9A" rel="nofollow">优点：</a></p> 
+<p id="%E4%BA%94%E3%80%81%40Autowired%E5%AD%98%E5%9C%A8%E9%97%AE%E9%A2%98-toc" style="margin-left:0px;"><a href="#%E4%BA%94%E3%80%81%40Autowired%E5%AD%98%E5%9C%A8%E9%97%AE%E9%A2%98" rel="nofollow">五、@Autowired存在问题</a></p> 
+<p id="1%E3%80%81%E5%BC%95%E5%85%A5Autowired%E7%9A%84%E9%94%99%E8%AF%AF%E4%BB%A3%E7%A0%81%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E5%BC%95%E5%85%A5Autowired%E7%9A%84%E9%94%99%E8%AF%AF%E4%BB%A3%E7%A0%81%EF%BC%9A" rel="nofollow">1、引入Autowired的错误代码：</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5%EF%BC%9A" rel="nofollow">（1）属性注入：</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A" rel="nofollow">（2）构造方法注入：</a></p> 
+<p id="%EF%BC%883%EF%BC%89Setter%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89Setter%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A" rel="nofollow">（3）Setter方法注入：</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E5%90%AF%E5%8A%A8%E7%B1%BB%E4%BB%A3%E7%A0%81%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E5%90%AF%E5%8A%A8%E7%B1%BB%E4%BB%A3%E7%A0%81%EF%BC%9A" rel="nofollow">（4）启动类代码：</a></p> 
+<p id="2%E3%80%81Autowired%E6%9F%A5%E6%89%BE%E4%BE%9D%E8%B5%96%E9%A1%BA%E5%BA%8F%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2%E3%80%81Autowired%E6%9F%A5%E6%89%BE%E4%BE%9D%E8%B5%96%E9%A1%BA%E5%BA%8F%EF%BC%9A" rel="nofollow">2、Autowired查找依赖顺序：</a></p> 
+<p id="3%E3%80%81%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" rel="nofollow">3、解决方案</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E6%A0%B9%E6%8D%AE%E5%90%8D%E7%A7%B0%E5%8E%BB%E6%9F%A5-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E6%A0%B9%E6%8D%AE%E5%90%8D%E7%A7%B0%E5%8E%BB%E6%9F%A5" rel="nofollow">（1）解决方案一：根据名称去查</a></p> 
+<p id="%EF%BC%882%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9A%E7%BB%99%E6%83%B3%E8%A6%81%E6%8B%BF%E5%88%B0%E7%9A%84%E5%AF%B9%E8%B1%A1%E5%8A%A0%E4%B8%8A%40Primary%E6%B3%A8%E8%A7%A3-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9A%E7%BB%99%E6%83%B3%E8%A6%81%E6%8B%BF%E5%88%B0%E7%9A%84%E5%AF%B9%E8%B1%A1%E5%8A%A0%E4%B8%8A%40Primary%E6%B3%A8%E8%A7%A3" rel="nofollow">（2）解决方案二：给想要拿到的对象加上@Primary注解</a></p> 
+<p id="%EF%BC%883%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%89%EF%BC%9A%E5%8A%A0%40Qualifier%E6%B3%A8%E8%A7%A3%EF%BC%8C%E6%8C%87%E5%AE%9A%E5%BC%95%E5%85%A5%E7%9A%84%E4%BE%9D%E8%B5%96%E5%AF%B9%E8%B1%A1-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%89%EF%BC%9A%E5%8A%A0%40Qualifier%E6%B3%A8%E8%A7%A3%EF%BC%8C%E6%8C%87%E5%AE%9A%E5%BC%95%E5%85%A5%E7%9A%84%E4%BE%9D%E8%B5%96%E5%AF%B9%E8%B1%A1" rel="nofollow">（3）解决方案三：加@Qualifier注解，指定引入的依赖对象</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%9B%9B%EF%BC%9A%E5%8A%A0%40Resource%E6%B3%A8%E8%A7%A3-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%9B%9B%EF%BC%9A%E5%8A%A0%40Resource%E6%B3%A8%E8%A7%A3" rel="nofollow">（4）解决方案四：加@Resource注解</a></p> 
+<p id="4%E3%80%81%40Autowired%20%E4%B8%8E%20%40Resource%20%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%88%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89-toc" style="margin-left:80px;"><a href="#4%E3%80%81%40Autowired%20%E4%B8%8E%20%40Resource%20%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%88%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89" rel="nofollow">4、@Autowired 与 @Resource 的区别（常见面试题）</a></p> 
+<p id="%E5%85%AD%E3%80%81Spring%20IoC%26DI%20%E7%9A%84%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E5%85%AD%E3%80%81Spring%20IoC%26DI%20%E7%9A%84%E6%80%BB%E7%BB%93" rel="nofollow">六、Spring IoC&amp;DI 的总结</a></p> 
+<p id="1%E3%80%81Spring%EF%BC%8CSpring%20Boot%20%E5%92%8C%20Spring%20MVC%E7%9A%84%E5%85%B3%E7%B3%BB%E4%BB%A5%E5%8F%8A%E5%8C%BA%E5%88%AB-toc" style="margin-left:40px;"><a href="#1%E3%80%81Spring%EF%BC%8CSpring%20Boot%20%E5%92%8C%20Spring%20MVC%E7%9A%84%E5%85%B3%E7%B3%BB%E4%BB%A5%E5%8F%8A%E5%8C%BA%E5%88%AB" rel="nofollow">1、Spring，Spring Boot 和 Spring MVC的关系以及区别</a></p> 
+<p id="%EF%BC%881%EF%BC%89Spring-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89Spring" rel="nofollow">（1）Spring</a></p> 
+<p id="%EF%BC%882%EF%BC%89Spring%20MVC-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89Spring%20MVC" rel="nofollow">（2）Spring MVC</a></p> 
+<p id="%EF%BC%883%EF%BC%89Spring%20Boot-toc" style="margin-left:80px;"><a href="#%EF%BC%883%EF%BC%89Spring%20Boot" rel="nofollow">（3）Spring Boot</a></p> 
+<p id="%EF%BC%884%EF%BC%89%E6%80%BB%E7%BB%93-toc" style="margin-left:80px;"><a href="#%EF%BC%884%EF%BC%89%E6%80%BB%E7%BB%93" rel="nofollow">（4）总结</a></p> 
+<p id="2%E3%80%81bean%E7%9A%84%E5%91%BD%E5%90%8D-toc" style="margin-left:40px;"><a href="#2%E3%80%81bean%E7%9A%84%E5%91%BD%E5%90%8D" rel="nofollow">2、bean的命名</a></p> 
+<p id="%EF%BC%881%EF%BC%89%E4%BA%94%E5%A4%A7%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean-toc" style="margin-left:80px;"><a href="#%EF%BC%881%EF%BC%89%E4%BA%94%E5%A4%A7%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean" rel="nofollow">（1）五大注解存储的bean</a></p> 
+<p id="%EF%BC%882%EF%BC%89%40Bean%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean-toc" style="margin-left:80px;"><a href="#%EF%BC%882%EF%BC%89%40Bean%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean" rel="nofollow">（2）@Bean注解存储的bean</a></p> 
+<p id="3%E3%80%81%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98" rel="nofollow">3、常见面试题</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p>        上篇博客学习了控制反转IoC的细节，接下来就开始学习依赖注入DI的细节。</p> 
+<p>        <strong>依赖注入是一个过程</strong>，<span style="background-color:#a2e043;">是指IoC容器在创建Bean时，去提供运行时所依赖的资源，而资源指的就是对象</span>。我们<strong>使用 @Autowired 注解</strong>，完成依赖注入的操作。</p> 
+<p>       <span style="background-color:#a2e043;"> 简单来说，就是把对象取出来，放到某个类的属性中</span>。在一些文章中，<strong>依赖注入也被称之为 “对象注入”、“属性装配”</strong>，具体含义需要结合文章的上下文来理解。</p> 
+<p>        关于依赖注入，Spring也给我们提供了三种方式：</p> 
+<blockquote> 
+ <p>1、属性注入（Field Injection）</p> 
+ <p>2、构造方法注入（Construct Injection）</p> 
+ <p>3、Setter 注入（Setter Injection）</p> 
+</blockquote> 
+<h2 id="%E4%B8%80%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5" style="background-color:transparent;">一、属性注入</h2> 
+<p>        属性注入是使用 @Autowired 实现的，将UserService 类注入到UserController类中，UserService 类代码如下：</p> 
+<pre><code class="language-java">@Service
+public class UserService {
+    public void doService() {
+        System.out.println("do Service...");
+    }
+}
+</code></pre> 
+<p>        UserController类的实现代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    //注入方法1：属性注入
+    @Autowired
+    private UserService userService;
+    public void sayHi() {
+        userService.doService();
+        System.out.println("hi, UserController");
+    }
+}</code></pre> 
+<p>        启动类获取到UserController的doService方法，代码如下：</p> 
+<pre><code class="language-java">@SpringBootApplication
+public class SpringIoC2Application {
+    public static void main(String[] args) {
+        //获取Spring上下文对象
+        ApplicationContext context = SpringApplication.run(SpringIoC2Application.class, args);
+        //从Spring上下文中获取对象
+        UserController userController = (UserController) context.getBean("userController");
+        //使用对象
+        userController.doService();
+    }
+}</code></pre> 
+<p>        执行结果：</p> 
+<p><img alt="" height="107" src="https://images2.imgbox.com/bb/60/Xmnl6cyM_o.png" width="490"></p> 
+<p>        如果去掉 注解@Autowired，再运行一下程序，结果如下：</p> 
+<p><img alt="" height="119" src="https://images2.imgbox.com/c7/b1/gVgQ1r6m_o.png" width="1200">        <span style="background-color:#ffd900;">报错了，提示空指针异常，没办法调用doService() 方法，因为userServer为空。原因就是没有加@Autowired注解，没有注入依赖，Spring拿不到这个属性，也自然不会给它初始化了，那么它肯定就是一个空指针了</span>。</p> 
+<h2 id="%E4%BA%8C%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5">二、构造方法注入</h2> 
+<p>        构造方法注入就是在类的构造方法中实现注入，代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    //注入方法2：构造方法注入
+    private UserService userService;
+    @Autowired
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+    public void doController() {
+        userService.doService();
+        System.out.println("do UserController");
+    }
+}</code></pre> 
+<p><strong>注意事项</strong>：<span style="background-color:#a2e043;">如果类只有一个构造方法，那么@Autowired注解可以省略；但如果类有多个构造方法，那么就需要添加上@Autowired来明确指定要使用哪个构造方法了</span>。下面的代码练习：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    //注入方法2：构造方法注入
+    private UserService userService;
+    public UserController(){
+        
+    }
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+    public void doController() {
+        userService.doService();
+        System.out.println("do UserController");
+    }
+}</code></pre> 
+<p>        加了个无参的构造函数，运行程序会报错，如图：</p> 
+<p><img alt="" height="111" src="https://images2.imgbox.com/04/06/gL1njZ3E_o.png" width="1200"></p> 
+<p>        <strong>报错解释</strong>：<span style="background-color:#ffd900;">空指针异常，虽然这个类交给Spring管理了，Spring内部也会给我们自动创建对象，但也是通过构造函数创建的，这里我们写了两个构造函数，如果不加@Autowired注解，Spring默认使用无参构造函数，自然也就没有成功创建对象了，那么这个userService也自然是空指针了</span>。</p> 
+<p>        现在代码改一下，把无参构造函数注释掉，再加一个构造函数，代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    //注入方法2：构造方法注入
+    private UserService userService;
+    private UserComponent userComponent;
+//    public UserController(){
+//
+//    }
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+    public UserController(UserService userService, UserComponent userComponent) {
+        this.userService = userService;
+        this.userComponent = userComponent;
+    }
+    public void doController() {
+        userComponent.doComponent();
+        userService.doService();
+        System.out.println("do UserController");
+    }
+}</code></pre> 
+<p>        运行代码报错了，报错信息如下：</p> 
+<p><img alt="" height="281" src="https://images2.imgbox.com/fd/98/Qk0jd4QJ_o.png" width="1200"></p> 
+<p><img alt="" height="300" src="https://images2.imgbox.com/96/0a/WajKHdVg_o.png" width="1200"></p> 
+<p>        <strong>报错解释</strong>：<span style="background-color:#a2e043;">没有找到默认的构造方法，因为这里出现了两个构造方法，Spring不知道该用哪个，现在给第二个构造方法加上@Autowired注解，表示让Spring使用被注解的构造方法</span>，代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    //注入方法2：构造方法注入
+    private UserService userService;
+    private UserComponent userComponent;
+//    public UserController(){
+//
+//    }
+    public UserController(UserService userService) {
+        this.userService = userService;
+    }
+    @Autowired
+    public UserController(UserService userService, UserComponent userComponent) {
+        this.userService = userService;
+        this.userComponent = userComponent;
+    }
+    public void doController() {
+        userComponent.doComponent();
+        userService.doService();
+        System.out.println("do UserController");
+    }
+}</code></pre> 
+<p>        运行结果：</p> 
+<p><img alt="" height="158" src="https://images2.imgbox.com/2b/41/mJgBiySX_o.png" width="465"></p> 
+<p>        程序跑起来了。</p> 
+<h3 id="%E5%B0%8F%E7%BB%93%EF%BC%9A%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0%E7%9A%84%E6%B3%A8%E5%85%A5">小结：构造函数的注入</h3> 
+<blockquote> 
+ <p><strong>1</strong>、<span style="background-color:#a2e043;">只有一个构造函数的情况，可以不加@Autowired</span></p> 
+ <p><strong>2</strong>、<span style="background-color:#a2e043;">如果有多个构造函数，需要指定默认的构造函数（通过@Autowired指定，如果未指定，默认使用无参的构造函数）</span>。</p> 
+ <p><strong>构造规范</strong>：<span style="background-color:#ffd900;">如果添加构造函数，把无参构造函数显示添加（也就是把构造函数写下来，再给注释掉）</span></p> 
+</blockquote> 
+<hr> 
+<h2 id="%E4%B8%89%E3%80%81Setter%E6%B3%A8%E5%85%A5">三、Setter注入</h2> 
+<p>        Setter注入和属性的Setter方法实现类似，只不过在set方法的时候需要加上@Autowired注解，代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    private UserService userService;
+    @Autowired
+    public void setUserService(UserService userService) {
+        this.userService = userService;
+    }
+    public void doController() {
+        userService.doService();
+        System.out.println("do UserController");
+    }
+}</code></pre> 
+<p>        启动类代码：</p> 
+<pre><code class="language-java">@SpringBootApplication
+public class SpringIoC3Application {
+    public static void main(String[] args) {
+        //拿到Spring上下文
+        ApplicationContext context = SpringApplication.run(SpringIoC3Application.class, args);
+        //拿到Spring上下文对象
+        UserController userController = context.getBean(UserController.class);
+        //使用对象
+        userController.doController();
+    }
+}</code></pre> 
+<p>        执行结果：</p> 
+<p><img alt="" height="116" src="https://images2.imgbox.com/35/76/FbK2x2zX_o.png" width="611"></p> 
+<p>        如果我们把@Autowired注解去掉呢？结果如下：<br><img alt="" height="117" src="https://images2.imgbox.com/5b/17/sOeuulgP_o.png" width="1200"></p> 
+<p>        又是空指针异常，原因和属性注入把@Autowired的情况一样。</p> 
+<hr> 
+<h2 id="%E5%9B%9B%E3%80%81%E4%B8%89%E7%A7%8D%E6%B3%A8%E5%85%A5%E7%9A%84%E4%BC%98%E7%BC%BA%E7%82%B9%E5%88%86%E6%9E%90%EF%BC%88%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89" style="background-color:transparent;">四、三种注入的优缺点分析（面试题）</h2> 
+<h3 id="1%E3%80%81%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5" style="background-color:transparent;">1、属性注入</h3> 
+<h4 id="%E4%BC%98%E7%82%B9%EF%BC%9A">优点：</h4> 
+<p>        <strong>1、</strong><span style="background-color:#ffd900;">简洁、使用方便</span>。</p> 
+<h4 id="%E7%BC%BA%E7%82%B9%EF%BC%9A" style="background-color:transparent;"><strong>缺点：</strong></h4> 
+<p>      <strong> </strong> 1、<span style="background-color:#a2e043;">只能用于IoC容器，如果非IoC容器则不可用，并且只有在使用的时候才会回出现NPE（空指针异常）</span>。</p> 
+<p>        <strong>2、</strong><span style="background-color:#a2e043;">不能注入一个final修饰的属性</span>。</p> 
+<blockquote> 
+ <p>1 的解释：</p> 
+ <p>        可以看到，它的来源是Spring的，那么就只能用于IoC容器了。</p> 
+ <p><img alt="" height="214" src="https://images2.imgbox.com/97/7e/FIy09p2i_o.png" width="1100"></p> 
+ <p>2 的解释：</p> 
+ <p>        final修饰的属性有个特点，必须初始化，如果我们给属性加上final，会有两种解决方案：1、提供构造函数，如图：<br><img alt="" height="355" src="https://images2.imgbox.com/fc/fe/msi7rAku_o.png" width="1131"></p> 
+ <p>        如果加上构造方法，那不就是构造方法注入了吗，也就不是属性注入了，违背了初心。</p> 
+ <p>        2、给它初始化，new 一个对象，如图：</p> 
+ <p><img alt="" height="249" src="https://images2.imgbox.com/32/9f/dmU3sPUt_o.png" width="780"></p> 
+ <p>        但是这样不就是我们自己管理我们的代码了吗，并不是Spring帮我们管理了，也违背了初心。</p> 
+</blockquote> 
+<h3 id="2%E3%80%81%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%88Spring4.X%E6%8E%A8%E8%8D%90%EF%BC%89">2、构造方法注入（Spring4.X推荐）</h3> 
+<p>SpringBoot和Spring的版本号对应：</p> 
+<blockquote> 
+ <p>Spring Boot3.X -&gt; Spring 6</p> 
+ <p>Spring Boot2.X -&gt; Spring 4</p> 
+</blockquote> 
+<h4>优点：</h4> 
+<p>      <strong>  1、</strong><span style="background-color:#ffd900;">可以注入final修饰的属性</span>。</p> 
+<p>      <strong>  2、</strong><span style="background-color:#ffd900;">注入的对象不会被修改</span>。</p> 
+<p>        <strong>3、</strong><span style="background-color:#ffd900;">依赖对象在使用前一定会被完全初始化，因为依赖是在类的构造方法中执行的，而构造方法是在类加载阶段就会执行的方法</span>。</p> 
+<p>        <strong>4、</strong><span style="background-color:#ffd900;">通用性好，构造方法是JDK支持的，所以更换任何框架，它都是适用的</span>。</p> 
+<blockquote> 
+ <p>1 的解释：final修饰的属性要初始化，构造方法会进行初始化，复合它的要求。</p> 
+ <p>2 的解释：因为构造方法在这个类创建的时候就会给它进行赋值了，不会再对它进行修改。</p> 
+ <p>3 的解释：在类加载的这个阶段，就会执行构造方法了，把依赖对象给初始化完成。</p> 
+ <p>4 的解释：因构造方法是JDK支持的，不再Spring框架也能正常的使用。</p> 
+</blockquote> 
+<h4>缺点：</h4> 
+<p>        <strong>1、</strong><span style="background-color:#a2e043;">注入多个对象时，代码会比较繁琐</span>。</p> 
+<h3 id="3%E3%80%81Setter%E6%B3%A8%E5%85%A5%EF%BC%88Spring3.X%E6%8E%A8%E8%8D%90%EF%BC%89" style="background-color:transparent;">3、Setter注入（Spring3.X推荐）</h3> 
+<h4>优点：</h4> 
+<p>        <strong>1、</strong><span style="background-color:#ffd900;">方便在类实例之后，重新对该对象进行配置或注入</span>。</p> 
+<blockquote> 
+ <p>1 的解释：因为Setter方法是可以被其他地方调用的，所以即使类已经被实例化了，也可以重新对该对象进行配置或注入。</p> 
+</blockquote> 
+<h4>缺点：</h4> 
+<p>        <strong>1、</strong><span style="background-color:#a2e043;">不能注入一个final修饰的属性</span>。</p> 
+<p>       <strong> 2、</strong><span style="background-color:#a2e043;">注入对象可能会被改变，因为Setter方法可能会被多次调用，就有被修改的风险</span>。</p> 
+<blockquote> 
+ <p>1 的解释：因为可能会被多次修改，所以不能使用final修饰。</p> 
+ <p>2 的解释：Setter方法当然能被修改了，这即使它的优点，也是它的缺点。</p> 
+</blockquote> 
+<h3 id="2%E3%80%81Autowired%E6%9F%A5%E6%89%BE%E4%BE%9D%E8%B5%96%E9%A1%BA%E5%BA%8F%EF%BC%9A">4、Autowired查找依赖顺序：</h3> 
+<blockquote> 
+ <p><span style="color:#956fe7;"><strong>1、根据名称和类型去查</strong></span>。</p> 
+ <p><span style="color:#956fe7;"><strong>2、如果根据名称查不到，就会根据类型去查</strong></span>。</p> 
+ <p>        <span style="background-color:#a2e043;">根据名称查不到了，去查找类型，这时如果类型匹配多个，就会报错</span>。</p> 
+</blockquote> 
+<hr> 
+<h2 id="%E4%BA%94%E3%80%81%40Autowired%E5%AD%98%E5%9C%A8%E9%97%AE%E9%A2%98" style="background-color:#e7f1f9;">五、@Autowired存在问题</h2> 
+<p>        <span style="color:#956fe7;"><strong>当同一类型存在多个bean时</strong></span>，使用@Autowired会存在问题。代码如下：</p> 
+<pre><code class="language-java">@Component
+public class BeanConfig {
+    @Bean
+    public UserInfo userInfo1() {
+        UserInfo user = new UserInfo();
+        user.setId(6);
+        user.setName("zhangsan");
+        user.setAge(18);
+        return user;
+    }
+
+    @Bean
+    public UserInfo userInfo2() {
+        UserInfo user = new UserInfo();
+        user.setId(7);
+        user.setName("lisi");
+        user.setAge(19);
+        return user;
+    }
+}</code></pre> 
+<p>        此时我们在UserController类里面注入UserInfo类，代码如下：（下面这几个的注入方式都是错误的）</p> 
+<h3 id="1%E3%80%81%E5%BC%95%E5%85%A5Autowired%E7%9A%84%E9%94%99%E8%AF%AF%E4%BB%A3%E7%A0%81%EF%BC%9A" style="background-color:transparent;">1、引入Autowired的错误代码：</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E5%B1%9E%E6%80%A7%E6%B3%A8%E5%85%A5%EF%BC%9A" style="background-color:transparent;">（1）属性注入：</h4> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    @Autowired
+    private UserInfo userInfo;
+
+    public void sayHi() {
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p>        可以看到，还没运行代码，就报红线了，如图：</p> 
+<p><img alt="" height="132" src="https://images2.imgbox.com/e1/8c/bBA2YTFF_o.png" width="491"></p> 
+<h4 id="%EF%BC%882%EF%BC%89%E6%9E%84%E9%80%A0%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A" style="background-color:transparent;">（2）构造方法注入：</h4> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    private UserInfo userInfo;
+    @Autowired
+    public UserController(UserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+}</code></pre> 
+<p>        这个也是，还没运行代码，就报红线了，如图：</p> 
+<p><img alt="" height="178" src="https://images2.imgbox.com/fe/c6/ls5dzvaZ_o.png" width="466"></p> 
+<h4 id="%EF%BC%883%EF%BC%89Setter%E6%96%B9%E6%B3%95%E6%B3%A8%E5%85%A5%EF%BC%9A" style="background-color:transparent;">（3）Setter方法注入：</h4> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    private UserInfo userInfo;
+    @Autowired
+    public void setUserInfo(UserInfo userInfo) {
+        this.userInfo = userInfo;
+    }
+
+    public void sayHi() {
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p>        可以看到，这个也报红线了，如图：</p> 
+<p><img alt="" height="139" src="https://images2.imgbox.com/0e/41/sSAX8FqA_o.png" width="526"></p> 
+<h4 id="%EF%BC%884%EF%BC%89%E5%90%AF%E5%8A%A8%E7%B1%BB%E4%BB%A3%E7%A0%81%EF%BC%9A" style="background-color:transparent;"><strong>（4）启动类代码：</strong></h4> 
+<pre><code class="language-java">@SpringBootApplication
+public class SpringIoC3Application
+{
+    public static void main(String[] args) {
+        //拿到Spring上下文
+        ApplicationContext context = SpringApplication.run(SpringIoC3Application.class, args);
+        //拿到Spring上下文对象
+        UserController bean = context.getBean(UserController.class);
+        //使用对象
+        bean.sayHi();
+    }
+}</code></pre> 
+<p>上面这三种方式注入都会出问题，启动程序后，而报错信息也都是一样的（有两个细微的差别，Field和Parameter，下面会介绍），如下图：<br><img alt="" height="527" src="https://images2.imgbox.com/f6/ff/HUWO2E6i_o.png" width="1200"></p> 
+<p>        可以看到，程序还没启动就失败了，可以看出来，Spring的依赖注入是在项目启动前就开始注入的了。</p> 
+<p>        <strong>上面报错提示</strong>：<span style="background-color:#a2e043;">UserController类需要一个bean，但是有两个，下面也打印出是哪两个bean了，Action介绍的就是解决方案。报错日志非常详细</span>。</p> 
+<p>        <span style="background-color:#ffd900;">报错信息说UserController类找不到依赖注入的是哪一个，因为有多个方法被@bean注释，而依赖注入时，三个方法的属性名都是userInfo，先根据userInfo名称查找，但BeanConfig类没有这个方法名，那就只能去根据类名找了，但有2个bean，Spring就不知道要找那个了，并不是@bean注释下的方法名（userInfo1 / userInfo2），Spring并不知道该注入哪个依赖，所以报错了</span>。</p> 
+<p>        在项目启动失败，可以把Filed看都属性，如图：这个是使用属性注入的，会有Field<img alt="" height="93" src="https://images2.imgbox.com/e6/bb/dzpVUijG_o.png" width="747"></p> 
+<p>        构造方法和Setter注入都是第一张报错图，但就不是Field了，而是Parameter，但其实三种注入的报错原因都是一样的。</p> 
+<p>        <strong>解决方案</strong>：<span style="background-color:#a2e043;">使用属性注入时，就把属性名改成bean修饰的其中之一的方法名就好了；使用@Parimary注解；使用@Qualifier注解；使用@Resource注解</span>。</p> 
+<h3 id="3%E3%80%81%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" style="background-color:transparent;">3、解决方案</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%80%EF%BC%9A%E6%A0%B9%E6%8D%AE%E5%90%8D%E7%A7%B0%E5%8E%BB%E6%9F%A5" style="background-color:transparent;">（1）解决方案一：根据名称去查</h4> 
+<p>属性名改成bean修饰的其中之一的方法名</p> 
+<p><strong>属性注入：</strong></p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    @Autowired
+    private UserInfo userInfo2;
+
+    public void sayHi() {
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p><strong>构造方法注入：</strong></p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    private UserInfo userInfo;
+    @Autowired
+    public UserController(UserInfo userInfo2) {
+        this.userInfo = userInfo2;
+    }
+}</code></pre> 
+<p><strong>Setter方法注入：</strong></p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    private UserInfo userInfo;
+    @Autowired
+    public void setUserInfo(UserInfo userInfo2) {
+        this.userInfo = userInfo2;
+    }
+
+    public void sayHi() {
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p>        执行结果都一样，这里虽然注入了依赖，但没有用这些依赖，所以打印的都是：hello controller，如图：</p> 
+<p><img alt="" height="86" src="https://images2.imgbox.com/d8/46/HXx8W1Jd_o.png" width="619"></p> 
+<h4 id="%EF%BC%882%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%BA%8C%EF%BC%9A%E7%BB%99%E6%83%B3%E8%A6%81%E6%8B%BF%E5%88%B0%E7%9A%84%E5%AF%B9%E8%B1%A1%E5%8A%A0%E4%B8%8A%40Primary%E6%B3%A8%E8%A7%A3">（2）解决方案二：给想要拿到的对象加上@Primary注解</h4> 
+<p>这个可以理解为依赖注入后，有多个依赖的方法，但默认使用加了@Primary的方法，代码如下：</p> 
+<p><strong>UserController类：</strong></p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    @Autowired
+    private UserInfo userInfo;
+
+    public void sayHi() {
+        System.out.println(userInfo.toString());
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p><strong>BeanConfig类：</strong></p> 
+<pre><code class="language-java">@Component
+public class BeanConfig {
+    @Primary
+    @Bean
+    public UserInfo userInfo1() {
+        UserInfo user = new UserInfo();
+        user.setId(6);
+        user.setName("zhangsan");
+        user.setAge(18);
+        return user;
+    }
+
+    @Bean
+    public UserInfo userInfo2() {
+        UserInfo user = new UserInfo();
+        user.setId(7);
+        user.setName("lisi");
+        user.setAge(19);
+        return user;
+    }
+}</code></pre> 
+<p><strong>启动类：</strong></p> 
+<pre><code class="language-java">@SpringBootApplication
+public class SpringIoC3Application
+{
+    public static void main(String[] args) {
+        //拿到Spring上下文
+        ApplicationContext context = SpringApplication.run(SpringIoC3Application.class, args);
+        //拿到Spring上下文对象
+        UserController bean = context.getBean(UserController.class);
+        //使用对象
+        bean.sayHi();
+    }
+}</code></pre> 
+<p>        代码运行结果：</p> 
+<p><img alt="" height="113" src="https://images2.imgbox.com/2b/a0/z4jDsmXP_o.png" width="623"></p> 
+<p>        其他注入的方式，使用@Primary注解用法也一样，把想要拿到的对象加上@Primary注解就好了。</p> 
+<h4 id="%EF%BC%883%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E4%B8%89%EF%BC%9A%E5%8A%A0%40Qualifier%E6%B3%A8%E8%A7%A3%EF%BC%8C%E6%8C%87%E5%AE%9A%E5%BC%95%E5%85%A5%E7%9A%84%E4%BE%9D%E8%B5%96%E5%AF%B9%E8%B1%A1" style="background-color:transparent;">（3）解决方案三：加@Qualifier注解，指定引入的依赖对象</h4> 
+<p><strong>UserController类：</strong></p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    @Qualifier("userInfo2")
+    @Autowired
+    private UserInfo userInfo;
+        
+    public void sayHi() {
+        System.out.println(userInfo.toString());
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p><strong>BeanConfig类：</strong></p> 
+<pre><code class="language-java">@Component
+public class BeanConfig {
+    @Bean
+    public UserInfo userInfo1() {
+        UserInfo user = new UserInfo();
+        user.setId(6);
+        user.setName("zhangsan");
+        user.setAge(18);
+        return user;
+    }
+
+    @Bean
+    public UserInfo userInfo2() {
+        UserInfo user = new UserInfo();
+        user.setId(7);
+        user.setName("lisi");
+        user.setAge(19);
+        return user;
+    }
+}</code></pre> 
+<p><strong>启动类：</strong></p> 
+<pre><code class="language-java">@SpringBootApplication
+public class SpringIoC3Application
+{
+    public static void main(String[] args) {
+        //拿到Spring上下文
+        ApplicationContext context = SpringApplication.run(SpringIoC3Application.class, args);
+        //拿到Spring上下文对象
+        UserController bean = context.getBean(UserController.class);
+        //使用对象
+        bean.sayHi();
+    }
+}</code></pre> 
+<p>        执行结果：</p> 
+<p><img alt="" height="130" src="https://images2.imgbox.com/57/08/Z7QofXw8_o.png" width="612"></p> 
+<h4 id="%EF%BC%884%EF%BC%89%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%E5%9B%9B%EF%BC%9A%E5%8A%A0%40Resource%E6%B3%A8%E8%A7%A3" style="background-color:transparent;">（4）解决方案四：加@Resource注解</h4> 
+<p>这里和上面的三方案代码改变的只有UserController类，其他都不变，<strong>UserController类</strong>的代码如下：</p> 
+<pre><code class="language-java">@Controller
+public class UserController {
+    @Resource(name = "userInfo2")
+    @Autowired
+    private UserInfo userInfo;
+        
+    public void sayHi() {
+        System.out.println(userInfo.toString());
+        System.out.println("hello, controller");
+    }
+}</code></pre> 
+<p>        运行结果如下：</p> 
+<p><img alt="" height="116" src="https://images2.imgbox.com/6e/06/0Gsu0zR8_o.png" width="634"></p> 
+<p>        但是<span style="color:#fe2c24;"><strong>这个注解不是Spring的</strong></span>，<span style="background-color:#a2e043;">而是JDK本身自带的，JDK早期也有这样的注解</span>，<span style="background-color:#ffd900;">所以Spring不推荐使用这个注解，因为不是自己开发的，如果出现啥问题，不好处理，是有着不可控因素的原因；还有使用自家的东西也肯定会更放心一些</span>。</p> 
+<h4 id="4%E3%80%81%40Autowired%20%E4%B8%8E%20%40Resource%20%E7%9A%84%E5%8C%BA%E5%88%AB%EF%BC%88%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98%EF%BC%89">4、@Autowired 与 @Resource 的区别（常见面试题）</h4> 
+<blockquote> 
+ <p><strong>1、</strong><span style="background-color:#38d8f0;">@Autowired 是 Spring框架提供的注解，而@Resource是JDK提供的注解</span>。</p> 
+ <p><strong>2、</strong><span style="background-color:#38d8f0;"><span style="color:#fe2c24;"><strong>@Autowired默认是按照类型注入，而@Resource是按照名称注入</strong></span></span>。<span style="background-color:#ffd900;">相比于 @Autowired 来说，@Resource 支持更多的参数设置；例如 name 设置，根据名称获取 Bean</span>。</p> 
+</blockquote> 
+<hr> 
+<h2 id="%E5%85%AD%E3%80%81Spring%20IoC%26DI%20%E7%9A%84%E6%80%BB%E7%BB%93" style="background-color:transparent;">六、Spring IoC&amp;DI 的总结</h2> 
+<h3 id="1%E3%80%81Spring%EF%BC%8CSpring%20Boot%20%E5%92%8C%20Spring%20MVC%E7%9A%84%E5%85%B3%E7%B3%BB%E4%BB%A5%E5%8F%8A%E5%8C%BA%E5%88%AB">1、Spring，Spring Boot 和 Spring MVC的关系以及区别</h3> 
+<h4 id="%EF%BC%881%EF%BC%89Spring">（1）Spring</h4> 
+<p>       <span style="color:#fe2c24;"><strong> 简单来说，Spring是一个开发应用框架</strong></span>；<span style="background-color:#a2e043;">那是什么样的框架呢？有这么几个标签：轻量级、一站式、模块化，其目的是用于简化企业级应用程序开发</span>。</p> 
+<blockquote> 
+ <p><strong>Spring的主要功能</strong>：<span style="background-color:#ffd900;">管理对象，以及对象之间的依赖关系，面向切面编程、数据库事务管理、数据访问、web框架支撑等等</span>。</p> 
+ <p><span style="background-color:#38d8f0;">但是Spring具备高度可开发性，并不强制依赖Spring，开发者可以自由选择Spring的部分或者全部，Spring可以无缝继承第三方框架，比如数据访问框架（Hibernate、JPA等等），web框架（如：Struts、JSF等等）</span>。</p> 
+</blockquote> 
+<h4 id="%EF%BC%882%EF%BC%89Spring%20MVC">（2）Spring MVC</h4> 
+<p>        <span style="color:#fe2c24;"><strong>Spring MVC是Spring的一个子框架</strong></span>，Spring诞生之后，大家觉得很好用，于是<span style="color:#fe2c24;"><strong>按照MVC模式设计了一个MVC框架（一些用Spring解耦的组件），主要用于开发WEB应用和网络接口</strong></span>，所以<strong>Spring MVC是一个Web框架</strong>。</p> 
+<blockquote> 
+ <p>Spring MVC基于Spring进行开发的，天生的与Spring框架集成。可以让我们更简洁的进行Web层开发，支持灵活的URL到页面控制器的映射，提供了强大的约定大于配置的契约式编程支持，非常容易与其他视图框架集成，如 Velocity、FreeMarker等等。</p> 
+</blockquote> 
+<h4 id="%EF%BC%883%EF%BC%89Spring%20Boot">（3）Spring Boot</h4> 
+<p>        <span style="color:#fe2c24;"><strong>Spring Boot 是对Spring的一个封装，为了简化Spring一样的开发而出现的</strong></span>，中小型企业，没有成本研究自己的框架，<span style="background-color:#a2e043;">使用Spring Boot 可以更加快速的搭建框架，降低开发成本，让开发人员更加专注于Spring应用的开发，而无需过多关注XML的配置和一些底层的实现</span>。</p> 
+<blockquote> 
+ <p><span style="color:#fe2c24;"><strong>Spring Boot是脚手架</strong></span>，插拔式搭建项目，<strong>可以快速的集成其他框架进来</strong>。</p> 
+ <p><span style="background-color:#ffd900;">比如想使用Spring Boot开发Web项目，只需要引入Spring MVC框架即可，Web开发的工作是Spring MVC完成的，而不是Spring Boot，想完成数据访问，只需要引入Mybatis框架即可</span>。</p> 
+ <p><span style="color:#956fe7;"><strong>Spring Boot只是辅助简化项目开发的，让开发变得更加简单</strong></span>，甚至不需要额外的web服务器，直接生成jar包执行即可。</p> 
+</blockquote> 
+<h4 id="%EF%BC%884%EF%BC%89%E6%80%BB%E7%BB%93">（4）总结</h4> 
+<p>        <span style="background-color:#a2e043;">Spring MVC和Spring Boot都属于Spring</span>，<span style="color:#956fe7;"><strong>Spring MVC是基于Spring的一个MVC框架</strong></span>，而<span style="color:#956fe7;"><strong>Spring Boot是基于Spring的一套快速开发整合包</strong></span>。</p> 
+<blockquote> 
+ <p>例如之前写的图书管理系统代码中，整体框架是通过SpringBoot搭建的IoC，DI功能是Spring提供的，而Web相关功能是Spring MVC提供的。</p> 
+</blockquote> 
+<p>        因为<strong>这三个专注的领域不同，所以解决的问题也不一样</strong>，总的来说，<span style="color:#ff9900;"><strong>Spring就像一个大家族，有众多衍生产品，但它们的基础都是Spring</strong></span>，上面三者的关系如下图：</p> 
+<p><img alt="" height="378" src="https://images2.imgbox.com/7f/d3/kXMAJLlX_o.png" width="813"></p> 
+<h3 id="2%E3%80%81bean%E7%9A%84%E5%91%BD%E5%90%8D">2、bean的命名</h3> 
+<h4 id="%EF%BC%881%EF%BC%89%E4%BA%94%E5%A4%A7%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean">（1）五大注解存储的bean</h4> 
+<blockquote> 
+ <p><strong>1、</strong><span style="background-color:#38d8f0;">类名前面两位字母均为大写，则bean名称为该类名本身（特殊情况）</span>。</p> 
+ <p><strong>2、</strong><span style="background-color:#38d8f0;">不是上面的特殊情况，其他的类名，首字母小写，驼峰形式命名</span>。</p> 
+ <p><strong>3、</strong><span style="background-color:#38d8f0;">通过 value 属性设置bean名 ，例如：@Controller (value = "user")</span>。</p> 
+</blockquote> 
+<h4 id="%EF%BC%882%EF%BC%89%40Bean%E6%B3%A8%E8%A7%A3%E5%AD%98%E5%82%A8%E7%9A%84bean">（2）@Bean注解存储的bean</h4> 
+<blockquote> 
+ <p><strong>1、</strong><span style="background-color:#a2e043;">bean名称为方法名</span>。</p> 
+ <p><strong>2、</strong><span style="background-color:#a2e043;">通过name属性设置bean名，例如：@Bean (name = {"u1", "user1"})</span>。</p> 
+</blockquote> 
+<h3 id="3%E3%80%81%E5%B8%B8%E8%A7%81%E9%9D%A2%E8%AF%95%E9%A2%98" style="background-color:transparent;">3、常见面试题</h3> 
+<p>（1）三种注入方式的优缺点（参考上面）</p> 
+<p>（2）常见注解有哪些，分别是什么作用？</p> 
+<blockquote> 
+ <p><strong>web url映射</strong>：<span style="background-color:#38d8f0;">@RequestMapping</span></p> 
+ <p><strong>参数接收和接口响应</strong>：<span style="background-color:#38d8f0;">@RequestParam、@RequestBody、@ResponseBody</span></p> 
+ <p><span style="background-color:#38d8f0;">bean的存储：@Controller、@Service、@Repository、@Component、@Configuration、@Bean</span></p> 
+ <p><strong>bean的获取</strong>：<span style="background-color:#38d8f0;">@Autowired、@Qualifier、@Resource</span></p> 
+</blockquote> 
+<p>（3）@Autowired 和 @Resource 的区别（参考上面）</p> 
+<p>（4）说下你对Spring、Spring MVC、Spring Boot的理解（参考上面）</p> 
+<hr> 
+<h2>都看到这了，点个赞再走吧，谢谢谢谢谢</h2>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/24aa7c0470c85df4f73774ef8ea96691/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">C# Web控件与数据感应之 BaseDataList 类</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/95d486e80411e468dfe6795397a25bdb/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【大模型】LLaMA-1 模型介绍</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,752 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【MySQL】MySQL复合查询--多表查询/自连接/子查询 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/18cc2a477ed7262baa364ab49e13a2c5/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【MySQL】MySQL复合查询--多表查询/自连接/子查询">
+  <meta property="og:description" content="文章目录 1.基本查询回顾2.多表查询3.自连接4.子查询4.1单行子查询4.2多行子查询4.3多列子查询4.4在from子句中使用子查询4.5合并查询4.5.1 union4.5.2 union all 1.基本查询回顾 表的内容如下：
+mysql&gt; select * from emp; &#43;--------&#43;--------&#43;-----------&#43;------&#43;---------------------&#43;---------&#43;---------&#43;--------&#43; | empno | ename | job | mgr | hiredate | sal | comm | deptno | &#43;--------&#43;--------&#43;-----------&#43;------&#43;---------------------&#43;---------&#43;---------&#43;--------&#43; | 007369 | SMITH | CLERK | 7902 | 1980-12-17 00:00:00 | 800.00 | NULL | 20 | | 007499 | ALLEN | SALESMAN | 7698 | 1981-02-20 00:00:00 | 1600.00 | 300.00 | 30 | | 007521 | WARD | SALESMAN | 7698 | 1981-02-22 00:00:00 | 1250.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-07T21:21:30+08:00">
+    <meta property="article:modified_time" content="2024-02-07T21:21:30+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【MySQL】MySQL复合查询--多表查询/自连接/子查询</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#1_1" rel="nofollow">1.基本查询回顾</a></li><li><a href="#2_245" rel="nofollow">2.多表查询</a></li><li><a href="#3_333" rel="nofollow">3.自连接</a></li><li><a href="#4_364" rel="nofollow">4.子查询</a></li><li><ul><li><a href="#41_368" rel="nofollow">4.1单行子查询</a></li><li><a href="#42_393" rel="nofollow">4.2多行子查询</a></li><li><a href="#43_477" rel="nofollow">4.3多列子查询</a></li><li><a href="#44from_497" rel="nofollow">4.4在from子句中使用子查询</a></li><li><a href="#45_697" rel="nofollow">4.5合并查询</a></li><li><ul><li><a href="#451_union_701" rel="nofollow">4.5.1 union</a></li><li><a href="#452_union_all_747" rel="nofollow">4.5.2 union all</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="1_1"></a>1.基本查询回顾</h2> 
+<p>表的内容如下：</p> 
+<pre><code class="prism language-mysql">mysql&gt; select * from emp;
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+| empno  | ename  | job       | mgr  | hiredate            | sal     | comm    | deptno |
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+| 007369 | SMITH  | CLERK     | 7902 | 1980-12-17 00:00:00 |  800.00 |    NULL |     20 |
+| 007499 | ALLEN  | SALESMAN  | 7698 | 1981-02-20 00:00:00 | 1600.00 |  300.00 |     30 |
+| 007521 | WARD   | SALESMAN  | 7698 | 1981-02-22 00:00:00 | 1250.00 |  500.00 |     30 |
+| 007566 | JONES  | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 |    NULL |     20 |
+| 007654 | MARTIN | SALESMAN  | 7698 | 1981-09-28 00:00:00 | 1250.00 | 1400.00 |     30 |
+| 007698 | BLAKE  | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 |    NULL |     30 |
+| 007782 | CLARK  | MANAGER   | 7839 | 1981-06-09 00:00:00 | 2450.00 |    NULL |     10 |
+| 007788 | SCOTT  | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 |    NULL |     20 |
+| 007839 | KING   | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 |    NULL |     10 |
+| 007844 | TURNER | SALESMAN  | 7698 | 1981-09-08 00:00:00 | 1500.00 |    0.00 |     30 |
+| 007876 | ADAMS  | CLERK     | 7788 | 1987-05-23 00:00:00 | 1100.00 |    NULL |     20 |
+| 007900 | JAMES  | CLERK     | 7698 | 1981-12-03 00:00:00 |  950.00 |    NULL |     30 |
+| 007902 | FORD   | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 |    NULL |     20 |
+| 007934 | MILLER | CLERK     | 7782 | 1982-01-23 00:00:00 | 1300.00 |    NULL |     10 |
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+14 rows in set (0.00 sec)
+
+mysql&gt; select * from dept;
++--------+------------+----------+
+| deptno | dname      | loc      |
++--------+------------+----------+
+|     10 | ACCOUNTING | NEW YORK |
+|     20 | RESEARCH   | DALLAS   |
+|     30 | SALES      | CHICAGO  |
+|     40 | OPERATIONS | BOSTON   |
++--------+------------+----------+
+4 rows in set (0.00 sec)
+
+mysql&gt; select * from salgrade;
++-------+-------+-------+
+| grade | losal | hisal |
++-------+-------+-------+
+|     1 |   700 |  1200 |
+|     2 |  1201 |  1400 |
+|     3 |  1401 |  2000 |
+|     4 |  2001 |  3000 |
+|     5 |  3001 |  9999 |
++-------+-------+-------+
+5 rows in set (0.00 sec)
+</code></pre> 
+<ul><li>查询工资高于500或岗位为MANAGER的雇员，同时还要满足他们的姓名首字母为大写的J</li></ul> 
+<pre><code class="prism language-mysql">// 使用模糊查询
+select * from emp where (sal&gt;500 or job='MANAGER') and ename like 'J%';
+// 使用函数
+select * from emp where (sal&gt;500 or job='MANAGER') and substring(ename,1,1)='J';
+mysql&gt; select * from emp where (sal&gt;500 or job='MANAGER') and ename like 'J%';
++--------+-------+---------+------+---------------------+---------+------+--------+
+| empno  | ename | job     | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+---------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007900 | JAMES | CLERK   | 7698 | 1981-12-03 00:00:00 |  950.00 | NULL |     30 |
++--------+-------+---------+------+---------------------+---------+------+--------+
+2 rows in set (0.00 sec)
+
+mysql&gt; select * from emp where (sal&gt;500 or job='MANAGER') and substring(ename,1,1)='J';
++--------+-------+---------+------+---------------------+---------+------+--------+
+| empno  | ename | job     | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+---------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007900 | JAMES | CLERK   | 7698 | 1981-12-03 00:00:00 |  950.00 | NULL |     30 |
++--------+-------+---------+------+---------------------+---------+------+--------+
+2 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e6/82/9RqEUsUJ_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>按照部门号升序而雇员的工资降序排序</li></ul> 
+<pre><code class="prism language-mysql">select * from emp order by deptno asc, sal desc;
+mysql&gt; select * from emp order by deptno asc,sal desc;
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+| empno  | ename  | job       | mgr  | hiredate            | sal     | comm    | deptno |
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+| 007839 | KING   | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 |    NULL |     10 |
+| 007782 | CLACK  | MANAGER   | 7839 | 1981-06-09 00:00:00 | 2450.00 |    NULL |     10 |
+| 007934 | MILLER | CLERK     | 7782 | 1982-01-23 00:00:00 | 1300.00 |    NULL |     10 |
+| 007788 | SCOTT  | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 |    NULL |     20 |
+| 007902 | FORD   | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 |    NULL |     20 |
+| 007566 | JONES  | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 |    NULL |     20 |
+| 007876 | ADAMS  | CLERK     | 7788 | 1987-05-23 00:00:00 | 1100.00 |    NULL |     20 |
+| 007369 | SMITH  | CLERK     | 7902 | 1980-12-17 00:00:00 |  800.00 |    NULL |     20 |
+| 007698 | BLAKE  | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 |    NULL |     30 |
+| 007499 | ALLEN  | SALESMAN  | 7698 | 1981-02-20 00:00:00 | 1600.00 |  300.00 |     30 |
+| 007844 | TURNER | SALESMAN  | 7698 | 1981-09-08 00:00:00 | 1500.00 |    0.00 |     30 |
+| 007521 | WARD   | SALESMAN  | 7698 | 1981-02-22 00:00:00 | 1250.00 |  500.00 |     30 |
+| 007654 | MARTIN | SALESMAN  | 7698 | 1981-09-28 00:00:00 | 1250.00 | 1400.00 |     30 |
+| 007900 | JAMES  | CLERK     | 7698 | 1981-12-03 00:00:00 |  950.00 |    NULL |     30 |
++--------+--------+-----------+------+---------------------+---------+---------+--------+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/60/27/p4fgMcx2_o.png" alt="在这里插入图片描述"></p> 
+<ul><li> <p>使用年薪进行降序排序</p> <p>年薪等于工资*12+奖金</p> <p>需要对奖金进行判断，如果奖金为null，则奖金为0</p> </li></ul> 
+<pre><code class="prism language-mysql">select ename, sal*12+ifnull(comm,0) as '年薪' from emp order by 年薪 desc;
+
+mysql&gt; select ename,sal*12+ifnull(comm,0) as '年薪' from emp  order by 年薪 desc;
++--------+----------+
+| ename  | 年薪     |
++--------+----------+
+| SMITH  |  9600.00 |
+| ALLEN  | 19500.00 |
+| WARD   | 15500.00 |
+| JONES  | 35700.00 |
+| MARTIN | 16400.00 |
+| BLAKE  | 34200.00 |
+| TEST   | 29400.00 |
+| SCOTT  | 36000.00 |
+| KING   | 60000.00 |
+| TURNER | 18000.00 |
+| ADAMS  | 13200.00 |
+| JAMES  | 11400.00 |
+| FORD   | 36000.00 |
+| MILLER | 15600.00 |
++--------+----------+
+14 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e9/4a/5kIrlQGl_o.png" alt="在这里插入图片描述"></p> 
+<ul><li> <p>显示工资最高的员工的名字和工作岗位</p> <p>这里使用分组查询即可，先查出最高的工资，然后查询工资等于最高工资的员工的姓名和工作岗位</p> </li></ul> 
+<pre><code class="prism language-mysql">select ename,job from emp where sal = (select max(sal) from emp);
+
+mysql&gt; select ename,job from emp where sal = (select max(sal) from emp);
++-------+-----------+
+| ename | job       |
++-------+-----------+
+| KING  | PRESIDENT |
++-------+-----------+
+1 row in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d6/e7/hqgzRuJE_o.png" alt="在这里插入图片描述"></p> 
+<ul><li> <p>显示工资高于平均工资的员工信息</p> <p>这里使用分组查询即可</p> </li></ul> 
+<pre><code class="prism language-mysql">select ename,sal from emp where sal &gt; (select avg(sal) from emp);
+
+mysql&gt; select ename,sal from emp where sal &gt; (select avg(sal) from emp);
++-------+---------+
+| ename | sal     |
++-------+---------+
+| JONES | 2975.00 |
+| BLAKE | 2850.00 |
+| TEST  | 2450.00 |
+| SCOTT | 3000.00 |
+| KING  | 5000.00 |
+| FORD  | 3000.00 |
++-------+---------+
+6 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/2c/5f/RCLFj9PH_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>显示每个部门的平均工资和最高工资</li></ul> 
+<pre><code class="prism language-mysql">select deptno,avg(sal),max(sal) from emp group by deptno;
+
+mysql&gt; select deptno,avg(sal),max(sal) from emp group by deptno;
++--------+-------------+----------+
+| deptno | avg(sal)    | max(sal) |
++--------+-------------+----------+
+|     10 | 2425.000000 |  5000.00 |
+|     20 | 2175.000000 |  3000.00 |
+|     30 | 1690.000000 |  2850.00 |
++--------+-------------+----------+
+3 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/0a/78/avP3yWqm_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>显示平均工资低于2000的部门号和它的平均工资</li></ul> 
+<pre><code class="prism language-mysql">select deptno,avg(sal) as avg_sal from emp group by deptno having avg_sal &lt; 2000;
+
+mysql&gt; select deptno,avg(sal) as avg_sal from emp group by deptno having avg_sal &lt; 2000;
++--------+-------------+
+| deptno | avg_sal     |
++--------+-------------+
+|     30 | 1690.000000 |
++--------+-------------+
+1 row in set (0.00 sec)
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/73/47/mx02l3g2_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>显示每种岗位的雇员总数，平均工资</li></ul> 
+<pre><code class="prism language-mysql">select job,count(*), avg(sal) from emp group by job;
+
+mysql&gt; select job,count(*), avg(sal) from emp group by job;
++-----------+----------+-------------+
+| job       | count(*) | avg(sal)    |
++-----------+----------+-------------+
+| ANALYST   |        2 | 3000.000000 |
+| CLERK     |        4 | 1037.500000 |
+| MANAGER   |        3 | 2758.333333 |
+| PRESIDENT |        1 | 5000.000000 |
+| SALESMAN  |        4 | 1400.000000 |
++-----------+----------+-------------+
+5 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/2a/4b/wIMdt6Ni_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="2_245"></a>2.多表查询</h2> 
+<p>实际开发中往往数据来自不同的表，所以需要多表查询。本节我们用一个简单的公司管理系统，有三张</p> 
+<p>表emp,dept,salgrade来演示如何进行多表查询。</p> 
+<p>案例：</p> 
+<p>显示雇员名、雇员工资以及所在部门的名字因为上面的数据来自emp和dept表，因此要联合查询</p> 
+<p><img src="https://images2.imgbox.com/f1/70/qVPM09OE_o.png" alt="在这里插入图片描述"></p> 
+<p>其实我们只要emp表中的deptno = dept表中的deptno字段的记录</p> 
+<pre><code class="prism language-mysql">select ename,sal,dname from emp,dept where emp.deptno=dept.deptno;
+mysql&gt; select ename,sal,dname from emp,dept where emp.deptno=dept.deptno;
++--------+---------+------------+
+| ename  | sal     | dname      |
++--------+---------+------------+
+| SMITH  |  800.00 | RESEARCH   |
+| ALLEN  | 1600.00 | SALES      |
+| WARD   | 1250.00 | SALES      |
+| JONES  | 2975.00 | RESEARCH   |
+| MARTIN | 1250.00 | SALES      |
+| BLAKE  | 2850.00 | SALES      |
+| CLACK  | 2450.00 | ACCOUNTING |
+| SCOTT  | 3000.00 | RESEARCH   |
+| KING   | 5000.00 | ACCOUNTING |
+| TURNER | 1500.00 | SALES      |
+| ADAMS  | 1100.00 | RESEARCH   |
+| JAMES  |  950.00 | SALES      |
+| FORD   | 3000.00 | RESEARCH   |
+| MILLER | 1300.00 | ACCOUNTING |
++--------+---------+------------+
+14 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d9/6f/akNoOjP8_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>显示部门号为10的部门名，员工名和工资</li></ul> 
+<pre><code class="prism language-mysql">mysql&gt; select dname,ename,sal from emp,dept where emp.deptno=dept.deptno and dept.deptno=10;
++------------+--------+---------+
+| dname      | ename  | sal     |
++------------+--------+---------+
+| ACCOUNTING | CLACK  | 2450.00 |
+| ACCOUNTING | KING   | 5000.00 |
+| ACCOUNTING | MILLER | 1300.00 |
++------------+--------+---------+
+3 rows in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/1d/a7/2bTWsvOo_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>显示各个员工的姓名，工资，及工资级别</li></ul> 
+<pre><code class="prism language-mysql">mysql&gt; select ename,sal,grade from emp,salgrade where sal between losal and hisal;
+mysql&gt; select ename,sal,grade from emp,salgrade where sal between losal and hisal;
++--------+---------+-------+
+| ename  | sal     | grade |
++--------+---------+-------+
+| SMITH  |  800.00 |     1 |
+| ALLEN  | 1600.00 |     3 |
+| WARD   | 1250.00 |     2 |
+| JONES  | 2975.00 |     4 |
+| MARTIN | 1250.00 |     2 |
+| BLAKE  | 2850.00 |     4 |
+| CLACK  | 2450.00 |     4 |
+| SCOTT  | 3000.00 |     4 |
+| KING   | 5000.00 |     5 |
+| TURNER | 1500.00 |     3 |
+| ADAMS  | 1100.00 |     1 |
+| JAMES  |  950.00 |     1 |
+| FORD   | 3000.00 |     4 |
+| MILLER | 1300.00 |     2 |
++--------+---------+-------+
+14 rows in set (0.00 sec)
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f4/8f/dGTbRVTF_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3_333"></a>3.自连接</h2> 
+<p>自连接是指在同一张表连接查询</p> 
+<p>案例：</p> 
+<p>显示员工FORD的上级领导的编号和姓名（mgr是员工领导的编号–empno）</p> 
+<p><strong>使用的子查询</strong></p> 
+<pre><code class="prism language-mysql">select ename,empno from emp where empno=(select mgr from emp where ename='FORD');
+</code></pre> 
+<p><strong>使用多表查询（自查询）</strong></p> 
+<pre><code class="prism language-mysql">select e2.ename,e2.empno from emp e1,emp e2 where e1.ename='FORD' and e1.mgr=e2.empno;
+mysql&gt; select e1.ename,e2.empno from emp e1,emp e2 where e1.ename='FORD' and e1.mgr=e2.empno;
++-------+--------+
+| ename | empno  |
++-------+--------+
+| FORD  | 007566 |
++-------+--------+
+1 row in set (0.00 sec)
+</code></pre> 
+<p><img src="https://images2.imgbox.com/fd/48/SnQS8IXJ_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="4_364"></a>4.子查询</h2> 
+<p>子查询是指嵌入在其他sql语句中的select语句，也叫嵌套查询</p> 
+<h3><a id="41_368"></a>4.1单行子查询</h3> 
+<p>返回一行记录的子查询</p> 
+<ul><li><strong>显示SMITH同一部门的员工</strong></li></ul> 
+<pre><code class="prism language-mysql">select * from emp where deptno=(select deptno from emp where ename='SMITH');
+mysql&gt; select * from emp where deptno=(select deptno from emp where ename='SMITH');
++--------+-------+---------+------+---------------------+---------+------+--------+
+| empno  | ename | job     | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+---------+------+---------------------+---------+------+--------+
+| 007369 | SMITH | CLERK   | 7902 | 1980-12-17 00:00:00 |  800.00 | NULL |     20 |
+| 007566 | JONES | MANAGER | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007788 | SCOTT | ANALYST | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |
+| 007876 | ADAMS | CLERK   | 7788 | 1987-05-23 00:00:00 | 1100.00 | NULL |     20 |
+| 007902 | FORD  | ANALYST | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |
++--------+-------+---------+------+---------------------+---------+------+--------+
+5 rows in set (0.00 sec)
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e7/5c/sEG2nq3n_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="42_393"></a>4.2多行子查询</h3> 
+<p>返回多行记录的子查询</p> 
+<ul><li> <p><strong>in</strong>关键字；查询和10号部门的工作岗位相同的雇员的名字，岗位，工资，部门号，但是不包含10自己的</p> <pre><code class="prism language-mysql">select ename,job,sal,deptno from emp where job in(select job from emp where deptno=10) and deptno&lt;&gt;10;
+mysql&gt; select ename,job,sal,deptno from emp where job in(select job from emp where deptno=10) and deptno&lt;&gt;10;
++-------+---------+---------+--------+
+| ename | job     | sal     | deptno |
++-------+---------+---------+--------+
+| JONES | MANAGER | 2975.00 |     20 |
+| BLAKE | MANAGER | 2850.00 |     30 |
+| SMITH | CLERK   |  800.00 |     20 |
+| ADAMS | CLERK   | 1100.00 |     20 |
+| JAMES | CLERK   |  950.00 |     30 |
++-------+---------+---------+--------+
+5 rows in set (0.00 sec)
+</code></pre> </li><li> <p><strong>all</strong>关键字；显示工资比部门30的所有员工的工资高的员工的姓名、工资和部门号</p> <pre><code class="prism language-mysql">// 使用聚合函数
+select ename,sal,deptno from emp where sal&gt;(select max(sal) from emp where deptno=30);
+mysql&gt; select ename,sal,deptno from emp where sal&gt;(select max(sal) from emp where deptno=30);
++-------+---------+--------+
+| ename | sal     | deptno |
++-------+---------+--------+
+| JONES | 2975.00 |     20 |
+| SCOTT | 3000.00 |     20 |
+| KING  | 5000.00 |     10 |
+| FORD  | 3000.00 |     20 |
++-------+---------+--------+
+4 rows in set (0.01 sec)
+
+// 使用all关键子
+select ename,sal,deptno from emp where sal&gt;all(select sal from emp where deptno=30);
+mysql&gt; select ename,sal,deptno from emp where sal&gt;all(select sal from emp where deptno=30);
++-------+---------+--------+
+| ename | sal     | deptno |
++-------+---------+--------+
+| JONES | 2975.00 |     20 |
+| SCOTT | 3000.00 |     20 |
+| KING  | 5000.00 |     10 |
+| FORD  | 3000.00 |     20 |
++-------+---------+--------+
+4 rows in set (0.00 sec)
+</code></pre> </li><li> <p><strong>any</strong>关键字；显示工资比部门30的任意员工的工资高的员工的姓名、工资和部门号（包含自己部门的员工）</p> </li></ul> 
+<pre><code class="prism language-mysql">// 使用聚合函数
+mysql&gt; select ename,sal,deptno from emp where sal &gt; (select min(sal) from emp where deptno=30) and deptno&lt;&gt;30;
++--------+---------+--------+
+| ename  | sal     | deptno |
++--------+---------+--------+
+| JONES  | 2975.00 |     20 |
+| CLACK  | 2450.00 |     10 |
+| SCOTT  | 3000.00 |     20 |
+| KING   | 5000.00 |     10 |
+| ADAMS  | 1100.00 |     20 |
+| FORD   | 3000.00 |     20 |
+| MILLER | 1300.00 |     10 |
++--------+---------+--------+
+7 rows in set (0.00 sec)
+// 使用any关键字
+mysql&gt; select ename,sal,deptno from emp where sal &gt; any(select sal from emp where deptno=30) and deptno&lt;&gt;30;
++--------+---------+--------+
+| ename  | sal     | deptno |
++--------+---------+--------+
+| JONES  | 2975.00 |     20 |
+| CLACK  | 2450.00 |     10 |
+| SCOTT  | 3000.00 |     20 |
+| KING   | 5000.00 |     10 |
+| ADAMS  | 1100.00 |     20 |
+| FORD   | 3000.00 |     20 |
+| MILLER | 1300.00 |     10 |
++--------+---------+--------+
+7 rows in set (0.00 sec)
+</code></pre> 
+<h3><a id="43_477"></a>4.3多列子查询</h3> 
+<p>单行子查询是指子查询只返回单列，单行数据；多行子查询是指返回单列多行数据，都是针对单列而言</p> 
+<p>的，而多列子查询则是指查询返回多个列数据的子查询语句</p> 
+<p>案例：<strong>查询和SMITH的部门和岗位完全相同的所有雇员，不含SMITH本人</strong></p> 
+<pre><code class="prism language-mysql">mysql&gt; select * from emp where (deptno,job)=(select deptno,job from emp where ename='SMITH') and ename&lt;&gt;'SMITH';
+mysql&gt; select * from emp where (deptno,job)in(select deptno,job from emp where ename='SMITH') and ename&lt;&gt;'SMITH';
++--------+-------+-------+------+---------------------+---------+------+--------+
+| empno  | ename | job   | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+-------+------+---------------------+---------+------+--------+
+| 007876 | ADAMS | CLERK | 7788 | 1987-05-23 00:00:00 | 1100.00 | NULL |     20 |
++--------+-------+-------+------+---------------------+---------+------+--------+
+1 row in set (0.00 sec)
+
+</code></pre> 
+<h3><a id="44from_497"></a>4.4在from子句中使用子查询</h3> 
+<p>子查询语句出现在from子句中。这里要用到数据查询的技巧，把一个子查询当做一个临时表使用。</p> 
+<p>案例：</p> 
+<p><strong>显示每个高于自己部门平均工资的员工的姓名、部门、工资、平均工资</strong></p> 
+<p>答案：</p> 
+<pre><code class="prism language-mysql">select t1.ename,t1.deptno,t1.sal,t2.myavg from emp t1,(select deptno,avg(sal) myavg from emp group by deptno) t2 where t1.deptno=t2.deptno and t1.ssal &gt; t2.myavg;
+</code></pre> 
+<p>步骤：</p> 
+<pre><code class="prism language-mysql">// 1.根据部门号分组得到每组的平均工资
+mysql&gt; select avg(sal) from emp group by deptno;
++-------------+
+| avg(sal)    |
++-------------+
+| 2916.666667 |
+| 2175.000000 |
+| 1566.666667 |
++-------------+
+3 rows in set (0.00 sec)
+
+// 2.根据部门号分组得到每组的平均工资和部门号
+mysql&gt; select deptno,avg(sal) from emp group by deptno;
++--------+-------------+
+| deptno | avg(sal)    |
++--------+-------------+
+|     10 | 2916.666667 |
+|     20 | 2175.000000 |
+|     30 | 1566.666667 |
++--------+-------------+
+3 rows in set (0.00 sec)
+
+// 3.将上面得到的结果与emp表做笛卡尔积
+mysql&gt; select * from emp t1,(select deptno,avg(sal) myavg from emp group by deptno) t2 where t1.deptno=t2.deptno;
++--------+--------+-----------+------+---------------------+---------+---------+--------+--------+-------------+
+| empno  | ename  | job       | mgr  | hiredate            | sal     | comm    | deptno | deptno | myavg       |
++--------+--------+-----------+------+---------------------+---------+---------+--------+--------+-------------+
+| 007369 | SMITH  | CLERK     | 7902 | 1980-12-17 00:00:00 |  800.00 |    NULL |     20 |     20 | 2175.000000 |
+| 007499 | ALLEN  | SALESMAN  | 7698 | 1981-02-20 00:00:00 | 1600.00 |  300.00 |     30 |     30 | 1566.666667 |
+| 007521 | WARD   | SALESMAN  | 7698 | 1981-02-22 00:00:00 | 1250.00 |  500.00 |     30 |     30 | 1566.666667 |
+| 007566 | JONES  | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 |    NULL |     20 |     20 | 2175.000000 |
+| 007654 | MARTIN | SALESMAN  | 7698 | 1981-09-28 00:00:00 | 1250.00 | 1400.00 |     30 |     30 | 1566.666667 |
+| 007698 | BLAKE  | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 |    NULL |     30 |     30 | 1566.666667 |
+| 007782 | CLACK  | MANAGER   | 7839 | 1981-06-09 00:00:00 | 2450.00 |    NULL |     10 |     10 | 2916.666667 |
+| 007788 | SCOTT  | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 |    NULL |     20 |     20 | 2175.000000 |
+| 007839 | KING   | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 |    NULL |     10 |     10 | 2916.666667 |
+| 007844 | TURNER | SALESMAN  | 7698 | 1981-09-08 00:00:00 | 1500.00 |    0.00 |     30 |     30 | 1566.666667 |
+| 007876 | ADAMS  | CLERK     | 7788 | 1987-05-23 00:00:00 | 1100.00 |    NULL |     20 |     20 | 2175.000000 |
+| 007900 | JAMES  | CLERK     | 7698 | 1981-12-03 00:00:00 |  950.00 |    NULL |     30 |     30 | 1566.666667 |
+| 007902 | FORD   | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 |    NULL |     20 |     20 | 2175.000000 |
+| 007934 | MILLER | CLERK     | 7782 | 1982-01-23 00:00:00 | 1300.00 |    NULL |     10 |     10 | 2916.666667 |
++--------+--------+-----------+------+---------------------+---------+---------+--------+--------+-------------+
+14 rows in set (0.00 sec)
+
+// 5.增加筛选条件 :工资大于平均工资
+mysql&gt; select * from emp t1,(select deptno,avg(sal) myavg from emp group by deptno) t2 where t1.deptno=t2.deptno and t1.sal &gt; t2.myavg;
++--------+-------+-----------+------+---------------------+---------+--------+--------+--------+-------------+
+| empno  | ename | job       | mgr  | hiredate            | sal     | comm   | deptno | deptno | myavg       |
++--------+-------+-----------+------+---------------------+---------+--------+--------+--------+-------------+
+| 007499 | ALLEN | SALESMAN  | 7698 | 1981-02-20 00:00:00 | 1600.00 | 300.00 |     30 |     30 | 1566.666667 |
+| 007566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 |   NULL |     20 |     20 | 2175.000000 |
+| 007698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 |   NULL |     30 |     30 | 1566.666667 |
+| 007788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 |   NULL |     20 |     20 | 2175.000000 |
+| 007839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 |   NULL |     10 |     10 | 2916.666667 |
+| 007902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 |   NULL |     20 |     20 | 2175.000000 |
++--------+-------+-----------+------+---------------------+---------+--------+--------+--------+-------------+
+6 rows in set (0.00 sec)
+
+// 5.根据题目要求得到结果
+mysql&gt; select t1.ename,t1.deptno,t1.sal,t2.myavg from emp t1,(select deptno,avg(sal) myavg from emp group by deptno) t2 where t1.deptno=t2.deptno and t1.ssal &gt; t2.myavg;
++-------+--------+---------+-------------+
+| ename | deptno | sal     | myavg       |
++-------+--------+---------+-------------+
+| ALLEN |     30 | 1600.00 | 1566.666667 |
+| JONES |     20 | 2975.00 | 2175.000000 |
+| BLAKE |     30 | 2850.00 | 1566.666667 |
+| SCOTT |     20 | 3000.00 | 2175.000000 |
+| KING  |     10 | 5000.00 | 2916.666667 |
+| FORD  |     20 | 3000.00 | 2175.000000 |
++-------+--------+---------+-------------+
+6 rows in set (0.00 sec)
+
+</code></pre> 
+<p><strong>查找每个部门工资最高的人的姓名、工资、部门、最高工资</strong></p> 
+<p>答案：</p> 
+<pre><code class="prism language-mysql">select t1.ename,t1.sal,t1.deptno,t2.mymax from emp t1,(select deptno, max(sal) mymax from emp group by deptno) t2 where t1.deptno=t2.deptno and t1..sal=t2.mymax;
+</code></pre> 
+<p>步骤：</p> 
+<pre><code>// 1.得到分组之后的部门号和最高工资
+mysql&gt; select deptno, max(sal) from emp group by deptno;
++--------+----------+
+| deptno | max(sal) |
++--------+----------+
+|     10 |  5000.00 |
+|     20 |  3000.00 |
+|     30 |  2850.00 |
++--------+----------+
+3 rows in set (0.01 sec)
+
+// 2.与emp表进行笛卡尔积并进行t1.sal=t2.mymax的筛选(工资等于最高工资)
+mysql&gt; select * from emp t1,(select deptno, max(sal) mymax from emp group by deptno) t2 where t1.deptno=t2.deptno and t1.sal=t2.mymax;
++--------+-------+-----------+------+---------------------+---------+------+--------+--------+---------+
+| empno  | ename | job       | mgr  | hiredate            | sal     | comm | deptno | deptno | mymax   |
++--------+-------+-----------+------+---------------------+---------+------+--------+--------+---------+
+| 007698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |     30 | 2850.00 |
+| 007788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |     20 | 3000.00 |
+| 007839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 | NULL |     10 |     10 | 5000.00 |
+| 007902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |     20 | 3000.00 |
++--------+-------+-----------+------+---------------------+---------+------+--------+--------+---------+
+4 rows in set (0.00 sec)
+
+// 3.根据题目要求选择需要筛选的内容
+mysql&gt; select t1.ename,t1.sal,t1.deptno,t2.mymax from emp t1,(select deptno, max(sal) mymax from emp group by deptno) t2 where t1.deptno=t2.deptno and t1..sal=t2.mymax;
++-------+---------+--------+---------+
+| ename | sal     | deptno | mymax   |
++-------+---------+--------+---------+
+| BLAKE | 2850.00 |     30 | 2850.00 |
+| SCOTT | 3000.00 |     20 | 3000.00 |
+| KING  | 5000.00 |     10 | 5000.00 |
+| FORD  | 3000.00 |     20 | 3000.00 |
++-------+---------+--------+---------+
+4 rows in set (0.00 sec
+</code></pre> 
+<p><strong>显示每个部门的信息（部门名，编号，地址）和人员数量</strong></p> 
+<p>答案：</p> 
+<pre><code class="prism language-mysql">select t1.deptno,t1.dname,t1.loc,t2.num from dept t1,(select deptno,count(*) num from emp group by deptno) t2 where t1.deptno=t2.deptno;
+</code></pre> 
+<p>步骤：</p> 
+<pre><code>// 1.分组得到每一组的人数
+mysql&gt; select deptno,count(*) num from emp group by deptno;
++--------+-----+
+| deptno | num |
++--------+-----+
+|     10 |   3 |
+|     20 |   5 |
+|     30 |   6 |
++--------+-----+
+3 rows in set (0.00 sec)
+
+// 2.和部门表进行笛卡尔积，然后进行条件筛选
+mysql&gt; select * from dept t1,(select deptno,count(*) num from emp group by deptno) t2 where t1.deptno=t2.deptno;
++--------+------------+----------+--------+-----+
+| deptno | dname      | loc      | deptno | num |
++--------+------------+----------+--------+-----+
+|     10 | ACCOUNTING | NEW YORK |     10 |   3 |
+|     20 | RESEARCH   | DALLAS   |     20 |   5 |
+|     30 | SALES      | CHICAGO  |     30 |   6 |
++--------+------------+----------+--------+-----+
+3 rows in set (0.01 sec)
+mysql&gt; select t1.deptno,t1.dname,t1.loc,t2.num from dept t1,(select deptno,count(*) num from emp group by deptno) t2 where t1.deptno=t2.deptno;
++--------+------------+----------+-----+
+| deptno | dname      | loc      | num |
++--------+------------+----------+-----+
+|     10 | ACCOUNTING | NEW YORK |   3 |
+|     20 | RESEARCH   | DALLAS   |   5 |
+|     30 | SALES      | CHICAGO  |   6 |
++--------+------------+----------+-----+
+3 rows in set (0.00 sec)
+
+</code></pre> 
+<p>暴力解法：</p> 
+<pre><code class="prism language-mysql">mysql&gt; select dept.dname,dept.deptno,dept.loc,count(*) from emp,dept where emp.deptno=dept.deptno group by dept.deptno,dept.dname,dept.loc;
++------------+--------+----------+----------+
+| dname      | deptno | loc      | count(*) |
++------------+--------+----------+----------+
+| ACCOUNTING |     10 | NEW YORK |        3 |
+| RESEARCH   |     20 | DALLAS   |        5 |
+| SALES      |     30 | CHICAGO  |        6 |
++------------+--------+----------+----------+
+3 rows in set (0.01 sec)
+</code></pre> 
+<p>总结：</p> 
+<p>解决多表问题的本质：想办法将多表转化为单表，所以mysql中，所有select的问题全部都可以转化成单表问题</p> 
+<h3><a id="45_697"></a>4.5合并查询</h3> 
+<p>在实际应用中，为了合并多个select的执行结果，可以使用集合操作符 union，union all</p> 
+<h4><a id="451_union_701"></a>4.5.1 union</h4> 
+<p>该操作符用于取得两个结果集的并集。当使用该操作符时，会自动去掉结果集中的重复行。</p> 
+<p><strong>案例：将工资大于2500或职位是MANAGER的人找出</strong></p> 
+<pre><code class="prism language-mysql">// 1.查出工资大于2500的
+mysql&gt; select * from emp where sal&gt;2500;
++--------+-------+-----------+------+---------------------+---------+------+--------+
+| empno  | ename | job       | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+-----------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+| 007788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |
+| 007839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 | NULL |     10 |
+| 007902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |
++--------+-------+-----------+------+---------------------+---------+------+--------+
+5 rows in set (0.00 sec)
+
+// 2.查出job=MANAGER的
+mysql&gt; select * from emp where job='MANAGER';
++--------+-------+---------+------+---------------------+---------+------+--------+
+| empno  | ename | job     | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+---------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007698 | BLAKE | MANAGER | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+| 007782 | CLACK | MANAGER | 7839 | 1981-06-09 00:00:00 | 2450.00 | NULL |     10 |
++--------+-------+---------+------+---------------------+---------+------+--------+
+3 rows in set (0.00 sec)
+
+// 3.进行合并
+mysql&gt; select * from emp where sal&gt;2500 union select * from emp where job='MANAGER';
++-------+-------+-----------+------+---------------------+---------+------+--------+
+| empno | ename | job       | mgr  | hiredate            | sal     | comm | deptno |
++-------+-------+-----------+------+---------------------+---------+------+--------+
+|  7566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+|  7698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+|  7788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |
+|  7839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 | NULL |     10 |
+|  7902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |
+|  7782 | CLACK | MANAGER   | 7839 | 1981-06-09 00:00:00 | 2450.00 | NULL |     10 |
++-------+-------+-----------+------+---------------------+---------+------+--------+
+6 rows in set (0.00 sec)
+</code></pre> 
+<h4><a id="452_union_all_747"></a>4.5.2 union all</h4> 
+<p>操作符用于取得两个结果集的并集。当使用该操作符时，不会去掉结果集中的重复行。</p> 
+<p><strong>案例：将工资大于25000或职位是MANAGER的人找出来</strong></p> 
+<pre><code class="prism language-mysql">// 1.查出工资大于2500的
+mysql&gt; select * from emp where sal&gt;2500;
++--------+-------+-----------+------+---------------------+---------+------+--------+
+| empno  | ename | job       | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+-----------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+| 007788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |
+| 007839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 | NULL |     10 |
+| 007902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |
++--------+-------+-----------+------+---------------------+---------+------+--------+
+5 rows in set (0.00 sec)
+
+// 2.查出job=MANAGER的
+mysql&gt; select * from emp where job='MANAGER';
++--------+-------+---------+------+---------------------+---------+------+--------+
+| empno  | ename | job     | mgr  | hiredate            | sal     | comm | deptno |
++--------+-------+---------+------+---------------------+---------+------+--------+
+| 007566 | JONES | MANAGER | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+| 007698 | BLAKE | MANAGER | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+| 007782 | CLACK | MANAGER | 7839 | 1981-06-09 00:00:00 | 2450.00 | NULL |     10 |
++--------+-------+---------+------+---------------------+---------+------+--------+
+3 rows in set (0.01 sec)
+
+// 3.进行合并
+mysql&gt; select * from emp where sal&gt;2500 union all select * from emp where job='MANAGER';
++-------+-------+-----------+------+---------------------+---------+------+--------+
+| empno | ename | job       | mgr  | hiredate            | sal     | comm | deptno |
++-------+-------+-----------+------+---------------------+---------+------+--------+
+|  7566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+|  7698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+|  7788 | SCOTT | ANALYST   | 7566 | 1987-04-19 00:00:00 | 3000.00 | NULL |     20 |
+|  7839 | KING  | PRESIDENT | NULL | 1981-11-17 00:00:00 | 5000.00 | NULL |     10 |
+|  7902 | FORD  | ANALYST   | 7566 | 1981-12-03 00:00:00 | 3000.00 | NULL |     20 |
+|  7566 | JONES | MANAGER   | 7839 | 1981-04-02 00:00:00 | 2975.00 | NULL |     20 |
+|  7698 | BLAKE | MANAGER   | 7839 | 1981-05-01 00:00:00 | 2850.00 | NULL |     30 |
+|  7782 | CLACK | MANAGER   | 7839 | 1981-06-09 00:00:00 | 2450.00 | NULL |     10 |
++-------+-------+-----------+------+---------------------+---------+------+--------+
+8 rows in set (0.00 sec)
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/6d866266b0a2444b480022f1106a0605/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Flink入门修炼】1-3 Flink WordCount 入门实现</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ddb1c18843d604668f20ce6ec523e44a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">数据仓库内容分享(十六)：Doris到底有多牛，为什么大厂都在使用它？</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>android APK安装提示“解析错误，解析软件包时出现问题” 解析 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b9290098c111dd4d8e8383fe87643843/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="android APK安装提示“解析错误，解析软件包时出现问题” 解析">
+  <meta property="og:description" content="android APK安装提示“解析错误，解析软件包时出现问题” 解析及优化 1.问题 项目产品在客户端升级的过程中遇到弹窗提示“解析错误，解析软件包时出现问题”，如下图。
+2.分析过程 1.该弹窗内容，搜索项目工程代码，并无相关字眼，排除项目代码中的业务。
+2.通过APK安装调用代码，可知安装行为，实为系统应用PackageInstaller中的业务
+/** * 安装APK * @param file */ public static void installAPK(Context context,File file) { try { Intent intent = new Intent(); intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK); intent.setAction(&#34;android.intent.action.VIEW&#34;); intent.addCategory(&#34;android.intent.category.DEFAULT&#34;); intent.setDataAndType(Uri.fromFile(file), &#34;application/vnd.android.package-archive&#34;); context.startActivity(intent); } catch (Exception e) { e.printStackTrace(); } } Packageinstaller清单文件内容，可知上述调用方式实则调用Packageinstaller的PackageInstallerActivity的第一个红色框的隐式调用方法
+4.查询解析错误的相关业务
+通过查找res/values-zh-rCN的strings.xml文件中“解析软件包时出现问题”文本，确有该内容
+通过Parse_error_dlg_text字符串资源，反查生成对话框代码位置
+通过DLG_PACKAGE_ERROR查找调用位置，业务调用
+showDialogInner(DLG_PACKAGE_ERROR)
+显示解析失败对话框，其中有2处调用该方法。
+从上图 onCreat() 方法可看出，调用安装程序的Intent携带的scheme内容为“package”，获取APK包信息=null，则调用第一处的解析错误弹窗；否则执行else代码块，获取apk包信息为null，则调用解析错误弹窗。
+从项目代码调用安装程序可知，采用android.intent.action.VIEW隐式调用，从packageinstaller清单文件AndroidManifest.xml可知该方式携带scheme=“file”,所以实际是执行第二处的解析错误弹窗。
+else代码块中，通过PackageUtil工具类中的 getPackageInfo(sourceFile) 方法获取apk文件包信息，如返回null，则弹出解析错误对话框。
+PackageUtil中的 getPackageInfo(sourceFile) 如下，实际执行是调用 PackageParser类中的parseMonolithicPackage(sourceFile, 0) 方法获取安装包的信息。
+/** * Utility method to get package information for a given {@link File} */ public static PackageParser.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-27T17:58:07+08:00">
+    <meta property="article:modified_time" content="2024-01-27T17:58:07+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">android APK安装提示“解析错误，解析软件包时出现问题” 解析</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="android_APK__0"></a>android APK安装提示“解析错误，解析软件包时出现问题” 解析及优化</h2> 
+<h3><a id="1_2"></a>1.问题</h3> 
+<p>项目产品在客户端升级的过程中遇到弹窗提示“解析错误，解析软件包时出现问题”，如下图。</p> 
+<p><img src="https://images2.imgbox.com/94/c5/yQtSPMRV_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_11"></a>2.分析过程</h3> 
+<p>1.该弹窗内容，搜索项目工程代码，并无相关字眼，排除项目代码中的业务。</p> 
+<p>2.通过APK安装调用代码，可知安装行为，实为系统应用<strong>PackageInstaller</strong>中的业务</p> 
+<pre><code class="prism language-java"><span class="token comment">/** * 安装APK * @param file */</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">installAPK</span><span class="token punctuation">(</span><span class="token class-name">Context</span> context<span class="token punctuation">,</span><span class="token class-name">File</span> file<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>   
+    <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>      
+        	<span class="token class-name">Intent</span> intent <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Intent</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      			                                             intent<span class="token punctuation">.</span><span class="token function">addFlags</span><span class="token punctuation">(</span><span class="token class-name">Intent</span><span class="token punctuation">.</span>FLAG_ACTIVITY_NEW_TASK<span class="token punctuation">)</span><span class="token punctuation">;</span>            				               intent<span class="token punctuation">.</span><span class="token function">setAction</span><span class="token punctuation">(</span><span class="token string">"android.intent.action.VIEW"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                                           intent<span class="token punctuation">.</span><span class="token function">addCategory</span><span class="token punctuation">(</span><span class="token string">"android.intent.category.DEFAULT"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>                                   intent<span class="token punctuation">.</span><span class="token function">setDataAndType</span><span class="token punctuation">(</span><span class="token class-name">Uri</span><span class="token punctuation">.</span><span class="token function">fromFile</span><span class="token punctuation">(</span>file<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"application/vnd.android.package-archive"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>      
+            context<span class="token punctuation">.</span><span class="token function">startActivity</span><span class="token punctuation">(</span>intent<span class="token punctuation">)</span><span class="token punctuation">;</span>   
+    <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> 
+    <span class="token punctuation">{<!-- --></span>     
+        e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>   
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>Packageinstaller</strong>清单文件内容，可知上述调用方式实则调用Packageinstaller的PackageInstallerActivity的第一个红色框的隐式调用方法</p> 
+<p><img src="https://images2.imgbox.com/24/5c/Avxfzzcm_o.png" alt="在这里插入图片描述"></p> 
+<p>4.查询解析错误的相关业务</p> 
+<p>通过查找<strong>res/values-zh-rCN</strong>的strings.xml文件中“解析软件包时出现问题”文本，确有该内容</p> 
+<p><img src="https://images2.imgbox.com/7f/60/0VgGUvk7_o.png" alt="在这里插入图片描述"></p> 
+<p>通过<strong>Parse_error_dlg_text</strong>字符串资源，反查生成对话框代码位置</p> 
+<p><img src="https://images2.imgbox.com/1a/74/9SneB29E_o.png" alt="在这里插入图片描述"></p> 
+<p>通过<strong>DLG_PACKAGE_ERROR</strong>查找调用位置，业务调用</p> 
+<blockquote> 
+ <p>showDialogInner(DLG_PACKAGE_ERROR)</p> 
+</blockquote> 
+<p>显示解析失败对话框，其中有2处调用该方法。</p> 
+<p><img src="https://images2.imgbox.com/cc/d4/Yj3kXa5s_o.png" alt="在这里插入图片描述"></p> 
+<p>从上图 <strong>onCreat()</strong> 方法可看出，调用安装程序的Intent携带的scheme内容为“package”，获取APK包信息=null，则调用第一处的解析错误弹窗；否则执行else代码块，获取apk包信息为null，则调用解析错误弹窗。</p> 
+<p>从项目代码调用安装程序可知，采用<strong>android.intent.action.VIEW</strong>隐式调用，从packageinstaller清单文件<strong>AndroidManifest.xml</strong>可知该方式携带<strong>scheme=“file”</strong>,所以实际是执行第二处的解析错误弹窗。</p> 
+<p>else代码块中，通过<strong>PackageUtil</strong>工具类中的 <strong>getPackageInfo(sourceFile)</strong> 方法获取apk文件包信息，如返回null，则弹出解析错误对话框。</p> 
+<p><strong>PackageUtil</strong>中的 <strong>getPackageInfo(sourceFile)</strong> 如下，实际执行是调用 <strong>PackageParser</strong>类中的<strong>parseMonolithicPackage(sourceFile, 0)</strong> 方法获取安装包的信息。</p> 
+<pre><code class="prism language-java">    <span class="token comment">/**
+     * Utility method to get package information for a given {@link File}
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token class-name">PackageParser<span class="token punctuation">.</span>Package</span> <span class="token function">getPackageInfo</span><span class="token punctuation">(</span><span class="token class-name">File</span> sourceFile<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">final</span> <span class="token class-name">PackageParser</span> parser <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">PackageParser</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token class-name">PackageParser<span class="token punctuation">.</span>Package</span> pkg <span class="token operator">=</span> parser<span class="token punctuation">.</span><span class="token function">parseMonolithicPackage</span><span class="token punctuation">(</span>sourceFile<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            parser<span class="token punctuation">.</span><span class="token function">collectManifestDigest</span><span class="token punctuation">(</span>pkg<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> pkg<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">PackageParserException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="3_79"></a>3.总结</h3> 
+<p>针对安装APK解析错误的问题，经以上分析可知，<strong>Packageinstaller</strong>调用<strong>PackageUtil</strong>提取APK的信息，如获取不到，就弹窗解析错误，退出安装流程。</p> 
+<h3><a id="4_85"></a>4.优化</h3> 
+<p>为了避免出现解析错误的问题，我们可以在APK下载完成后，可以按如下：</p> 
+<ol><li> <p>通过MD5确认文件下载完整</p> </li><li> <p>通过反射的办法调用 <strong>PackageParser.parseMonolithicPackage(File.class,int.class)</strong> 判断APK是否可以安装【重点】</p> <pre><code class="prism language-java">    <span class="token comment">/**
+     * 通过&lt;data android:scheme="file" /&gt;，启动PackageInstaller()
+     * @param apkPath
+     * @return
+     */</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">boolean</span> <span class="token function">isApkOk2</span><span class="token punctuation">(</span><span class="token class-name">String</span> apkPath<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+
+            <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">&gt;</span></span> aClass <span class="token operator">=</span> <span class="token class-name">Class</span><span class="token punctuation">.</span><span class="token function">forName</span><span class="token punctuation">(</span><span class="token string">"android.content.pm.PackageParser"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">Method</span> parseMonolithicPackage <span class="token operator">=</span> aClass<span class="token punctuation">.</span><span class="token function">getMethod</span><span class="token punctuation">(</span><span class="token string">"parseMonolithicPackage"</span><span class="token punctuation">,</span> <span class="token class-name">File</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">,</span><span class="token keyword">int</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            parseMonolithicPackage<span class="token punctuation">.</span><span class="token function">setAccessible</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">Object</span> invoke <span class="token operator">=</span> parseMonolithicPackage<span class="token punctuation">.</span><span class="token function">invoke</span><span class="token punctuation">(</span>aClass<span class="token punctuation">.</span><span class="token function">newInstance</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">File</span><span class="token punctuation">(</span>apkPath<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>invoke<span class="token operator">==</span><span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+<span class="token comment">//                Log.w(TAG, "Parse error when parsing manifest. Discontinuing installation");</span>
+                <span class="token class-name">LogUtils</span><span class="token punctuation">.</span><span class="token function">e</span><span class="token punctuation">(</span>TAG<span class="token punctuation">,</span><span class="token string">"get APK info is NULL"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span><span class="token keyword">else</span><span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">LogUtils</span><span class="token punctuation">.</span><span class="token function">e</span><span class="token punctuation">(</span>TAG<span class="token punctuation">,</span><span class="token string">"get APK info is SUCCESS"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">ClassNotFoundException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">NoSuchMethodException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">IllegalAccessException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name"><span class="token namespace">java<span class="token punctuation">.</span>lang<span class="token punctuation">.</span></span>InstantiationException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InvocationTargetException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+    <span class="token punctuation">}</span>
+</code></pre> </li></ol> 
+<p>至于为什么不反射 <strong>PackageUtil</strong> 中的 <strong>getPackageInfo(File sourceFile)</strong> 呢，原因是反射获取不到这个类，只能参考该方法反射 <strong>PackageParser</strong>的 <strong>parseMonolithicPackage(sourceFile, 0)</strong> 来获取包信息，达到 <strong>getPackageInfo(File sourceFile)</strong> 一样的效果。</p> 
+<ol start="3"><li> <p>再保存新版本相关信息</p> </li><li> <p>升级界面执行新版本提示</p> </li><li> <p>安装</p> </li></ol> 
+<p>以上是个人的一点经验总结，如有理解不对的地方，欢迎各位评论指正，感激不尽。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/57c8c93934922c72510258d1a3757970/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">JavaScript------常用的输入(input)聚焦方法</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e0ec816c5bdfefe97e78b7ae01402740/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">解析MySQL生产环境CPU使用率过高的排查与解决方案</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

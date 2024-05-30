@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>前端项目使用docker编译发版和gitlab-cicd发版方式 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/772dab2bfa76384447eb399b7ffebbe7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="前端项目使用docker编译发版和gitlab-cicd发版方式">
+  <meta property="og:description" content="项目目录 app/ ├── container/ │ ├── init.sh │ ├── nginx.conf.template ├── src/ ├── .gitlab-ci.yml └── deploy.sh └── Dockerfile └── Makefile container目录是放nginx的配置文件，给nginx镜像使用
+.gitlab-ci.yml和Makefile是cicd自动发版，适用于测试环境和生产环境
+deploy.sh是使用shell手动发版，适用于开发环境
+下面是以上配置文件 init.sh
+主要作用是根据env环境变量替换nginx的反向代理地址
+#!/bin/bash BACKENDURL=$BACKENDURL export &#34;BACKENDURL&#34;=$BACKENDURL envsubst &#39;$BACKENDURL&#39; &lt; /etc/nginx/nginx.conf.template &gt; /etc/nginx/nginx.conf &amp;&amp; nginx -g &#39;daemon off;&#39; nginx.conf.template
+user root; events { worker_connections 4096; ## Default: 1024 } http { proxy_connect_timeout 300000; #连接握手时间 proxy_send_timeout 300000; # 设置发送超时时间， proxy_read_timeout 300000; # 设置读取超时时间。 client_max_body_size 100M; include /etc/nginx/mime.types; sendfile on; server { listen 80; listen [::]:80; add_header Access-Control-Allow-Origin *; add_header Access-Control-Allow-Headers X-Requested-With,access-token,Access-Token,Refresh-Token,Accept,Content-Type,User-Agent; add_header Access-Control-Allow-Methods GET,POST,OPTIONS; location / { root /usr/share/nginx/html; index index.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T17:30:27+08:00">
+    <meta property="article:modified_time" content="2024-05-23T17:30:27+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">前端项目使用docker编译发版和gitlab-cicd发版方式</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="_0"></a>项目目录</h3> 
+<pre><code class="prism language-plaintext">app/
+├── container/
+│   ├── init.sh
+│   ├── nginx.conf.template
+├── src/
+├── .gitlab-ci.yml
+└── deploy.sh
+└── Dockerfile
+└── Makefile
+</code></pre> 
+<p>container目录是放nginx的配置文件，给nginx镜像使用<br> .gitlab-ci.yml和Makefile是cicd自动发版，适用于测试环境和生产环境<br> deploy.sh是使用shell手动发版，适用于开发环境</p> 
+<h3><a id="_17"></a>下面是以上配置文件</h3> 
+<p><strong>init.sh</strong><br> 主要作用是根据env环境变量替换nginx的反向代理地址</p> 
+<pre><code class="prism language-shell"><span class="token shebang important">#!/bin/bash</span>
+<span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token variable">$BACKENDURL</span>
+<span class="token builtin class-name">export</span> <span class="token string">"BACKENDURL"</span><span class="token operator">=</span><span class="token variable">$BACKENDURL</span>
+envsubst <span class="token string">'$BACKENDURL'</span> <span class="token operator">&lt;</span> /etc/nginx/nginx.conf.template <span class="token operator">&gt;</span> /etc/nginx/nginx.conf <span class="token operator">&amp;&amp;</span> nginx <span class="token parameter variable">-g</span> <span class="token string">'daemon off;'</span>
+</code></pre> 
+<p><strong>nginx.conf.template</strong></p> 
+<pre><code class="prism language-nginx">user root;
+events {
+  worker_connections  4096;  ## Default: 1024
+}
+
+http {
+  proxy_connect_timeout 300000;   #连接握手时间
+  proxy_send_timeout 300000;     # 设置发送超时时间，
+  proxy_read_timeout 300000;     # 设置读取超时时间。
+  client_max_body_size 100M;
+  include /etc/nginx/mime.types;
+  sendfile on;
+
+  server {
+    listen 80;
+    listen [::]:80;
+    add_header Access-Control-Allow-Origin *;
+    add_header Access-Control-Allow-Headers X-Requested-With,access-token,Access-Token,Refresh-Token,Accept,Content-Type,User-Agent;
+    add_header Access-Control-Allow-Methods GET,POST,OPTIONS;
+
+    location / {
+      root   /usr/share/nginx/html;
+        index index.html;
+        try_files $uri $uri/ /index.html;
+    }
+
+    location ^~/api/ {
+        proxy_set_header Host $host;
+        proxy_set_header  X-Real-IP        $remote_addr;
+        proxy_set_header  X-Forwarded-For  $proxy_add_x_forwarded_for;
+        proxy_set_header X-NginX-Proxy true;
+        proxy_pass $BACKENDURL; #后端实际服务器地址
+        add_header Access-Control-Allow-Origin *;
+        add_header Access-Control-Allow-Headers X-Requested-With,access-token,Access-Token,Refresh-Token,Accept,Content-Type,User-Agent;
+        add_header Access-Control-Allow-Methods GET,POST,OPTIONS;
+    }
+  }
+}
+</code></pre> 
+<p><strong>Dockerfile</strong><br> 镜像内编译打包，因为服务器上可能有多个node项目版本会有兼容问题，直接容器内编译</p> 
+<pre><code class="prism language-dockerfile"># 编译打包
+FROM node:18-alpine as builder
+WORKDIR /app
+COPY package.json .
+ENV NODE_OPTIONS=--openssl-legacy-provider
+RUN npm install
+COPY . .
+RUN npm run build
+
+# 运行应用
+FROM nginx:latest
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY container/nginx.conf.template /etc/nginx/nginx.conf.template
+COPY container/init.sh /init.sh
+RUN chmod 777 init.sh
+EXPOSE 80
+
+CMD ["/bin/bash", "/init.sh"]
+</code></pre> 
+<p><strong>deploy.sh</strong><br> 人工发版时运行脚本<br> <strong>部署脚本里面打包命令、项目名字、端口、后端地址记得更换</strong></p> 
+<pre><code class="prism language-shell"><span class="token shebang important">#!/bin/bash</span>
+<span class="token builtin class-name">set</span> <span class="token parameter variable">-x</span>
+
+<span class="token keyword">function</span> <span class="token function-name function">show_help</span> <span class="token punctuation">{<!-- --></span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"Usage: <span class="token variable">$0</span> [OPTIONS]"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"Options:"</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"  --mode=&lt;mode&gt;   Set the mode (local, dev, test, prod)"</span>
+<span class="token punctuation">}</span>
+<span class="token comment"># 保存输入的参数</span>
+<span class="token assign-left variable">args</span><span class="token operator">=</span><span class="token punctuation">(</span><span class="token string">"<span class="token variable">$@</span>"</span><span class="token punctuation">)</span>
+<span class="token comment"># 使用 shift 命令去除已处理的位置参数</span>
+<span class="token builtin class-name">shift</span>
+<span class="token comment"># 处理命令行参数</span>
+<span class="token keyword">for</span> <span class="token variable"><span class="token punctuation">((</span>i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> "${#args[@]}"<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">))</span></span><span class="token punctuation">;</span> <span class="token keyword">do</span>
+  <span class="token keyword">case</span> <span class="token string">"<span class="token variable">${args<span class="token punctuation">[</span>$i<span class="token punctuation">]</span>}</span>"</span> <span class="token keyword">in</span>
+  <span class="token parameter variable">--mode</span><span class="token operator">=</span>* <span class="token operator">|</span> <span class="token parameter variable">-mode</span><span class="token operator">=</span>*<span class="token punctuation">)</span>
+    <span class="token assign-left variable">mode</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${args<span class="token punctuation">[</span>$i<span class="token punctuation">]</span><span class="token operator">#</span>*=}</span>"</span>
+    <span class="token punctuation">;</span><span class="token punctuation">;</span>
+  <span class="token parameter variable">--mode</span> <span class="token operator">|</span> -mode<span class="token punctuation">)</span>
+    <span class="token assign-left variable">mode</span><span class="token operator">=</span><span class="token string">"<span class="token variable">${args<span class="token punctuation">[</span>$((i + 1))<span class="token punctuation">]</span>}</span>"</span>
+    <span class="token punctuation">;</span><span class="token punctuation">;</span>
+  --help<span class="token punctuation">)</span>
+    show_help
+    <span class="token builtin class-name">exit</span> <span class="token number">0</span>
+    <span class="token punctuation">;</span><span class="token punctuation">;</span>
+  <span class="token keyword">esac</span>
+<span class="token keyword">done</span>
+<span class="token comment"># 如果 mode 不在合法的模式值中，则输出错误信息</span>
+<span class="token keyword">if</span> <span class="token operator">!</span> <span class="token variable">$valid</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token builtin class-name">echo</span> <span class="token string">"mode值只能是:空值 local, dev, test, prod."</span>
+  <span class="token builtin class-name">exit</span> <span class="token number">1</span>
+<span class="token keyword">fi</span>
+<span class="token comment"># 根据 mode 设置不同的 BACKENDURL 地址</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$mode</span>"</span> <span class="token operator">==</span> <span class="token string">"dev"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token string">"http://xxxx"</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$mode</span>"</span> <span class="token operator">==</span> <span class="token string">"test"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token string">"http://xxxx"</span>
+<span class="token keyword">elif</span> <span class="token punctuation">[</span> <span class="token string">"<span class="token variable">$mode</span>"</span> <span class="token operator">==</span> <span class="token string">"prod"</span> <span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+  <span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token string">"-"</span>
+<span class="token keyword">else</span>
+  <span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token string">"http://xxxx"</span>
+<span class="token keyword">fi</span>
+
+<span class="token assign-left variable">name</span><span class="token operator">=</span><span class="token string">"project"</span>
+<span class="token assign-left variable">port</span><span class="token operator">=</span><span class="token number">8080</span>
+<span class="token assign-left variable">version</span><span class="token operator">=</span><span class="token string">"latest"</span>
+<span class="token assign-left variable">current_user</span><span class="token operator">=</span><span class="token variable"><span class="token variable">$(</span><span class="token function">whoami</span><span class="token variable">)</span></span>
+<span class="token builtin class-name">echo</span> <span class="token string">"当前用户：<span class="token variable">${current_user}</span>"</span>
+<span class="token comment"># 拉代码和打包镜像</span>
+<span class="token function">git</span> pull
+<span class="token comment"># 设置 node_modules 为当前用户</span>
+<span class="token function">sudo</span> <span class="token function">chown</span> <span class="token parameter variable">-R</span> <span class="token variable">$current_user</span><span class="token builtin class-name">:</span><span class="token variable">$current_user</span> ./
+<span class="token function">sudo</span> <span class="token function">docker</span> build <span class="token parameter variable">-f</span> Dockerfile <span class="token parameter variable">-t</span> <span class="token variable">$name</span><span class="token builtin class-name">:</span><span class="token variable">$version</span> <span class="token builtin class-name">.</span>
+<span class="token comment"># 停止并删除容器</span>
+<span class="token function">sudo</span> <span class="token function">docker</span> stop <span class="token string">"<span class="token variable">$name</span>"</span>
+<span class="token function">sudo</span> <span class="token function">docker</span> <span class="token function">rm</span> <span class="token string">"<span class="token variable">$name</span>"</span> <span class="token parameter variable">-f</span>
+<span class="token comment"># 启动容器</span>
+<span class="token function">sudo</span> <span class="token function">docker</span> run <span class="token parameter variable">--restart</span><span class="token operator">=</span>always <span class="token parameter variable">--name</span> <span class="token variable">$name</span> <span class="token parameter variable">-p</span> <span class="token variable">$port</span>:80 <span class="token parameter variable">-e</span> <span class="token assign-left variable">BACKENDURL</span><span class="token operator">=</span><span class="token string">"<span class="token variable">$BACKENDURL</span>"</span> <span class="token parameter variable">-d</span> <span class="token variable">$name</span><span class="token builtin class-name">:</span><span class="token variable">$version</span>
+</code></pre> 
+<h4><a id="_152"></a>人工发版</h4> 
+<p>运行命令</p> 
+<pre><code class="prism language-shell"><span class="token comment"># 记得先给部署脚本+执行权限</span>
+<span class="token function">chmod</span> +x ./deploy.sh
+./deploy.sh <span class="token parameter variable">--mode</span> dev
+</code></pre> 
+<p>运行截图<br> <img src="https://images2.imgbox.com/92/fa/CpXAr91H_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/3d/87/wMOazJp9_o.png" alt="在这里插入图片描述"><br> <strong>项目成功运行</strong><br> 然后浏览器访问：http://xxx.xxx.com:21000</p> 
+<h4><a id="gitlabcicd_165"></a>gitlab-cicd的下一篇文章写叭</h4>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d9ac458e72533d37fee5ce4ee83c91ff/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">如何查看mysql使用的内存</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e1ec0a156be3bdddafeb9b8e57762615/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Spring常见问题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

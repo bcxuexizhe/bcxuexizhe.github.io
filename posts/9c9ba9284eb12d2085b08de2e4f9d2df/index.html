@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Hadoop】DataNode 数据盘进行磁盘DiskBalancer - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9c9ba9284eb12d2085b08de2e4f9d2df/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Hadoop】DataNode 数据盘进行磁盘DiskBalancer">
+  <meta property="og:description" content="目录
+​一、问题原因
+二、DiskBalancer介绍
+三、DiskBalancer实战
+3.1 生成plan json文件
+3.2 执行plan json文件
+一、问题原因 阿里云事件磁盘损坏后，使用新磁盘进行了替换，或者当发现HDFS容量不够需要扩展空间时，由运维管理人员陆陆续续为 datanode 节点增加了多块磁盘，并将这些磁盘挂载到了不同目录比如 /mnt/disk1, /mnt/disk2；此后由大数据系统管理人员配置 HDFS 使用了这些新的磁盘上的目录 （比如配置 dfs.datanode.data.dir=/mnt/disk1/dfs/data,/mnt/disk2/dfs/data,/mnt/disk3/dfs/data），并重启了 hdfs 服务使配置生效。
+但是hdfs经过上述配置更改并重启生效之后，只有新增加的HDFS文件才会存储在新增加的目录下，已经存在的HDFS历史文件，其对应的底层数据是不会从原有目录移动到新增目录的。
+即使使用了命令 hdfs balancer 来在集群内重新分布 HDFS 文件，由于该命令只会在不同host之间移动数据，也就是主要做的是 host 节点级别的负载均衡，上述单节点中多磁盘之间的负载不均衡问题，也不会由太大缓解。
+二、DiskBalancer介绍 DiskBalancer是一个命令行工具，可在DataNode的所有磁盘上均匀分发数据。 此工具对给定的DataNode进行操作，并将块从一个磁盘移动到当前DataNode的另一个磁盘。DiskBalancer通过创建计划并继续在DataNode上执行该计划。 计划是一组陈述，描述了两个磁盘之间应该移动的数据。 计划由多个移动步骤组成。 移动步骤具有源磁盘，目标磁盘和移动的字节数。 可以针对运行数据节点执行计划。DiskBalancer是一个相对独立的线程，它可以对数据的复制进行限流。 集群默认是启用DiskBalancer的， 不启用DiskBalancer 需要在hdfs-site.xml中将dfs.disk.balancer.enabled设置为false。
+三、DiskBalancer实战 需求：磁盘 /disk2是新挂的 ，需要将一台服务器的 4块磁盘 做数据平衡。 3.1 生成plan json文件 首先要确保DataNode的配置dfs.disk.balancer.enabled为true
+hdfs-site.xml配置 &lt;property&gt; &lt;name&gt;dfs.disk.balancer.enabled&lt;/name&gt; &lt;value&gt;true&lt;/value&gt; &lt;/property&gt; 通过-plan生成plan:
+hdfs diskbalancer -plan winner-reid-datanode07 -maxerror 5 -bandwidth 50 -thresholdPercentage 5 参数介绍：
+-bandwidth 平衡带宽，单位MB/s，默认10-maxerror 错误重试次数，默认5-thresholdPercentage 平衡阈值，默认10，即磁盘占用率大小相差&lt;=10%则认为是平衡的-out 执行计划json输出路径，注意为hdfs路径，且路径需要为空 生成文件位于 HDFS">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-21T11:24:53+08:00">
+    <meta property="article:modified_time" content="2024-05-21T11:24:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Hadoop】DataNode 数据盘进行磁盘DiskBalancer</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 id="oF9kz"></h2> 
+<h2 id="E2SQQ"><img alt="" height="534" src="https://images2.imgbox.com/05/90/21H6f8KD_o.png" width="950"></h2> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="E2SQQ-toc" style="margin-left:0px;"><a href="#E2SQQ" rel="nofollow">​一、问题原因</a></p> 
+<p id="T8b22-toc" style="margin-left:0px;"><a href="#T8b22" rel="nofollow">二、DiskBalancer介绍</a></p> 
+<p id="zZLsM-toc" style="margin-left:0px;"><a href="#zZLsM" rel="nofollow">三、DiskBalancer实战</a></p> 
+<p id="XpJ9i-toc" style="margin-left:40px;"><a href="#XpJ9i" rel="nofollow">3.1 生成plan json文件</a></p> 
+<p id="GJdgK-toc" style="margin-left:40px;"><a href="#GJdgK" rel="nofollow">3.2 执行plan json文件</a></p> 
+<hr id="hr-toc"> 
+<h2 style="background-color:transparent;"><span style="color:#956fe7;">一、问题原因</span></h2> 
+<hr id="Ow3Sr"> 
+<p id="ua21db361">阿里云事件磁盘损坏后，使用新磁盘进行了替换，或者当发现HDFS容量不够需要扩展空间时，由运维管理人员陆陆续续为 datanode 节点增加了多块磁盘，并将这些磁盘挂载到了不同目录比如 /mnt/disk1, /mnt/disk2；此后由大数据系统管理人员配置 HDFS 使用了这些新的磁盘上的目录 （比如配置 dfs.datanode.data.dir=/mnt/disk1/dfs/data,/mnt/disk2/dfs/data,/mnt/disk3/dfs/data），并重启了 hdfs 服务使配置生效。</p> 
+<p id="u8a62658a">但是hdfs经过上述配置更改并重启生效之后，只有新增加的HDFS文件才会存储在新增加的目录下，已经存在的HDFS历史文件，其对应的底层数据是不会从原有目录移动到新增目录的。</p> 
+<p id="u12e5478c">即使使用了命令 hdfs balancer 来在集群内重新分布 HDFS 文件，由于该命令只会在不同host之间移动数据，也就是主要做的是 host 节点级别的负载均衡，上述单节点中多磁盘之间的负载不均衡问题，也不会由太大缓解。</p> 
+<hr> 
+<h2 id="T8b22" style="background-color:transparent;"><span style="color:#956fe7;">二、DiskBalancer介绍</span></h2> 
+<hr id="Nqhbb"> 
+<blockquote> 
+ <p id="ufc37d914">DiskBalancer是一个命令行工具，可在DataNode的所有磁盘上均匀分发数据。 此工具对给定的DataNode进行操作，并将块从一个磁盘移动到当前DataNode的另一个磁盘。DiskBalancer通过创建计划并继续在DataNode上执行该计划。 计划是一组陈述，描述了两个磁盘之间应该移动的数据。 计划由多个移动步骤组成。 移动步骤具有源磁盘，目标磁盘和移动的字节数。 可以针对运行数据节点执行计划。DiskBalancer是一个相对独立的线程，它可以对数据的复制进行限流。 集群默认是启用DiskBalancer的， 不启用DiskBalancer 需要在hdfs-site.xml中将dfs.disk.balancer.enabled设置为false。</p> 
+</blockquote> 
+<hr> 
+<h2 id="zZLsM" style="background-color:transparent;"><span style="color:#956fe7;">三、DiskBalancer实战</span></h2> 
+<hr id="exntH"> 
+<p id="ue11684f6">需求：磁盘 /disk2是新挂的 ，需要将一台服务器的 4块磁盘 做数据平衡。 <img alt="" height="349" src="https://images2.imgbox.com/6e/50/sUmgpaF5_o.png" width="776"></p> 
+<h3 id="XpJ9i"><span style="color:#511b78;">3.1 生成plan json文件</span></h3> 
+<hr> 
+<p id="udf5c2d62">首先要确保DataNode的配置dfs.disk.balancer.enabled为true</p> 
+<pre id="bL8QY"><code>hdfs-site.xml配置
+
+&lt;property&gt;
+   &lt;name&gt;dfs.disk.balancer.enabled&lt;/name&gt;
+   &lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p id="ua8f366de">通过-plan生成plan:</p> 
+<pre id="GxVZy"><code>hdfs diskbalancer -plan winner-reid-datanode07 -maxerror 5  -bandwidth 50 -thresholdPercentage 5</code></pre> 
+<p id="ube38647f"><strong>参数介绍：</strong></p> 
+<ul><li id="ub547881c">-bandwidth 平衡带宽，单位MB/s，默认10</li><li id="u9fc15def">-maxerror 错误重试次数，默认5</li><li id="u0b764e63">-thresholdPercentage 平衡阈值，默认10，即磁盘占用率大小相差&lt;=10%则认为是平衡的</li><li id="uccd2ec6e">-out 执行计划json输出路径，注意为hdfs路径，且路径需要为空<img alt="" height="262" src="https://images2.imgbox.com/97/e1/wOXbK7uF_o.png" width="1200"></li></ul> 
+<p id="u07b87d0d"></p> 
+<p id="u2ba42ca6">生成文件位于 HDFS</p> 
+<p id="u10671445"></p> 
+<p class="img-center"><img alt="" height="74" id="u8d320bbf" src="https://images2.imgbox.com/17/76/A9tbz2wu_o.png" width="1155"></p> 
+<p id="ubd26ab7a">查看生成的winner-reid-datanode07.plan.json 文件内容</p> 
+<pre id="XYCMG"><code>{
+	"volumeSetPlans": [{
+		"@class": "org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep",
+		"sourceVolume": {
+			"path": "/disk4/",
+			"capacity": 5853616278016,
+			"storageType": "DISK",
+			"used": 1886035164776,
+			"reserved": 0,
+			"uuid": "DS-4073f74c-51fb-4aa1-8088-e5fce28913d4",
+			"failed": false,
+			"volumeDataDensity": 9.999999999998899E-5,
+			"skip": false,
+			"transient": false,
+			"readOnly": false
+		},
+		"destinationVolume": {
+			"path": "/disk2/",
+			"capacity": 5853616278016,
+			"storageType": "DISK",
+			"used": 1366782103125,
+			"reserved": 0,
+			"uuid": "DS-afbaacc6-adfd-4248-ab65-d83ae998ef0b",
+			"failed": false,
+			"volumeDataDensity": 0.08879999999999999,
+			"skip": false,
+			"transient": false,
+			"readOnly": false
+		},
+		"idealStorage": 0.3222,
+		"bytesToMove": 537372946394,
+		"volumeSetID": "234e991a-d7b1-4398-b84d-f665984fc40c",
+		"maxDiskErrors": 5,
+		"bandwidth": 5
+	}, {
+		"@class": "org.apache.hadoop.hdfs.server.diskbalancer.planner.MoveStep",
+		"sourceVolume": {
+			"path": "/disk1/",
+			"capacity": 5853616278016,
+			"storageType": "DISK",
+			"used": 1886035164776,
+			"reserved": 0,
+			"uuid": "DS-aaa27e2a-27bd-4d2f-9465-0760826404e1",
+			"failed": false,
+			"volumeDataDensity": 9.999999999998899E-5,
+			"skip": false,
+			"transient": false,
+			"readOnly": false
+		},
+		"destinationVolume": {
+			"path": "/disk2/",
+			"capacity": 5853616278016,
+			"storageType": "DISK",
+			"used": 1366782103125,
+			"reserved": 0,
+			"uuid": "DS-afbaacc6-adfd-4248-ab65-d83ae998ef0b",
+			"failed": false,
+			"volumeDataDensity": 0.08879999999999999,
+			"skip": false,
+			"transient": false,
+			"readOnly": false
+		},
+		"idealStorage": 0.3222,
+		"bytesToMove": 524120732056,
+		"volumeSetID": "234e991a-d7b1-4398-b84d-f665984fc40c",
+		"maxDiskErrors": 5,
+		"bandwidth": 5
+	}],
+	"nodeName": "winner-reid-datanode07",
+	"nodeUUID": "e6f30cb6-2bf5-4eb9-a5ab-4eb2b39ab3d7",
+	"port": 8010,
+	"timeStamp": 1715934031482
+}</code></pre> 
+<h3 id="GJdgK" style="background-color:transparent;"><span style="color:#511b78;">3.2 执行plan json文件</span></h3> 
+<hr id="TlxFP"> 
+<p id="uec423db0">通过-execute执行plan阶段生成的plan文件:</p> 
+<pre id="eCAAh"><code>hdfs diskbalancer -execute  /system/diskbalancer/2024-May-17-16-00-04/winner-reid-datanode07.plan.json</code></pre> 
+<p id="uc31ee4b5"></p> 
+<p class="img-center"><img alt="" height="124" id="u02fdf0be" src="https://images2.imgbox.com/38/8a/RmU3VCA4_o.png" width="1200"></p> 
+<p id="ud28c2af8">查询指定DataNode磁盘balance的状况</p> 
+<pre id="CUSpY"><code>  hdfs diskbalancer -query winner-reid-datanode07</code></pre> 
+<p id="u0774f050"></p> 
+<p class="img-center"><img alt="" height="195" id="uda1360dc" src="https://images2.imgbox.com/19/2f/fLVpU70E_o.png" width="856"></p> 
+<p id="u11fca1d8">看到PLAN_UNDER_PROGRESS 表示正在平衡，PLAN_DONE 表示完成</p> 
+<p id="uc9863029"><strong>如下开始disk banlance</strong></p> 
+<p id="uf06125d6"></p> 
+<p class="img-center"><img alt="" height="392" id="u99ca2dc2" src="https://images2.imgbox.com/72/3b/pizUstGP_o.png" width="866"></p> 
+<p id="u7800f5c1">如下已完成disk banlance</p> 
+<p id="uef9a74a4"></p> 
+<p class="img-center"><img alt="" height="380" id="ufe491c91" src="https://images2.imgbox.com/0e/11/yA9A0jJG_o.png" width="860"></p> 
+<p id="u3b144e5c"></p> 
+<p id="ub73ef4ba">取消指定DataNode的磁盘均衡</p> 
+<pre id="tQCFI"><code>hdfs diskbalancer -cancel  xx.json</code></pre> 
+<p id="ufb649f8e"></p> 
+<p id="u1a218ed1"></p> 
+<p id="u8a8186eb"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a53948b1c61422e652a5473ea9f29842/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">在排序数组中查找元素的一个位置和最后一个位置-力扣</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/20d65efaface86e816cd83ed58633e8c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">基于微信小程序实现的【二手物品交易平台】后端 JAVA Springboot （内附设计LW &#43; PPT&#43; 源码&#43; 演示视频 下载）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

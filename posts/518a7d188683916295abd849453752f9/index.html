@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【C&#43;&#43;入门到精通】智能指针 shared_ptr循环引用 | weak_ptr 简介及C&#43;&#43;模拟实现 [ C&#43;&#43;入门 ] - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/518a7d188683916295abd849453752f9/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【C&#43;&#43;入门到精通】智能指针 shared_ptr循环引用 | weak_ptr 简介及C&#43;&#43;模拟实现 [ C&#43;&#43;入门 ]">
+  <meta property="og:description" content="阅读导航 引言一、std::shared_ptr的循环引用1. 概念2. 示例分析 二、std::weak_ptr1. 简介2. weak_ptr模板类提供的成员方法3. 使用示例（1）weak_ptr指针的创建（2）完整示例（解决上面循环引用问题） 4. C&#43;&#43;模拟实现 温馨提示 引言 欢迎阅读本系列文章的第二篇，我们将继续探讨与 shared_ptr 相关的主题。上一篇文章我们介绍了 shared_ptr 的强大功能，但也提到了它可能面临的一个问题 —— 循环引用。当两个或多个对象之间相互持有 shared_ptr 的引用时，就会形成循环引用，导致这些对象无法被正确释放，从而引发内存泄漏。
+在本文中，我们将深入讨论循环引用问题，并引入另一个智能指针类——weak_ptr。weak_ptr 是 shared_ptr 的伙伴，它可以帮助我们解决循环引用问题，并且不会增加引用计数，以避免对象无法释放的情况。
+通过学习 shared_ptr 和 weak_ptr 的组合使用，我们将能够更好地管理动态分配的对象，避免内存泄漏，并提高代码的健壮性和可维护性。敬请期待本文的剖析和示例，希望能给您带来更深入的了解和实践经验。
+一、std::shared_ptr的循环引用 1. 概念 当使用 std::shared_ptr 时，循环引用是一种常见的问题。循环引用指的是两个或多个对象彼此持有 shared_ptr 的引用，形成一个环状依赖关系。这种情况下，即使没有外部引用指向这些对象，它们的引用计数也无法降为零，从而导致内存泄漏。
+循环引用可能会导致内存泄漏的发生，因为每个对象都会持有对其他对象的引用，导致它们的引用计数无法归零。当没有外部引用指向这些对象时，它们的析构函数不会被调用，从而导致资源无法正确释放。
+2. 示例分析 首先我们来看一段代码，这段代码就明显存在着循环引用。
+struct ListNode { int _data; shared_ptr&lt;ListNode&gt; _prev; shared_ptr&lt;ListNode&gt; _next; ~ListNode(){ cout &lt;&lt; &#34;~ListNode()&#34; &lt;&lt; endl; } }; int main() { shared_ptr&lt;ListNode&gt; node1(new ListNode); shared_ptr&lt;ListNode&gt; node2(new ListNode); cout &lt;&lt; node1.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-25T15:45:13+08:00">
+    <meta property="article:modified_time" content="2024-01-25T15:45:13+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【C&#43;&#43;入门到精通】智能指针 shared_ptr循环引用 | weak_ptr 简介及C&#43;&#43;模拟实现 [ C&#43;&#43;入门 ]</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atelier-sulphurpool-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/ad/1c/N3yys92M_o.jpg" alt="在这里插入图片描述"><br> </p> 
+<div class="toc"> 
+ <h4>阅读导航</h4> 
+ <ul><li><a href="#_2" rel="nofollow">引言</a></li><li><a href="#stdshared_ptr_8" rel="nofollow">一、std::shared_ptr的循环引用</a></li><li><ul><li><a href="#1__9" rel="nofollow">1. 概念</a></li><li><a href="#2__14" rel="nofollow">2. 示例分析</a></li></ul> 
+  </li><li><a href="#stdweak_ptr_49" rel="nofollow">二、std::weak_ptr</a></li><li><ul><li><a href="#1__50" rel="nofollow">1. 简介</a></li><li><a href="#2_weak_ptr_57" rel="nofollow">2. weak_ptr模板类提供的成员方法</a></li><li><a href="#3__69" rel="nofollow">3. 使用示例</a></li><li><ul><li><a href="#1weak_ptr_70" rel="nofollow">（1）weak_ptr指针的创建</a></li><li><a href="#2_107" rel="nofollow">（2）完整示例（解决上面循环引用问题）</a></li></ul> 
+   </li><li><a href="#4_C_205" rel="nofollow">4. C++模拟实现</a></li></ul> 
+  </li><li><a href="#_254" rel="nofollow">温馨提示</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_2"></a>引言</h2> 
+<p>欢迎阅读本系列文章的第二篇，我们将继续探讨与 <code>shared_ptr</code> 相关的主题。上一篇文章我们介绍了 <code>shared_ptr</code> 的强大功能，但也提到了它可能面临的一个问题 —— <strong>循环引用</strong>。当两个或多个对象之间相互持有 <code>shared_ptr</code> 的引用时，就会形成循环引用，导致这些对象无法被正确释放，从而引发内存泄漏。</p> 
+<p>在本文中，我们将深入讨论循环引用问题，<strong>并引入另一个智能指针类——<code>weak_ptr</code>。<code>weak_ptr</code> 是 <code>shared_ptr</code> 的伙伴，它可以帮助我们解决循环引用问题，并且不会增加引用计数，以避免对象无法释放的情况</strong>。</p> 
+<p>通过学习 <code>shared_ptr</code> 和 <code>weak_ptr</code> 的组合使用，我们将能够更好地管理动态分配的对象，避免内存泄漏，并提高代码的健壮性和可维护性。敬请期待本文的剖析和示例，希望能给您带来更深入的了解和实践经验。</p> 
+<h2><a id="stdshared_ptr_8"></a>一、std::shared_ptr的循环引用</h2> 
+<h3><a id="1__9"></a>1. 概念</h3> 
+<p>当使用 <code>std::shared_ptr</code> 时，循环引用是一种常见的问题。循环引用指的是<strong>两个或多个对象彼此持有 <code>shared_ptr</code> 的引用，形成一个环状依赖关系。这种情况下，即使没有外部引用指向这些对象，它们的引用计数也无法降为零，从而导致内存泄漏</strong>。</p> 
+<p>循环引用可能会导致内存泄漏的发生，因为每个对象都会持有对其他对象的引用，导致它们的引用计数无法归零。当没有外部引用指向这些对象时，它们的析构函数不会被调用，从而导致资源无法正确释放。</p> 
+<h3><a id="2__14"></a>2. 示例分析</h3> 
+<p>首先我们来看一段代码，这段代码就明显存在着循环引用。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">struct</span> <span class="token class-name">ListNode</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">int</span> _data<span class="token punctuation">;</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _prev<span class="token punctuation">;</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _next<span class="token punctuation">;</span>
+	<span class="token operator">~</span><span class="token function">ListNode</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~ListNode()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node1</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node2</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node1<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node2<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	node1<span class="token operator">-&gt;</span>_next <span class="token operator">=</span> node2<span class="token punctuation">;</span>
+	node2<span class="token operator">-&gt;</span>_prev <span class="token operator">=</span> node1<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node1<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node2<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>✅<strong>循环引用分析</strong>：</p> 
+<ol><li><code>node1</code>和<code>node2</code>两个智能指针对象指向两个节点，引用计数变成1，我们不需要手动<code>delete</code>。</li><li><code>node1</code>的<code>_next</code>指向<code>node2</code>，<code>node2</code>的<code>_prev</code>指向<code>node1</code>，引用计数变成2。</li><li><code>node1</code>和<code>node2</code>析构，引用计数减到1，但是<code>_next</code>还指向下一个节点。但是<code>_prev</code>还指向上一个节点。</li><li><strong>也就是说<code>_next</code>析构了，<code>node2</code>就释放了</strong>。</li><li><strong>也就是说<code>_prev</code>析构了，<code>node1</code>就释放了</strong>。</li><li><strong>但是<code>_next</code>属于<code>node</code>的成员，<code>node1</code>释放了，<code>_next</code>才会析构，而<code>node1</code>由<code>_prev</code>管理，<code>_prev</code>属于<code>node2</code>成员，所以这就叫循环引用，谁也不会释放</strong>。</li></ol> 
+<p>⭕让我们通过下面这个图片来说上面这个问题：<br> <img src="https://images2.imgbox.com/5a/16/g6aa2CD3_o.png" alt="在这里插入图片描述"></p> 
+<p>为了解决循环引用问题，可以使用 <code>std::weak_ptr</code>。<code>std::weak_ptr</code> 是一种弱引用，它可以指向 <code>std::shared_ptr</code> 持有的对象，但不会增加对象的引用计数。这样，即使存在循环引用，通过使用 <code>std::weak_ptr</code> 可以打破循环引用，使对象的引用计数能够正确降为零，从而触发析构函数的调用。</p> 
+<h2><a id="stdweak_ptr_49"></a>二、std::weak_ptr</h2> 
+<h3><a id="1__50"></a>1. 简介</h3> 
+<p><code>std::weak_ptr</code> 是 C++11 标准库中提供的一种弱引用智能指针，它可以指向 <code>std::shared_ptr</code> 所管理的对象，<strong>但不会增加对象的引用计数</strong>。因此，当使用 <code>std::weak_ptr</code> 时，<strong>如果 <code>std::shared_ptr</code> 对象被释放或者过期，<code>std::weak_ptr</code> 将自动失效，避免了循环引用导致的内存泄漏问题</strong>。</p> 
+<p>🔴<a href="https://cplusplus.com/reference/memory/weak_ptr/" rel="nofollow">std::weak_ptr官方文档</a></p> 
+<p><img src="https://images2.imgbox.com/75/49/Ji8tPSWv_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_weak_ptr_57"></a>2. weak_ptr模板类提供的成员方法</h3> 
+<p>和 <code>shared_ptr&lt;T&gt;</code>、<code>unique_ptr&lt;T&gt;</code> 相比，<code>weak_ptr&lt;T&gt;</code> 模板类提供的成员方法不多，下表罗列了常用的成员方法及各自的功能。</p> 
+<table><thead><tr><th>成员方法</th><th>功能</th></tr></thead><tbody><tr><td><strong>operator=</strong></td><td>重载 <code>=</code> 赋值运算符，使得 <code>std::weak_ptr</code> 指针可以直接被 <code>std::weak_ptr</code> 或者 <code>std::shared_ptr</code> 类型指针赋值。</td></tr><tr><td><strong>swap(x)</strong></td><td>其中 <code>x</code> 表示一个同类型的 <code>std::weak_ptr</code> 类型指针，该函数可以互换两个同类型 <code>std::weak_ptr</code> 指针的内容。</td></tr><tr><td><strong>reset()</strong></td><td>将当前 <code>std::weak_ptr</code> 指针置为空指针。</td></tr><tr><td><strong>use_count()</strong></td><td>查看指向和当前 <code>std::weak_ptr</code> 指针相同的 <code>std::shared_ptr</code> 指针的数量。</td></tr><tr><td><strong>expired()</strong></td><td>判断当前 <code>std::weak_ptr</code> 指针是否过期（指针为空，或者指向的堆内存已经被释放）。</td></tr><tr><td><strong>lock()</strong></td><td>如果当前 <code>std::weak_ptr</code> 已经过期，则该函数会返回一个空的 <code>std::shared_ptr</code> 指针；反之，该函数返回一个和当前 <code>std::weak_ptr</code> 指向相同的 <code>std::shared_ptr</code> 指针。</td></tr></tbody></table> 
+<p>🚨🚨<strong>注意：<code>weak_ptr&lt;T&gt;</code> 模板类没有重载 <code>*</code> 和 <code>-&gt;</code> 运算符，因此 <code>weak_ptr</code> 类型指针只能访问某一 <code>shared_ptr</code> 指针指向的堆内存空间，无法对其进行修改</strong>。</p> 
+<h3><a id="3__69"></a>3. 使用示例</h3> 
+<h4><a id="1weak_ptr_70"></a>（1）weak_ptr指针的创建</h4> 
+<p>创建 <code>std::weak_ptr</code> 指针的方式和创建 <code>std::shared_ptr</code> 的方式类似。下面列举了三种常见的创建 <code>std::weak_ptr</code> 的方式：</p> 
+<ol><li>从 <code>std::shared_ptr</code> 创建</li></ol> 
+<p>可以通过将 <code>std::shared_ptr</code> 赋值给 <code>std::weak_ptr</code> 来创建一个弱引用指针，例如：</p> 
+<pre><code class="prism language-cpp">std<span class="token operator">::</span>shared_ptr<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span> sptr <span class="token operator">=</span> std<span class="token operator">::</span>make_shared<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token number">42</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+std<span class="token operator">::</span>weak_ptr<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span> <span class="token function">wptr</span><span class="token punctuation">(</span>sptr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>上述代码中，我们首先创建了一个 <code>std::shared_ptr</code> 对象 <code>sptr</code>，它指向一个动态分配的 <code>int</code> 类型对象。然后，我们将 <code>sptr</code> 赋值给 <code>std::weak_ptr</code> 对象 <code>wptr</code>，创建了一个弱引用指针。</p> 
+<ol start="2"><li>从 <code>std::shared_ptr</code> 转换</li></ol> 
+<p>可以通过 <code>std::shared_ptr</code> 的 <code>weak_ptr</code> 成员函数，将 <code>std::shared_ptr</code> 转换为 <code>std::weak_ptr</code>，例如：</p> 
+<pre><code class="prism language-cpp">std<span class="token operator">::</span>shared_ptr<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span> sptr <span class="token operator">=</span> std<span class="token operator">::</span>make_shared<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span><span class="token punctuation">(</span><span class="token number">42</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+std<span class="token operator">::</span>weak_ptr<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span> wptr <span class="token operator">=</span> sptr<span class="token operator">-&gt;</span><span class="token function">weak_ptr</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>上述代码中，我们首先创建了一个 <code>std::shared_ptr</code> 对象 <code>sptr</code>，它指向一个动态分配的 <code>int</code> 类型对象。然后，我们调用 <code>sptr</code> 的 <code>weak_ptr()</code> 成员函数，将 <code>sptr</code> 转换为 <code>std::weak_ptr</code> 对象 <code>wptr</code>，创建了一个弱引用指针。</p> 
+<ol start="3"><li>使用 <code>std::weak_ptr</code> 的构造函数</li></ol> 
+<p>可以直接使用 <code>std::weak_ptr</code> 的构造函数，创建一个空的弱引用指针，例如：</p> 
+<pre><code class="prism language-cpp">std<span class="token operator">::</span>weak_ptr<span class="token operator">&lt;</span><span class="token keyword">int</span><span class="token operator">&gt;</span> wptr<span class="token punctuation">;</span>
+</code></pre> 
+<p>上述代码中，我们直接创建了一个空的 <code>std::weak_ptr</code> 对象 <code>wptr</code>，它不持有任何对象的引用。</p> 
+<h4><a id="2_107"></a>（2）完整示例（解决上面循环引用问题）</h4> 
+<p>使用 <code>std::weak_ptr</code> 修改上面的代码，可以将 <code>_prev</code> 和 <code>_next</code> 成员变量改为 <code>std::weak_ptr&lt;ListNode&gt;</code> 类型。这样可以避免循环引用，同时仍然可以访问链表中的前一个节点和后一个节点</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">struct</span> <span class="token class-name">ListNode</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">int</span> _data<span class="token punctuation">;</span>
+	weak_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _prev<span class="token punctuation">;</span>
+	weak_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _next<span class="token punctuation">;</span>
+	<span class="token operator">~</span><span class="token function">ListNode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~ListNode()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node1</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node2</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node1<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node2<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	node1<span class="token operator">-&gt;</span>_next <span class="token operator">=</span> node2<span class="token punctuation">;</span>
+	node2<span class="token operator">-&gt;</span>_prev <span class="token operator">=</span> node1<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node1<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> node2<span class="token punctuation">.</span><span class="token function">use_count</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+	<span class="token comment">// 使用 weak_ptr.lock() 获取 shared_ptr 对象</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> node1Next <span class="token operator">=</span> node1<span class="token operator">-&gt;</span>_next<span class="token punctuation">.</span><span class="token function">lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> node2Prev <span class="token operator">=</span> node2<span class="token operator">-&gt;</span>_prev<span class="token punctuation">.</span><span class="token function">lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>node1Next<span class="token punctuation">)</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node1 next data: "</span> <span class="token operator">&lt;&lt;</span> node1Next<span class="token operator">-&gt;</span>_data <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">else</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node1 next is nullptr"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>node2Prev<span class="token punctuation">)</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node2 prev data: "</span> <span class="token operator">&lt;&lt;</span> node2Prev<span class="token operator">-&gt;</span>_data <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">else</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node2 prev is nullptr"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>运行上述代码，可以得到如下输出：</p> 
+<pre><code class="prism language-cpp"><span class="token number">1</span>
+<span class="token number">1</span>
+<span class="token number">2</span>
+<span class="token number">2</span>
+node1 next data<span class="token operator">:</span> <span class="token number">0</span>
+node2 prev data<span class="token operator">:</span> <span class="token number">0</span>
+</code></pre> 
+<p>在上面的代码示例中，我们创建了两个节点 <code>node1</code> 和 <code>node2</code>，并通过 <code>std::weak_ptr</code> 进行相互引用。</p> 
+<pre><code class="prism language-cpp">shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node1</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> <span class="token function">node2</span><span class="token punctuation">(</span><span class="token keyword">new</span> ListNode<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>接下来，我们设置节点之间的关系。修改前的代码如下：</p> 
+<pre><code class="prism language-cpp">node1<span class="token operator">-&gt;</span>_next <span class="token operator">=</span> node2<span class="token punctuation">;</span>
+node2<span class="token operator">-&gt;</span>_prev <span class="token operator">=</span> node1<span class="token punctuation">;</span>
+</code></pre> 
+<p>我们将 <code>_next</code> 和 <code>_prev</code> 成员变量的类型从 <code>shared_ptr&lt;ListNode&gt;</code> 改为 <code>weak_ptr&lt;ListNode&gt;</code>：</p> 
+<pre><code class="prism language-cpp">weak_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _prev<span class="token punctuation">;</span>
+weak_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> _next<span class="token punctuation">;</span>
+</code></pre> 
+<p>这样就建立了节点之间的弱引用关系，避免了循环引用。</p> 
+<p>接下来，我们可以通过 <code>lock()</code> 方法将 <code>std::weak_ptr</code> 转换为 <code>std::shared_ptr</code>，以访问所管理的对象。</p> 
+<pre><code class="prism language-cpp">shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> node1Next <span class="token operator">=</span> node1<span class="token operator">-&gt;</span>_next<span class="token punctuation">.</span><span class="token function">lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+shared_ptr<span class="token operator">&lt;</span>ListNode<span class="token operator">&gt;</span> node2Prev <span class="token operator">=</span> node2<span class="token operator">-&gt;</span>_prev<span class="token punctuation">.</span><span class="token function">lock</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>如果 <code>std::weak_ptr</code> 不过期（即所管理的对象还存在），<code>lock()</code> 方法会返回一个有效的 <code>std::shared_ptr</code> 对象，否则返回空指针。</p> 
+<p>最后，我们可以使用这些 <code>std::shared_ptr</code> 对象来访问链表中的前驱和后继节点的数据。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">if</span> <span class="token punctuation">(</span>node1Next<span class="token punctuation">)</span>
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node1 next data: "</span> <span class="token operator">&lt;&lt;</span> node1Next<span class="token operator">-&gt;</span>_data <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token keyword">else</span>
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node1 next is nullptr"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+<span class="token keyword">if</span> <span class="token punctuation">(</span>node2Prev<span class="token punctuation">)</span>
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node2 prev data: "</span> <span class="token operator">&lt;&lt;</span> node2Prev<span class="token operator">-&gt;</span>_data <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token keyword">else</span>
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">"node2 prev is nullptr"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+</code></pre> 
+<p>通过这种方式，我们可以安全地访问链表中的前驱和后继节点，而不会导致循环引用和内存泄漏。</p> 
+<h3><a id="4_C_205"></a>4. C++模拟实现</h3> 
+<pre><code class="prism language-cpp"><span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">T</span><span class="token operator">&gt;</span>
+<span class="token keyword">class</span> <span class="token class-name">weak_ptr</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token comment">// 默认构造函数，将_ptr成员指针初始化为nullptr</span>
+    <span class="token function">weak_ptr</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+        <span class="token operator">:</span><span class="token function">_ptr</span><span class="token punctuation">(</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+
+    <span class="token comment">// 接受shared_ptr参数的构造函数，将_ptr成员指针初始化为shared_ptr所管理对象的指针</span>
+    <span class="token function">weak_ptr</span><span class="token punctuation">(</span><span class="token keyword">const</span> shared_ptr<span class="token operator">&lt;</span>T<span class="token operator">&gt;</span><span class="token operator">&amp;</span> sp<span class="token punctuation">)</span>
+        <span class="token operator">:</span><span class="token function">_ptr</span><span class="token punctuation">(</span>sp<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+
+    <span class="token comment">// 重载*运算符，返回所管理对象的引用</span>
+    T<span class="token operator">&amp;</span> <span class="token keyword">operator</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token operator">*</span>_ptr<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 重载-&gt;运算符，返回所管理对象的指针</span>
+    T<span class="token operator">*</span> <span class="token keyword">operator</span><span class="token operator">-&gt;</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> _ptr<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 返回所管理对象的指针</span>
+    T<span class="token operator">*</span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> _ptr<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token keyword">private</span><span class="token operator">:</span>
+    T<span class="token operator">*</span> _ptr<span class="token punctuation">;</span> <span class="token comment">// 所管理对象的指针</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>这段代码是一个简化版的 <code>weak_ptr</code> 类的实现，提供了一些基本的功能。</p> 
+<p>首先，我们可以看到 <code>weak_ptr</code> 类有一个默认构造函数和一个接受 <code>shared_ptr</code> 参数的构造函数。默认构造函数将 <code>_ptr</code> 成员指针初始化为 <code>nullptr</code>，而接受 <code>shared_ptr</code> 参数的构造函数将 <code>_ptr</code> 成员指针初始化为 <code>shared_ptr</code> 所管理对象的指针。</p> 
+<p>接下来，我们可以看到 <code>weak_ptr</code> 重载了 <code>*</code> 和 <code>-&gt;</code> 运算符，使得可以像使用指针一样，通过 <code>weak_ptr</code> 对象访问所管理的对象。<code>operator*()</code> 返回所管理对象的引用，<code>operator-&gt;()</code> 返回所管理对象的指针。</p> 
+<p>同时，<code>weak_ptr</code> 还提供了一个 <code>get()</code> 方法，返回 <code>_ptr</code> 指针，即所管理对象的指针。这允许用户直接访问 <code>_ptr</code> 指针，但需要注意，这种直接访问可能会导致悬空指针问题，因为 <code>_ptr</code> 指针可能已经无效（所管理对象已被释放）。</p> 
+<p>🚨🚨<strong>注意：这个简化版的 <code>weak_ptr</code> 实现没有考虑线程安全性。在实际应用中，<code>weak_ptr</code> 需要与其他智能指针共同使用，比如 <code>shared_ptr</code>、<code>unique_ptr</code>，并且需要考虑线程安全性和异常安全性</strong>。</p> 
+<h2><a id="_254"></a>温馨提示</h2> 
+<p>感谢您对博主文章的关注与支持！另外，我计划在未来的更新中持续探讨与本文相关的内容，会为您带来更多关于C++以及编程技术问题的深入解析、应用案例和趣味玩法等。请继续关注博主的更新，不要错过任何精彩内容！</p> 
+<p>再次感谢您的支持和关注。期待与您建立更紧密的互动，共同探索C++、算法和编程的奥秘。祝您生活愉快，排便顺畅！<br> <img src="https://images2.imgbox.com/cd/95/jfivH8Wh_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/49e69b8574dae735f93d4d560cdd3649/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">RabbitMQ详解与实战(绝对足够惊喜)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e1052d3d0abb4dbc1c9fff77622f7f87/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">微信支付对接：vue前端调起支付时，提示error ‘WeixinJSBridge‘ is not defined，已解决</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

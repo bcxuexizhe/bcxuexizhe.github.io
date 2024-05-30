@@ -1,0 +1,731 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【c&#43;&#43;】全面理解C&#43;&#43;多态：虚函数表深度剖析与实践应用 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d5521c370939220f2282595898d212a7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【c&#43;&#43;】全面理解C&#43;&#43;多态：虚函数表深度剖析与实践应用">
+  <meta property="og:description" content="🔥个人主页：Quitecoder
+🔥专栏：c&#43;&#43;笔记仓
+朋友们大家好，通过本篇文章，来详细理解多态的内容
+目录 `1.多态的定义及实现``1.1多态的构成条件``1.2虚函数的重写``1.3 C&#43;&#43;11 override 和 final``1.4重载、覆盖(重写)、隐藏(重定义)的对比` `2.多态的原理``2.1虚函数表``2.2多态的原理``2.3单继承的虚函数表` `3.抽象类``3.1接口继承与实现继承``3.2静态多态与动态多态``3.3例题` `4.多继承中的虚函数表``4.1菱形继承和菱形虚拟继承``4.2菱形虚拟继承：` `5.虚表的存储位置` 1.多态的定义及实现 多态的基本概念：多态指的是对象可以通过指向它们的基类的引用或指针被操纵，同时还能保持其派生类部分的特性。将派生类对象当作基类对象来对待，这允许不同类的对象响应相同的消息以不同的方式，换句话说，同一个接口，使用不同的实例而执行不同操作
+比如买票，普通人买票时，是全价买票；学生买票时，是半价买票
+class Person { public: virtual void BuyTicket() { cout &lt;&lt; &#34;买票-全价&#34; &lt;&lt; endl; } }; class Student : public Person { public: virtual void BuyTicket() { cout &lt;&lt; &#34;买票-半价&#34; &lt;&lt; endl; } }; void Func(Person&amp; p) { p.BuyTicket(); } int main() { Person ps; Student st; Func(ps); Func(st); return 0; } 普通人全价，学生半价
+1.1多态的构成条件 多态是在不同继承关系的类对象，去调用同一函数，产生了不同的行为。比如Student继承了Person。Person对象买票全价，Student对象买票半价">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-11T17:58:52+08:00">
+    <meta property="article:modified_time" content="2024-05-11T17:58:52+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【c&#43;&#43;】全面理解C&#43;&#43;多态：虚函数表深度剖析与实践应用</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atelier-sulphurpool-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/33/f5/7gbAUZRn_o.png" alt="Alt" width="300" height="170"></p> 
+<p><font color="peru" size="4"><b>🔥个人主页</b>：<a href="https://blog.csdn.net/arf_dog?type=blog"><font color="#33CCCC" size="4"><b>Quitecoder</b></font></a></font></p> 
+<p><font color="peru" size="4">🔥<strong>专栏</strong></font>：<a href="https://blog.csdn.net/arf_dog/category_12614029.html?spm=1001.2014.3001.5482"><font color="#33CCCC" size="4"><b>c++笔记仓</b></font></a></p> 
+<p><img src="https://images2.imgbox.com/e8/82/xpfoDY9B_o.gif" alt="Alt"></p> 
+<blockquote> 
+ <p>朋友们大家好，通过本篇文章，来详细理解多态的内容</p> 
+</blockquote> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#1_14" rel="nofollow">`1.多态的定义及实现`</a></li><li><ul><li><a href="#11_45" rel="nofollow">`1.1多态的构成条件`</a></li><li><a href="#12_64" rel="nofollow">`1.2虚函数的重写`</a></li><li><a href="#13_C11_override__final_165" rel="nofollow">`1.3 C++11 override 和 final`</a></li><li><a href="#14_213" rel="nofollow">`1.4重载、覆盖(重写)、隐藏(重定义)的对比`</a></li></ul> 
+  </li><li><a href="#2_277" rel="nofollow">`2.多态的原理`</a></li><li><ul><li><a href="#21_279" rel="nofollow">`2.1虚函数表`</a></li><li><a href="#22_302" rel="nofollow">`2.2多态的原理`</a></li><li><a href="#23_405" rel="nofollow">`2.3单继承的虚函数表`</a></li></ul> 
+  </li><li><a href="#3_508" rel="nofollow">`3.抽象类`</a></li><li><ul><li><a href="#31_539" rel="nofollow">`3.1接口继承与实现继承`</a></li><li><a href="#32_544" rel="nofollow">`3.2静态多态与动态多态`</a></li><li><a href="#33_548" rel="nofollow">`3.3例题`</a></li></ul> 
+  </li><li><a href="#4_594" rel="nofollow">`4.多继承中的虚函数表`</a></li><li><ul><li><a href="#41_652" rel="nofollow">`4.1菱形继承和菱形虚拟继承`</a></li><li><a href="#42_695" rel="nofollow">`4.2菱形虚拟继承：`</a></li></ul> 
+  </li><li><a href="#5_800" rel="nofollow">`5.虚表的存储位置`</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="1_14"></a><code>1.多态的定义及实现</code></h2> 
+<blockquote> 
+ <p><mark><font color="green">多态的基本概念：</font></mark><strong>多态指的是对象可以通过指向它们的基类的引用或指针被操纵，同时还能保持其派生类部分的特性。将派生类对象当作基类对象来对待，这允许不同类的对象响应相同的消息以不同的方式，换句话说，同一个接口，使用不同的实例而执行不同操作</strong></p> 
+</blockquote> 
+<p>比如买票，普通人买票时，是全价买票；学生买票时，是半价买票</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-半价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">Func</span><span class="token punctuation">(</span>Person<span class="token operator">&amp;</span> p<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	p<span class="token punctuation">.</span><span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Person ps<span class="token punctuation">;</span>
+	Student st<span class="token punctuation">;</span>
+	<span class="token function">Func</span><span class="token punctuation">(</span>ps<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">Func</span><span class="token punctuation">(</span>st<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a1/d6/B9PHFKm1_o.png" alt="在这里插入图片描述"><br> 普通人全价，学生半价</p> 
+<h3><a id="11_45"></a><code>1.1多态的构成条件</code></h3> 
+<p><strong>多态是在不同继承关系的类对象，去调用同一函数，产生了不同的行为。比如Student继承了Person。Person对象买票全价，Student对象买票半价</strong></p> 
+<p>那么在<strong>继承中要构成多态还有两个条件</strong>：</p> 
+<ol><li><mark>必须通过基类的指针或者引用调用虚函数</mark></li><li><mark>被调用的函数必须是虚函数，且派生类必须对基类的虚函数进行重写</mark></li></ol> 
+<p><img src="https://images2.imgbox.com/b5/11/7tEb06qf_o.png" alt="在这里插入图片描述"><br> <strong>指向谁调用谁</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">Func</span><span class="token punctuation">(</span>Person  p<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	p<span class="token punctuation">.</span><span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>如果这样调用，就不是指针或引用了，现在就不是多态</strong>：<br> <img src="https://images2.imgbox.com/e7/8f/I8MpuaJx_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="12_64"></a><code>1.2虚函数的重写</code></h3> 
+<p><font color="red">虚函数：即被virtual修饰的类成员函数称为虚函数</font></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>虚函数的重写(覆盖)</strong>：派生类中有一个跟基类完全相同的虚函数(即派生类虚函数与基类虚函数的<mark>返回值类型、函数名字、参数列表</mark>完全相同)，<font color="red">称子类的虚函数重写了基类的虚函数</font></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-半价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>虚函数重写的三个例外</strong>：</p> 
+<ol><li>协变(基类与派生类虚函数<mark>返回值类型不同</mark>)：<br> 派生类重写基类虚函数时，与基类虚函数返回值类型不同。即<mark>基类虚函数返回基类对象的指针或者引用，派生类虚函数返回派生类对象的指针或者引用</mark>时，称为协变。</li></ol> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">A</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">A</span></span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> A<span class="token operator">*</span> <span class="token function">f</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token keyword">return</span> <span class="token keyword">new</span> A<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> B<span class="token operator">*</span> <span class="token function">f</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token keyword">return</span> <span class="token keyword">new</span> B<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<ol start="2"><li>析构函数的重写(基类与派生类析构<mark>函数的名字</mark>不同)<br> 如果基类的析构函数为虚函数，此时派生类析构函数只要定义，<mark>无论是否加virtual关键字，都与基类的析构函数构成重写</mark>，虽然基类与派生类析构函数名字不同。虽然函数名不相同，看起来违背了重写的规则，其实不然，这里可以理解为<mark>编译器对析构函数的名称做了特殊处理，编译后析构函数的名称统一处理成destructor</mark></li></ol> 
+<p><strong>只有派生类Student的析构函数重写了Person的析构函数，下面的delete对象调用析构函数，才能构成多态，才能保证p1和p2指向的对象正确的调用析构函数</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token operator">~</span><span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token operator">~</span><span class="token function">Student</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Person<span class="token operator">*</span> p1 <span class="token operator">=</span> <span class="token keyword">new</span> Person<span class="token punctuation">;</span>
+	Person<span class="token operator">*</span> p2 <span class="token operator">=</span> <span class="token keyword">new</span> Student<span class="token punctuation">;</span>
+	<span class="token keyword">delete</span> p1<span class="token punctuation">;</span>
+	<span class="token keyword">delete</span> p2<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>当我们通过<mark>基类的指针</mark>来删除一个派生类的对象时，如果基类的析构函数没有被声明为虚拟的（<code>virtual</code>），将会发生对象的不完全析构。<strong>这意味着只有基类的析构代码会被执行，而派生类的析构逻辑不会调用，可能导致资源泄露或其他问题。</strong></p> 
+<p>在给定的代码中，<code>Person</code> 类的析构函数被声明为虚拟的：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">virtual</span> <span class="token operator">~</span><span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre> 
+<p>这意味着任何从 <code>Person</code> 派生的类，像 <code>Student</code>，都应该提供析构函数的一个覆盖版本：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">virtual</span> <span class="token operator">~</span><span class="token function">Student</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre> 
+<p>当 <code>delete p2;</code> 被执行的时候（其中 <code>p2</code> <strong>是一个基类 <code>Person</code> 类型的指针，指向一个 <code>Student</code> 对象</strong>），<code>Student</code> 的析构函数首先会被调用（子类），然后是 <code>Person</code> 的析构函数（基类）</p> 
+<p><strong>因此，重写基类的虚拟析构函数确保了当通过基类指向派生类对象的指针进行 <code>delete</code> 操作时，能够按照正确的顺序调用派生类和基类的析构函数</strong></p> 
+<ol start="3"><li><strong>派生类可以不写virtual</strong></li></ol> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-半价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>在重写基类虚函数时，派生类的虚函数在不加virtual关键字时，虽然也可以构成重写(因为继承后基类的虚函数被继承下来了在派生类依旧保持虚函数属性)，<strong>但是该种写法不是很规范，不建议这样使用</strong></p> 
+<h3><a id="13_C11_override__final_165"></a><code>1.3 C++11 override 和 final</code></h3> 
+<blockquote> 
+ <p><strong>C++对函数重写的要求比较严格，但是有些情况下由于疏忽，可能会导致函数名字母次序写反而无法构成重载，而这种错误在编译期间是不会报出的，只有在程序运行时没有得到预期结果才来debug会得不偿失，因此：C++11提供了override和final两个关键字，可以帮助用户检测是否重写</strong></p> 
+</blockquote> 
+<ol><li><strong>final：修饰虚函数，表示该虚函数不能再被重写</strong></li></ol> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Car</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">final</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Benz</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Car</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Benz-舒适"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d2/56/SGAWdGaj_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>用final修饰的类叫做最终类，不能被继承</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Car</span> <span class="token keyword">final</span><span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Benz</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Car</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span>  <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Benz-舒适"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c0/49/1LMu7tZH_o.png" alt="在这里插入图片描述"></p> 
+<ol start="2"><li><strong>override: 检查派生类虚函数是否重写了基类某个虚函数，如果没有重写编译报错</strong></li></ol> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Car</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Benz</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Car</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Benz-舒适"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/9e/4b/kJNbt5hS_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="14_213"></a><code>1.4重载、覆盖(重写)、隐藏(重定义)的对比</code></h3> 
+<p>重载发生在<mark>同一作用域内</mark>。当两个或者更多的函数<mark>拥有相同的名字</mark>，但是**参数列表不同（参数类型、参数个数或者参数顺序不同）**时，这些函数被称为重载函数。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">MyClass</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> 
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">double</span> d<span class="token punctuation">)</span> 
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>重写仅在基类和派生类之间发生，<mark>且只针对虚函</mark>数。当派生类定义一个与基类中虚函数签名完全相同的函数时（即函数名、参数列表和返回类型相同），派生类函数会覆盖（重写）基类中对应的虚函数。这是多态的基础，使得在运行时可以通过基类的指针或引用调用派生类的函数实现</p> 
+<p>示例：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Base</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Derived</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Base</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">override</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span> <span class="token comment">// 覆盖（重写）基类中的func</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><font color="red">隐藏也是在类的继承关系中发生，但它和是否为虚函数无关。在派生类中定义了一个新的函数，如果这个函数的名字与基类中的某个函数的名字相同，但是参数列表不同，那么它会隐藏（也称为重定义）所有与它同名的基类函数，不论基类中同名函数参数列表如何</font></p> 
+<p>示例：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Base</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Derived</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Base</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">double</span> d<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">/* ... */</span> <span class="token punctuation">}</span> <span class="token comment">// 隐藏了基类的func()</span>
+    <span class="token comment">// 注意：现在Base的func()和func(int)都被隐藏，只能通过Derived的对象访问新的func(double)</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>在继承的类中隐藏了基类中的同名函数（不论是重载还是同签名的函数），如果想要调用被隐藏的函数，需要显式地指明作用域：</p> 
+<pre><code class="prism language-cpp">Derived obj<span class="token punctuation">;</span>
+obj<span class="token punctuation">.</span><span class="token class-name">Base</span><span class="token double-colon punctuation">::</span><span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 显式调用Base类中被隐藏的func()</span>
+obj<span class="token punctuation">.</span><span class="token class-name">Base</span><span class="token double-colon punctuation">::</span><span class="token function">func</span><span class="token punctuation">(</span><span class="token number">42</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 显式调用Base类中被隐藏的func(int)</span>
+obj<span class="token punctuation">.</span><span class="token function">func</span><span class="token punctuation">(</span><span class="token number">3.14</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 调用Derived类中的func(double)</span>
+</code></pre> 
+<p><mark>两个基类和派生类的同名函数，不构成重写就是隐藏</mark></p> 
+<h2><a id="2_277"></a><code>2.多态的原理</code></h2> 
+<h3><a id="21_279"></a><code>2.1虚函数表</code></h3> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Base</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Func1()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _b <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><code>sizeof(Base)</code>是多少？<br> 答案是8，我们进行测试观察：</p> 
+<p><img src="https://images2.imgbox.com/24/8f/wwX6GrQT_o.png" alt="在这里插入图片描述"><br> 除了_b成员，还多一个__vfptr放在对象的前面，<strong>对象中的这个指针我们叫做虚函数表指针(v代表virtual，f代表function)</strong>。<mark>一个含有虚函数的类中都至少都有一个虚函数表指针，因为虚函数的地址要被放到虚函数表中</mark>，虚函数表也简称虚表<br> 用内存窗口观察：<br> <img src="https://images2.imgbox.com/64/00/FCzB0dVq_o.png" alt="在这里插入图片描述"><br> 它是占八个字节的</p> 
+<h3><a id="22_302"></a><code>2.2多态的原理</code></h3> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-半价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+	<span class="token keyword">int</span> _j <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">void</span> <span class="token function">Func</span><span class="token punctuation">(</span>Person<span class="token operator">*</span> p<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	p<span class="token operator">-&gt;</span><span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Person Mike<span class="token punctuation">;</span>
+	<span class="token function">Func</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>Mike<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	Student Johnson<span class="token punctuation">;</span>
+	<span class="token function">Func</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>Johnson<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ec/e0/ZKxgHiTD_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>这里的指向父类调父类，指向子类调子类是怎么实现的呢？</strong> 我们进行调试</p> 
+<p><img src="https://images2.imgbox.com/36/5b/PTlp37zW_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/6c/56/JXEuCJLv_o.png" alt="在这里插入图片描述"></p> 
+<p><mark>Johnson首先继承了父类的部分，有虚表和虚表指针，这两个虚表指针不一样，他们指向内容不一样，一个指向父类的Buyticket，另一个指向子类的</mark></p> 
+<p><strong>p是指向mike对象时，p-&gt;BuyTicket在mike的虚表中找到虚函数Person::BuyTicket</strong><br> <strong>p是指向johnson对象时，p-&gt;BuyTicket在johson的虚表中找到虚函数是Student::BuyTicket</strong></p> 
+<p><font color="green">这样就实现出了不同对象去完成同一行为时，展现出不同的形态</font></p> 
+<blockquote> 
+ <p><strong>反过来思考我们要达到多态，有两个条件，一个是虚函数覆盖，一个是对象的指针或引用调用虚函数。反思一下为什么</strong></p> 
+</blockquote> 
+<p><font color="red"><strong>满足多态条件，这里的调用生成的指令就会指向对象的虚表中找对应的虚函数调用</strong></font></p> 
+<p><font color="green"><strong>满足多态以后的函数调用，不是在编译时确定的，是运行起来以后到对象的中取找的。不满足多态的函数调用时编译时确认好的</strong></font></p> 
+<pre><code class="prism language-cpp">	p<span class="token operator">-&gt;</span><span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token number">009924E1</span>  mov         eax<span class="token punctuation">,</span>dword ptr <span class="token punctuation">[</span>p<span class="token punctuation">]</span>  
+<span class="token number">009924E4</span>  mov         edx<span class="token punctuation">,</span>dword ptr <span class="token punctuation">[</span>eax<span class="token punctuation">]</span>  
+<span class="token number">009924E6</span>  mov         esi<span class="token punctuation">,</span>esp  
+<span class="token number">009924E8</span>  mov         ecx<span class="token punctuation">,</span>dword ptr <span class="token punctuation">[</span>p<span class="token punctuation">]</span>  
+<span class="token number">009924</span>EB  mov         eax<span class="token punctuation">,</span>dword ptr <span class="token punctuation">[</span>edx<span class="token punctuation">]</span>  
+<span class="token number">009924</span>ED  call        eax  
+<span class="token number">009924</span>EF  cmp         esi<span class="token punctuation">,</span>esp  
+<span class="token number">009924F</span>1  call        <span class="token function">__RTC_CheckEsp</span> <span class="token punctuation">(</span><span class="token number">09912</span>B2h<span class="token punctuation">)</span>
+</code></pre> 
+<p><strong>满足多态的情况下</strong></p> 
+<ul><li> <p>p中存的是mike对象的指针，将p移动到eax中</p> </li><li> <p>[eax]就是取eax值指向的内容，这里相当于把mike对象头4个字节(虚表指针)移动到了edx</p> </li><li> <p>[edx]就是取edx值指向的内容，这里相当于把虚表中的头4字节存的虚函数指针移动到了eax</p> </li><li> <p>call eax中存虚函数的指针。<strong>这里可以看出满足多态的调用，不是在编译时确定的，是运行起来以后到对象的中取找的</strong></p> </li></ul> 
+<p><strong>同类型共用一个虚表</strong>：</p> 
+<pre><code class="prism language-cpp">Person Mike<span class="token punctuation">;</span>
+<span class="token function">Func</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>Mike<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+Person p1<span class="token punctuation">;</span>
+<span class="token function">Func</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a6/d2/Xq9ZiSnM_o.png" alt="在这里插入图片描述"><br> 现在如果不满足多态呢？</p> 
+<p>我将父类进行修改</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _i <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<pre><code class="prism language-cpp">	p<span class="token operator">-&gt;</span><span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token number">005</span>B24E1  mov         ecx<span class="token punctuation">,</span>dword ptr <span class="token punctuation">[</span>p<span class="token punctuation">]</span>  
+<span class="token number">005</span>B24E4  call        <span class="token class-name">Person</span><span class="token double-colon punctuation">::</span><span class="token function">BuyTicket</span> <span class="token punctuation">(</span><span class="token number">05</span>B149Ch<span class="token punctuation">)</span>
+</code></pre> 
+<p><strong>它在编译链接时就确定了</strong></p> 
+<h3><a id="23_405"></a><code>2.3单继承的虚函数表</code></h3> 
+<p>来看下面的类：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Base</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base::func2"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Derive</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Base</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Derive::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Derive::func3"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func4</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Derive::func4"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> b <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Base b<span class="token punctuation">;</span>
+	Derive d<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b8/c5/lpt1mlxO_o.png" alt="在这里插入图片描述"><br> 我们发现Derive少了两个虚表指针，它只有重写的func1和继承的func2，没有func3，func4，这里是监视窗口的问题</p> 
+<p>在 <code>Derive</code> 类的虚表中，会有以下指向虚函数的指针：</p> 
+<ol><li>指向 <code>Derive::func1</code> 的指针 （重写了 <code>Base::func1</code>）</li><li>指向 <code>Base::func2</code> 的指针 （继承自 <code>Base</code>，<code>Derive</code> 没有重写）</li><li>指向 <code>Derive::func3</code> 的指针 （Derive 新增的虚函数）</li><li>指向 <code>Derive::func4</code> 的指针 （Derive 新增的虚函数）</li></ol> 
+<p>我们通过内存来确认：</p> 
+<p><img src="https://images2.imgbox.com/40/14/TrROy6Fb_o.png" alt="在这里插入图片描述"><br> 我们不是很确认后面两个地址就是func3和func4的地址</p> 
+<p><strong>那么我们如何查看d的虚表呢？下面我们使用代码打印出虚表中的函数</strong></p> 
+<p>这里我们用到<strong>函数指针数组</strong>来实现：</p> 
+<p>虚函数表的本质就是函数指针数组</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span><span class="token punctuation">(</span><span class="token operator">*</span>p<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>这个就定义了一个函数指针数组，我们用typedef来进行优化一下：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">typedef</span> <span class="token keyword">void</span><span class="token punctuation">(</span><span class="token operator">*</span>VFPTR<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+VFPTR p2<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>我们<strong>定义一个打印虚表的函数</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">PrintVFT</span><span class="token punctuation">(</span>VFPTR<span class="token operator">*</span> vft<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span>size_t i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%p-&gt;"</span><span class="token punctuation">,</span> vft<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+		VFPTR pf <span class="token operator">=</span> vft<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+		<span class="token punctuation">(</span><span class="token operator">*</span>pf<span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token comment">//pf();</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>依次取虚表中的虚函数指针打印并调用。调用就可以看出存的是哪个函数</strong></p> 
+<p>函数写好后，关键是我如何取到它的地址？</p> 
+<pre><code class="prism language-cpp">Derive d<span class="token punctuation">;</span>
+<span class="token keyword">int</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span>d<span class="token punctuation">;</span>  
+</code></pre> 
+<p>上面是不支持转换的，<strong>只有有关联的类型才能互相转换</strong></p> 
+<p>但是，<font color="red">指针可以随意转换</font></p> 
+<pre><code class="prism language-cpp">VFPTR<span class="token operator">*</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span>VFPTR<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>d<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<ol><li><code>&amp;d</code> 取得 <code>d</code> 对象的地址。</li><li><code>(int*)&amp;d</code> 将 <code>d</code> 对象的地址转换为 <code>int*</code> 类型的指针。这里假定 <code>int</code> 大小足够存储指针</li><li><code>*((int*)&amp;d)</code> 对转换后的指针进行解引用，得到的是 <code>d</code> 对象内存起始处的值。由于在C++中，一个包含虚函数的对象在内存起始地址处通常存储着指向虚表的指针，因此这步操作实际上<strong>获取的是指向 <code>Derive</code> 虚表的指针</strong></li><li><code>(VFPTR*)</code> 将 <code>int</code> 类型的值强制转换为 <code>VFPTR*</code> 类型，也就是指向函数指针的指针。</li><li><strong>最终，<code>ptr</code> 就是指向 <code>Derive</code> 类的虚表的指针</strong>。</li></ol> 
+<p>因此，<code>VFPTR* ptr</code> 就是指向目标对象 <code>d</code> 的虚表的指针。之后调用 <code>PrintVFT(ptr);</code> 就可以遍历虚表中的每个条目并调用对应的函数（这里的函数都是通过函数指针 <code>VFPTR</code> 调用的）</p> 
+<p><img src="https://images2.imgbox.com/93/ec/ujsBy6X4_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3_508"></a><code>3.抽象类</code></h2> 
+<p>在虚函数的后面写上 =0 ，则这个函数为<mark>纯虚函数</mark>。<strong>包含纯虚函数的类叫做抽象类（也叫接口类）</strong>，<mark>抽象类不能实例化出对象。派生类继承后也不能实例化出对象，只有重写纯虚函数，派生类才能实例化出对象</mark>。纯虚函数规范了派生类必须重写，另外纯虚函数更体现出了<strong>接口继承</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Car</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/55/df/zznoZISQ_o.png" alt="在这里插入图片描述"><br> <strong>某种意义上说，抽象类强制派生类去完成重写</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Benz</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Car</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Benz-舒适"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">BMW</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Car</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">Drive</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"BMW-操控"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="31_539"></a><code>3.1接口继承与实现继承</code></h3> 
+<blockquote> 
+ <p><strong>普通函数的继承是一种实现继承，派生类继承了基类函数，可以使用函数，继承的是函数的实现。虚函数的继承是一种接口继承，派生类继承的是基类虚函数的接口，目的是为了重写，达成多态，继承的是接口。所以如果不实现多态，不要把函数定义成虚函数</strong></p> 
+</blockquote> 
+<h3><a id="32_544"></a><code>3.2静态多态与动态多态</code></h3> 
+<ol><li>静态绑定又称为前期绑定(早绑定)，<strong>在程序编译期间确定了程序的行为，也称为静态多态，比如：函数重载</strong></li><li>动态绑定又称后期绑定(晚绑定)，<strong>是在程序运行期间，根据具体拿到的类型确定程序的具体行为，调用具体的函数，也称为动态多态</strong></li></ol> 
+<h3><a id="33_548"></a><code>3.3例题</code></h3> 
+<p>下面函数输出结果是什么？</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">A</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">int</span> val <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"A-&gt;"</span> <span class="token operator">&lt;&lt;</span> val <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">test</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">A</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">void</span> <span class="token function">func</span><span class="token punctuation">(</span><span class="token keyword">int</span> val <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"B-&gt;"</span> <span class="token operator">&lt;&lt;</span> val <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">int</span> argc<span class="token punctuation">,</span> <span class="token keyword">char</span><span class="token operator">*</span> argv<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	B<span class="token operator">*</span> p <span class="token operator">=</span> <span class="token keyword">new</span> B<span class="token punctuation">;</span>
+	p<span class="token operator">-&gt;</span><span class="token function">test</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<pre><code>A: A-&gt;0  B: B-&gt;1  C: A-&gt;1  D: B-&gt;0  E: 编译出错  F: 以上都不正确
+</code></pre> 
+<p>正确答案是B</p> 
+<p>类 <code>B</code> 继承自类 <code>A</code> 并且 <strong>复写了 <code>A</code> 中的虚函数 <code>func</code></strong>。</p> 
+<p>首先，复写（覆盖）的本质是派生类提供基类虚函数的一个新的实现。<mark>基类中的虚函数定义了一个接口，而派生类通过覆盖这个虚函数，提供了这个接口的特定实现</mark></p> 
+<p>当创建了派生类 <code>B</code> 的实例，并通过它调用 <code>test()</code> 时，过程如下：</p> 
+<ol><li><code>test()</code> 是在基类 <code>A</code> 中定义的，因此它会调用 <code>func</code> 时使用 <code>A</code> 中定义的默认参数，即 <code>1</code>。</li><li>由于 <code>func</code> 是虚函数，并且我们实际上是在操作 <code>B</code> 类的对象，因此调用的是 <code>B</code> 类中覆盖的 <code>func</code> 版本。</li><li>被调用的 <code>B</code> 类的 <code>func</code> 输出 “B-&gt;”，<strong>然后使用传递给它的参数值，此时是基类的默认参数值 <code>1</code></strong>。</li></ol> 
+<p>综上所述，输出是 <code>B-&gt;1</code>。</p> 
+<p>要明白一个重要的细节：<strong>虚函数的默认参数是静态绑定的，而非动态绑定。也就是说，虚函数的默认参数会在编译时根据函数的静态类型决定，而函数的动态类型会决定在运行时实际调用哪个版本的覆盖函数。这意味着即使 <code>B::func</code> 定义了一个默认值 <code>0</code>，在 <code>A::test</code> 中调用 <code>func()</code> 时，由于它在编译时是视为 <code>A</code> 类型的函数调用，所以使用的是 <code>A::func</code> 定义的默认参数 <code>1</code>。这就是为什么是 <code>B-&gt;1</code> 而不是 <code>B-&gt;0</code></strong></p> 
+<h2><a id="4_594"></a><code>4.多继承中的虚函数表</code></h2> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Base1</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base1::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base1::func2"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> b1<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Base2</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base2::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Base2::func2"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> b2<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Derive</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Base1</span><span class="token punctuation">,</span> <span class="token keyword">public</span> <span class="token class-name">Base2</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Derive::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Derive::func3"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> d1<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ef/26/4rqaDb1E_o.png" alt="在这里插入图片描述"><br> 这里有<strong>两个虚表指针，继承了两个父类</strong>，两个父类的虚表不能合在一起，这里对两张虚表都进行了重写，那么这里<code>func3</code>放在哪个虚表中了呢，是都放呢还是只放一个呢？</p> 
+<p>我们可以用上面的打印虚表的函数进行打印</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">PrintVTable</span><span class="token punctuation">(</span>VFPTR vTable<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">" 虚表地址&gt;"</span> <span class="token operator">&lt;&lt;</span> vTable <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> vTable<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">!=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">" 第%d个虚函数地址 :0X%x,-&gt;"</span><span class="token punctuation">,</span> i<span class="token punctuation">,</span> vTable<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		VFPTR f <span class="token operator">=</span> vTable<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+		<span class="token function">f</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">void</span> <span class="token function">test</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Derive d<span class="token punctuation">;</span>
+	VFPTR<span class="token operator">*</span> vTableb1 <span class="token operator">=</span> <span class="token punctuation">(</span>VFPTR<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>d<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">PrintVTable</span><span class="token punctuation">(</span>vTableb1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	VFPTR<span class="token operator">*</span> vTableb2 <span class="token operator">=</span> <span class="token punctuation">(</span>VFPTR<span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token keyword">char</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token operator">&amp;</span>d <span class="token operator">+</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>Base1<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">PrintVTable</span><span class="token punctuation">(</span>vTableb2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这里第一个虚表已经讲过，<em><em>找第二个虚表先强转为char</em>，再进行字节相加</em>*<br> <img src="https://images2.imgbox.com/f1/b2/GZZizme2_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>func3放入第一个虚表中</strong><br> <img src="https://images2.imgbox.com/35/60/KNNsesZW_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="41_652"></a><code>4.1菱形继承和菱形虚拟继承</code></h3> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">A</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func1</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"A::func1"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">int</span> _a<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">A</span>
+<span class="token comment">//class B : virtual public A</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func2</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"B::func2"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">int</span> _b<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">A</span>
+<span class="token comment">//class C : virtual public A</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func3</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"C::func3"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">int</span> _c<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">D</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">B</span><span class="token punctuation">,</span> <span class="token keyword">public</span> <span class="token class-name">C</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">func4</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"D::func4"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token keyword">int</span> _d<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	D d<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>	
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/4e/11/iSoIRkhd_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/6d/eb/LLajUROW_o.png" alt="在这里插入图片描述"><br> <strong>菱形继承与多继承相似，d里面的虚函数放在B的虚表中</strong></p> 
+<h3><a id="42_695"></a><code>4.2菱形虚拟继承：</code></h3> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token operator">:</span> <span class="token keyword">virtual</span> <span class="token keyword">public</span> A
+<span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token operator">:</span> <span class="token keyword">virtual</span> <span class="token keyword">public</span> A
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d9/a0/j7K83p4h_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/88/2f/AL9ySeMz_o.png" alt="在这里插入图片描述"><br> <strong>这里除了虚表指针，还有上篇文章讲解的存储偏移量的虚基表指针</strong></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	D d<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span>d<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	d<span class="token punctuation">.</span>B<span class="token double-colon punctuation">::</span>_a <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+	d<span class="token punctuation">.</span>C<span class="token double-colon punctuation">::</span>_a <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+	d<span class="token punctuation">.</span>_b <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+	d<span class="token punctuation">.</span>_c <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+	d<span class="token punctuation">.</span>_d <span class="token operator">=</span> <span class="token number">5</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/37/0c/DNAiJZaH_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/61/20/CmQiEaOU_o.png" alt="在这里插入图片描述"><br> 菱形虚拟继承，每个类都有一个虚函数，<font color="red">这里ABC都有自己的虚表，但是BC的虚函数不能放在A的虚表中，因为这里虚基类A是共享的</font></p> 
+<p>子类有虚函数，继承的父类有虚函数就有虚表，子类对象中就不需要单独建立虚表</p> 
+<p><img src="https://images2.imgbox.com/bb/1a/aBmtpYk4_o.png" alt="在这里插入图片描述"><br> 但是<strong>菱形虚拟继承</strong>就需要自己建立虚表，<strong>不能往父类中放</strong></p> 
+<p><img src="https://images2.imgbox.com/76/bd/zdHpA7Co_o.png" alt="在这里插入图片描述"></p> 
+<p>再看下面的代码：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">A</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">A</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> s <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+	<span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">virtual</span> <span class="token keyword">public</span> <span class="token class-name">A</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">B</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s1<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s2<span class="token punctuation">)</span> <span class="token operator">:</span><span class="token function">A</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> s2 <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">virtual</span> <span class="token keyword">public</span> <span class="token class-name">A</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">C</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s1<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s2<span class="token punctuation">)</span> <span class="token operator">:</span><span class="token function">A</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> s2 <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">D</span> <span class="token operator">:</span><span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">B</span><span class="token punctuation">,</span> <span class="token keyword">public</span> <span class="token class-name">C</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">D</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s1<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s2<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s3<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s4<span class="token punctuation">)</span>
+		<span class="token operator">:</span><span class="token function">B</span><span class="token punctuation">(</span>s1<span class="token punctuation">,</span> s2<span class="token punctuation">)</span>  <span class="token comment">//A  B</span>
+		<span class="token punctuation">,</span> <span class="token function">C</span><span class="token punctuation">(</span>s1<span class="token punctuation">,</span> s3<span class="token punctuation">)</span>  <span class="token comment">//A  C</span>
+		<span class="token punctuation">,</span> <span class="token function">A</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span>      <span class="token comment">//A</span>
+	<span class="token punctuation">{<!-- --></span>
+		<span class="token comment">// D</span>
+		cout <span class="token operator">&lt;&lt;</span> s4 <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	D<span class="token operator">*</span> p <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">D</span><span class="token punctuation">(</span><span class="token string">"class A"</span><span class="token punctuation">,</span> <span class="token string">"class B"</span><span class="token punctuation">,</span> <span class="token string">"class C"</span><span class="token punctuation">,</span> <span class="token string">"class D"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">delete</span> p<span class="token punctuation">;</span>
+
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><mark>当创建一个派生类的对象时，构造函数会按照特定的顺序执行，确保所有的基类和成员变量都被正确初始化。在多继承和虚继承的情况下，这个顺序变得更加复杂。上面代码涉及到虚继承，这意味着基类 <code>A</code> 只会有一个实例，即使它被多次包含在派生类层次结构中，在 <code>B</code> 和 <code>C</code> 中</mark></p> 
+<pre><code class="prism language-cpp"><span class="token function">D</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s1<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s2<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s3<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> s4<span class="token punctuation">)</span>
+		<span class="token operator">:</span><span class="token function">B</span><span class="token punctuation">(</span>s1<span class="token punctuation">,</span> s2<span class="token punctuation">)</span>  <span class="token comment">//A  B</span>
+		<span class="token punctuation">,</span> <span class="token function">C</span><span class="token punctuation">(</span>s1<span class="token punctuation">,</span> s3<span class="token punctuation">)</span>  <span class="token comment">//A  C</span>
+		<span class="token punctuation">,</span> <span class="token function">A</span><span class="token punctuation">(</span>s1<span class="token punctuation">)</span>      <span class="token comment">//A</span>
+	<span class="token punctuation">{<!-- --></span>
+</code></pre> 
+<p><code>D</code> 的构造函数，我们发现它首先调用 <code>B</code> 的构造函数，然后是 <code>C</code> 的构造函数，最后调用 <code>A</code> 的构造函数。<strong>然而，在虚继承的情况下，共享的基类（在该例子中是 <code>A</code>）只会被初始化一次，而且是由最底层的派生类（<code>D</code>）来初始化。无论 <code>B</code> 和 <code>C</code> 在其构造函数中怎么尝试初始化 <code>A</code>，它们的尝试都会被忽略</strong></p> 
+<p>根据上述规则，执行 <code>new D("class A", "class B", "class C", "class D");</code> 的过程如下：</p> 
+<ol><li>首先，最底层的派生类 <code>D</code> 的构造器被调用。</li><li><strong>因为 <code>A</code> 是通过虚继承被 <code>B</code> 和 <code>C</code> 继承的，所以 <code>D</code> 的构造器负责初始化 <code>A</code>。这里将输出 “class A”</strong></li><li>接下来，<code>D</code> 的构造器调用 <code>B</code> 的构造函数。虽然 <code>B</code> 试图先调用 <code>A</code> 的构造函数，但这个调用会被忽略，因为 <code>A</code> 已经被初始化了。然后，<code>B</code> 的构造器继续执行并输出 “class B”</li><li><code>C</code> 的构造函数也会被调用，但同样，其对 <code>A</code> 构造函数的调用被忽略，并且 <code>C</code> 的构造器继续执行，输出 “class C”</li><li>最后，在 <code>D</code> 的构造函数中的代码执行之前，所有基类都已经初始化完成。最后输出 “class D”。</li></ol> 
+<pre><code>class A
+class B
+class C
+class D
+</code></pre> 
+<p><font color="red">所以，尽量不要写菱形虚拟继承，坑点十分多</font></p> 
+<h2><a id="5_800"></a><code>5.虚表的存储位置</code></h2> 
+<p>我们可以通过下面的代码来推断虚表在哪存储的：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-全价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">virtual</span> <span class="token keyword">void</span> <span class="token function">BuyTicket</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"买票-半价"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">tese</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+	<span class="token keyword">static</span> <span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> p1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">;</span>
+	<span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> p2 <span class="token operator">=</span> <span class="token string">"xxxxxxxx"</span><span class="token punctuation">;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"栈:%p\n"</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"静态区:%p\n"</span><span class="token punctuation">,</span> <span class="token operator">&amp;</span>j<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"堆:%p\n"</span><span class="token punctuation">,</span> p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"常量区:%p\n"</span><span class="token punctuation">,</span> p2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	Person p<span class="token punctuation">;</span>
+	Student s<span class="token punctuation">;</span>
+	Person<span class="token operator">*</span> p3 <span class="token operator">=</span> <span class="token operator">&amp;</span>p<span class="token punctuation">;</span>
+	Student<span class="token operator">*</span> p4 <span class="token operator">=</span> <span class="token operator">&amp;</span>s<span class="token punctuation">;</span>
+	
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Person虚表地址:%p\n"</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span>p3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"Student虚表地址:%p\n"</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span>p4<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/34/39/1PMkBrDR_o.png" alt="在这里插入图片描述"><br> 可以推断出存储位置在常量区</p> 
+<p>本节内容到此结束！！感谢大家阅读！！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9aa387dad5922b857678f2ec71e2fd42/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">SpringBootWeb 篇-深入了解请求响应（服务端接收不同类型的请求参数的方式）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/1e46a5f5ef3f01d1f539b204ca6558a9/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java----数组的定义和使用</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

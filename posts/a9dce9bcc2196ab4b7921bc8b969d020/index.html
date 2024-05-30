@@ -1,0 +1,730 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【机器学习 | 异常检测】孤立森林（isolation Forest）iForest 算法理论讲解及 Python 实战 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a9dce9bcc2196ab4b7921bc8b969d020/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【机器学习 | 异常检测】孤立森林（isolation Forest）iForest 算法理论讲解及 Python 实战">
+  <meta property="og:description" content="文章目录 一、原理二、具体流程2.1 训练森林2.2 首先要明确几个相关概念2.3 异常分数2.4 检测过程 三、优缺点3.1 优点3.2 缺点 四、代码实战4.1 准备数据4.2 模型4.3 可视化边缘 一、原理 孤立森林（Isolation Forest，简称 iForest）是一种无监督学习算法，用于识别异常值。
+其基本原理可以概括为一句话：异常数据由于数量较少且与正常数据差异较大，因此在被隔离时需要较少的步骤。
+有两个假设：
+异常的值是非常少的（如果异常值很多，可能被识别为正常的）异常值与其他值的差异较大（这点也可以引出主要是全局上都为异常的异常，局部小异常可能发现不了，因为差异并不大） 二、具体流程 2.1 训练森林 子采样: 首先从整个数据集中随机抽取一定数量的样本来为构建树做准备。这些抽样的子集大小通常远小于原始数据集的大小，这样可以限制树的大小，并且减少计算复杂度。构建孤立树 (iTrees): 对于每个子采样集，算法构建一棵孤立树。构建孤立树的过程是递归的。在每个节点，算法随机选择一个特征，并在该特征的最大值和最小值之间随机选择一个分割值。然后，数据根据这个分割值将样本分到左子树或右子树（这里其实就是简单的将样本中特征小于这个分割点的样本分到左边，其次分到右边）。这个过程的结束条件：树达到限定的高度， 节点中的样本数量到一定的数目，或者所有样本的所选特征值都是同一个值。森林构建: 重复1-2构建完特定数量的孤立树，集合为孤立森林。 2.2 首先要明确几个相关概念 路径长度（ h ( x ) h(x) h(x)）: 指样本通过该孤立树构建阶段的特征选择方式，从树的根节点到达该样本被孤立的节点（被孤立就是意味着这个样本最终到达的树的叶子节点）所需要的边数。平均路径长度 E ( h ( x ) ) E(h(x)) E(h(x)): 该样本在森林中所有树的路径长度的平均值。树的平均路径长度：
+c ( n ) = 2 H ( n − 1 ) − 2 ( n − 1 ) n c(n)=2H(n-1)-\frac{2(n-1)}{n} c(n)=2H(n−1)−n2(n−1)​">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-19T21:08:05+08:00">
+    <meta property="article:modified_time" content="2024-01-19T21:08:05+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【机器学习 | 异常检测】孤立森林（isolation Forest）iForest 算法理论讲解及 Python 实战</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_1" rel="nofollow">一、原理</a></li><li><a href="#_11" rel="nofollow">二、具体流程</a></li><li><ul><li><a href="#21__12" rel="nofollow">2.1 训练森林</a></li><li><a href="#22__17" rel="nofollow">2.2 首先要明确几个相关概念</a></li><li><a href="#23__31" rel="nofollow">2.3 异常分数</a></li><li><a href="#24__37" rel="nofollow">2.4 检测过程</a></li></ul> 
+  </li><li><a href="#_42" rel="nofollow">三、优缺点</a></li><li><ul><li><a href="#31__43" rel="nofollow">3.1 优点</a></li><li><a href="#32__47" rel="nofollow">3.2 缺点</a></li></ul> 
+  </li><li><a href="#_52" rel="nofollow">四、代码实战</a></li><li><ul><li><a href="#41__53" rel="nofollow">4.1 准备数据</a></li><li><a href="#42__79" rel="nofollow">4.2 模型</a></li><li><a href="#43__99" rel="nofollow">4.3 可视化边缘</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_1"></a>一、原理</h2> 
+<p>孤立森林（Isolation Forest，简称 iForest）是一种无监督学习算法，用于识别异常值。</p> 
+<p>其基本原理可以概括为一句话：异常数据由于数量较少且与正常数据差异较大，因此在被隔离时需要较少的步骤。</p> 
+<p>有两个假设：</p> 
+<ul><li>异常的值是非常少的（如果异常值很多，可能被识别为正常的）</li><li>异常值与其他值的差异较大（这点也可以引出主要是全局上都为异常的异常，局部小异常可能发现不了，因为差异并不大）</li></ul> 
+<h2><a id="_11"></a>二、具体流程</h2> 
+<h3><a id="21__12"></a>2.1 训练森林</h3> 
+<ol><li>子采样: 首先从整个数据集中随机抽取一定数量的样本来为构建树做准备。这些抽样的子集大小通常远小于原始数据集的大小，这样可以限制树的大小，并且减少计算复杂度。</li><li>构建孤立树 (iTrees): 对于每个子采样集，算法构建一棵孤立树。构建孤立树的过程是递归的。在每个节点，算法随机选择一个特征，并在该特征的最大值和最小值之间随机选择一个分割值。然后，数据根据这个分割值将样本分到左子树或右子树（这里其实就是简单的将样本中特征小于这个分割点的样本分到左边，其次分到右边）。这个过程的结束条件：树达到限定的高度， 节点中的样本数量到一定的数目，或者所有样本的所选特征值都是同一个值。</li><li>森林构建: 重复1-2构建完特定数量的孤立树，集合为孤立森林。</li></ol> 
+<h3><a id="22__17"></a>2.2 首先要明确几个相关概念</h3> 
+<ol><li>路径长度（<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+       
+         h(x) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">)</span></span></span></span></span>）: 指样本通过该孤立树构建阶段的特征选择方式，从树的根节点到达该样本被孤立的节点（被孤立就是意味着这个样本最终到达的树的叶子节点）所需要的边数。</li><li>平均路径长度 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          E 
+         
+        
+          ( 
+         
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+          ) 
+         
+        
+       
+         E(h(x)) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0576em;">E</span><span class="mopen">(</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span></span>: 该样本在森林中所有树的路径长度的平均值。</li><li>树的平均路径长度：<br> <span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"> 
+       
+        
+         
+         
+           c 
+          
+         
+           ( 
+          
+         
+           n 
+          
+         
+           ) 
+          
+         
+           = 
+          
+         
+           2 
+          
+         
+           H 
+          
+         
+           ( 
+          
+         
+           n 
+          
+         
+           − 
+          
+         
+           1 
+          
+         
+           ) 
+          
+         
+           − 
+          
+          
+           
+           
+             2 
+            
+           
+             ( 
+            
+           
+             n 
+            
+           
+             − 
+            
+           
+             1 
+            
+           
+             ) 
+            
+           
+          
+            n 
+           
+          
+         
+        
+          c(n)=2H(n-1)-\frac{2(n-1)}{n} 
+         
+        
+      </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord">2</span><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord">1</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 2.113em; vertical-align: -0.686em;"></span><span class="mord"><span class="mopen nulldelimiter"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.427em;"><span class="" style="top: -2.314em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord mathnormal">n</span></span></span><span class="" style="top: -3.23em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line" style="border-bottom-width: 0.04em;"></span></span><span class="" style="top: -3.677em;"><span class="pstrut" style="height: 3em;"></span><span class="mord"><span class="mord">2</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mord">1</span><span class="mclose">)</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.686em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter"></span></span></span></span></span></span></span><br> <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          H 
+         
+        
+          ( 
+         
+        
+          i 
+         
+        
+          ) 
+         
+        
+       
+         H(i) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0813em;">H</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mclose">)</span></span></span></span></span> 是调和数，可以近似为 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          l 
+         
+        
+          n 
+         
+        
+          ( 
+         
+        
+          i 
+         
+        
+          ) 
+         
+        
+          + 
+         
+        
+          0.5772156649 
+         
+        
+       
+         ln(i) + 0.5772156649 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0197em;">l</span><span class="mord mathnormal">n</span><span class="mopen">(</span><span class="mord mathnormal">i</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">+</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6444em;"></span><span class="mord">0.5772156649</span></span></span></span></span>，其中 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          n 
+         
+        
+       
+         n 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> 为样本个数，对于给定的数据集大小 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          n 
+         
+        
+       
+         n 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span>，平均路径长度的期望是一个常数，该公式提供了一个标准化的基准，用于将路径长度标准化。</li><li>异常分数：对于每个样本 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          x 
+         
+        
+       
+         x 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span></span>，其异常分数 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          s 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          , 
+         
+        
+          n 
+         
+        
+          ) 
+         
+        
+       
+         s(x, n) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord mathnormal">n</span><span class="mclose">)</span></span></span></span></span> 的计算公式如下：<br> <span class="katex--display"><span class="katex-display"><span class="katex"><span class="katex-mathml"> 
+       
+        
+         
+         
+           s 
+          
+         
+           ( 
+          
+         
+           x 
+          
+         
+           , 
+          
+         
+           n 
+          
+         
+           ) 
+          
+         
+           = 
+          
+          
+          
+            2 
+           
+           
+           
+             − 
+            
+            
+             
+             
+               E 
+              
+             
+               ( 
+              
+             
+               h 
+              
+             
+               ( 
+              
+             
+               x 
+              
+             
+               ) 
+              
+             
+               ) 
+              
+             
+             
+             
+               c 
+              
+             
+               ( 
+              
+             
+               n 
+              
+             
+               ) 
+              
+             
+            
+           
+          
+         
+        
+          s(x, n) = 2^{-\frac{E(h(x))}{c(n)}} 
+         
+        
+      </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">s</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord mathnormal">n</span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1.2107em;"></span><span class="mord"><span class="mord">2</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height: 1.2107em;"><span class="" style="top: -3.4842em; margin-right: 0.05em;"><span class="pstrut" style="height: 3em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight"><span class="mord mtight">−</span><span class="mord mtight"><span class="mopen nulldelimiter sizing reset-size3 size6"></span><span class="mfrac"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 1.0378em;"><span class="" style="top: -2.6408em;"><span class="pstrut" style="height: 3em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight">c</span><span class="mopen mtight">(</span><span class="mord mathnormal mtight">n</span><span class="mclose mtight">)</span></span></span></span><span class="" style="top: -3.2255em;"><span class="pstrut" style="height: 3em;"></span><span class="frac-line mtight" style="border-bottom-width: 0.049em;"></span></span><span class="" style="top: -3.5021em;"><span class="pstrut" style="height: 3em;"></span><span class="sizing reset-size3 size1 mtight"><span class="mord mtight"><span class="mord mathnormal mtight" style="margin-right: 0.0576em;">E</span><span class="mopen mtight">(</span><span class="mord mathnormal mtight">h</span><span class="mopen mtight">(</span><span class="mord mathnormal mtight">x</span><span class="mclose mtight">))</span></span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.5378em;"><span class=""></span></span></span></span></span><span class="mclose nulldelimiter sizing reset-size3 size6"></span></span></span></span></span></span></span></span></span></span></span></span></span></span></span><br> 其中，<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          E 
+         
+        
+          ( 
+         
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+          ) 
+         
+        
+       
+         E(h(x)) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0576em;">E</span><span class="mopen">(</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span></span> 是数据点 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          x 
+         
+        
+       
+         x 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">x</span></span></span></span></span> 在所有树中路径长度的平均值，<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          n 
+         
+        
+       
+         n 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.4306em;"></span><span class="mord mathnormal">n</span></span></span></span></span> 是训练数据的样本量，<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          c 
+         
+        
+          ( 
+         
+        
+          n 
+         
+        
+          ) 
+         
+        
+       
+         c(n) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mclose">)</span></span></span></span></span> 是树的平均路径长度，用于标准化。</li></ol> 
+<h3><a id="23__31"></a>2.3 异常分数</h3> 
+<p>score的范围为[0, 1]。</p> 
+<ol><li><span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          E 
+         
+        
+          ( 
+         
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+          ) 
+         
+        
+       
+         E(h(x)) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0576em;">E</span><span class="mopen">(</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span></span> 约等于 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          c 
+         
+        
+          ( 
+         
+        
+          n 
+         
+        
+          ) 
+         
+        
+       
+         c(n) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal">c</span><span class="mopen">(</span><span class="mord mathnormal">n</span><span class="mclose">)</span></span></span></span></span>， 样本点的路径长度和平均路径长度没啥差别，看不出是否有异常；</li><li><span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          E 
+         
+        
+          ( 
+         
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+          ) 
+         
+        
+       
+         E(h(x)) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0576em;">E</span><span class="mopen">(</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span></span> 越靠近 0， score 越接近1， 说明样本很容易被孤立，更可能是异常的；</li><li><span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          E 
+         
+        
+          ( 
+         
+        
+          h 
+         
+        
+          ( 
+         
+        
+          x 
+         
+        
+          ) 
+         
+        
+          ) 
+         
+        
+       
+         E(h(x)) 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord mathnormal" style="margin-right: 0.0576em;">E</span><span class="mopen">(</span><span class="mord mathnormal">h</span><span class="mopen">(</span><span class="mord mathnormal">x</span><span class="mclose">))</span></span></span></span></span> 的极端情况就是为样本的 <span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+      
+       
+        
+        
+          n 
+         
+        
+          − 
+         
+        
+          1 
+         
+        
+       
+         n - 1 
+        
+       
+     </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.6667em; vertical-align: -0.0833em;"></span><span class="mord mathnormal">n</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">−</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 0.6444em;"></span><span class="mord">1</span></span></span></span></span>， 这时候 score 很小，不容易被孤立，也看不出是否为异常。</li></ol> 
+<h3><a id="24__37"></a>2.4 检测过程</h3> 
+<ol><li>路径长度计算: 对于新的测试样本计算它们在每棵孤立树中的路径长度, 并算平均路径长度。</li><li>计算异常分数: 利用上述计算，孤立森林会计算每个数据点的异常分数。</li><li>判定异常: 根据计算出的异常分数，可以设置一个阈值来判定哪些数据点是异常的。</li></ol> 
+<h2><a id="_42"></a>三、优缺点</h2> 
+<h3><a id="31__43"></a>3.1 优点</h3> 
+<ol><li>高效性: 孤立森林算法特别适合处理大数据集。它具有线性的时间复杂度，并且由于使用了子采样，使得在计算上更加高效。</li><li>易于并行化: 和随机森林一样，构建孤立树是独立的过程，构建森林可以并行化。</li></ol> 
+<h3><a id="32__47"></a>3.2 缺点</h3> 
+<ol><li>异常值比例敏感性: 如果数据集中异常值的比例相对较高，孤立森林的效果可能就会下降，因为它是基于异常值“少而不同”的假设。</li><li>对局部异常检测不敏感：因为 少而不同的 前提条件决定主要解决全局异常的特点，对在局部区域表现出轻微异常特征的点检测不是很敏感。</li><li>不适用于多维特征情况：iforest不会因为特征的多少而降低算法的效率，但也正因为每次只随机用其中一个特征作为分割的特征，如果特征维度很高，就会有很多特征没有用到。</li></ol> 
+<h2><a id="_52"></a>四、代码实战</h2> 
+<h3><a id="41__53"></a>4.1 准备数据</h3> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">import</span> matplotlib<span class="token punctuation">.</span>pyplot <span class="token keyword">as</span> plt
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>model_selection <span class="token keyword">import</span> train_test_split
+
+n_samples<span class="token punctuation">,</span> n_outliers <span class="token operator">=</span> <span class="token number">120</span><span class="token punctuation">,</span> <span class="token number">10</span>
+rng <span class="token operator">=</span> np<span class="token punctuation">.</span>random<span class="token punctuation">.</span>RandomState<span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span>
+cluster_1 <span class="token operator">=</span> <span class="token number">0.4</span> <span class="token operator">*</span> rng<span class="token punctuation">.</span>randn<span class="token punctuation">(</span>n_samples<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">+</span> np<span class="token punctuation">.</span>array<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+cluster_2 <span class="token operator">=</span> <span class="token number">0.3</span> <span class="token operator">*</span> rng<span class="token punctuation">.</span>randn<span class="token punctuation">(</span>n_samples<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">+</span> np<span class="token punctuation">.</span>array<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">2</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+outliers <span class="token operator">=</span> rng<span class="token punctuation">.</span>uniform<span class="token punctuation">(</span>low<span class="token operator">=</span><span class="token operator">-</span><span class="token number">4</span><span class="token punctuation">,</span> high<span class="token operator">=</span><span class="token number">4</span><span class="token punctuation">,</span> size<span class="token operator">=</span><span class="token punctuation">(</span>n_outliers<span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+X <span class="token operator">=</span> np<span class="token punctuation">.</span>concatenate<span class="token punctuation">(</span><span class="token punctuation">[</span>cluster_1<span class="token punctuation">,</span> cluster_2<span class="token punctuation">,</span> outliers<span class="token punctuation">]</span><span class="token punctuation">)</span>
+y <span class="token operator">=</span> np<span class="token punctuation">.</span>concatenate<span class="token punctuation">(</span>
+    <span class="token punctuation">[</span>np<span class="token punctuation">.</span>ones<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token number">2</span> <span class="token operator">*</span> n_samples<span class="token punctuation">)</span><span class="token punctuation">,</span> dtype<span class="token operator">=</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token operator">-</span>np<span class="token punctuation">.</span>ones<span class="token punctuation">(</span>n_outliers<span class="token punctuation">,</span> dtype<span class="token operator">=</span><span class="token builtin">int</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+<span class="token punctuation">)</span>
+
+scatter <span class="token operator">=</span> plt<span class="token punctuation">.</span>scatter<span class="token punctuation">(</span>X<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> X<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> c<span class="token operator">=</span>y<span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">,</span> edgecolor<span class="token operator">=</span><span class="token string">"k"</span><span class="token punctuation">)</span>
+handles<span class="token punctuation">,</span> labels <span class="token operator">=</span> scatter<span class="token punctuation">.</span>legend_elements<span class="token punctuation">(</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>axis<span class="token punctuation">(</span><span class="token string">"square"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>legend<span class="token punctuation">(</span>handles<span class="token operator">=</span>handles<span class="token punctuation">,</span> labels<span class="token operator">=</span><span class="token punctuation">[</span><span class="token string">"outliers"</span><span class="token punctuation">,</span> <span class="token string">"inliers"</span><span class="token punctuation">]</span><span class="token punctuation">,</span> title<span class="token operator">=</span><span class="token string">"true class"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>title<span class="token punctuation">(</span><span class="token string">"data distribution"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b5/8d/OLYWm6hP_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="42__79"></a>4.2 模型</h3> 
+<pre><code class="prism language-python"><span class="token comment"># 通过y的比例进行均匀拆分</span>
+X_train<span class="token punctuation">,</span> X_test<span class="token punctuation">,</span> y_train<span class="token punctuation">,</span> y_test <span class="token operator">=</span> train_test_split<span class="token punctuation">(</span>X<span class="token punctuation">,</span> y<span class="token punctuation">,</span> stratify<span class="token operator">=</span>y<span class="token punctuation">,</span> random_state<span class="token operator">=</span><span class="token number">42</span><span class="token punctuation">)</span>
+
+<span class="token keyword">from</span> sklearn<span class="token punctuation">.</span>ensemble <span class="token keyword">import</span> IsolationForest
+
+clf <span class="token operator">=</span> IsolationForest<span class="token punctuation">(</span>max_samples<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">,</span> random_state<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+clf<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>X_train<span class="token punctuation">)</span>
+
+<span class="token comment"># 得到score，Negative scores represent outliers, positive scores represent inliers</span>
+y_pre_score_test <span class="token operator">=</span> clf<span class="token punctuation">.</span>decision_function<span class="token punctuation">(</span>cluster_1<span class="token punctuation">)</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>y_pre_score_test<span class="token punctuation">)</span>
+
+<span class="token comment"># -1为异常， 1为正常， 可以看下这个函数内部，就是score&lt;0的设为-1</span>
+y_pre_label_test <span class="token operator">=</span> clf<span class="token punctuation">.</span>predict<span class="token punctuation">(</span>cluster_1<span class="token punctuation">)</span> 
+<span class="token keyword">print</span><span class="token punctuation">(</span>y_pre_label_test<span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/fd/c7/wMudrkdD_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="43__99"></a>4.3 可视化边缘</h3> 
+<pre><code class="prism language-python"><span class="token comment"># 通过网格的方式得到location的x和y坐标</span>
+xx<span class="token punctuation">,</span> yy <span class="token operator">=</span> np<span class="token punctuation">.</span>meshgrid<span class="token punctuation">(</span>np<span class="token punctuation">.</span>linspace<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">,</span> np<span class="token punctuation">.</span>linspace<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">60</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+<span class="token comment"># concat x和y 得到输入的坐标</span>
+input_location <span class="token operator">=</span> np<span class="token punctuation">.</span>c_<span class="token punctuation">[</span>xx<span class="token punctuation">.</span>ravel<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> yy<span class="token punctuation">.</span>ravel<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+
+Z <span class="token operator">=</span> clf<span class="token punctuation">.</span>decision_function<span class="token punctuation">(</span>input_location<span class="token punctuation">)</span>
+Z <span class="token operator">=</span> Z<span class="token punctuation">.</span>reshape<span class="token punctuation">(</span>xx<span class="token punctuation">.</span>shape<span class="token punctuation">)</span>
+
+plt<span class="token punctuation">.</span>title<span class="token punctuation">(</span><span class="token string">"IsolationForest"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>contourf<span class="token punctuation">(</span>xx<span class="token punctuation">,</span> yy<span class="token punctuation">,</span> Z<span class="token punctuation">,</span> camp<span class="token operator">=</span>plt<span class="token punctuation">.</span>cm<span class="token punctuation">.</span>Blues_r<span class="token punctuation">)</span>
+b1 <span class="token operator">=</span> plt<span class="token punctuation">.</span>scatter<span class="token punctuation">(</span>X_train<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> X_train<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> c<span class="token operator">=</span><span class="token string">'white'</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">,</span> edgecolor<span class="token operator">=</span><span class="token string">'k'</span><span class="token punctuation">)</span>
+b2 <span class="token operator">=</span> plt<span class="token punctuation">.</span>scatter<span class="token punctuation">(</span>X_test<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> X_test<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> c<span class="token operator">=</span><span class="token string">'green'</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">,</span> edgecolor<span class="token operator">=</span><span class="token string">'k'</span><span class="token punctuation">)</span>
+c <span class="token operator">=</span> plt<span class="token punctuation">.</span>scatter<span class="token punctuation">(</span>outliers<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> outliers<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">,</span> c<span class="token operator">=</span><span class="token string">'red'</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token number">20</span><span class="token punctuation">,</span> edgecolor<span class="token operator">=</span><span class="token string">'k'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>axis<span class="token punctuation">(</span><span class="token string">'tight'</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>xlim<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>ylim<span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>legend<span class="token punctuation">(</span><span class="token punctuation">[</span>b1<span class="token punctuation">,</span> b2<span class="token punctuation">,</span> c<span class="token punctuation">]</span><span class="token punctuation">,</span>
+           <span class="token punctuation">[</span><span class="token string">"train data"</span><span class="token punctuation">,</span>
+            <span class="token string">"test data"</span><span class="token punctuation">,</span>
+            <span class="token string">"outlier"</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+           loc<span class="token operator">=</span><span class="token string">"best"</span><span class="token punctuation">)</span>
+plt<span class="token punctuation">.</span>show<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/81/de/xxZomoRj_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a07394b3bf32ee658927d47bd9c1129a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【数据库】Navicat Premium 15安装与激活</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/86f5c54994c50b955597c3b1c8acf89b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">如何在Mac上安装PHP环境</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

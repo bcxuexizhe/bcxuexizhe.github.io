@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【分布式链路追踪技术】sleuth&#43;zipkin - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/dea15e1bb80ddb1226e6a3cac2b42668/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【分布式链路追踪技术】sleuth&#43;zipkin">
+  <meta property="og:description" content="目录
+1.概述
+2.搭建演示工程
+3.sleuth
+4.zipkin
+5.插拔式存储
+5.1.存储到MySQL中
+5.2.用MQ来流量削峰
+6.联系作者
+1.概述 当采用分布式架构后，一次请求会在多个服务之间流转，组成单次调用链的服务往往都分散在不同的服务器上。这就会带来一个问题：
+故障难以溯源。
+发起请求，然后请求报错，到底是调用链中哪一环出了问题？很难以定位。这时候就需要用到链路追踪技术了。所谓的链路追踪技术，也就是想办法让分布式系统中的单次请求的链路调用成为可被追踪的，便于在出现故障的时候进行快速的定位溯源。
+目前有两套实现思路：
+基于日志来实现，常用到的有Sleuth、zipkin
+基于agent来实现，常用到的有skywaiking
+本文讲解的是其中基于日志实现的sleuth以及其配套的可视化套件zipkin。
+关于分布式链路追踪作者上文讲过详细的概论：
+https://bugman.blog.csdn.net/article/details/135175596?spm=1001.2014.3001.5502
+2.搭建演示工程 本次用于演示的工程很简单，用spring cloud来搭建三个服务，一个app服务用来提供服务，一个鉴权中心用来登录以及鉴权，一个bis服务用来聚合：
+在bis中调用鉴权中心来登录获取token，然后校验token，校验通过后调用app提供的服务：
+spring cloud的成体系的文章，在博主的另一个专栏，从0开始一步步深入浅出(该系列登上过2023年的新星计划)：
+http://t.csdnimg.cn/PDgr3
+3.sleuth 依赖：
+&lt;dependency&gt;
+&lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+&lt;artifactId&gt;spring-cloud-starter-sleuth&lt;/artifactId&gt;
+&lt;version&gt;3.1.8&lt;/version&gt;
+&lt;/dependency&gt;
+去访问bis，会看到：
+bis的日志：
+AuthenticationCenter的日志：
+APP的日志：
+我想到这里很多读者会有个疑问。
+问：
+sleuth这么保证一个链路上的traceID是相同的？
+答：
+当一个请求进入 Spring Cloud 的微服务系统时，Sleuth 会生成一个唯一的 Trace ID。如果请求是从另一个使用 Sleuth 的服务传入的，Sleuth 会提取并使用该服务传入的 Trace ID。Sleuth 集成了这些通信协议，如HTTP协议，并在服务间调用时自动将 Trace ID 添加到 HTTP 请求的头部、消息的元数据等中。
+4.zipkin 光有了日志，进行问题排查还是要一条条的翻，还是很繁琐。所以配套出现了可视化套件，由推特开发的——zipkin。其能对标准opentracing格式的日志进行收集和展示。zipkin采用的标准的CS架构，client向server发数据。
+服务端：
+服务端是一个jar包，直接跑起来就可以，下载地址：
+Central Repository: io/zipkin/zipkin-server
+客户端：
+依赖：
+&lt;dependency&gt;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-28T00:57:50+08:00">
+    <meta property="article:modified_time" content="2023-12-28T00:57:50+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【分布式链路追踪技术】sleuth&#43;zipkin</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="%E2%80%8B%E7%BC%96%E8%BE%91" style="text-align:center;"><img alt="" height="103" src="https://images2.imgbox.com/d7/e0/MfwYj2kg_o.png" width="556"></p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/a8/b7/WJWgqQ0u_o.gif"></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="1.%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#1.%E6%A6%82%E8%BF%B0" rel="nofollow">1.概述</a></p> 
+<p id="2.%E6%90%AD%E5%BB%BA%E6%BC%94%E7%A4%BA%E5%B7%A5%E7%A8%8B-toc" style="margin-left:0px;"><a href="#2.%E6%90%AD%E5%BB%BA%E6%BC%94%E7%A4%BA%E5%B7%A5%E7%A8%8B" rel="nofollow">2.搭建演示工程</a></p> 
+<p id="2.sleuth-toc" style="margin-left:0px;"><a href="#2.sleuth" rel="nofollow">3.sleuth</a></p> 
+<p id="3.zipkin-toc" style="margin-left:0px;"><a href="#3.zipkin" rel="nofollow">4.zipkin</a></p> 
+<p id="4.%E6%8F%92%E6%8B%94%E5%BC%8F%E5%AD%98%E5%82%A8-toc" style="margin-left:0px;"><a href="#4.%E6%8F%92%E6%8B%94%E5%BC%8F%E5%AD%98%E5%82%A8" rel="nofollow">5.插拔式存储</a></p> 
+<p id="4.1.%E5%AD%98%E5%82%A8%E5%88%B0MySQL%E4%B8%AD-toc" style="margin-left:40px;"><a href="#4.1.%E5%AD%98%E5%82%A8%E5%88%B0MySQL%E4%B8%AD" rel="nofollow">5.1.存储到MySQL中</a></p> 
+<p id="4.2.%E7%94%A8MQ%E6%9D%A5%E6%B5%81%E9%87%8F%E5%89%8A%E5%B3%B0-toc" style="margin-left:40px;"><a href="#4.2.%E7%94%A8MQ%E6%9D%A5%E6%B5%81%E9%87%8F%E5%89%8A%E5%B3%B0" rel="nofollow">5.2.用MQ来流量削峰</a></p> 
+<p id="6.%E8%81%94%E7%B3%BB%E4%BD%9C%E8%80%85-toc" style="margin-left:0px;"><a href="#6.%E8%81%94%E7%B3%BB%E4%BD%9C%E8%80%85" rel="nofollow">6.联系作者</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="1.%E6%A6%82%E8%BF%B0" style="background-color:transparent;">1.概述</h2> 
+<p>当采用分布式架构后，一次请求会在多个服务之间流转，组成单次调用链的服务往往都分散在不同的服务器上。这就会带来一个问题：</p> 
+<p>故障难以溯源。</p> 
+<p>发起请求，然后请求报错，到底是调用链中哪一环出了问题？很难以定位。这时候就需要用到链路追踪技术了。所谓的链路追踪技术，也就是想办法让分布式系统中的单次请求的链路调用成为可被追踪的，便于在出现故障的时候进行快速的定位溯源。</p> 
+<p>目前有两套实现思路：</p> 
+<ul><li> <p>基于日志来实现，常用到的有Sleuth、zipkin</p> </li><li> <p>基于agent来实现，常用到的有skywaiking</p> </li></ul> 
+<p>本文讲解的是其中基于日志实现的sleuth以及其配套的可视化套件zipkin。</p> 
+<p>关于分布式链路追踪作者上文讲过详细的概论：</p> 
+<p><a href="https://bugman.blog.csdn.net/article/details/135175596?spm=1001.2014.3001.5502" rel="nofollow" title="https://bugman.blog.csdn.net/article/details/135175596?spm=1001.2014.3001.5502">https://bugman.blog.csdn.net/article/details/135175596?spm=1001.2014.3001.5502</a></p> 
+<p></p> 
+<h2 id="2.%E6%90%AD%E5%BB%BA%E6%BC%94%E7%A4%BA%E5%B7%A5%E7%A8%8B">2.搭建演示工程</h2> 
+<p>本次用于演示的工程很简单，用spring cloud来搭建三个服务，一个app服务用来提供服务，一个鉴权中心用来登录以及鉴权，一个bis服务用来聚合：</p> 
+<p><img alt="" height="170" src="https://images2.imgbox.com/a4/ce/w6HWSfYt_o.png" width="305"><br> 在bis中调用鉴权中心来登录获取token，然后校验token，校验通过后调用app提供的服务：</p> 
+<p><img alt="" height="665" src="https://images2.imgbox.com/a3/ea/L7CMWsjY_o.png" width="1200"></p> 
+<p>spring cloud的成体系的文章，在博主的另一个专栏，从0开始一步步深入浅出(该系列登上过2023年的新星计划)：</p> 
+<p><a href="http://t.csdnimg.cn/PDgr3" rel="nofollow" title="http://t.csdnimg.cn/PDgr3">http://t.csdnimg.cn/PDgr3</a></p> 
+<h2 id="2.sleuth">3.sleuth</h2> 
+<p>依赖：</p> 
+<blockquote> 
+ <p>&lt;dependency&gt;<br>     &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;<br>     &lt;artifactId&gt;spring-cloud-starter-sleuth&lt;/artifactId&gt;<br>     &lt;version&gt;3.1.8&lt;/version&gt;<br> &lt;/dependency&gt;</p> 
+</blockquote> 
+<p>去访问bis，会看到：</p> 
+<p>bis的日志：</p> 
+<p><img alt="" height="140" src="https://images2.imgbox.com/74/f5/3RmFJOje_o.png" width="1200"></p> 
+<p>AuthenticationCenter的日志：</p> 
+<p><img alt="" height="164" src="https://images2.imgbox.com/8b/e6/WSPymDd4_o.png" width="1200"></p> 
+<p>APP的日志：</p> 
+<p><img alt="" height="138" src="https://images2.imgbox.com/9b/6a/2eBGWO9v_o.png" width="1200"></p> 
+<p>我想到这里很多读者会有个疑问。</p> 
+<p>问：</p> 
+<p>sleuth这么保证一个链路上的traceID是相同的？</p> 
+<p>答：</p> 
+<p>当一个请求进入 Spring Cloud 的微服务系统时，Sleuth 会生成一个唯一的 Trace ID。如果请求是从另一个使用 Sleuth 的服务传入的，Sleuth 会提取并使用该服务传入的 Trace ID。Sleuth 集成了这些通信协议，如HTTP协议，并在服务间调用时自动将 Trace ID 添加到 HTTP 请求的头部、消息的元数据等中。</p> 
+<h2 id="3.zipkin">4.zipkin</h2> 
+<p>光有了日志，进行问题排查还是要一条条的翻，还是很繁琐。所以配套出现了可视化套件，由推特开发的——zipkin。其能对标准opentracing格式的日志进行收集和展示。zipkin采用的标准的CS架构，client向server发数据。</p> 
+<p class="img-center"><img alt="" height="190" src="https://images2.imgbox.com/6c/d8/39Lm1Fsr_o.png" width="420"></p> 
+<p><strong>服务端：</strong></p> 
+<p>服务端是一个jar包，直接跑起来就可以，下载地址：</p> 
+<p><a href="https://repo1.maven.org/maven2/io/zipkin/zipkin-server/" rel="nofollow" title="Central Repository: io/zipkin/zipkin-server">Central Repository: io/zipkin/zipkin-server</a></p> 
+<p><strong>客户端：</strong></p> 
+<p>依赖：</p> 
+<blockquote> 
+ <p>&lt;dependency&gt;<br>    &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;<br>    &lt;artifactId&gt;spring-cloud-starter-zipkin&lt;/artifactId&gt;<br>    &lt;version&gt;2.2.1.RELEASE&lt;/version&gt;<br> &lt;/dependency&gt;</p> 
+</blockquote> 
+<p>配置：</p> 
+<blockquote> 
+ <p>#zipkin server地址<br> spring.zipkin.base-url=http://localhost:9411/<br> #client向server发送数据的方式，web，http报文<br> spring.zipkin.sender.type=web</p> 
+</blockquote> 
+<p><strong>效果：</strong></p> 
+<p>zipkin的启动日志里已经清晰的告诉了Web界面的访问地址是多少：</p> 
+<p><img alt="" height="386" src="https://images2.imgbox.com/5c/8f/axgVS1Uc_o.png" width="1200"></p> 
+<p>访问127.0.0.1:9411/可以看到：</p> 
+<p style="text-align:center;"><img alt="" height="300" src="https://images2.imgbox.com/b2/46/RmO6ASxF_o.png" width="555"></p> 
+<p>点进链路可以看到单次请求的详细内容：</p> 
+<p style="text-align:center;"><img alt="" height="314" src="https://images2.imgbox.com/08/0e/lHicmYBP_o.png" width="581"></p> 
+<h2 id="4.%E6%8F%92%E6%8B%94%E5%BC%8F%E5%AD%98%E5%82%A8">5.插拔式存储</h2> 
+<p>zipkin从各个client中收集到的server上的数据存到哪儿去？默认是将数据存储在内存中，除此之外zipkin还支持多种数据的存储方式，如mysql、ES等，根据场景需要可自行切换。</p> 
+<h3 id="4.1.%E5%AD%98%E5%82%A8%E5%88%B0MySQL%E4%B8%AD">5.1.存储到MySQL中</h3> 
+<p>要存储到MySQL中首先当然是要先建表，zipkin在项目文件中自带了mysql的建表脚本：</p> 
+<p><a href="https://github.com/openzipkin/zipkin/blob/master/zipkin-storage/mysql-v1/src/main/resources/mysql.sql" title="https://github.com/openzipkin/zipkin/blob/master/zipkin-storage/mysql-v1/src/main/resources/mysql.sql">https://github.com/openzipkin/zipkin/blob/master/zipkin-storage/mysql-v1/src/main/resources/mysql.sql</a></p> 
+<p>server的源码工程的配置文件中可以看到，存储默认是内存，参数有默认值，但是支持传参来设置：</p> 
+<p style="text-align:center;"><img alt="" height="378" src="https://images2.imgbox.com/cb/de/WuAOUR28_o.png" width="636"></p> 
+<p>所以在用java -jar启动的时候可以通过跟参数的方式来切换存储类型：</p> 
+<p>java -jar zipkin-server-2.20.1-exec.jar --STORAGE_TYPE=mysql --MYSQL_HOST=localhost --MYSOL_TCP_PORT=3306 --MYSQL_USER=root --MYSQL_PASS=admin --MYSQL_DB=zipkin</p> 
+<p>这样数据就会存进MySQL中来进行持久化了。</p> 
+<h3 id="4.2.%E7%94%A8MQ%E6%9D%A5%E6%B5%81%E9%87%8F%E5%89%8A%E5%B3%B0">5.2.用MQ来流量削峰</h3> 
+<p>zipkin支持多种数据的存储方式，如mysql、ES等，默认是将数据存储在内存中。</p> 
+<p style="text-align:center;"><img alt="" height="190" src="https://images2.imgbox.com/e4/26/oP5v7uCL_o.png" width="609"></p> 
+<p><strong>server端：</strong></p> 
+<p>从配置文件中可以看到，zipkin server支持Kafka、rabbitMQ等多种MQ，具体配置是用启动传参的方式来配置的：</p> 
+<p style="text-align:center;"><img alt="" height="428" src="https://images2.imgbox.com/8c/45/eLDxtnPL_o.png" width="418"></p> 
+<p>想用哪种MQ，直接去配置即可，这里以rabbitMQ为例：</p> 
+<p>java -jar zipkin-server-2.20.1-exec.jar --STORAGE_TYPE=mysql --MYSQL_HOST=localhost --MYSOL-TCP-PORT=3306 --MYSOL_USER=root --MYSQL_PASS=admin --MYSQL_DB=zipkin --RABBIT_ADDRESSES=10.1.2.10:5672 --RABBIT_USER=quest --RABBIT_PASSWORD=guest --RABBIT_VIRTUAL_HOST=/ --RABBIT_QUEUE=zipkin</p> 
+<p><strong>client端：</strong></p> 
+<blockquote> 
+ <p>client端增加以下关于mq的配置：</p> 
+</blockquote> 
+<p>#zipkin server地址<br> spring.zipkin.base-url=http://localhost:9411/<br> #client向server发送数据的方式，rabbitmq<br> spring.zipkin.sender.type=rabbit<br> #队列名称<br> spring.zipkin.rabbitmq.queue=zipkin<br> #服务器IP、端口号、账户名、密码<br> spring.rabbitmq.host=10.1.2.10<br> spring.rabbitmq.port=5672<br> spring.rabbitmq.username=guest<br> spring.rabbitmq.password=guest<br> #虚拟主机地址<br> spring.rabbitmq.virtual-host=/<br> #是否开启发布重试<br> spring.rabbitmq.listener.direct.retry.enabled=true<br> #最大重试次数<br> spring.rabbitmq.listener.direct.retry.max-attempts=5<br> #重试间隔时间<br> spring.rabbitmq.listener.direct.retry.initial-interval=5000<br> #是否开启消费者重试<br> spring.rabbitmq.listener.simple.retry.enabled=true<br> #最大重试次数<br> spring.rabbitmq.listener.simple.retry.max-attempts=5<br> #最大间隔时间<br> spring.rabbitmq.listener.simple.retry.initial-interval=5000</p> 
+<h2 id="6.%E8%81%94%E7%B3%BB%E4%BD%9C%E8%80%85" style="background-color:transparent;">6.联系作者</h2> 
+<p>公众号：</p> 
+<p>博主会在上面成体系的输出后端干货。</p> 
+<p class="img-center"><img alt="" height="158" src="https://images2.imgbox.com/1f/ce/oXDL2oEa_o.png" width="164"></p> 
+<p>商务合作、各种交流：</p> 
+<p class="img-center"><img alt="" height="252" src="https://images2.imgbox.com/07/d3/rd7VGaui_o.jpg" width="187"></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/87c3459a308fd8d0bc9fc8d9d086a8e5/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Python头歌集合（部分参考题解）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/628deb70ae5ffbc0fe959563907cb1b2/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">深度学习关于stable diffusion官方模型下载，并附上：Stable Diffusion下载&#43;安装&#43;使用教程，保证你能学会！</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

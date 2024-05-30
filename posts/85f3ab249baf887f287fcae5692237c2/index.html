@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AIGC实战——MuseGAN详解与实现 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/85f3ab249baf887f287fcae5692237c2/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="AIGC实战——MuseGAN详解与实现">
+  <meta property="og:description" content="AIGC实战——MuseGAN详解与实现 0. 前言1. MuseGAN1.1 Bach Chorale 数据集1.2 MuseGAN 生成器1.3 MuseGAN 判别器 2. MuseGAN 分析小结系列链接 0. 前言 在基于 Transfromer 生成音乐一节，我们可以看到可视化的乐谱类似于一幅图像，因此，我们可以利用图像生成方法替代序列生成技术生成音乐。可以将音乐生成视为一个图像生成问题，这意味着可以不使用 Transformer，而是应用在图像生成问题中表现出色的基于卷积的技术，例如生成对抗网络 (Generative Adversarial Network, GAN)。本节中，我们将解决多声部音乐生成的问题，并探讨如何使用基于 GAN 架构创建多声部音乐。
+1. MuseGAN MuseGAN 通过一种新颖的生成对抗网络 (Generative Adversarial Network, GAN) 框架来训练模型生成复调、多轨和多小节的音乐。此外，通过将生成器的输人噪声向量划分职责，实现对音乐的时域以及声部等高级特征进行精细控制。为了训练 MuseGAN，我们将使用 Bach Chorale 数据集。
+1.1 Bach Chorale 数据集 首先需要下载用于训练 MuseGAN 的 MIDI 文件，使用 Bach Chorale 数据集的四个声部(声部也称为音轨，tracks)，下载后将 MIDI 文件保存到本地的 ./data 文件夹中。
+数据集每个时间步 (timesteps) 由四个数字组成，分别是四个声部中每个声部 MIDI 音符的音高。在此数据集中，一个时间步等于一个 16 分音符。例如，在 4 个四分音(四拍)拍子的一个小节中，有 16 个时间步。数据集会自动分为训练集、验证集和测试集，使用训练集来训练 MuseGAN。
+首先，我们需要将数据转换成正确的形状以供 GAN 使用，我们将生成两小节的音乐，所以只提取每个声部的前两小节。每小节由 16 个时间步组成，4 个声部有 84 个音高。因此，转换后的数据形状如下：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-04T08:07:03+08:00">
+    <meta property="article:modified_time" content="2024-05-04T08:07:03+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">AIGC实战——MuseGAN详解与实现</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>AIGC实战——MuseGAN详解与实现</h4> 
+ <ul><li><ul><li><a href="#0__1" rel="nofollow">0. 前言</a></li><li><a href="#1_MuseGAN_3" rel="nofollow">1. MuseGAN</a></li><li><ul><li><a href="#11_Bach_Chorale__5" rel="nofollow">1.1 Bach Chorale 数据集</a></li><li><a href="#12_MuseGAN__25" rel="nofollow">1.2 MuseGAN 生成器</a></li><li><a href="#13_MuseGAN__165" rel="nofollow">1.3 MuseGAN 判别器</a></li></ul> 
+   </li><li><a href="#2_MuseGAN__216" rel="nofollow">2. MuseGAN 分析</a></li><li><a href="#_230" rel="nofollow">小结</a></li><li><a href="#_232" rel="nofollow">系列链接</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="0__1"></a>0. 前言</h3> 
+<p>在<a href="https://blog.csdn.net/LOVEmy134611/article/details/138142967">基于 Transfromer 生成音乐</a>一节，我们可以看到可视化的乐谱类似于一幅图像，因此，我们可以利用图像生成方法替代序列生成技术生成音乐。可以将音乐生成视为一个图像生成问题，这意味着可以不使用 <code>Transformer</code>，而是应用在图像生成问题中表现出色的基于卷积的技术，例如<a href="https://blog.csdn.net/LOVEmy134611/article/details/133974562">生成对抗网络 (Generative Adversarial Network, GAN)</a>。本节中，我们将解决多声部音乐生成的问题，并探讨如何使用基于 <code>GAN</code> 架构创建多声部音乐。</p> 
+<h3><a id="1_MuseGAN_3"></a>1. MuseGAN</h3> 
+<p><code>MuseGAN</code> 通过一种新颖的生成对抗网络 (<code>Generative Adversarial Network</code>, <code>GAN</code>) 框架来训练模型生成复调、多轨和多小节的音乐。此外，通过将生成器的输人噪声向量划分职责，实现对音乐的时域以及声部等高级特征进行精细控制。为了训练 <code>MuseGAN</code>，我们将使用 <code>Bach Chorale</code> 数据集。</p> 
+<h4><a id="11_Bach_Chorale__5"></a>1.1 Bach Chorale 数据集</h4> 
+<p>首先需要下载用于训练 <code>MuseGAN</code> 的 <code>MIDI</code> 文件，使用 <code>Bach Chorale</code> 数据集的四个声部(声部也称为音轨，<code>tracks</code>)，<a href="https://github.com/czhuang/JSB-Chorales-dataset/raw/master/Jsb16thSeparated.npz">下载</a>后将 <code>MIDI</code> 文件保存到本地的 <code>./data</code> 文件夹中。<br> 数据集每个时间步 (<code>timesteps</code>) 由四个数字组成，分别是四个声部中每个声部 <code>MIDI</code> 音符的音高。在此数据集中，一个时间步等于一个 <code>16</code> 分音符。例如，在 <code>4</code> 个四分音(四拍)拍子的一个小节中，有 <code>16</code> 个时间步。数据集会自动分为训练集、验证集和测试集，使用训练集来训练 <code>MuseGAN</code>。<br> 首先，我们需要将数据转换成正确的形状以供 <code>GAN</code> 使用，我们将生成两小节的音乐，所以只提取每个声部的前两小节。每小节由 <code>16</code> 个时间步组成，<code>4</code> 个声部有 <code>84</code> 个音高。因此，转换后的数据形状如下：</p> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>BATCH_SIZE, N_BARS, N_STEPS_PER_BAR, N_PITCHES, N_TRACKS<span class="token punctuation">]</span>
+</code></pre> 
+<p>其中：</p> 
+<pre><code class="prism language-shell">BATCH_SIZE <span class="token operator">=</span> <span class="token number">64</span>
+N_BARS <span class="token operator">=</span> <span class="token number">2</span>
+N_STEPS_PER_BAR <span class="token operator">=</span> <span class="token number">16</span>
+N_PITCHES <span class="token operator">=</span> <span class="token number">84</span>
+N_TRACKS <span class="token operator">=</span> <span class="token number">4</span>
+</code></pre> 
+<p>为了使数据转换成这种形状，我们将音高数字进行独热编码，变成长度为 <code>84</code> 的向量，并将每个音符序列拆分成两组，每组 <code>16</code> 个时间步，对应两个小节。在这里，我们假设数据集中的每个众赞歌每个小节都有四拍。下图展示了如何将两个小节的原始数据转换为训练数据集，并提供给 <code>GAN</code> 作为输入。</p> 
+<p><img src="https://images2.imgbox.com/10/91/0kK4m94C_o.png" alt="数据转换"></p> 
+<h4><a id="12_MuseGAN__25"></a>1.2 MuseGAN 生成器</h4> 
+<p>和所有 <code>GAN</code> 一样，<code>MuseGAN</code> 由一个生成器和一个判别器组成。生成器试图用它的音乐作品欺骗判别器，而判别器试图阻止这种情况的发生，并确保其能够分辨出生成器伪造的 <code>Bach Chorale</code> 音乐和真实的 <code>Bach Chorale</code> 音乐之间的区别。<br> <code>MuseGAN</code> 的不同之处在于，生成器不仅接受单个噪声向量作为输入，而是有四个独立的输入，对应音乐的四个不同特征：和弦、风格、旋律以及节奏。通过独立操作每个输入，我们可以改变生成音乐的高级属性，生成器的架构如下图所示。</p> 
+<p><img src="https://images2.imgbox.com/b0/4f/RdfieZqh_o.png" alt="生成器架构"></p> 
+<p><code>MuseGAN</code> 首先将和弦和旋律输入传入到时间网络 (<code>temporal network</code>)，该网络输出一个张量，其维度等于要生成的小节数。样式和节奏输入不会以这种方式在时间上拉伸，因为它们在整个乐曲中保持恒定。<br> 然后，为了针对特定的音轨生成特定的小节，从和弦、风格、旋律和节奏部分提取出相关的输出，并将它们连接起来形成一个更长的向量。然后将这个向量传递给小节生成器，最终为特定声部输出特定小节。<br> 通过将所有声部生成的小节连接起来，我们可以创建一个能够与真实乐谱进行比较的乐谱。接下来，我们首先介绍如何构建一个时间网络。</p> 
+<h5>1.2.1 时间网络</h5> 
+<p>时间网络 (<code>temporal network</code>) 是一个由卷积转置层组成的神经网络，它的作用是将长度为 <code>Z_DIM = 32</code> 的单个输入噪声向量转换为每个小节的不同噪声向量(同样长度为 <code>32</code>)：</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">conv_t</span><span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token punctuation">,</span> k<span class="token punctuation">,</span> s<span class="token punctuation">,</span> a<span class="token punctuation">,</span> p<span class="token punctuation">,</span> bn<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Conv2DTranspose<span class="token punctuation">(</span>
+        filters<span class="token operator">=</span>f<span class="token punctuation">,</span>
+        kernel_size<span class="token operator">=</span>k<span class="token punctuation">,</span>
+        padding<span class="token operator">=</span>p<span class="token punctuation">,</span>
+        strides<span class="token operator">=</span>s<span class="token punctuation">,</span>
+        kernel_initializer<span class="token operator">=</span>initializer<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> bn<span class="token punctuation">:</span>
+        x <span class="token operator">=</span> layers<span class="token punctuation">.</span>BatchNormalization<span class="token punctuation">(</span>momentum<span class="token operator">=</span><span class="token number">0.9</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Activation<span class="token punctuation">(</span>a<span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> x
+
+<span class="token keyword">def</span> <span class="token function">TemporalNetwork</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 时间网络的输入是长度为 32 的向量 (Z_DIM)</span>
+    input_layer <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>Z_DIM<span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"temporal_input"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 将输入向量调整为一个具有 32 个通道的 1 × 1 张量，以便对其应用二维卷积转置操作</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Reshape<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> Z_DIM<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>input_layer<span class="token punctuation">)</span>
+    <span class="token comment"># 应用 Conv2DTranspose 层来扩展张量的大小，使其与 N_BARS 的长度相同</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">1024</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"valid"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span>Z_DIM<span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span>N_BARS <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"valid"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    <span class="token comment"># 使用 Reshape 层去除不必要的额外维度</span>
+    output_layer <span class="token operator">=</span> layers<span class="token punctuation">.</span>Reshape<span class="token punctuation">(</span><span class="token punctuation">[</span>N_BARS<span class="token punctuation">,</span> Z_DIM<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> models<span class="token punctuation">.</span>Model<span class="token punctuation">(</span>input_layer<span class="token punctuation">,</span> output_layer<span class="token punctuation">)</span>
+</code></pre> 
+<p>我们之所以使用卷积操作而不是将两个独立的向量输入网络，是因为我们希望网络能够学习如何一致地将一个小节连接到另一个小节。使用神经网络沿时间轴扩展输入向量意味着模型有机会学习音乐如何在小节之间连接，而不是将每个小节完全视为独立的部分。</p> 
+<h5>1.2.2 和弦、风格、旋律和节奏</h5> 
+<p>接下来，我们介绍生成器的四个不同输入。<br> <strong>和弦</strong><br> 和弦 (<code>Chords</code>) 输入是长度为 <code>Z_DIM(32)</code> 的单个噪声向量，这个向量的作用是控制音乐随时间的整体进展，跨音轨共享，因此我们使用一个 <code>TemporalNetwork</code> 为每个小节的输出一个不同潜向量。虽然我们将这个输入称为和弦，但它实际上可以控制每小节发生的所有变化，例如总体节奏风格，而不特定于任何特定的声部。</p> 
+<p><strong>风格</strong><br> 风格 (<code>Style</code>) 输入也是长度为 <code>Z_DIM</code> 的向量。它在传递过程中没有进行任何转换，因此在所有小节和音轨上都是相同的。可以将其视为控制作品整体风格的向量(即，它会一致地影响所有小节和声部)。换句话说，小节生成器应该利用这个向量在小节和声部之间建立一致性。</p> 
+<p><strong>旋律</strong><br> 旋律 (<code>Melody</code>) 输入是一个形状为 <code>[N_TRACKS, Z_DIM]</code> 的数组，即对于每个声部，我们提供长度为 <code>Z_DIM</code> 的随机噪声向量。<br> 每个向量都通过一个特定于音轨的 <code>TemporalNetwork</code>，其中权重在音轨之间不共享。因此，对于每小节的每个声部，输出都是长度为 <code>Z_DIM</code> 的向量。因此，模型可以使用这个输入向量独立调整每个小节和声部。</p> 
+<p><strong>节奏</strong><br> 节奏 (<code>Groove</code>) 输入也是一个形状为 <code>[N_TRACKS, Z_DIM]</code> 的数组，即对于每个声部，我们提供长度为 <code>Z_DIM</code> 的随机噪声向量。与旋律输入不同的是，节奏向量不会通过时间网络，而是直接传递给小节生成器，就像风格向量一样。因此，每个节奏向量将影响一个声部的整体属性，并延续到所有小节。与风格向量不同的是，每个声部都有不同的节奏，这意味着我们可以使用这些向量来单独调整每个声部的整体输出。<br> <code>MuseGAN</code> 生成器的最后一部分是小节生成器，使用它可以将和弦、风格、旋律和节奏组件的输出连接在一起。</p> 
+<h5>1.2.3 小节生成器</h5> 
+<p>小节生成器接收四个潜向量——分别来自和弦、风格、旋律和节奏组件，将这些向量被连接起来，得到一个长度为 <code>4 * Z_DIM</code> 的向量作为输入，输出是一个声部的一个小节，即形状为 <code>[1, n_steps_per_bar, n_pitches, 1]</code> 的张量。<br> 小节生成器只是一个使用卷积转置层来扩展输入向量的时间和音高维度的神经网络。我们为每个声部创建一个小节生成器，权重在声部之间不共享：</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">BarGenerator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 小节生成器的输入是长度为 4 * Z_DIM 的向量</span>
+    input_layer <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>Z_DIM <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"bar_generator_input"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 通过 Dense 层将其传递，然后重新调整张量以准备进行卷积转置操作</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Dense<span class="token punctuation">(</span><span class="token number">1024</span><span class="token punctuation">)</span><span class="token punctuation">(</span>input_layer<span class="token punctuation">)</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>BatchNormalization<span class="token punctuation">(</span>momentum<span class="token operator">=</span><span class="token number">0.9</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Activation<span class="token punctuation">(</span><span class="token string">"relu"</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Reshape<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">512</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token comment"># 首先，我们沿时间步轴扩展张量</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">512</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    <span class="token comment"># 然后沿音高轴扩展</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"relu"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+    <span class="token comment"># 最终层应用 tanh 激活函数，因为我们将使用 WGAN-GP (需要 tanh 输出激活)来训练神经网络</span>
+    x <span class="token operator">=</span> conv_t<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">12</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">12</span><span class="token punctuation">)</span><span class="token punctuation">,</span> a<span class="token operator">=</span><span class="token string">"tanh"</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">,</span> bn<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+    <span class="token comment"># 将张量重新调整形状后，额外添加两个大小为1的维度，以便与其他小节和声部连接</span>
+    output_layer <span class="token operator">=</span> layers<span class="token punctuation">.</span>Reshape<span class="token punctuation">(</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">,</span> N_STEPS_PER_BAR<span class="token punctuation">,</span> N_PITCHES<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> models<span class="token punctuation">.</span>Model<span class="token punctuation">(</span>input_layer<span class="token punctuation">,</span> output_layer<span class="token punctuation">)</span>
+</code></pre> 
+<h5>1.2.4 构建生成器</h5> 
+<p>最终，<code>MuseGAN</code> 生成器将四个输入噪声张量(和弦、风格、旋律和节奏)转换为多轨、多小节的乐谱：</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">Generator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 定义生成器的输入</span>
+    chords_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>Z_DIM<span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"chords_input"</span><span class="token punctuation">)</span>
+    style_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>Z_DIM<span class="token punctuation">,</span><span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"style_input"</span><span class="token punctuation">)</span>
+    melody_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>N_TRACKS<span class="token punctuation">,</span> Z_DIM<span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"melody_input"</span><span class="token punctuation">)</span>
+    groove_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>N_TRACKS<span class="token punctuation">,</span> Z_DIM<span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"groove_input"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 将和弦输入通过时间网络</span>
+    chords_tempNetwork <span class="token operator">=</span> TemporalNetwork<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    chords_over_time <span class="token operator">=</span> chords_tempNetwork<span class="token punctuation">(</span>chords_input<span class="token punctuation">)</span>  <span class="token comment"># [n_bars, z_dim]</span>
+    <span class="token comment"># 将旋律输入通过时间网络</span>
+    melody_over_time <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_TRACKS  <span class="token comment"># list of n_tracks [n_bars, z_dim] tensors</span>
+    melody_tempNetwork <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_TRACKS
+    <span class="token keyword">for</span> track <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>N_TRACKS<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># 为每个声部创建一个独立的小节生成器网络</span>
+        melody_tempNetwork<span class="token punctuation">[</span>track<span class="token punctuation">]</span> <span class="token operator">=</span> TemporalNetwork<span class="token punctuation">(</span><span class="token punctuation">)</span>
+        melody_track <span class="token operator">=</span> layers<span class="token punctuation">.</span>Lambda<span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">,</span> track<span class="token operator">=</span>track<span class="token punctuation">:</span> x<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> track<span class="token punctuation">,</span> <span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>melody_input<span class="token punctuation">)</span>
+        melody_over_time<span class="token punctuation">[</span>track<span class="token punctuation">]</span> <span class="token operator">=</span> melody_tempNetwork<span class="token punctuation">[</span>track<span class="token punctuation">]</span><span class="token punctuation">(</span>melody_track<span class="token punctuation">)</span>
+
+    <span class="token comment"># 循环遍历每个声部和小节，为每组合创建一个生成的小节</span>
+    barGen <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_TRACKS
+    <span class="token keyword">for</span> track <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>N_TRACKS<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        barGen<span class="token punctuation">[</span>track<span class="token punctuation">]</span> <span class="token operator">=</span> BarGenerator<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+    <span class="token comment"># CREATE OUTPUT FOR EVERY TRACK AND BAR</span>
+    bars_output <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_BARS
+    c <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_BARS
+    <span class="token keyword">for</span> bar <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>N_BARS<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        track_output <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token boolean">None</span><span class="token punctuation">]</span> <span class="token operator">*</span> N_TRACKS
+
+        c<span class="token punctuation">[</span>bar<span class="token punctuation">]</span> <span class="token operator">=</span> layers<span class="token punctuation">.</span>Lambda<span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">,</span> bar<span class="token operator">=</span>bar<span class="token punctuation">:</span> x<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> bar<span class="token punctuation">,</span> <span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>chords_over_time<span class="token punctuation">)</span>  <span class="token comment"># [z_dim]</span>
+        s <span class="token operator">=</span> style_input  <span class="token comment"># [z_dim]</span>
+
+        <span class="token keyword">for</span> track <span class="token keyword">in</span> <span class="token builtin">range</span><span class="token punctuation">(</span>N_TRACKS<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            m <span class="token operator">=</span> layers<span class="token punctuation">.</span>Lambda<span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">,</span> bar<span class="token operator">=</span>bar<span class="token punctuation">:</span> x<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> bar<span class="token punctuation">,</span> <span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>melody_over_time<span class="token punctuation">[</span>track<span class="token punctuation">]</span><span class="token punctuation">)</span>  <span class="token comment"># [z_dim]</span>
+            g <span class="token operator">=</span> layers<span class="token punctuation">.</span>Lambda<span class="token punctuation">(</span><span class="token keyword">lambda</span> x<span class="token punctuation">,</span> track<span class="token operator">=</span>track<span class="token punctuation">:</span> x<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> track<span class="token punctuation">,</span> <span class="token punctuation">:</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">(</span>groove_input<span class="token punctuation">)</span>  <span class="token comment"># [z_dim]</span>
+
+            z_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Concatenate<span class="token punctuation">(</span>
+                axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"total_input_bar_{}_track_{}"</span><span class="token punctuation">.</span><span class="token builtin">format</span><span class="token punctuation">(</span>bar<span class="token punctuation">,</span> track<span class="token punctuation">)</span>
+            <span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">[</span>c<span class="token punctuation">[</span>bar<span class="token punctuation">]</span><span class="token punctuation">,</span> s<span class="token punctuation">,</span> m<span class="token punctuation">,</span> g<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+            track_output<span class="token punctuation">[</span>track<span class="token punctuation">]</span> <span class="token operator">=</span> barGen<span class="token punctuation">[</span>track<span class="token punctuation">]</span><span class="token punctuation">(</span>z_input<span class="token punctuation">)</span>
+        bars_output<span class="token punctuation">[</span>bar<span class="token punctuation">]</span> <span class="token operator">=</span> layers<span class="token punctuation">.</span>Concatenate<span class="token punctuation">(</span>axis<span class="token operator">=</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">(</span>track_output<span class="token punctuation">)</span>
+    <span class="token comment"># 将所有内容连接在一起形成一个输出张量</span>
+    generator_output <span class="token operator">=</span> layers<span class="token punctuation">.</span>Concatenate<span class="token punctuation">(</span>axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"concat_bars"</span><span class="token punctuation">)</span><span class="token punctuation">(</span>bars_output<span class="token punctuation">)</span>
+    <span class="token comment"># MuseGAN 模型接受 4 个不同的噪声张量作为输入，并输出生成的多轨、多小节的乐谱</span>
+    <span class="token keyword">return</span> models<span class="token punctuation">.</span>Model<span class="token punctuation">(</span><span class="token punctuation">[</span>chords_input<span class="token punctuation">,</span> style_input<span class="token punctuation">,</span> melody_input<span class="token punctuation">,</span> groove_input<span class="token punctuation">]</span><span class="token punctuation">,</span> generator_output<span class="token punctuation">,</span><span class="token punctuation">)</span>
+
+generator <span class="token operator">=</span> Generator<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="13_MuseGAN__165"></a>1.3 MuseGAN 判别器</h4> 
+<p>与生成器相比，判别器架构更加简单。判别器试图区分由生成器创建的完整的声部、多小节乐谱和巴赫众赞歌中的真实片段。判别器是一个卷积神经网络，主要由Conv3D层组成，可以将乐谱折叠成单个输出预测。</p> 
+<h5>1.3.1 Conv3D 层</h5> 
+<p><code>Conv2D</code> 层适用于三维输入图像(宽度、高度、通道)，而在本节，模型需要使用 <code>Conv3D</code> 层，它类似于 <code>Conv2D</code> 层，但接受四维输入张量 <code>(n_bars、n_steps_per_bar、n_pitches、n_tracks)</code>。同时，由于使用<a href="https://blog.csdn.net/LOVEmy134611/article/details/133974577"> WGAN-GP </a>框架训练 <code>GAN</code>，在判别器中不使用批归一化层。</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">conv</span><span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token punctuation">,</span> k<span class="token punctuation">,</span> s<span class="token punctuation">,</span> p<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Conv3D<span class="token punctuation">(</span>
+        filters<span class="token operator">=</span>f<span class="token punctuation">,</span>
+        kernel_size<span class="token operator">=</span>k<span class="token punctuation">,</span>
+        padding<span class="token operator">=</span>p<span class="token punctuation">,</span>
+        strides<span class="token operator">=</span>s<span class="token punctuation">,</span>
+        kernel_initializer<span class="token operator">=</span>initializer<span class="token punctuation">,</span>
+    <span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>LeakyReLU<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> x
+
+<span class="token keyword">def</span> <span class="token function">Critic</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 判别器的输入是一个由多声部、多小节乐谱组成的数组，每个乐谱的形状为 [N_BARS，N_STEPS_PER_BAR，N_PITCHES，N_TRACKS]</span>
+    critic_input <span class="token operator">=</span> layers<span class="token punctuation">.</span>Input<span class="token punctuation">(</span>shape<span class="token operator">=</span><span class="token punctuation">(</span>N_BARS<span class="token punctuation">,</span> N_STEPS_PER_BAR<span class="token punctuation">,</span> N_PITCHES<span class="token punctuation">,</span> N_TRACKS<span class="token punctuation">)</span><span class="token punctuation">,</span> name<span class="token operator">=</span><span class="token string">"critic_input"</span><span class="token punctuation">,</span><span class="token punctuation">)</span>
+
+    x <span class="token operator">=</span> critic_input
+    <span class="token comment"># 首先，沿着小节轴压缩张量。由于我们需要处理 4D 张量，因此在判别器中需要应用 Conv3D 层</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"valid"</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span>N_BARS <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"valid"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 接下来，沿音高轴压缩张量</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">12</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">12</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+    <span class="token comment"># 最后，沿时间步轴压缩张量</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">128</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">256</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+    x <span class="token operator">=</span> conv<span class="token punctuation">(</span>x<span class="token punctuation">,</span> f<span class="token operator">=</span><span class="token number">512</span><span class="token punctuation">,</span> k<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> s<span class="token operator">=</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span> p<span class="token operator">=</span><span class="token string">"same"</span><span class="token punctuation">)</span>
+
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Flatten<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>Dense<span class="token punctuation">(</span><span class="token number">1024</span><span class="token punctuation">,</span> kernel_initializer<span class="token operator">=</span>initializer<span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    x <span class="token operator">=</span> layers<span class="token punctuation">.</span>LeakyReLU<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    <span class="token comment"># 根据 WGAN-GP 框架，输出是拥有一个单元且没有激活函数的 Dense 层</span>
+    critic_output <span class="token operator">=</span> layers<span class="token punctuation">.</span>Dense<span class="token punctuation">(</span>
+        <span class="token number">1</span><span class="token punctuation">,</span> activation<span class="token operator">=</span><span class="token boolean">None</span><span class="token punctuation">,</span> kernel_initializer<span class="token operator">=</span>initializer
+    <span class="token punctuation">)</span><span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+
+    <span class="token keyword">return</span> models<span class="token punctuation">.</span>Model<span class="token punctuation">(</span>critic_input<span class="token punctuation">,</span> critic_output<span class="token punctuation">)</span>
+    
+critic <span class="token operator">=</span> Critic<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<h3><a id="2_MuseGAN__216"></a>2. MuseGAN 分析</h3> 
+<p>我们可以通过生成一个乐谱，然后调整一些输入噪声参数来观察输出的效果。<br> 生成器的输出是一个数组，值在范围 <code>[-1, 1]</code> 之间(由于最后一层使用tanh激活函数)。为了将这个数组转换成对应于每个声部的音符，我们选择每个时间步长上 <code>84</code> 个音高中值最大的音符。在原始 <code>MuseGAN</code> 模型中使用阈值为 <code>0</code>，因为每个声部可以包含多个音符；但在本节中，我们可以简单地取最大值，以确保每个声部在每个时间步长只有一个音符。<br> 下图中展示了一个由模型从随机正态分布的噪声向量生成的乐谱(左上角)。使用欧氏距离找到数据集中最接近的乐谱，并检查生成的乐谱是否是数据集中已经存在的音乐的复制品，图下方展示了与之最接近的乐谱，我们可以看到它与生成的乐谱不相同。</p> 
+<p><img src="https://images2.imgbox.com/2b/4c/ShhorK7v_o.png" alt="音乐生成"></p> 
+<p>通过修改输入噪声来调整生成的乐谱。首先，我们可以尝试改变和弦噪声向量-上图中左下角的乐谱显示了结果。我们可以看到每个声部都按照预期发生了变化，而且两个小节表现出不同的特性。在第 <code>2</code> 小节中，最下面一行更加动态，并且最上面—行的音高比第 <code>1</code> 小节更高，顶部音线的音高比第一小节更高，这是因为影响两个小节的潜向量是不同的，因为将输入和弦向量通过时间网络传递。<br> 改变风格向量(右上角)时，两个小节以类似的方式发生变化。两小节之间的风格没有太大区别，但已与原来生成的乐谱有了很大不同(即，使用相同的潜向量来调整所有轨道和小节)。<br> 我们还可以通过旋律和节奏输入单独改变声部。在上图的乐谱中，我们可以看到仅改变最上面一行旋律噪声输入的效果。所有其他部分保持不变，但最上面的音符发生了显著变化。此外，在最上面一行的两个小节之间可以看到节奏变化：第 <code>2</code> 个小节比第 <code>1</code> 个小节包含更快的音符，更具动态性。<br> 最后，在图示中右下角的乐谱显示了当我们仅改变最下面一行的节奏输入参数时的预测乐谱。所有其他部分均保持不变，仅最下面一行不同。此外，最下面一行的总体模式在各个小节之间保持相似，与我们所期望的相符。<br> 我们已经分析了每个输入参数如何直接影响生成的音乐序列的高级特征，这与调整<a href="https://blog.csdn.net/LOVEmy134611/article/details/133974527">变分自编码器 (Variational Autoencoder, VAE) </a>和 <code>GAN</code> 的潜向量以改变生成图像一样。该模型的一个缺点是必须事先指定要生成的小节数量。为了解决这个问题，扩展 <code>MuseGAN</code> 将先前的小节作为输入传递给模型，并通过不断将最近预测的小节作为额外输入反馈到模型中，从而生成更长的乐谱。</p> 
+<h3><a id="_230"></a>小结</h3> 
+<p><code>MuseGAN</code> 使用卷积来生成具有多个声部的多声部乐谱，可以将乐谱视为图像，其中声部类似于图像的各个通道。<code>MuseGAN</code> 的创新之处在于四个输入噪声向量(和弦、风格、旋律和节奏)的组织方式，以便可以对音乐的高级特征进行完全控制。</p> 
+<h3><a id="_232"></a>系列链接</h3> 
+<p><a href="https://blog.csdn.net/LOVEmy134611/article/details/132463580">AIGC实战——生成模型简介</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133967709">AIGC实战——深度学习 (Deep Learning, DL)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133967726">AIGC实战——卷积神经网络(Convolutional Neural Network, CNN)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974426">AIGC实战——自编码器(Autoencoder)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974527">AIGC实战——变分自编码器(Variational Autoencoder, VAE)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974538">AIGC实战——使用变分自编码器生成面部图像</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974562">AIGC实战——生成对抗网络(Generative Adversarial Network, GAN)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974577">AIGC实战——WGAN(Wasserstein GAN)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/133974588">AIGC实战——条件生成对抗网络(Conditional Generative Adversarial Net, CGAN)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/135395814">AIGC实战——自回归模型(Autoregressive Model)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/135514046">AIGC实战——改进循环神经网络</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/135634657">AIGC实战——像素卷积神经网络(PixelCNN)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/135984457">AIGC实战——归一化流模型(Normalizing Flow Model)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/136125887">AIGC实战——能量模型(Energy-Based Model)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/136288802">AIGC实战——扩散模型(Diffusion Model)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/136613558">AIGC实战——GPT(Generative Pre-trained Transformer)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/137000581">AIGC实战——Transformer模型</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/137448040">AIGC实战——ProGAN(Progressive Growing Generative Adversarial Network)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/137566606">AIGC实战——StyleGAN(Style-Based Generative Adversarial Network)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/137853624">AIGC实战——VQ-GAN(Vector Quantized Generative Adversarial Network)</a><br> <a href="https://blog.csdn.net/LOVEmy134611/article/details/138142967">AIGC实战——基于Transformer实现音乐生成</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3f9797f1c31a3de7e122d47c8f9ab0b9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">50个前端实战项目之04：隐藏的搜索小组件</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/3733884adf901a914bc45a45a53021a5/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Oracle23ai来了，23爱，全能、超级巨兽...</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

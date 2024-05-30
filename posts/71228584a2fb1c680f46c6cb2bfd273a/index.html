@@ -1,0 +1,376 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>CentOS 7配置hadoop和hbase伪分布式模式保姆级教程（近乎零基础跟着配也能配对） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/71228584a2fb1c680f46c6cb2bfd273a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="CentOS 7配置hadoop和hbase伪分布式模式保姆级教程（近乎零基础跟着配也能配对）">
+  <meta property="og:description" content="前置准备： VMware17
+Tabby：https://github.com/Eugeny/tabby/releases/tag/v1.0.207
+jdk-8u401：https://www.java.com/en/download/
+hbase-1.3.1：https://archive.apache.org/dist/hbase/1.3.1/
+hadoop-2.7.7：https://archive.apache.org/dist/hadoop/common/hadoop-2.7.7/
+CentOS-7安装镜像：去找其他链接吧
+打包在以下百度网盘链接里了
+链接：https://pan.baidu.com/s/1VQGGVFOZ5uSo-9P-9reF9A?pwd=igcd
+提取码：igcd
+1、安装VMware17和Tabby 这里不再详细展开如何安装
+2、安装centos7 顺带一提，装好后关机打个快照可以方便之后克隆装好虚拟机的最纯净状态，不必再次安装虚拟机（能省半个小时它不香吗？）
+3、配置静态ip vim /etc/sysconfig/network-scripts/ifcfg-ens33 按a可以进入编辑模式
+不会看自己网段的看下图
+要改的
+BOOTPROTO=&#34;static&#34; 要新增的
+IPADDR=&#34;192.168.88.102&#34; GATEWAY=&#34;192.168.88.2&#34; NETMASK=&#34;255.255.255.0&#34; DNS=&#34;192.168.88.2&#34; 配完后如下图
+注意保存是先按esc键进入命令模式再输入:wq回车
+重启网络
+systemctl restart network 查看下ip
+ifconfig 打个快照保存下，然后转战tabby
+右键左侧当前虚拟机的名称选择快照-&gt;拍摄快照
+4、Tabby连接虚拟机并上传文件 选择ssh连接
+Tabby上传文件
+查看一下上传的目录
+ls /usr/local/ 5、解压并配置环境变量 先给jdk创建一个新目录
+mkdir -p /export/server 解压jdk：
+tar -zxvf /usr/local/jdk-8u401-linux-x64.tar.gz -C /export/server/ 解压hadoop：
+tar -zxvf /usr/local/hadoop-2.7.7.tar.gz -C /usr/local/ 解压hbase：
+tar -zxvf /usr/local/hbase-1.3.1-bin.tar.gz -C /usr/local/ 改名jdk：
+mv /export/server/jdk1.8.0_401 /export/server/jdk 改名hadoop：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-26T22:43:27+08:00">
+    <meta property="article:modified_time" content="2024-04-26T22:43:27+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">CentOS 7配置hadoop和hbase伪分布式模式保姆级教程（近乎零基础跟着配也能配对）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 style="margin-left:0px;text-align:justify;">前置准备：</h2> 
+<p style="margin-left:0;text-align:justify;">VMware17</p> 
+<p style="margin-left:0;text-align:justify;">Tabby：https://github.com/Eugeny/tabby/releases/tag/v1.0.207</p> 
+<p style="margin-left:0;text-align:justify;">jdk-8u401：https://www.java.com/en/download/</p> 
+<p style="margin-left:0;text-align:justify;">hbase-1.3.1：https://archive.apache.org/dist/hbase/1.3.1/</p> 
+<p style="margin-left:0;text-align:justify;">hadoop-2.7.7：https://archive.apache.org/dist/hadoop/common/hadoop-2.7.7/</p> 
+<p style="margin-left:0;text-align:justify;">CentOS-7安装镜像：去找其他链接吧</p> 
+<p style="margin-left:0;text-align:justify;">打包在以下百度网盘链接里了</p> 
+<p style="margin-left:0;text-align:justify;">链接：https://pan.baidu.com/s/1VQGGVFOZ5uSo-9P-9reF9A?pwd=igcd</p> 
+<p style="margin-left:0;text-align:justify;">提取码：igcd</p> 
+<h2 style="margin-left:0px;text-align:justify;">1、安装VMware17和Tabby</h2> 
+<p>这里不再详细展开如何安装</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="45bd83c638dd4b25b34ada57a06c36ca.png" src="https://images2.imgbox.com/52/33/C5a1kq28_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="097a27cc67404b97a59b36441bede613.png" src="https://images2.imgbox.com/c6/7a/AFcDCmuH_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="fd6245ceda904903b1c8b6a4e37b48e5.png" src="https://images2.imgbox.com/18/58/it6yANgg_o.png"></p> 
+<h2 style="margin-left:0px;text-align:justify;">2、安装centos7</h2> 
+<p style="margin-left:0;text-align:justify;"><img alt="b2934600bbca4ae2a32a8e17f1068ac1.png" src="https://images2.imgbox.com/b8/aa/tfWpD6Dw_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="df05ad87ba0e4c49a12eaff55a298f22.png" src="https://images2.imgbox.com/c9/5d/ijGZeGUY_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="b869f971a4bf495c99de0aa7132ffdd9.png" src="https://images2.imgbox.com/e6/60/LpQrj2D7_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="d02e7f20e1574d74bba77086d674e1d3.png" src="https://images2.imgbox.com/68/36/rxJIMDv5_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">顺带一提，装好后关机打个快照可以方便之后克隆装好虚拟机的最纯净状态，不必再次安装虚拟机（能省半个小时它不香吗？）</p> 
+<h2 style="margin-left:0px;text-align:justify;">3、配置静态ip</h2> 
+<pre><code>vim /etc/sysconfig/network-scripts/ifcfg-ens33</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="ad58ea070be9409fa32e554535d3c4fc.png" src="https://images2.imgbox.com/bd/c9/ChLyLq1Z_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">按a可以进入编辑模式</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="0ab2d523e38e40d5900c239e6db76d9e.png" src="https://images2.imgbox.com/e1/49/BHVJ1BGL_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">不会看自己网段的看下图</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="03a8bf8e07184202841534d0e5e93335.png" src="https://images2.imgbox.com/df/d1/in4J1F2N_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">要改的</p> 
+<pre><code>BOOTPROTO="static"</code></pre> 
+<p style="margin-left:0;text-align:justify;">要新增的</p> 
+<pre><code>IPADDR="192.168.88.102"
+GATEWAY="192.168.88.2"
+NETMASK="255.255.255.0"
+DNS="192.168.88.2"</code></pre> 
+<p style="margin-left:0;text-align:justify;">配完后如下图</p> 
+<p style="margin-left:0;text-align:justify;">注意保存是先按esc键进入命令模式再输入:wq回车</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="f751a7fb2e814e6993e2db079b4db50e.png" src="https://images2.imgbox.com/8c/eb/kBor0SZZ_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">重启网络</p> 
+<pre><code>systemctl restart network</code></pre> 
+<p style="margin-left:0;text-align:justify;">查看下ip</p> 
+<pre><code>ifconfig</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="4cc9706ac8f34448b0aeb334d19c03e4.png" src="https://images2.imgbox.com/47/5e/CVv25zom_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">打个快照保存下，然后转战tabby</p> 
+<p style="margin-left:0;text-align:justify;">右键左侧当前虚拟机的名称选择快照-&gt;拍摄快照</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="173d439873db4365a88637b7f4641e2a.png" src="https://images2.imgbox.com/6d/a5/uUkuwH7y_o.png"></p> 
+<h2 style="margin-left:0px;text-align:justify;">4、Tabby连接虚拟机并上传文件</h2> 
+<p style="margin-left:0;text-align:justify;"><img alt="774602e2a1ff422f9cd7328541a4a245.png" src="https://images2.imgbox.com/67/26/mxy47qCb_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">选择ssh连接</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="b017c5532bfa4aaa86e23d36f9012c7b.png" src="https://images2.imgbox.com/bc/23/kaSC5xg7_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="fe0e14fbb96541ab93eeda4fb0fd43b2.png" src="https://images2.imgbox.com/2b/88/OKzDBUrK_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="d4a287ce93054d9c99a33f320fcea43f.png" src="https://images2.imgbox.com/39/3c/iTMc5kLt_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="2bcf158e5e5540c09009c7230c627ec3.png" src="https://images2.imgbox.com/78/95/0lSruAAC_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">Tabby上传文件</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="b15e93ddcc0148899c167fd63d376e90.png" src="https://images2.imgbox.com/77/5e/Ek6Jz0Xh_o.png"></p> 
+<p style="margin-left:0;text-align:justify;"><img alt="516ca9b5fbed4b88af7f80200a166bfc.png" src="https://images2.imgbox.com/c2/4a/8S76vRFk_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">查看一下上传的目录</p> 
+<pre><code>ls /usr/local/</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="54618123eec4452da5810d57e63422ed.png" src="https://images2.imgbox.com/6d/18/Hj8ar4EI_o.png"></p> 
+<h2 style="margin-left:0px;text-align:justify;">5、解压并配置环境变量</h2> 
+<p style="margin-left:0;text-align:justify;">先给jdk创建一个新目录</p> 
+<pre><code>mkdir -p /export/server</code></pre> 
+<p style="margin-left:0;text-align:justify;">解压jdk：</p> 
+<pre><code>tar -zxvf /usr/local/jdk-8u401-linux-x64.tar.gz -C /export/server/</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="21a805a53d8049b182cf6d82e8b0f257.png" src="https://images2.imgbox.com/98/23/dv9tHyug_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">解压hadoop：</p> 
+<pre><code>tar -zxvf /usr/local/hadoop-2.7.7.tar.gz -C /usr/local/</code></pre> 
+<p style="margin-left:0;text-align:justify;">解压hbase：</p> 
+<pre><code>tar -zxvf /usr/local/hbase-1.3.1-bin.tar.gz -C /usr/local/</code></pre> 
+<p style="margin-left:0;text-align:justify;">改名jdk：</p> 
+<pre><code>mv /export/server/jdk1.8.0_401 /export/server/jdk</code></pre> 
+<p style="margin-left:0;text-align:justify;">改名hadoop：</p> 
+<pre><code>mv /usr/local/hadoop-2.7.7 /usr/local/hadoop</code></pre> 
+<p style="margin-left:0;text-align:justify;">改名hbase：</p> 
+<pre><code>mv /usr/local/hbase-1.3.1 /usr/local/hbase</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="eb1a002435f0421984f8e37bb9c80295.png" src="https://images2.imgbox.com/4b/99/QyeBr0L8_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">进入环境变量文件：</p> 
+<pre><code>vim /etc/profile</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="bd306c4ac214405a8c2e5519ba759527.png" src="https://images2.imgbox.com/37/a2/Z3294kYN_o.png"></p> 
+<pre><code>export JAVA_HOME=/export/server/jdk
+export PATH=$PATH:$JAVA_HOME/bin
+export HADOOP_HOME=/usr/local/hadoop
+export PATH=.:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$PATH
+export HBASE_HOME=/usr/local/hbase
+export PATH=$PATH:$HBASE_HOME/bin</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="18fb7a3484584add84f9933eb72455fb.png" src="https://images2.imgbox.com/7a/e0/Cwlt5dAu_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">应用环境变量：</p> 
+<pre><code>source /etc/profile</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="7e5785cdcaf94ed4a72c7d44cec119a3.png" src="https://images2.imgbox.com/eb/cd/ZNmSzkVF_o.png"></p> 
+<h2 style="margin-left:0px;text-align:justify;">6、一些其他的基础配置</h2> 
+<p style="margin-left:0;text-align:justify;">关闭防火墙</p> 
+<p style="margin-left:0;text-align:justify;">关闭本次：</p> 
+<pre><code>systemctl stop firewalld</code></pre> 
+<p style="margin-left:0;text-align:justify;">关闭开机自启：</p> 
+<pre><code>systemctl disable firewalld</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="ac55208e1c174959ad547a9c55694696.png" src="https://images2.imgbox.com/9c/b2/2wCugGE6_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">关闭selinux</p> 
+<p style="margin-left:0;text-align:justify;">临时关闭：</p> 
+<pre><code>setenforce 0</code></pre> 
+<p style="margin-left:0;text-align:justify;">修改配置文件：</p> 
+<pre><code>vim /etc/sysconfig/selinux</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="27ebc541395640e1af8d601cca2bad66.png" src="https://images2.imgbox.com/ae/1a/XVIWiYGH_o.png"></p> 
+<pre><code>SELINUX=disabled</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="bf8f9f9bc752452b919a99d4ca243812.png" src="https://images2.imgbox.com/f2/23/SVpY1ZPJ_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">更改主机名（这里的主机名要与后边配置hadoop和hbase时完全一致）：</p> 
+<pre><code>hostnamectl set-hostname node2</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="1679b67e061e4c389c53f8dbc074af16.png" src="https://images2.imgbox.com/e3/a7/IamcE6nZ_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">修改hosts映射文件：</p> 
+<pre><code>vim /etc/hosts</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="f80dab2e51144f07a369740672a19ca5.png" src="https://images2.imgbox.com/2a/91/2eWqPyrB_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">在里面添加一行：自己的ip（刚配的）+主机名</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="c0288547dc4e476397806a1ad82b6799.png" src="https://images2.imgbox.com/5f/59/dMzU8vhm_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">配置ssh免密登录：</p> 
+<pre><code>ssh-keygen -t rsa</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="705eab9aab52406ba9780b6fb92a61ff.png" src="https://images2.imgbox.com/e7/24/xgf3keRK_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">创建密钥文件：</p> 
+<pre><code>cp ~/.ssh/id_rsa.pub ~/.ssh/authorized_keys</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="0204523164364f8e8bc201c24c471243.png" src="https://images2.imgbox.com/80/73/m7k2rCX5_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">如果查看Java版本时（java -version）显示的不是1.8.0.401可以删除掉本机上自带的其他jdk</p> 
+<p style="margin-left:0;text-align:justify;">查看本机已安装jdk命令：</p> 
+<pre><code>rpm -qa|grep java</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="f36394202e524518a48670d13126e103.png" src="https://images2.imgbox.com/9a/b5/8dTI8Xnz_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">删除命令：rpm -e --nodeps xxxxxx(xxxxxx指代你要删除的软件，示例见下图)</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="901f772c5de345bf9d6fe92a18d2734f.png" src="https://images2.imgbox.com/b9/f4/cIODP8XF_o.png"></p> 
+<h2 style="margin-left:0px;text-align:justify;">7、配置hadoop</h2> 
+<p style="margin-left:0;text-align:justify;">配置hadoop-env.sh：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/hadoop-env.sh</code></pre> 
+<pre><code>export JAVA_HOME=/export/server/jdk</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="076df609baf949bbb22283cbb6bae4d4.png" src="https://images2.imgbox.com/73/71/MRezNRn8_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">配置yarn-env.sh：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/yarn-env.sh</code></pre> 
+<pre><code>export JAVA_HOME=/export/server/jdk</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="99ff34ac642e40d1aa9949ac447c84c6.png" src="https://images2.imgbox.com/50/41/RfRhPuDa_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">配置core-site.xml：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/core-site.xml</code></pre> 
+<pre><code>&lt;property&gt;
+ &lt;name&gt;fs.defaultFS&lt;/name&gt;
+ &lt;value&gt;hdfs://192.168.88.102:8020&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+  &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+  &lt;value&gt;/usr/local/hadoop/tmp&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p style="margin-left:0;text-align:justify;">下图ip地址和代码块内对应不上，以代码块为主</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="" height="1200" src="https://images2.imgbox.com/37/4f/GZK9PBxy_o.png" width="1200"></p> 
+<p style="margin-left:0;text-align:justify;">配置hdfs-site.xml：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/hdfs-site.xml</code></pre> 
+<pre><code>&lt;property&gt;
+ &lt;name&gt;dfs.replication&lt;/name&gt;
+ &lt;value&gt;1&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="a8a9fdd0c6a64388be49c5386a96d30c.png" src="https://images2.imgbox.com/74/d7/IYzjgYoO_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">因为没有mapred-site.xml只有mapred-site.xml.template所以要复制一份</p> 
+<p style="margin-left:0;text-align:justify;">命令：</p> 
+<pre><code>cp /usr/local/hadoop/etc/hadoop/mapred-site.xml.template /usr/local/hadoop/etc/hadoop/mapred-site.xml</code></pre> 
+<p style="margin-left:0;text-align:justify;">配置mapred-site.xml：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/mapred-site.xml</code></pre> 
+<pre><code>&lt;property&gt;
+ &lt;name&gt;mapreduce.framework.name&lt;/name&gt;
+ &lt;value&gt;yarn&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="ce19add639734f089a62536186f455db.png" src="https://images2.imgbox.com/99/97/gXX6oEUB_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">配置yarn-site.xml：</p> 
+<pre><code>vim /usr/local/hadoop/etc/hadoop/yarn-site.xml</code></pre> 
+<pre><code>&lt;property&gt;
+ &lt;name&gt;yarn.nodemanager.aux-services&lt;/name&gt;
+ &lt;value&gt;mapreduce_shuffle&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="a4c3e2655d5e4453bb920cffabdee5df.png" src="https://images2.imgbox.com/af/53/LixgblCE_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">格式化hadoop：</p> 
+<pre><code>hadoop namenode -format</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="597a40627e814ae9a2af1bd93d991e1e.png" src="https://images2.imgbox.com/bc/95/LltGgAzy_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">启动hadoop：</p> 
+<pre><code>start-all.sh</code></pre> 
+<p style="margin-left:0;text-align:justify;">查看是否成功方法1：</p> 
+<pre><code>jps</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="309f17abb41b4a908ac656c8c4e98337.png" src="https://images2.imgbox.com/b0/54/VhyaeGMl_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">查看是否成功方法2：浏览器内输入地址<a href="http://192.168.88.102:50070/%EF%BC%88ip" rel="nofollow" title="http://192.168.88.102:50070/（ip">http://192.168.88.102:50070/（ip</a>改成自己的，能ping通虚拟机的都可以访问）</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="46d2de6d7cf94581a8e0b13a828c86f4.png" src="https://images2.imgbox.com/3d/f3/e21pFzXt_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">关闭hadoop命令为：</p> 
+<pre><code>stop-all.sh</code></pre> 
+<p style="margin-left:0;text-align:justify;">这里不做演示</p> 
+<p style="margin-left:0;text-align:justify;">配好了之后可以再拍个快照以防配错</p> 
+<h2 style="background-color:transparent;margin-left:0px;text-align:justify;">8、配置hbase伪分布式模式</h2> 
+<p style="margin-left:0;text-align:justify;">配置hbase-env.sh：</p> 
+<pre><code>vim /usr/local/hbase/conf/hbase-env.sh</code></pre> 
+<p style="margin-left:0;text-align:justify;">加上</p> 
+<pre><code>export JAVA_HOME=/export/server/jdk
+export HBASE_MANAGES_ZK=true</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="e3c3064af9034ccfbf07d3daafd2049b.png" src="https://images2.imgbox.com/24/f0/GKAbB0G4_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">配置hbase-site.xml：</p> 
+<pre><code>vim /usr/local/hbase/conf/hbase-site.xml</code></pre> 
+<p style="margin-left:0;text-align:justify;">注意一定要应该修改的一定要修改</p> 
+<pre><code>&lt;property&gt;
+ &lt;name&gt;hbase.rootdir&lt;/name&gt;
+ &lt;value&gt;hdfs://node2:8020/hbase&lt;/value&gt;
+&lt;/property&gt;
+&lt;property&gt;
+ &lt;name&gt;hbase.zookeeper.quorum&lt;/name&gt;
+ &lt;value&gt;node2&lt;/value&gt;
+&lt;!--改成自己的主机名，这是血的教训--&gt;
+&lt;/property&gt;
+
+&lt;property&gt;
+ &lt;name&gt;dfs.replication&lt;/name&gt;
+ &lt;value&gt;1&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;property&gt;
+ &lt;name&gt;hbase.cluster.distributed&lt;/name&gt;
+ &lt;value&gt;true&lt;/value&gt;
+&lt;/property&gt;
+
+&lt;property&gt;
+ &lt;name&gt;hbase.zookeeper.property.dataDir&lt;/name&gt;
+ &lt;value&gt;/usr/local/hbase/data/zookeeper&lt;/value&gt;
+&lt;/property&gt;</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="aa3d6ce20ee545b787e4de55b0bcc246.png" src="https://images2.imgbox.com/1b/80/55rDkkVh_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">开启（开启前需要开启hadoop）：</p> 
+<pre><code>start-hbase.sh</code></pre> 
+<p style="margin-left:0;text-align:justify;">查看是否成功方法1：</p> 
+<pre><code>jps</code></pre> 
+<p style="margin-left:0;text-align:justify;"><img alt="067245ec19c94975bc95b9d9f7b1e9e6.png" src="https://images2.imgbox.com/b0/59/2twweUAW_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">查看是否成功方法2：浏览器内输入地址<a href="http://192.168.88.102:16010/%EF%BC%88ip" rel="nofollow" title="http://192.168.88.102:16010/（ip">http://192.168.88.102:16010/（ip</a>改成自己的，能ping通虚拟机的都可以访问）</p> 
+<p style="margin-left:0;text-align:justify;"><img alt="6c8f9aa08b3742e29f3341a8aaf4894c.png" src="https://images2.imgbox.com/c0/d7/De5ROKug_o.png"></p> 
+<p style="margin-left:0;text-align:justify;">关闭时注意先关hbase再关hadoop。</p> 
+<p style="margin-left:0;text-align:justify;">关闭hbase：</p> 
+<pre><code class="hljs">stop-hbase.sh</code></pre> 
+<p style="margin-left:0;text-align:justify;">配好后别忘了拍个快照备份一下</p> 
+<h2>9、解决某些服务启动不起来的问题（持续更新）</h2> 
+<h3>9.1无namenode</h3> 
+<p>一种可能的原因是格式化化多次但没有删除以前格式化时的文件，导致唯一识别标识集群id变化了。所以启动不起来namenode </p> 
+<p>解决方法：删除以前格式化的文件重新格式化</p> 
+<p>删除临时文件：</p> 
+<pre><code>rm -rf /tmp/hadoop*</code></pre> 
+<p>删除在core-site.xml中配置的格式化文件地址的文件夹：</p> 
+<pre><code>rm -rf /usr/local/hadoop/tmp</code></pre> 
+<p>每个人配置的地址不同请查看自己的core-site.xml文件</p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/1c/7f/cy8DBeIN_o.png" width="1200"></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/57d55007bd62aab4c5811f59c2bfe66f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Leetcode】vector刷题</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/eade6e951f24be3dc432b661a0ca1551/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Ubuntu20.04安装配置stable diffusion 超详细教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

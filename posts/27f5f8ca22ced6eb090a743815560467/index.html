@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>llama-factory SFT系列教程 (一)，大模型 API 部署与使用 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/27f5f8ca22ced6eb090a743815560467/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="llama-factory SFT系列教程 (一)，大模型 API 部署与使用">
+  <meta property="og:description" content="文章目录 背景简介难点 前置条件1. 大模型 api 部署下一步阅读 背景 本来今天没有计划学 llama-factory，逐步跟着github的文档走，发现这框架确实挺方便，逐渐掌握了一些。
+最近想使用 SFT 微调大模型，llama-factory 是使用非常广泛的大模型微调框架；
+简介 基于 llama_factory 微调 qwen/Qwen-7B，qwen/Qwen-7B-Chat
+我使用的是 qwen/Qwen-7B，如果追求对话效果qwen/Qwen-7B-Chat的效果会好一点；
+本系列的主要工作如下：
+大模型 api 部署；直接部署开源大模型体验一下；增加自定义数据集；为实现SFT准备数据；大模型 lora 微调；原始模型 &#43; 微调后的lora插件，完成 api 部署； 使用 llama_factory 的 API 部署有 vllm加速推理；
+文章目录：
+llama-factory SFT系列教程 (一)，大模型 API 部署与使用llama-factory SFT系列教程 (二)，大模型在自定义数据集 lora 训练与部署
+llama-factory SFT系列教程 (三)，chatglm3-6B 命名实体识别实战
+llama-factory SFT 系列教程 (四)，lora sft 微调后，使用vllm加速推理 难点 可能遇到的一些难点：
+llama_factory 默认从 Huggingface下载模型，要改为从modelscope下载模型权重；
+前置条件 llama_factory 装包
+git clone https://github.com/hiyouga/LLaMA-Factory.git # conda create -n llama_factory python=3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-26T17:26:16+08:00">
+    <meta property="article:modified_time" content="2024-04-26T17:26:16+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">llama-factory SFT系列教程 (一)，大模型 API 部署与使用</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#_1" rel="nofollow">背景</a></li><li><a href="#_6" rel="nofollow">简介</a></li><li><ul><li><a href="#_25" rel="nofollow">难点</a></li></ul> 
+   </li><li><a href="#_29" rel="nofollow">前置条件</a></li><li><a href="#1__api__47" rel="nofollow">1. 大模型 api 部署</a></li><li><a href="#_177" rel="nofollow">下一步阅读</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="_1"></a>背景</h3> 
+<p>本来今天没有计划学 <code>llama-factory</code>，逐步跟着github的文档走，发现这框架确实挺方便，逐渐掌握了一些。<br> 最近想使用 SFT 微调大模型，<a href="https://github.com/hiyouga/LLaMA-Factory">llama-factory</a> 是使用非常广泛的大模型微调框架；</p> 
+<h3><a id="_6"></a>简介</h3> 
+<p>基于 <code>llama_factory</code> 微调 <a href="https://www.modelscope.cn/models/qwen/Qwen-7B/summary" rel="nofollow">qwen/Qwen-7B</a>，<a href="https://www.modelscope.cn/models/qwen/Qwen-7B-Chat/summary" rel="nofollow">qwen/Qwen-7B-Chat</a><br> 我使用的是 <code>qwen/Qwen-7B</code>，如果追求对话效果<code>qwen/Qwen-7B-Chat</code>的效果会好一点；</p> 
+<p>本系列的主要工作如下：</p> 
+<ol><li>大模型 api 部署；直接部署开源大模型体验一下；</li><li>增加自定义数据集；为实现SFT准备数据；</li><li>大模型 lora 微调；</li><li>原始模型 + 微调后的lora插件，完成 api 部署；</li></ol> 
+<blockquote> 
+ <p>使用 llama_factory 的 API 部署有 vllm加速推理；</p> 
+</blockquote> 
+<p>文章目录：</p> 
+<ol><li><a href="https://blog.csdn.net/sjxgghg/article/details/137654018?spm=1001.2014.3001.5502">llama-factory SFT系列教程 (一)，大模型 API 部署与使用</a></li><li><a href="https://blog.csdn.net/sjxgghg/article/details/137656248?spm=1001.2014.3001.5502">llama-factory SFT系列教程 (二)，大模型在自定义数据集 lora 训练与部署<br> </a></li><li><a href="https://blog.csdn.net/sjxgghg/article/details/137698364">llama-factory SFT系列教程 (三)，chatglm3-6B 命名实体识别实战<br> </a></li><li><a href="https://blog.csdn.net/sjxgghg/article/details/137993809">llama-factory SFT 系列教程 (四)，lora sft 微调后，使用vllm加速推理</a></li></ol> 
+<h4><a id="_25"></a>难点</h4> 
+<p>可能遇到的一些难点：<br> llama_factory 默认从 Huggingface下载模型，要改为从<code>modelscope</code>下载模型权重；</p> 
+<h3><a id="_29"></a>前置条件</h3> 
+<p>llama_factory 装包</p> 
+<pre><code class="prism language-bash"><span class="token function">git</span> clone https://github.com/hiyouga/LLaMA-Factory.git
+<span class="token comment"># conda create -n llama_factory python=3.10</span>
+<span class="token comment"># conda activate llama_factory</span>
+<span class="token builtin class-name">cd</span> LLaMA-Factory
+pip <span class="token function">install</span> <span class="token parameter variable">-e</span> .<span class="token punctuation">[</span>metrics<span class="token punctuation">]</span>
+</code></pre> 
+<p>If you have trouble with downloading models and datasets from Hugging Face, you can use ModelScope.</p> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">export</span> <span class="token assign-left variable">USE_MODELSCOPE_HUB</span><span class="token operator">=</span><span class="token number">1</span> <span class="token comment"># `set USE_MODELSCOPE_HUB=1` for Windows</span>
+</code></pre> 
+<p>linux 在 <code>~/.bashrc</code> 中 添加 <code>export USE_MODELSCOPE_HUB=1</code>， <code>source .bashrc</code> 激活，达到重启电脑也生效；</p> 
+<h3><a id="1__api__47"></a>1. 大模型 api 部署</h3> 
+<p>虽然我执行了这条语句 <code>export USE_MODELSCOPE_HUB=1</code> 以为切换到 modelscope的下载源了；<br> 但是 填写模型名称 <code>--model_name_or_path qwen/Qwen-7B</code>，还是会从 huggingface下载模型权重；于是我填写本地绝对路径的方式；</p> 
+<p>下载模型权重：</p> 
+<pre><code class="prism language-python"><span class="token comment">#模型下载</span>
+<span class="token keyword">from</span> modelscope <span class="token keyword">import</span> snapshot_download
+model_dir <span class="token operator">=</span> snapshot_download<span class="token punctuation">(</span><span class="token string">'qwen/Qwen-7B'</span><span class="token punctuation">)</span>
+model_dir
+</code></pre> 
+<p>输出模型的下载地址如下：</p> 
+<blockquote> 
+ <p>/mnt/workspace/.cache/modelscope/qwen/Qwen-7B</p> 
+</blockquote> 
+<p>切换目录到刚才从github下载的 llama-factory 文件夹</p> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> LLaMA-Factory
+</code></pre> 
+<p>执行 API 部署脚本，本文选择 api 而不是网页，因为API的用途更广，可供python程序调用，而网页只能与用户交互。</p> 
+<pre><code class="prism language-bash"><span class="token assign-left variable">CUDA_VISIBLE_DEVICES</span><span class="token operator">=</span><span class="token number">0</span> <span class="token assign-left variable">API_PORT</span><span class="token operator">=</span><span class="token number">8000</span> python src/api_demo.py <span class="token punctuation">\</span>
+<span class="token parameter variable">--model_name_or_path</span> /mnt/workspace/.cache/modelscope/qwen/Qwen-7B <span class="token punctuation">\</span>
+<span class="token parameter variable">--template</span> qwen 
+<span class="token parameter variable">--infer_backend</span> vllm 
+<span class="token parameter variable">--vllm_enforce_eager</span>
+</code></pre> 
+<p>可以注意到 LLaMA-Factory 在模型推理时，使用了 vllm 加速；<br> 不出意外的话，经过一段时间的模型权重加载，看到下述图片展示的状态时，那么 API 便部署成功了；<br> <img src="https://images2.imgbox.com/48/7b/MDYIeuwF_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>现在如何给 API 接口传参呢？是不是有点不知所措！<br> 不用急，在图片的红框中，笔者已经给大家标出来了，<code>http://localhost:8000/docs </code> 便是API 的接口文档说明；</p> 
+</blockquote> 
+<blockquote> 
+ <p>有同学会说：“我使用的云端服务器，而且还没有公网 ip，我该那怎么访问这个文档呢？”<br> 笔者：直接点击便可访问，该文档做了内网穿透；</p> 
+</blockquote> 
+<p>比如，我点击后，弹出了如下页面：<u>https://dsw-gateway-cn-beijing.data.aliyun.com/dsw-70173/proxy/8000/docs</u></p> 
+<p>该 API 的文档页面如下图所示：<br> <img src="https://images2.imgbox.com/11/24/rjXzr1TL_o.png" alt="在这里插入图片描述"></p> 
+<p>下述是官方给的请求体参数</p> 
+<pre><code class="prism language-bash"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"model"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>,
+  <span class="token string">"messages"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"role"</span><span class="token builtin class-name">:</span> <span class="token string">"user"</span>,
+      <span class="token string">"content"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>,
+      <span class="token string">"tool_calls"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+        <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span><span class="token builtin class-name">:</span> <span class="token string">"call_default"</span>,
+          <span class="token string">"type"</span><span class="token builtin class-name">:</span> <span class="token string">"function"</span>,
+          <span class="token string">"function"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>,
+            <span class="token string">"arguments"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">]</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>,
+  <span class="token string">"tools"</span><span class="token builtin class-name">:</span> <span class="token punctuation">[</span>
+    <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"type"</span><span class="token builtin class-name">:</span> <span class="token string">"function"</span>,
+      <span class="token string">"function"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"name"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>,
+        <span class="token string">"description"</span><span class="token builtin class-name">:</span> <span class="token string">"string"</span>,
+        <span class="token string">"parameters"</span><span class="token builtin class-name">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">]</span>,
+  <span class="token string">"do_sample"</span><span class="token builtin class-name">:</span> true,
+  <span class="token string">"temperature"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+  <span class="token string">"top_p"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+  <span class="token string">"n"</span><span class="token builtin class-name">:</span> <span class="token number">1</span>,
+  <span class="token string">"max_tokens"</span><span class="token builtin class-name">:</span> <span class="token number">0</span>,
+  <span class="token string">"stream"</span><span class="token builtin class-name">:</span> <span class="token boolean">false</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>笔者把下述的请求保存在 <code>1.sh</code> 文件中，因为下述请求体太长了，在sh文件中进行编辑方便一点；</p> 
+<pre><code class="prism language-bash"><span class="token function">curl</span> <span class="token parameter variable">-X</span> <span class="token string">'POST'</span> <span class="token punctuation">\</span>
+  <span class="token string">'http://0.0.0.0:8000/v1/chat/completions'</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">'accept: application/json'</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-H</span> <span class="token string">'Content-Type: application/json'</span> <span class="token punctuation">\</span>
+  <span class="token parameter variable">-d</span> <span class="token string">'{
+  "model": "string",
+  "messages": [
+    {
+      "role": "user",
+      "content": "你能帮我做一些什么事情？",
+      "tool_calls": [
+        {
+          "id": "call_default",
+          "type": "function",
+          "function": {
+            "name": "string",
+            "arguments": "string"
+          }
+        }
+      ]
+    }
+  ],
+  "tools": [
+    {
+      "type": "function",
+      "function": {
+        "name": "string",
+        "description": "string",
+        "parameters": {}
+      }
+    }
+  ],
+  "do_sample": true,
+  "temperature": 0,
+  "top_p": 0,
+  "n": 1,
+  "max_tokens": 128,
+  "stream": false
+}'</span>
+</code></pre> 
+<p>执行 <code>bash 1.sh</code> 便可获得大模型生成的回答了；<br> <img src="https://images2.imgbox.com/77/11/EU2VQOAz_o.png" alt="在这里插入图片描述"><br> 在 API 文档中，还有其他的接口，请读者自行探索。</p> 
+<h3><a id="_177"></a>下一步阅读</h3> 
+<p><a href="https://blog.csdn.net/sjxgghg/article/details/137656248">llama-factory SFT系列教程 (二)，大模型在自定义数据集 lora 训练与部署</a></p> 
+<p>包含如下内容：</p> 
+<blockquote> 
+ <ol start="2"><li>增加自定义数据集；为实现SFT准备数据；</li><li>大模型 lora 微调；</li><li>原始模型 + 微调后的lora插件，完成 api 部署；</li></ol> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/27684670a76001085a5586cc338e2431/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MongoDB观点：让生成式AI成为业务增长的新动能，游戏公司可以这样做</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/76c02a1b661cc6c7fa769d27f7c33a10/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">XYCTF 2024 部分web wp</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

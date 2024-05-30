@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【大数据】分布式数据库HBase - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c0a3c8a19c3c096cfe2ec53280f89612/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【大数据】分布式数据库HBase">
+  <meta property="og:description" content="目录
+1.概述
+1.1.前言
+1.2.数据模型
+1.3.列式存储的优势
+2.实现原理
+2.1.region
+2.2.LSM树
+2.3.完整读写过程
+2.4.master的作用
+1.概述 1.1.前言 本文式作者大数据系列专栏中的一篇文章，按照专栏来阅读，循序渐进能更好的理解，专栏地址：
+https://blog.csdn.net/joker_zjn/category_12631789.html?spm=1001.2014.3001.5482
+当前的分布式数据库其实都是参考的Google的BigTable，所以学习分布式数据库之前先学一下BigTable会一通百通。专栏中有对BigTable进行介绍的前文：
+【大数据】bigtable，分布式数据库的鼻祖-CSDN博客
+分布式数据库底层依托于分部署文件系统进行存储，分布式数据库更像在分布式文件系统上做了一层封装。就像BigTable底层依托于GFS一样，HBase底层依托于HDFS，专栏有专门介绍HDFS的文章：
+【大数据】分布式文件系统HDFS-CSDN博客
+1.2.数据模型 HBase中一个具体的数据由行键、列族、列限定符、时间戳组成。数据类型是不定的，统一存储为Bytes数组。
+之所以有时间戳是因为HBASE底层是用的HDFS来做存储的，HDFS只支持追加写，所以HBASE为了实现删除效果只能用时间戳来区分哪个数据是最新的。
+列族是个很核心的概念，底层的物理存储以列族为单位进行存储，支持动态扩展，一个列族其实就是HDFS中的一个文件，同一列族下的数据一定是被存到HDFS中的一个文件中的。
+​
+1.3.列式存储的优势 大数据技术中为什么采用列式存储：
+HDBASE采用的这种存储模式叫列式存储，传统的关系型数据库采用的行式存储，大数据中普遍都采用列式存储。大数据中之所以采用列式存储是因为列式存储往往更有利于分析，当需要做指标统计的时候往往只需要访问一个列即可，而且列族在物理磁盘上是连续存储的，速度会很快。行式存储要进行指标统计的时候要访问很多无用的列，而且数据在物理磁盘上也不是连续存储的，性能不会很好。
+比如数据表是这样：
+​行式和列式的区别会是：
+2.实现原理 2.1.region HBase最核心的概念！！！
+hbase的架构直接参照bigtable即可，只是改了个名字。bigtable的核心是tablet，HBase的核心是region，存储region的服务器叫region server，对应bigtable中的tablet server。一个表会按照行键的字典序列进行排布，然后被分成多个region：
+​
+如何找到要的region？
+HBASE参照BigTable的三层结构也维护了一个类树状结构用来快速查找到要的region：
+叶子节点是region、meta表负责维护树形的层级结构，一个meta对应多个region，root只有一个，对应多个meta。
+​
+层次名称作用第一层root表记录了META表的位置信息第二层meta表记录了region表的位置信息，meta表相当于一个集合，将region分块的管理，用来维护了层级结构第三层用户表用来记录用户数据 2.2.LSM树 LSM树是一种专门针对海量数据读写而升的数据结构，前文中作者聊bigtable的时候单独写了一篇文章对LSM树进行过讲解，可移步：
+【大数据】LSM树，专为海量数据读写而生的数据结构-CSDN博客
+同样HBASE中也用了LSM树，也有类似于memtable和sstable的东西：
+memstore-&gt;memtable
+storefile-&gt;sstable
+这里HBase和bigtable唯一有区别的就是bigtable的一个tablet里只会有一条线的memtable和sstable，而HBase由于支持多个列族所以会有多条线的memtable和sstable。
+​
+2.3.完整读写过程 写过程：
+​
+客户端发起写请求 客户端应用通过HBase客户端API（如Java API）向HBase提交一个PUT请求，包含待写入的数据（包括RowKey、列族、列限定符、值以及可选的时间戳等）。
+定位目标Region 访问ZooKeeper：客户端首先访问ZooKeeper集群，先查询hbase:root表以获取hbase:meta表所在的Region Server位置。 缓存元数据：客户端将获取到的元数据信息（如hbase:meta表或目标Region的位置）缓存在本地Client Cache中，以减少后续操作对ZooKeeper的依赖和网络开销。
+查找目标Region 查询元数据表：客户端使用缓存的信息连接到hbase:meta表所在的Region Server，根据待写入数据的RowKey在hbase:meta表中查找目标Region的位置。这个过程可能涉及Region的三层定位（Namespace、表名、RowKey区间），确保找到正确的Region负责处理该RowKey的数据。 更新缓存：客户端将查询到的目标Region的位置信息（包括Region Server地址和Region边界）更新到本地缓存中。
+与目标Region Server交互 发送写请求：客户端根据缓存中的信息，向目标Region Server发送实际的PUT请求。
+Region Server内部处理 追加写入HLog（WAL，Write Ahead og）：Region Server接收到PUT请求后，首先将写操作作为一条日志记录追加到HLog。HLog是一种预写式日志，用于保证在发生故障时能够恢复未持久化到磁盘的数据。 随机写入MemStore：接着，Region Server将数据随机写入对应Region的MemStore。MemStore是内存中的数据结构，用于临时存储待写入HFile（HBase的数据文件）的修改。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-26T15:21:57+08:00">
+    <meta property="article:modified_time" content="2024-04-26T15:21:57+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【大数据】分布式数据库HBase</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><img alt="" height="104" src="https://images2.imgbox.com/f6/ae/dWlLzCGL_o.png" width="631"></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="1.%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#1.%E6%A6%82%E8%BF%B0" rel="nofollow">1.概述</a></p> 
+<p id="1.1.%E5%89%8D%E8%A8%80-toc" style="margin-left:40px;"><a href="#1.1.%E5%89%8D%E8%A8%80" rel="nofollow">1.1.前言</a></p> 
+<p id="1.2.%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B-toc" style="margin-left:40px;"><a href="#1.2.%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B" rel="nofollow">1.2.数据模型</a></p> 
+<p id="1.3.%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8%E7%9A%84%E4%BC%98%E5%8A%BF-toc" style="margin-left:40px;"><a href="#1.3.%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8%E7%9A%84%E4%BC%98%E5%8A%BF" rel="nofollow">1.3.列式存储的优势</a></p> 
+<p id="2.%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86-toc" style="margin-left:0px;"><a href="#2.%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86" rel="nofollow">2.实现原理</a></p> 
+<p id="2.1.region-toc" style="margin-left:40px;"><a href="#2.1.region" rel="nofollow">2.1.region</a></p> 
+<p id="2.2.LSM%E6%A0%91-toc" style="margin-left:40px;"><a href="#2.2.LSM%E6%A0%91" rel="nofollow">2.2.LSM树</a></p> 
+<p id="2.3.%E5%AE%8C%E6%95%B4%E8%AF%BB%E5%86%99%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#2.3.%E5%AE%8C%E6%95%B4%E8%AF%BB%E5%86%99%E8%BF%87%E7%A8%8B" rel="nofollow">2.3.完整读写过程</a></p> 
+<p id="2.4.master%E7%9A%84%E4%BD%9C%E7%94%A8-toc" style="margin-left:40px;"><a href="#2.4.master%E7%9A%84%E4%BD%9C%E7%94%A8" rel="nofollow">2.4.master的作用</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="1.%E6%A6%82%E8%BF%B0">1.概述</h2> 
+<h3 id="1.1.%E5%89%8D%E8%A8%80" style="background-color:transparent;">1.1.前言</h3> 
+<p>本文式作者大数据系列专栏中的一篇文章，按照专栏来阅读，循序渐进能更好的理解，专栏地址：</p> 
+<p><a href="https://blog.csdn.net/joker_zjn/category_12631789.html?spm=1001.2014.3001.5482" title="https://blog.csdn.net/joker_zjn/category_12631789.html?spm=1001.2014.3001.5482">https://blog.csdn.net/joker_zjn/category_12631789.html?spm=1001.2014.3001.5482</a></p> 
+<p>当前的分布式数据库其实都是参考的Google的BigTable，所以学习分布式数据库之前先学一下BigTable会一通百通。专栏中有对BigTable进行介绍的前文：</p> 
+<p><a href="https://bugman.blog.csdn.net/article/details/137988452?spm=1001.2014.3001.5502" rel="nofollow" title="【大数据】bigtable，分布式数据库的鼻祖-CSDN博客">【大数据】bigtable，分布式数据库的鼻祖-CSDN博客</a></p> 
+<p>分布式数据库底层依托于分部署文件系统进行存储，分布式数据库更像在分布式文件系统上做了一层封装。就像BigTable底层依托于GFS一样，HBase底层依托于HDFS，专栏有专门介绍HDFS的文章：</p> 
+<p><a href="https://blog.csdn.net/Joker_ZJN/article/details/137846603?spm=1001.2014.3001.5501" title="【大数据】分布式文件系统HDFS-CSDN博客">【大数据】分布式文件系统HDFS-CSDN博客</a></p> 
+<h3 id="1.2.%E6%95%B0%E6%8D%AE%E6%A8%A1%E5%9E%8B"><strong>1.2.数据模型</strong></h3> 
+<p>HBase中一个具体的数据由行键、列族、列限定符、时间戳组成。数据类型是不定的，统一存储为Bytes数组。</p> 
+<p style="text-align:center;"><img alt="" height="237" src="https://images2.imgbox.com/8b/ac/vJwYVPmg_o.png" width="391"></p> 
+<p>之所以有时间戳是因为HBASE底层是用的HDFS来做存储的，HDFS只支持追加写，所以HBASE为了实现删除效果只能用时间戳来区分哪个数据是最新的。</p> 
+<p>列族是个很核心的概念，底层的物理存储以列族为单位进行存储，支持动态扩展，一个列族其实就是HDFS中的一个文件，同一列族下的数据一定是被存到HDFS中的一个文件中的。</p> 
+<div> 
+ <p style="text-align:center;"><img alt="" height="135" src="https://images2.imgbox.com/b5/0d/KlSGCNeB_o.png" width="506">​</p> 
+</div> 
+<h3 id="1.3.%E5%88%97%E5%BC%8F%E5%AD%98%E5%82%A8%E7%9A%84%E4%BC%98%E5%8A%BF">1.3.列式存储的优势</h3> 
+<p><strong>大数据技术中为什么采用列式存储：</strong></p> 
+<p>HDBASE采用的这种存储模式叫列式存储，传统的关系型数据库采用的行式存储，大数据中普遍都采用列式存储。大数据中之所以采用列式存储是因为列式存储往往更有利于分析，当需要做指标统计的时候往往只需要访问一个列即可，而且列族在物理磁盘上是连续存储的，速度会很快。行式存储要进行指标统计的时候要访问很多无用的列，而且数据在物理磁盘上也不是连续存储的，性能不会很好。</p> 
+<div> 
+ <p>比如数据表是这样：</p> 
+ <p class="img-center"><img alt="" height="169" src="https://images2.imgbox.com/f0/f8/LCBcZBzm_o.png" width="312"></p> 
+ <p>​行式和列式的区别会是：</p> 
+ <p class="img-center"><img alt="" height="228" src="https://images2.imgbox.com/d8/ef/ILjguU4w_o.png" width="572"></p> 
+</div> 
+<h2 id="2.%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86">2.实现原理</h2> 
+<h3 id="2.1.region">2.1.region</h3> 
+<p>HBase最核心的概念！！！</p> 
+<p>hbase的架构直接参照bigtable即可，只是改了个名字。bigtable的核心是tablet，HBase的核心是region，存储region的服务器叫region server，对应bigtable中的tablet server。一个表会按照行键的字典序列进行排布，然后被分成多个region：</p> 
+<div> 
+ <p style="text-align:center;">​<img alt="" height="362" src="https://images2.imgbox.com/fe/5c/Gxklvaa3_o.png" width="444"></p> 
+</div> 
+<p><strong>如何找到要的region？</strong></p> 
+<p>HBASE参照BigTable的三层结构也维护了一个类树状结构用来快速查找到要的region：</p> 
+<p>叶子节点是region、meta表负责维护树形的层级结构，一个meta对应多个region，root只有一个，对应多个meta。</p> 
+<div> 
+ <p style="text-align:center;">​<img alt="" height="250" src="https://images2.imgbox.com/f7/0f/Bs5vCG7j_o.png" width="449"></p> 
+</div> 
+<table><thead><tr><th>层次</th><th>名称</th><th>作用</th></tr></thead><tbody><tr><td>第一层</td><td>root表</td><td>记录了META表的位置信息</td></tr><tr><td>第二层</td><td>meta表</td><td>记录了region表的位置信息，meta表相当于一个集合，将region分块的管理，用来维护了层级结构</td></tr><tr><td>第三层</td><td>用户表</td><td>用来记录用户数据</td></tr></tbody></table> 
+<h3 id="2.2.LSM%E6%A0%91">2.2.LSM树</h3> 
+<p>LSM树是一种专门针对海量数据读写而升的数据结构，前文中作者聊bigtable的时候单独写了一篇文章对LSM树进行过讲解，可移步：</p> 
+<p><a href="https://bugman.blog.csdn.net/article/details/138141480?spm=1001.2014.3001.5502" rel="nofollow" title="【大数据】LSM树，专为海量数据读写而生的数据结构-CSDN博客">【大数据】LSM树，专为海量数据读写而生的数据结构-CSDN博客</a></p> 
+<p>同样HBASE中也用了LSM树，也有类似于memtable和sstable的东西：</p> 
+<p>memstore-&gt;memtable</p> 
+<p>storefile-&gt;sstable</p> 
+<p>这里HBase和bigtable唯一有区别的就是bigtable的一个tablet里只会有一条线的memtable和sstable，而HBase由于支持多个列族所以会有多条线的memtable和sstable。</p> 
+<div> 
+ <p style="text-align:center;"><img alt="" height="314" src="https://images2.imgbox.com/0c/97/3XdaifqO_o.png" width="506">​</p> 
+</div> 
+<h3 id="2.3.%E5%AE%8C%E6%95%B4%E8%AF%BB%E5%86%99%E8%BF%87%E7%A8%8B"><strong>2.3.完整读写过程</strong></h3> 
+<p>写过程：</p> 
+<div> 
+ <p><img alt="img" height="473" src="https://images2.imgbox.com/c9/9e/KkGkr9TT_o.png" width="924">​</p> 
+</div> 
+<ul><li> <p>客户端发起写请求 客户端应用通过HBase客户端API（如Java API）向HBase提交一个PUT请求，包含待写入的数据（包括RowKey、列族、列限定符、值以及可选的时间戳等）。</p> </li><li> <p>定位目标Region 访问ZooKeeper：客户端首先访问ZooKeeper集群，先查询hbase:root表以获取hbase:meta表所在的Region Server位置。 缓存元数据：客户端将获取到的元数据信息（如hbase:meta表或目标Region的位置）缓存在本地Client Cache中，以减少后续操作对ZooKeeper的依赖和网络开销。</p> </li><li> <p>查找目标Region 查询元数据表：客户端使用缓存的信息连接到hbase:meta表所在的Region Server，根据待写入数据的RowKey在hbase:meta表中查找目标Region的位置。这个过程可能涉及Region的三层定位（Namespace、表名、RowKey区间），确保找到正确的Region负责处理该RowKey的数据。 更新缓存：客户端将查询到的目标Region的位置信息（包括Region Server地址和Region边界）更新到本地缓存中。</p> </li><li> <p>与目标Region Server交互 发送写请求：客户端根据缓存中的信息，向目标Region Server发送实际的PUT请求。</p> </li><li> <p>Region Server内部处理 追加写入HLog（WAL，Write Ahead og）：Region Server接收到PUT请求后，首先将写操作作为一条日志记录追加到HLog。HLog是一种预写式日志，用于保证在发生故障时能够恢复未持久化到磁盘的数据。 随机写入MemStore：接着，Region Server将数据随机写入对应Region的MemStore。MemStore是内存中的数据结构，用于临时存储待写入HFile（HBase的数据文件）的修改。</p> </li><li> <p>更新BlockCache 读写加速：写入完成后，新写入的数据会被添加到Region Server的BlockCache中。BlockCache是一种基于LRU（最近最少使用）策略的缓存，用于加速后续对相同数据块的读取。</p> </li></ul> 
+<p>读过程：</p> 
+<div> 
+ <p><img alt="img" height="479" src="https://images2.imgbox.com/0b/89/LAX0xx2j_o.png" width="941">​</p> 
+</div> 
+<ul><li> <p>定位目标Region 访问ZooKeeper：客户端首先访问ZooKeeper集群，查询HBase的元数据表（hbase:meta）的位置信息。这里同样可能存在旧版流程（先查询hbase:root表）和新版流程（直接查询hbase:meta表）的区别。 缓存元数据：客户端将获取到的元数据信息（如hbase:meta表或目标Region的位置）缓存在本地Client Cache中，以减少后续操作对ZooKeeper的依赖和网络开销。</p> </li><li> <p>查找目标Region 查询元数据表：客户端使用缓存的信息连接到hbase:meta表所在的Region Server，根据待读取数据的RowKey在hbase:meta表中查找目标Region的位置。这一步确保客户端知道应该向哪个Region Server的哪个Region发送读请求。 更新缓存：客户端将查询到的目标Region的位置信息更新到本地缓存中。</p> </li><li> <p>与目标Region Server交互 发送读请求：客户端根据缓存中的信息，向目标Region Server发送实际的GET请求。</p> </li><li> <p>Region Server内部处理 查询BlockCache：Region Server首先在本地BlockCache中查找是否有请求的数据。BlockCache是一种基于LRU（最近最少使用）策略的缓存，存储最近访问过的HFile数据块。如果数据在BlockCache中命中，则直接返回给客户端，避免了磁盘I/O。 查询MemStore：如果BlockCache中未找到数据，Region Server接着在对应Region的MemStore中查找。MemStore存储了尚未刷写到HFile的最新数据，如果请求的数据在这里存在且是最新的版本，则直接返回给客户端。 查询HFile：如果BlockCache和MemStore均未命中，Region Server将从磁盘上的HFile中读取数据。HFile是按RowKey排序的持久化存储文件，通过二分查找等高效算法快速定位数据。读取到的数据将返回给客户端，并可能被加入到BlockCache中以供后续读取加速。 合并版本与过滤：对于同一RowKey的多个版本（依据时间戳区分），Region Server按照请求的时间戳范围或其他过滤条件（如列族、列限定符等）筛选并合并结果集，只返回满足条件的数据版本。</p> </li><li> <p>客户端接收响应 处理响应：客户端接收到Region Server返回的数据后，解析并呈现给应用程序。如果请求涉及多个列族或多行数据，客户端可能需要合并来自不同Region Server的响应。</p> </li></ul> 
+<p><strong>数据flush与compaction：</strong></p> 
+<p>MemStore flush：当MemStore达到一定大小阈值时，Region Server将其内容刷写到硬盘上的HFile中，并清空MemStore。同时，对应的HLog记录可以被安全地截断（truncated），因为其数据已持久化。 Compaction：随着时间推移，针对同一Region可能会产生多个HFile。HBase后台会定期执行Compaction操作，合并小文件、删除过期版本的数据，并可能进行压缩，以优化读性能和存储空间利用率。</p> 
+<p>合并没有什么好说的，和bigtable一样，值得注意的是一直合并下去，单体过大后又会分成小块来存储，这个分块存储的过程就会造成一个大region1分成一个个小region。</p> 
+<div> 
+ <p style="text-align:center;">​<img alt="" height="177" src="https://images2.imgbox.com/28/14/n7WkGW6J_o.png" width="595"></p> 
+</div> 
+<h3 id="2.4.master%E7%9A%84%E4%BD%9C%E7%94%A8">2.4.master的作用</h3> 
+<p>master主要就是负责整个集群的管理：</p> 
+<ul><li> <p>通过master来对表进行增删改查</p> </li><li> <p>负责region的分布</p> </li><li> <p>负责不同region服务器的负载均衡，将负载较重的region服务器上的region重新分布到其它负载轻的region服务器上去。</p> </li><li> <p>region服务器故障失效后，借助master来将上面的region重新分配给其它服务器。</p> </li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/aa2cae71a9dc733bc35ae558a30104e2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">如何在虚拟专用服务器上配置 Nginx Web 服务器</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/87bd916d73d937e9675e1bb2ccf48522/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Hive面试题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

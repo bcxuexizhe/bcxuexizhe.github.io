@@ -1,0 +1,391 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【redis】Redis五种常用数据类型和内部编码,以及对String字符串类型的总结 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/6ca406fe4a54bce1315d36502a8bc7e4/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【redis】Redis五种常用数据类型和内部编码,以及对String字符串类型的总结">
+  <meta property="og:description" content="˃͈꒵˂͈꒱ write in front ꒰˃͈꒵˂͈꒱
+ʕ̯•͡˔•̯᷅ʔ大家好，我是xiaoxie.希望你看完之后,有不足之处请多多谅解，让我们一起共同进步૮₍❀ᴗ͈ . ᴗ͈ აxiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客
+本文由xiaoxieʕ̯•͡˔•̯᷅ʔ 原创 CSDN 如需转载还请通知˶⍤⃝˶​
+个人主页：xiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客
+系列专栏:​ xiaoxie的redis学习系列专栏——CSDN博客●&#39;ᴗ&#39;σσணღ ​
+我的目标:&#34;团团等我💪( ◡̀_◡́ ҂)&#34; ( ⸝⸝⸝›ᴥ‹⸝⸝⸝ )欢迎各位→点赞👍 &#43; 收藏⭐️ &#43; 留言📝​&#43;关注（互三必回）!
+目录
+​编辑 一.五种常用数据类型和内部编码
+1.五种常用数据类型和内部编码
+2.内部编码方式
+1.string 类型 2.hash类型
+3.list类型
+4.set类型
+5.zset(有序集合)类型
+6.Redis这样设计有两个好处:
+3.单线程架构
+redis单线程为什么可以做到高性能?(面试重点)
+二.字符串类型的总结
+1.字符串类型的常用命令
+1.set 及其选项
+1.普通的set语句
+2. nx选项
+3. xx选项
+4. ex seconds 或 px milliseconds 选项
+2.get命令
+3.mset,mget
+2.计数命令
+1.incr / decr 2.incrby / decrby
+3.incrbyfloat
+3.其他命令
+1.APPEND">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-11T12:30:22+08:00">
+    <meta property="article:modified_time" content="2024-05-11T12:30:22+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【redis】Redis五种常用数据类型和内部编码,以及对String字符串类型的总结</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <blockquote> 
+ <p>˃͈꒵˂͈꒱ write in front ꒰˃͈꒵˂͈꒱<br> ʕ̯•͡˔•̯᷅ʔ大家好，我是xiaoxie.希望你看完之后,有不足之处请多多谅解，让我们一起共同进步૮₍❀ᴗ͈ . ᴗ͈ ა<a href="https://blog.csdn.net/xiaoxie8023?spm=1000.2115.3001.5343" title="xiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客">xiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客</a><br> 本文由xiaoxieʕ̯•͡˔•̯᷅ʔ 原创 CSDN 如需转载还请通知˶⍤⃝˶<a href="https://blog.csdn.net/xiaoxie8023/category_12621168.html" title="​">​</a><br><a href="https://so.csdn.net/so/search?q=%E4%B8%AA%E4%BA%BA%E4%B8%BB%E9%A1%B5&amp;spm=1001.2101.3001.7020" title="个人主页">个人主页</a>：<a href="https://blog.csdn.net/xiaoxie8023/article/details/134417887?spm=1001.2014.3001.5501" title="xiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客">xiaoxieʕ̯•͡˔•̯᷅ʔ—CSDN博客</a></p> 
+ <p>系列专栏:<a href="https://blog.csdn.net/xiaoxie8023/category_12657067.html" title="​ xiaoxie的redis学习系列专栏——CSDN博客●'ᴗ'σσணღ ​">​ xiaoxie的redis学习系列专栏——CSDN博客●'ᴗ'σσணღ ​</a><br><span style="color:#fe2c24;"><strong>我的目标:"团团等我💪( ◡̀_◡́ ҂)" </strong></span></p> 
+ <p><span style="color:#fe2c24;"><strong>( ⸝⸝⸝›ᴥ‹⸝⸝⸝ )欢迎各位→点赞👍 + 收藏⭐️ + 留言📝​+关注（互三必回）!</strong></span></p> 
+</blockquote> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E4%B8%80.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81-toc" style="margin-left:0px;"><a href="#%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E4%B8%80.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81" rel="nofollow">​编辑 一.五种常用数据类型和内部编码</a></p> 
+<p id="1.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81-toc" style="margin-left:40px;"><a href="#1.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81" rel="nofollow">1.五种常用数据类型和内部编码</a></p> 
+<p id="2.%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81%E6%96%B9%E5%BC%8F-toc" style="margin-left:40px;"><a href="#2.%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81%E6%96%B9%E5%BC%8F" rel="nofollow">2.内部编码方式</a></p> 
+<p id="1.string%20%E7%B1%BB%E5%9E%8B%C2%A0-toc" style="margin-left:80px;"><a href="#1.string%20%E7%B1%BB%E5%9E%8B%C2%A0" rel="nofollow">1.string 类型 </a></p> 
+<p id="2.hash%E7%B1%BB%E5%9E%8B-toc" style="margin-left:80px;"><a href="#2.hash%E7%B1%BB%E5%9E%8B" rel="nofollow">2.hash类型</a></p> 
+<p id="3.list%E7%B1%BB%E5%9E%8B-toc" style="margin-left:80px;"><a href="#3.list%E7%B1%BB%E5%9E%8B" rel="nofollow">3.list类型</a></p> 
+<p id="4.set%E7%B1%BB%E5%9E%8B-toc" style="margin-left:80px;"><a href="#4.set%E7%B1%BB%E5%9E%8B" rel="nofollow">4.set类型</a></p> 
+<p id="5.zset(%E6%9C%89%E5%BA%8F%E9%9B%86%E5%90%88)%E7%B1%BB%E5%9E%8B-toc" style="margin-left:80px;"><a href="#5.zset%28%E6%9C%89%E5%BA%8F%E9%9B%86%E5%90%88%29%E7%B1%BB%E5%9E%8B" rel="nofollow">5.zset(有序集合)类型</a></p> 
+<p id="6.Redis%E8%BF%99%E6%A0%B7%E8%AE%BE%E8%AE%A1%E6%9C%89%E4%B8%A4%E4%B8%AA%E5%A5%BD%E5%A4%84%3A-toc" style="margin-left:80px;"><a href="#6.Redis%E8%BF%99%E6%A0%B7%E8%AE%BE%E8%AE%A1%E6%9C%89%E4%B8%A4%E4%B8%AA%E5%A5%BD%E5%A4%84%3A" rel="nofollow">6.Redis这样设计有两个好处:</a></p> 
+<p id="3.%E5%8D%95%E7%BA%BF%E7%A8%8B%E6%9E%B6%E6%9E%84-toc" style="margin-left:40px;"><a href="#3.%E5%8D%95%E7%BA%BF%E7%A8%8B%E6%9E%B6%E6%9E%84" rel="nofollow">3.单线程架构</a></p> 
+<p id="%C2%A0redis%E5%8D%95%E7%BA%BF%E7%A8%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AF%E4%BB%A5%E5%81%9A%E5%88%B0%E9%AB%98%E6%80%A7%E8%83%BD%3F(%E9%9D%A2%E8%AF%95%E9%87%8D%E7%82%B9)-toc" style="margin-left:80px;"><a href="#%C2%A0redis%E5%8D%95%E7%BA%BF%E7%A8%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AF%E4%BB%A5%E5%81%9A%E5%88%B0%E9%AB%98%E6%80%A7%E8%83%BD%3F%28%E9%9D%A2%E8%AF%95%E9%87%8D%E7%82%B9%29" rel="nofollow"> redis单线程为什么可以做到高性能?(面试重点)</a></p> 
+<p id="%E4%BA%8C.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E4%BA%8C.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%80%BB%E7%BB%93" rel="nofollow">二.字符串类型的总结</a></p> 
+<p id="1.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4-toc" style="margin-left:40px;"><a href="#1.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4" rel="nofollow">1.字符串类型的常用命令</a></p> 
+<p id="1.set%20%E5%8F%8A%E5%85%B6%E9%80%89%E9%A1%B9-toc" style="margin-left:80px;"><a href="#1.set%20%E5%8F%8A%E5%85%B6%E9%80%89%E9%A1%B9" rel="nofollow">1.set 及其选项</a></p> 
+<p id="1.%E6%99%AE%E9%80%9A%E7%9A%84set%E8%AF%AD%E5%8F%A5-toc" style="margin-left:120px;"><a href="#1.%E6%99%AE%E9%80%9A%E7%9A%84set%E8%AF%AD%E5%8F%A5" rel="nofollow">1.普通的set语句</a></p> 
+<p id="2.%20nx%E9%80%89%E9%A1%B9-toc" style="margin-left:120px;"><a href="#2.%20nx%E9%80%89%E9%A1%B9" rel="nofollow">2. nx选项</a></p> 
+<p id="3.%20xx%E9%80%89%E9%A1%B9-toc" style="margin-left:120px;"><a href="#3.%20xx%E9%80%89%E9%A1%B9" rel="nofollow">3. xx选项</a></p> 
+<p id="4.%C2%A0ex%20seconds%20%E6%88%96%20px%C2%A0milliseconds%20%E9%80%89%E9%A1%B9-toc" style="margin-left:120px;"><a href="#4.%C2%A0ex%20seconds%20%E6%88%96%20px%C2%A0milliseconds%20%E9%80%89%E9%A1%B9" rel="nofollow">4. ex seconds 或 px milliseconds 选项</a></p> 
+<p id="2.get%E5%91%BD%E4%BB%A4-toc" style="margin-left:80px;"><a href="#2.get%E5%91%BD%E4%BB%A4" rel="nofollow">2.get命令</a></p> 
+<p id="3.mset%2Cmget-toc" style="margin-left:80px;"><a href="#3.mset%2Cmget" rel="nofollow">3.mset,mget</a></p> 
+<p id="2.%E8%AE%A1%E6%95%B0%E5%91%BD%E4%BB%A4-toc" style="margin-left:40px;"><a href="#2.%E8%AE%A1%E6%95%B0%E5%91%BD%E4%BB%A4" rel="nofollow">2.计数命令</a></p> 
+<p id="1.incr%20%2F%20decr%C2%A0-toc" style="margin-left:80px;"><a href="#1.incr%20%2F%20decr%C2%A0" rel="nofollow">1.incr / decr </a></p> 
+<p id="%C2%A02.incrby%20%2F%20decrby-toc" style="margin-left:80px;"><a href="#%C2%A02.incrby%20%2F%20decrby" rel="nofollow"> 2.incrby / decrby</a></p> 
+<p id="3.incrbyfloat-toc" style="margin-left:80px;"><a href="#3.incrbyfloat" rel="nofollow">3.incrbyfloat</a></p> 
+<p id="%C2%A03.%E5%85%B6%E4%BB%96%E5%91%BD%E4%BB%A4-toc" style="margin-left:40px;"><a href="#%C2%A03.%E5%85%B6%E4%BB%96%E5%91%BD%E4%BB%A4" rel="nofollow"> 3.其他命令</a></p> 
+<p id="1.APPEND-toc" style="margin-left:80px;"><a href="#1.APPEND" rel="nofollow">1.APPEND</a></p> 
+<p id="2.getrange-toc" style="margin-left:80px;"><a href="#2.getrange" rel="nofollow">2.getrange</a></p> 
+<p id="3.setrange-toc" style="margin-left:80px;"><a href="#3.setrange" rel="nofollow">3.setrange</a></p> 
+<p id="4.%20strlen-toc" style="margin-left:80px;"><a href="#4.%20strlen" rel="nofollow">4. strlen</a></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91%C2%A05.%E6%9F%A5%E7%9C%8B%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81-toc" style="margin-left:80px;"><a href="#%E2%80%8B%E7%BC%96%E8%BE%91%C2%A05.%E6%9F%A5%E7%9C%8B%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81" rel="nofollow">​编辑 5.查看内部编码</a></p> 
+<p id="%C2%A04.%E5%85%B8%E5%9E%8B%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF-toc" style="margin-left:40px;"><a href="#%C2%A04.%E5%85%B8%E5%9E%8B%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF" rel="nofollow"> 4.典型使用场景</a></p> 
+<p id="1.%E7%BC%93%E5%AD%98%E5%8A%9F%E8%83%BD-toc" style="margin-left:80px;"><a href="#1.%E7%BC%93%E5%AD%98%E5%8A%9F%E8%83%BD" rel="nofollow">1.缓存功能</a></p> 
+<p id="2.%E8%AE%A1%E6%95%B0%EF%BC%88Counter%EF%BC%89%E5%8A%9F%E8%83%BD-toc" style="margin-left:80px;"><a href="#2.%E8%AE%A1%E6%95%B0%EF%BC%88Counter%EF%BC%89%E5%8A%9F%E8%83%BD" rel="nofollow">2.计数（Counter）功能</a></p> 
+<p id="%C2%A03.%E6%89%8B%E6%9C%BA%E9%AA%8C%E8%AF%81%E7%A0%81%C2%A0-toc" style="margin-left:80px;"><a href="#%C2%A03.%E6%89%8B%E6%9C%BA%E9%AA%8C%E8%AF%81%E7%A0%81%C2%A0" rel="nofollow"> 3.手机验证码 </a></p> 
+<p id="4.%E5%85%B1%E4%BA%AB%E4%BC%9A%E8%AF%9D%EF%BC%88Session%EF%BC%89-toc" style="margin-left:80px;"><a href="#4.%E5%85%B1%E4%BA%AB%E4%BC%9A%E8%AF%9D%EF%BC%88Session%EF%BC%89" rel="nofollow">4.共享会话（Session）</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p> </p> 
+<h2 id="%E2%80%8B%E7%BC%96%E8%BE%91%C2%A0%E4%B8%80.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81"><img alt="" src="https://images2.imgbox.com/dc/8d/jQNvRflP_o.jpg"> 一.五种常用数据类型和内部编码</h2> 
+<p><strong>redis我们在之前提到过,它是 key value 以键值对的存储数据的,并且,key 的数据类型是固定,只为字符串类型,而value是可以以多种的数据类型来吧表示的,这里只介绍五种常用的数据类型和内部的编码.它们分别是. String类型,哈希类型,列表类型,集合类型,有序集合类型.它们的对外的表示类型为</strong></p> 
+<h3 id="1.%E4%BA%94%E7%A7%8D%E5%B8%B8%E7%94%A8%E6%95%B0%E6%8D%AE%E7%B1%BB%E5%9E%8B%E5%92%8C%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81"><strong>1.</strong>五种常用数据类型和内部编码</h3> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/f3/f9/i0YjGLFx_o.png" width="1200"></p> 
+<p><strong>1.字符串类型可以类比于 java 的 String以及 C++的std :: string ,不过其编码方式不一定会是String类型,redis 会根据数据的不同自适应编码方式,这个下文就会介绍到.</strong></p> 
+<p><strong>2.哈希类型 可以类比于 java 的 HashMap以及 C++的std :: unordered_map,还是一样其编码方式不一定是和Java 或 C++的一样,会根据数据的不同自适应编码方式.</strong></p> 
+<p><strong>3.列表类型可以类比于java 的 List 以及 C++的std :: deque,有序的字符串集合，可以作为栈或队列使用</strong><strong>其编码方式也是根据数据的不同自适应编码方式</strong></p> 
+<p><strong>4.集合类型可以类比于Java 的 set 和 c++ 的std :: set 也就是说,它是有去重功能并且是无序的,其编码方式也是根据数据的不同自适应编码方式.</strong></p> 
+<p><strong>5.有序集合类型,在Java 或者是 C++中找不到可以类比的数据结构(不包括在第三方库),不过它大致,是这样构成的:</strong></p> 
+<p><strong>它除了存储member 之外(看成图上的张三,李四之类的数据),还需要存储一个 Sorce(图上的99,97)这个数据就代表着权重,集合就可以理解为是按照权重来排序的它结合了集合的去重特性和列表的有序特性。</strong></p> 
+<h3 id="2.%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81%E6%96%B9%E5%BC%8F"><strong>2.内部编码方式</strong></h3> 
+<p><strong>首先博主这里强调一点,就是Redis 对使用者承诺它就相当于hash表 对数据的删除,增加,修改,查找的时间复杂度都为O(1).但是它背后的实现原理,也就是内部的编码方式也不一定是,标准的hash表,但是可能是使用别的数据结构来实现这些操作，以优化内存使用、提高处理速度或适应不同的使用场景,但是时间复杂度依然是为O(1).</strong></p> 
+<p><strong>Redis 在底层实现上述的这些数据类型的时候,会在源码层面上,对不同的情况做出优化也就是使用特定的数据结构(改变内部的编码方式)以提高性能.</strong></p> 
+<p><strong>总结来说,同一个数据类型,其背后的编码方式可能是不同的,会根据特点的场景做出优化,并且它是个自适应的过程,我们是感知不到的.</strong></p> 
+<p><img alt="" height="1185" src="https://images2.imgbox.com/c1/cb/Ws1VCV51_o.png" width="1200"></p> 
+<h4 id="1.string%20%E7%B1%BB%E5%9E%8B%C2%A0">1.string 类型 </h4> 
+<p><strong>1.raw: 就是最基础的字符串类型,其底层就是字节数组,这里强调一下,redis存储字符串就是存储二进制字节,而不是字符,这就使得</strong> <strong>Redis 的字符串类型可以存储任何二进制数据，这使得它非常灵活，可以用于存储图像、音频、视频、序列化的对象等</strong>。<strong>需要注意:当存储汉字或其他 Unicode 字符时，需要注意它们可能占用多个字节。例如，UTF-8 编码的汉字通常占用 3 个字节。Redis 不会对这些字符进行任何特殊处理，它们会被直接存储为二进制数据</strong><strong>,在使用这些数据时我们要确保数据正确的话要进行编码和解码操作</strong></p> 
+<p><strong>2.int: redis通常可以实现"计数"这样的功能,而当redis存储的数据类型为整数,并且存储的值是一个范围在 <code>long</code> 类型之内的整数时（即，通常为 <code>int64</code>，在 Java 中为 <code>long</code>其内部编码方式就会被自适应为 int 类型.这里要强调的是当存储浮点数时，Redis 实际上会将其转换为字符串形式.而不是自适应为 int内部编码方式.</strong></p> 
+<p><strong>3.embstr: 针对短的字符串进行特殊的优化,当字符串的长度少于一定的字节时,这里就不说明是多少字节了,因为像这样数据每个版本的redis都可能不一样,并且,这个数值也是可以更改的,例如,可能因为一些业务上的需求,就可能需要对这个数值进行修改,所以博主这里就不说明是多少字节了只需要知道:</strong></p> 
+<p></p> 
+<ol><li> <p><strong>内部结构</strong>：<strong><span style="color:#fe2c24;"><code>embstr</code></span> 编码的字符串包含数据长度、数据本身和一个尾部的空字节（用于简单的字符串终止符）。</strong></p> </li><li><strong>当 <code>embstr</code> 编码的字符串增长超过一定长度时，Redis 会将其转换为其他编码方式，如简单的动态字符串（SDS）。</strong></li><li><strong><code>embstr</code> 编码的字符串直接存储在内存分配块中，避免了额外的内存分配和指针管理，从而节省了内存。</strong></li></ol> 
+<p><strong>这几点 并且知道<code>embstr</code> 编码是 Redis 为了提高性能和内存效率而进行的一项优化即可.</strong></p> 
+<h4 id="2.hash%E7%B1%BB%E5%9E%8B">2.hash类型</h4> 
+<p><strong>1. hashtable :最基本的哈希表同时注意这里的实现方式和Java 或者是 C++的可能不太一样,不过思想是差不多的,</strong></p> 
+<p><strong>2.ziplist 当哈希中的字段数量较少时，可能会自适应使用 <code>ziplist</code>（压缩列表）的内部编码方式来存储，这是一种连续分配的、紧凑的存储格式,这样就使得占用的内存空间减少了.</strong></p> 
+<h4 id="3.list%E7%B1%BB%E5%9E%8B"><strong>3.list类型</strong></h4> 
+<p><strong>1.linkedList: 也就是以链表的方式来存储.</strong></p> 
+<p><strong>2.ziplis:当列表存储的数据较少时,就会自适应的使用 <code>ziplist</code>（压缩列表）的内部编码方式来存储数据.</strong></p> 
+<p><strong>3.quicklist: 自从redis 3.2之后redis 在使用list类型时引入了全新的内部编码方式即 <span style="color:#fe2c24;">quicklist</span>,这个数据结构就牛逼了,它同时结合了链表和压缩列表的优点, quicklist 是一个链表(双端),同时它存储的每个元素是一个个的压缩链表,所以它同时支持大量数据存储和快速访问的场景.</strong></p> 
+<h4 id="4.set%E7%B1%BB%E5%9E%8B"><strong>4.set类型</strong></h4> 
+<p><strong>1.hashtable :这是 set 最基本的实现方式，使用哈希表来存储集合中的元素，支持快速的添加、删除和成员存在性检查操作。每个元素都是哈希表中的一个键，值通常是一个固定值，用于指示元素的存在</strong></p> 
+<p><strong>2.intset:</strong>：当<strong>集合中只包含整数值时，Redis 会自适应的使用 intset 编码。intset 是一种紧凑的数组实现，它根据集合内元素的数量和数值大小，动态在编码方式（例如，从单个字节到更宽的整型）间转换，以节省空间。这种方式特别适合整数集合，因为不需要额外的哈希计算，并且存储更为紧凑。</strong></p> 
+<h4 id="5.zset(%E6%9C%89%E5%BA%8F%E9%9B%86%E5%90%88)%E7%B1%BB%E5%9E%8B">5.zset(有序集合)类型</h4> 
+<p><strong>1.skiplist : 有序集合之所以具有列表的有序以及集合的去重性就是基于这个数据机构<span style="color:#fe2c24;">跳跃表</span>是一种随机化的数据结构，它通过在列表中添加多级索引来加速查询操作。每个节点包含指向其他节点的指针，这些指针可以让算法“跳跃式”地前进，从而快速定位到目标元素。这种结构在保持有序集合特性的同时，还能提供对数据的高效访问。</strong></p> 
+<p><strong>2.ziplist:当有序集合的元素数量较少，且每个元素的成员（member）和分数（score）都较短时，Redis 会自适应 ziplist 作为 zset 的内部编码方式.</strong></p> 
+<h4 id="6.Redis%E8%BF%99%E6%A0%B7%E8%AE%BE%E8%AE%A1%E6%9C%89%E4%B8%A4%E4%B8%AA%E5%A5%BD%E5%A4%84%3A"><strong>6.Redis这样设计有两个好处:</strong></h4> 
+<ol><li> <p><strong>无感升级的内部编码改进</strong>：<strong>Redis设计允许其内部编码的优化和更新，而不影响外部接口和用户使用的数据结构及命令。这意味着，当Redis开发者引入了更高效的内部编码方式，如在Redis 3.2中引入的quicklist来优化list类型，用户的代码和数据结构无需任何改变就能享受到性能提升的好处。这种机制极大降低了软件升级的成本，确保了向后兼容性，使得技术迭代更加平滑。</strong></p> </li><li> <p><strong>场景适配的编码选择</strong>：<strong>Redis为不同的数据结构提供了多种内部编码实现，使得它能够根据实际数据特性和操作场景自动选择最合适的编码方式。例如，ziplist因其紧凑的内存占用，在处理少量元素时非常高效，但随着元素数量增长，其性能会下降，这时Redis会自动切换到linkedlist编码以保证操作性能，这一转换过程对用户完全透明。这样的设计确保了Redis能够在不同规模和不同类型的数据集上都能提供最优的性能表现，同时也保持了使用的简便性。</strong></p> </li></ol> 
+<p><strong>通过这样的设计哲学，Redis不仅实现了高性能的数据处理能力，还保证了高度的灵活性和易用性，使得开发者能够专注于业务逻辑，而不必过多担心底层数据结构的优化问题。</strong></p> 
+<h3 id="3.%E5%8D%95%E7%BA%BF%E7%A8%8B%E6%9E%B6%E6%9E%84"><strong>3.单线程架构</strong></h3> 
+<p><strong>redis使用</strong><strong>单线程架构来实现高性能的内存数据库服务,也就是说,reids服务端是单线程的处理客服端的请求并响应.</strong></p> 
+<p><strong>例如有三个客户端同时向服务端发起请求</strong></p> 
+<p><img alt="" height="1119" src="https://images2.imgbox.com/38/ed/LH3tsNGU_o.png" width="1200"></p> 
+<p><strong>虽然宏观上看是三个客户端同时向服务端发起请求,但其实在内部里,redis服务端是这样处理客户端的请求的</strong></p> 
+<p><img alt="" height="1026" src="https://images2.imgbox.com/11/ba/gSDB6Dg7_o.png" width="1200"></p> 
+<p><strong>尽管听起来可能与直觉相悖，即多线程或多进程通常与高性能相关联，但Redis通过这一策略实现了高效的内存数据库服务。以下是几个关键点解释.</strong></p> 
+<h4 id="%C2%A0redis%E5%8D%95%E7%BA%BF%E7%A8%8B%E4%B8%BA%E4%BB%80%E4%B9%88%E5%8F%AF%E4%BB%A5%E5%81%9A%E5%88%B0%E9%AB%98%E6%80%A7%E8%83%BD%3F(%E9%9D%A2%E8%AF%95%E9%87%8D%E7%82%B9)"><strong> redis单线程为什么可以做到高性能?(面试重点)</strong></h4> 
+<ol><li> <p><strong>基于内存操作</strong>：<strong>Redis 数据存储在内存中，这意味着读写操作都非常迅速，远超硬盘I/O的速度。大部分请求直接在内存中完成，没有磁盘访问延迟。</strong></p> </li><li> <p><strong>避免多线程开销</strong>：<strong>单线程避免了多线程环境下的上下文切换成本和线程同步的开销，比如锁的竞争和释放。这减少了CPU在不同线程间切换的时间，也消除了多线程编程中可能出现的竞态条件和死锁问题。</strong></p> </li><li> <p><strong>I/O多路复用</strong>：<strong>Redis 使用I/O多路复用技术（如epoll on Linux），能够在一个线程里同时监控多个客户端连接，有效地管理这些连接上的事件（如读、写就绪）。当有事件发生时，Redis线程可以立即响应，这大大提升了处理并发连接的效率，而不需要为每个连接创建单独的线程。</strong></p> </li><li> <p><strong>简单且高效的命令执行</strong>：<strong>由于是单线程，Redis 可以简化其内部实现，不需要复杂的锁机制来保护数据结构。所有命令串行执行，确保了操作的原子性，同时也简化了编程模型和调试过程。</strong></p> </li><li> <p><strong>数据结构优化</strong>：<strong>Redis 提供了多种经过优化的数据结构（如哈希表、跳跃表等），这些数据结构本身就是为高性能设计的，进一步增强了单线程处理的效率。</strong></p> </li></ol> 
+<p><strong>总之，尽管是单线程，但通过将数据存储在内存中、利用I/O多路复用技术以及优化的数据结构，Redis成功地实现了高吞吐量和低延迟的服务，适用于大量读写操作的场景，特别是那些对响应时间和数据一致性有严格要求的应用。 </strong></p> 
+<p><strong>同时需要注意的是,虽然redis使用单线程架构一样可以做到高性能,但是由于是单线程,要是某个操作的执行时间过长,就长时间阻塞其他的操作,例如在生产环境下使用 </strong></p> 
+<pre><code>keys *
+</code></pre> 
+<p><strong>这样需要消耗大量时间的操作,阻塞其他的操作,使得MySql需要一下子处理大量的请求.所以我们在使用redis 时,要特别注意这点.</strong></p> 
+<p><strong>同时在这里用一个小栗子来说明一下<span style="color:#fe2c24;">I/O多路复用</span></strong></p> 
+<p><strong>理解I/O多路复用，可以通过一个生活中的类比来形象地说明。想象一下，你是一位繁忙的餐厅服务员，负责同时服务多桌客人。每桌客人都可能会有各种需求，比如点餐、加水、结账等。如果按照传统的做法，你每次只能专心服务一桌客人，直到他们当前的需求被完全满足，然后再转向下一桌。这样一来，其他等待服务的桌次就会造成等待时间较长，整体效率低下。</strong></p> 
+<p><strong>而采用I/O多路复用的做法就像是这位服务员有了“分身术”或者“超级注意力”。你不再是一次只服务于一桌客人，而是快速地在各个桌之间巡视，询问每桌是否需要服务，但并不停留等待具体任务完成。当某桌客人提出需求时，你会记录下来，然后继续巡视。一旦有任务（比如厨房通知某道菜好了，或者某桌客人示意结账）准备好，你立刻知道并快速响应，而不会让其他桌的客人等待过长时间。</strong></p> 
+<p><strong>这个过程就好比操作系统中的I/O多路复用技术，服务器程序（服务员）通过一个系统调用（如<code>select</code>、<code>poll</code>或<code>epoll</code>）同时监控多个文件描述符（各桌客人），这些文件描述符代表了不同的I/O操作（如网络连接的读写）。当任何一描述符上有事件发生（如数据可读或写缓冲区有空闲），系统就会通知程序，程序随即针对性地处理该事件，而不是为每个描述符分配一个单独的线程或进程等待。这样，即使在单线程环境下，也能高效地处理大量并发的I/O操作，提高了系统的响应速度和资源利用率。</strong></p> 
+<h2 id="%E4%BA%8C.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E6%80%BB%E7%BB%93"><strong>二.字符串类型的总结</strong></h2> 
+<p><strong>Redis中的字符串类型是其核心且最为基础的数据结构，需着重留意几个关键点：</strong></p> 
+<ol><li> <p><strong>字符串作为键的基石</strong>：<strong>在Redis数据库内部，不论数据结构多么复杂，所有键（Keys）均统一采用字符串形式。这一设计不仅维护了数据访问接口的一致性，也意味着掌握字符串类型是理解其余四种高级数据结构（列表、集合、散列、有序集合）的前提。</strong></p> </li><li> <p><strong>多样的值类型支持</strong>：<strong>字符串值展现了极高的灵活性，能够承载各种类型的数据：不仅是常规文本字符串，还包括如JSON、XML这类结构化数据格式；支持整数、浮点数等数值类型；甚至可以是图片、音频、视频文件等二进制大数据块。值得注意的是，尽管用途广泛，但单个字符串值的大小限制为不超过512MB，确保了数据操作的高效性与内存使用的合理性。</strong></p> </li></ol> 
+<h3 id="1.%E5%AD%97%E7%AC%A6%E4%B8%B2%E7%B1%BB%E5%9E%8B%E7%9A%84%E5%B8%B8%E7%94%A8%E5%91%BD%E4%BB%A4">1.字符串类型的常用命令</h3> 
+<h4 id="1.set%20%E5%8F%8A%E5%85%B6%E9%80%89%E9%A1%B9">1.set 及其选项</h4> 
+<p><strong>语法:</strong></p> 
+<p><img alt="" height="462" src="https://images2.imgbox.com/3f/1a/s2tRkVU5_o.png" width="1151"></p> 
+<p><strong>一些常用的<code>SET</code>命令选项及其功能：</strong></p> 
+<ol><li> <p><strong>ex seconds</strong> 或 <strong>px milliseconds</strong>：设置键的过期时间。<strong><code>ex</code></strong>后面跟秒数，<strong><code>px</code></strong>后面跟毫秒数。过了指定的时间后，键会自动被删除。</p> </li><li> <p><strong>nx</strong>：仅当键不存在时才设置键的值。这可以用来实现"设置-if-not-exists"操作，类似于某些数据库的"INSERT IF NOT EXISTS"。</p> </li><li> <p><strong>XX</strong>：仅当键已经存在时才设置键的值。这可以用来实现"更新-if-exists"操作。</p> </li></ol> 
+<p>注意：由于带选项的SET命令可以被setnx 、 setex 、psetex 等命令代替，所以之后的版本中，Redis可能进⾏合并 </p> 
+<h5 id="1.%E6%99%AE%E9%80%9A%E7%9A%84set%E8%AF%AD%E5%8F%A5">1.普通的set语句</h5> 
+<p><strong>将一个键(key)关联到一个值(value)，如果键已经存在，则更新其对应的值。</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>set key value</code></pre> 
+<p><strong>示例 存储 hello 1</strong></p> 
+<pre><code>set hello 1
+</code></pre> 
+<p><img alt="" height="218" src="https://images2.imgbox.com/20/e5/brOF19Ym_o.png" width="578"></p> 
+<p><strong>如果hello 这个键之前存在,就会覆盖之前的value</strong></p> 
+<p><img alt="" height="390" src="https://images2.imgbox.com/62/60/zce5N0on_o.png" width="1200"></p> 
+<h5 id="2.%20nx%E9%80%89%E9%A1%B9">2. nx选项</h5> 
+<p><strong>仅当键不存在时才设置键的值,如果成功设置就返回 OK,如果键已经存在就返回<span style="color:#fe2c24;"> nil</span></strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>set key value nx
+#或者
+setnx key value#返回值可能会有所差别</code></pre> 
+<p><strong>当键不存在时 </strong></p> 
+<p><img alt="" height="396" src="https://images2.imgbox.com/d1/a6/VGxAgxKP_o.png" width="1200"><strong> 当键存在时</strong></p> 
+<p><img alt="" height="374" src="https://images2.imgbox.com/25/4d/fZkLpxHa_o.png" width="1200"></p> 
+<h5 id="3.%20xx%E9%80%89%E9%A1%B9">3. xx选项</h5> 
+<p><strong>仅当键存在时才设置键的值,即如果key之前不存在设置不执行,如果成功设置就返回 OK,如果键不存在就返回<span style="color:#fe2c24;"> nil</span></strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>set key value xx</code></pre> 
+<p><strong>当键存在时</strong></p> 
+<p><img alt="" height="320" src="https://images2.imgbox.com/ad/61/F25b1QWN_o.png" width="1200"></p> 
+<p><strong>当键不存在时 </strong></p> 
+<p><img alt="" height="288" src="https://images2.imgbox.com/64/d8/oQnr0Cx4_o.png" width="1200"></p> 
+<p><strong>set set nx set xx 总结图示</strong></p> 
+<p><img alt="" height="723" src="https://images2.imgbox.com/97/a4/vk9HViRU_o.png" width="1200"></p> 
+<h5 id="4.%C2%A0ex%20seconds%20%E6%88%96%20px%C2%A0milliseconds%20%E9%80%89%E9%A1%B9">4. <strong>ex seconds</strong> 或 <strong>px milliseconds 选项</strong></h5> 
+<p><strong>设置键的过期时间。<code>ex</code>后面跟秒数，<code>px</code>后面跟毫秒数。过了指定的时间后，键会自动被删除</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>set key value ex 秒
+set key value px 毫秒
+#或者时
+setex key 秒  value 
+psetex key 毫秒 value</code></pre> 
+<p> <strong><code>ex</code>后面跟秒数</strong></p> 
+<p><img alt="" height="732" src="https://images2.imgbox.com/dd/37/CWJ747qi_o.png" width="1200"></p> 
+<p> <strong><code>px</code>后面跟毫秒数</strong></p> 
+<p><img alt="" height="421" src="https://images2.imgbox.com/bd/2d/bo0WhYFN_o.png" width="1200"></p> 
+<h4 id="2.get%E5%91%BD%E4%BB%A4">2.get命令</h4> 
+<p><strong>获取key对应的value。如果key不存在，返回nil。如果value的数据类型不是string，会报错。</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>get key
+</code></pre> 
+<p> <img alt="" height="425" src="https://images2.imgbox.com/01/a8/ENbXCrhT_o.png" width="1200"></p> 
+<h4 id="3.mset%2Cmget">3.mset,mget</h4> 
+<p><strong> 一次性获取多个key,和一次性设置多个key value</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>mset key value key value ...
+mget key ,key,key...</code></pre> 
+<p><img alt="" height="302" src="https://images2.imgbox.com/1a/66/p15gYXoF_o.png" width="1200"></p> 
+<p><strong>同时这里需要提醒一点,由于每次get / set 都是rides客户端通过网络访问redis服务端,就要消耗系统资源,以及网络开销时间 所以我们使⽤mget/mset可以有效地减少了网络时间，这里也建议,尽量使用 mget / mset,一次获取多个,或设置多个,但注意,由于redis是单线程架构的,所以不建议,设置或获取太多个数据,以防一个操作太久,阻塞其他操作. </strong> </p> 
+<h3 id="2.%E8%AE%A1%E6%95%B0%E5%91%BD%E4%BB%A4">2.计数命令</h3> 
+<p><strong>上文提到了,如果value 为整数的话,redis就有计数的功能,这里就介绍一些用于计数的命令</strong></p> 
+<h4 id="1.incr%20%2F%20decr%C2%A0"><strong>1.incr / decr </strong></h4> 
+<p><strong>将key对应的string表示的数字加⼀或减一。如果key不存在，则视为key对应的value是0。如果key对应的string不是⼀个整型或者范围超过了64位有符号整型，则报错.</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>incr key 
+decr key</code></pre> 
+<p><img alt="" height="603" src="https://images2.imgbox.com/b5/0c/jiJPbJFY_o.png" width="1200"></p> 
+<h4 id="%C2%A02.incrby%20%2F%20decrby"> 2.incrby / decrby</h4> 
+<p><strong>将key对应的string表示的数字加上/减去对应的值。如果key不存在，则视为key对应的value是0。如果key对应的string不是⼀个整型或者范围超过了64位有符号整型，则报错</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>incrby key n
+decrby key n </code></pre> 
+<p> <strong>这里注意:如果n为正数,那么incrby 就是加,为负数,incrby 就是减,decrby 同理</strong></p> 
+<p><strong>n为正数:</strong></p> 
+<p><img alt="" height="433" src="https://images2.imgbox.com/97/26/ihg7exHz_o.png" width="1200"></p> 
+<p><strong>n为负数:</strong></p> 
+<p><img alt="" height="372" src="https://images2.imgbox.com/23/cc/rh7HvPAb_o.png" width="1200"></p> 
+<h4 id="3.incrbyfloat">3.incrbyfloat</h4> 
+<p><strong>将key对应的string表示的浮点数加上对应的值。如果对应的值是负数，则视为减去对应的值。如果key不存在，则视为key对应的value是0。如果key对应的不是string，则报错。允许采⽤科学计数法表示浮点数 </strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>incrbyfloat key n</code></pre> 
+<p><strong>这里n和incrby一样正数为加,负数为减,并且,浮点数只有 incrbyfloat.</strong></p> 
+<p><img alt="" height="376" src="https://images2.imgbox.com/06/81/oMZjfDmw_o.png" width="1200"></p> 
+<h3 id="%C2%A03.%E5%85%B6%E4%BB%96%E5%91%BD%E4%BB%A4"> 3.其他命令</h3> 
+<h4 id="1.APPEND">1.APPEND</h4> 
+<p><strong>如果key已经存在并且是⼀个string，命令会将value追加到原有string的后边。如果key不存在，则效果等同于SET命令。</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>append key value</code></pre> 
+<p><strong>时间复杂度:O(1)</strong></p> 
+<p><strong>返回值:追加后的value的长度 </strong></p> 
+<p><img alt="" height="510" src="https://images2.imgbox.com/a4/ac/ByMQ2N6Y_o.png" width="1200"></p> 
+<h4 id="2.getrange">2.getrange</h4> 
+<p><strong>返回key对应的string的子串，由start和end确定（左闭右闭）。可以使用负数表示倒数。-1代表倒数第⼀个字符，-2代表倒数第⼆个，其他的与此类似。超过范围的偏移量会根据string的长度调整成正确的值</strong></p> 
+<p><strong> 语法:</strong></p> 
+<pre><code>getrange key star end </code></pre> 
+<p><strong>时间复杂度:O(n)这里的n是[star,end]区间的长度,也可以看做O(1)</strong></p> 
+<p><strong>返回值:value的子串的长度</strong></p> 
+<p> <img alt="" height="241" src="https://images2.imgbox.com/f3/59/hKBTv4Mc_o.png" width="1200"></p> 
+<p><strong>注意:</strong></p> 
+<p><strong>在Redis中，<code>GETRANGE</code>命令处理字符串数据时，并不会直接区分字符编码或字符类型（如汉字或其他Unicode字符）。它是基于字节序列来操作的，这意味着如果你的键中存储的是多字节字符（例如UTF-8编码的汉字），你需要按照字节来计算<code>start</code>和<code>end</code>参数。</strong></p> 
+<p><strong>UTF-8编码中，一个汉字通常占用3个字节。因此，如果你要获取字符串中特定位置的汉字，你需要确保<code>start</code>和<code>end</code>参数正确地对齐到汉字的起始字节。例如，如果你想获取第一个汉字，<code>start</code>应设置为0；若想获取第二个汉字，由于第一个汉字占用了前3个字节，<code>start</code>应设置为3，以此类推。</strong></p> 
+<p><img alt="" height="445" src="https://images2.imgbox.com/76/97/6ilFxnAN_o.png" width="1200"></p> 
+<h4 id="3.setrange">3.setrange</h4> 
+<p><strong>覆盖字符串的⼀部分，从指定的偏移开始。 </strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>setrange key offset value</code></pre> 
+<p><strong>时间复杂度：O(N),N为value的长度.由于⼀般给的value⽐较短,通常视为O(1).</strong></p> 
+<p><strong>返回值：替换后的string的长度。</strong></p> 
+<p><img alt="" height="239" src="https://images2.imgbox.com/ea/68/znGgySym_o.png" width="1200"></p> 
+<p><strong> 注意:</strong></p> 
+<p><strong>如汉字或其他Unicode字符要注意转换,和 getrange 差不多这里就不过多的解释了.</strong></p> 
+<h4 id="4.%20strlen">4. strlen</h4> 
+<p><strong>获取key对应的string的长度。当key存放的类不是string时，报错。</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>strlen key
+</code></pre> 
+<p><strong>时间复杂度：O(1)<br> 返回值：string的长度。或者当key不存在时，返回0。</strong></p> 
+<h4 id="%E2%80%8B%E7%BC%96%E8%BE%91%C2%A05.%E6%9F%A5%E7%9C%8B%E5%86%85%E9%83%A8%E7%BC%96%E7%A0%81"><img alt="" height="435" src="https://images2.imgbox.com/f7/37/ZAmMy8oO_o.png" width="1200"> 5.查看内部编码</h4> 
+<p><strong>Redis会根据当前值的类型和⻓度动态决定使用哪种内部编码实现,可以通过命令查看哪种内部编码实现</strong></p> 
+<p><strong>语法:</strong></p> 
+<pre><code>object encoding key</code></pre> 
+<p><img alt="" height="529" src="https://images2.imgbox.com/f2/fa/Q3lYBLxl_o.png" width="1200"></p> 
+<h3 id="%C2%A04.%E5%85%B8%E5%9E%8B%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF"> 4.典型使用场景</h3> 
+<h4 id="1.%E7%BC%93%E5%AD%98%E5%8A%9F%E8%83%BD">1.缓存功能</h4> 
+<p><strong>Redis+MySQL组成的缓存存储架构</strong></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/48/f2/Ta6XCf8s_o.png" width="1200"></p> 
+<ol><li> <p><strong>用户</strong>：</p> 用户是系统的终端用户，他们通过 Web 服务与应用程序交互。</li><li> <p><strong>Web 服务</strong>：</p> Web 服务是用户与应用程序交互的接口，它处理用户的请求并返回响应。</li><li> <p><strong>业务层</strong>：</p> 业务层包含应用程序的业务逻辑，负责处理用户的请求并返回相应的结果。</li><li> <p><strong>缓存层（Redis）</strong>：</p> 
+  <ul><li>缓存层使用 Redis 作为缓存数据库，用于存储频繁访问的数据以提高性能。</li><li>当用户请求数据时，系统首先检查 Redis 中是否存在该数据（称为缓存命中，hit）。</li><li>如果 Redis 中存在数据（缓存命中），则直接返回该数据给用户。</li><li>如果 Redis 中不存在数据（缓存未命中，miss），则需要从存储层获取数据。</li></ul></li><li> <p><strong>存储层（MySQL）</strong>：</p> 
+  <ul><li>存储层使用 MySQL 作为持久化数据库，存储应用程序的所有数据。</li><li>当缓存未命中时，业务层会从 MySQL 获取数据，然后将数据写入 Redis 缓存，并返回数据给用户。</li></ul></li></ol> 
+<h4 id="2.%E8%AE%A1%E6%95%B0%EF%BC%88Counter%EF%BC%89%E5%8A%9F%E8%83%BD">2.计数（Counter）功能</h4> 
+<p><strong>许多应用都会使用Redis作为计数的基础⼯具，它可以实现快速计数、查询缓存的功能，同时数据可以异步处理或者落地到其他数据源。如下图所示，例如视频网站的视频播放次数可以使用Redis来完成：用户每播放⼀次视频，相应的视频播放数就会自增1。</strong></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/95/12/O3rpSQTt_o.png" width="1200"></p> 
+<ol><li> <p><strong>用户播放视频</strong>：</p> 用户在视频网站上播放视频，视频通常有唯一的编号或标识符，例如 <span style="color:#fe2c24;"><strong>"5253"</strong></span>。</li><li> <p><strong>Redis 作为缓存和计数器</strong>：</p> 
+  <ul><li>视频网站的后端使用 Redis 来存储视频的播放次数。</li><li>每个视频的播放次数存储在一个独立的键中，键名通常采用格式 <span style="color:#fe2c24;"><strong><code>"video:" + 视频编号</code></strong></span>，例如 <span style="color:#fe2c24;"><strong><code>"video:1"</code>、<code>"video:3582"</code>、<code>"video:5253"</code></strong></span>。</li></ul></li><li> <p><strong>获取和更新播放次数</strong>：</p> 
+  <ul><li>当用户播放视频时，系统执行一个 Redis 命令来增加对应视频的播放计数器。</li><li>使用 <code>INCR</code> 命令来原子地增加键 <span style="color:#fe2c24;"><strong><code>"video:5253"</code></strong></span> 的值。<code>INCR</code> 命令将键的值增加一。</li></ul></li><li> <p><strong>异步数据同步</strong>：</p> 
+  <ul><li>为了提高性能，播放次数的增加通常是实时的，但将播放次数同步到其他数据源（如视频存储或统计数据仓库）可能会采用异步方式。</li><li>这意味着在 Redis 中更新播放次数后，系统会安排一个后台任务或使用消息队列来异步处理数据同步。</li></ul></li><li> <p><strong>数据持久化</strong>：</p> 尽管 Redis 是一个内存数据库，但它提供了数据持久化的选项，以防止在系统故障时丢失数据。</li></ol> 
+<h4 id="%C2%A03.%E6%89%8B%E6%9C%BA%E9%AA%8C%E8%AF%81%E7%A0%81%C2%A0"> 3.手机验证码 </h4> 
+<p>Redis 可以有效地用于存储和管理手机验证码，主要是因为它提供的原子操作、快速响应和易于使用的数据结构。以下是使用 Redis 来处理手机验证码的一些关键步骤和考虑因素：</p> 
+<ol><li> <p><strong>生成验证码</strong>：</p> 通常，验证码是一个随机生成的数字或字母字符串，长度和复杂度可以根据安全需求来设定。</li><li> <p><strong>设置验证码到 Redis</strong>：</p> 
+  <ul><li>使用 Redis 的 <code>SET</code> 命令将验证码与用户的手机号码关联起来。例如： <pre><code>SET phone:123456 "验证码1234" EX 300</code></pre> </li><li>其中<span style="color:#fe2c24;"><strong> <code>phone:123456</code></strong></span> 是一个唯一标识用户手机的键，<span style="color:#fe2c24;"><strong><code>"验证码1234"</code></strong></span> 是验证码，<span style="color:#fe2c24;"><strong><code>EX 300</code> </strong></span>表示验证码的有效期为 300 秒。</li></ul></li><li> <p><strong>验证过程</strong>：</p> 
+  <ul><li>当用户输入验证码后，应用程序会向 Redis 查询该验证码是否正确，并是否在有效期内。</li><li>使用 <span style="color:#fe2c24;"><strong><code>GET</code></strong></span> 命令来获取存储的验证码，并与用户输入的验证码进行比对。</li></ul></li><li> <p><strong>安全性</strong>：</p> 
+  <ul><li>为了提高安全性，可以为验证码设置一个较短的有效期，例如几分钟。</li><li>也可以考虑使用 Redis 的散列（Hash）数据结构来存储验证码，并将用户的手机作为键。</li></ul></li><li> <p><strong>验证码使用后的处理</strong>：</p> 
+  <ul><li>一旦验证码被使用，应该立即从 Redis 中删除，以防止重复使用。</li><li>使用 <code>DEL</code> 命令来删除已使用的验证码。</li></ul></li><li> <p><strong>容错性和高可用性</strong>：</p> 在高流量的应用中，可能需要使用 Redis 集群来提高容错性和可用性。</li><li> <p><strong>监控和日志</strong>：</p> 记录验证码的生成、验证尝试和使用情况，以便于监控和审计。</li><li> <p><strong>防止暴力破解</strong>：</p> 实现限制机制，如在一定时间内只允许用户尝试一定次数的验证码输入。</li></ol> 
+<h4 id="4.%E5%85%B1%E4%BA%AB%E4%BC%9A%E8%AF%9D%EF%BC%88Session%EF%BC%89">4.共享会话（Session）</h4> 
+<p><strong>⼀个分布式Web服务将用户的Session信息（例如用户登录信息）保存在各自的服务器中，但这样会造成⼀个问题：出于负载均衡的考虑，分布式服务会将用户的访问请求均衡到不同的服务器上，并且通常⽆法保证用户每次请求都会被均衡到同⼀台服务器上，这样当用户刷新⼀次访问是可能会发现需要重新登录，这个问题是用户⽆法容忍的。</strong></p> 
+<p><img alt="" height="1195" src="https://images2.imgbox.com/1f/42/G0GlHgYG_o.png" width="1200"></p> 
+<p><strong>为了解决这个问题，可以使用Redis将用户的Session信息进行集中管理，在这种模式下，只要保证Redis是高可用和可扩展性的，⽆论用户被均衡到哪台Web服务器上，都集中从Redis中查询、更新Session信息。</strong></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/07/39/69h3I3hh_o.png" width="1200"></p> 
+<p><strong>以上介绍了使⽤Redis的字符串数据类型可以使⽤的⼏个场景，但其适⽤场景远不⽌于此，开发⼈员可以结合字符串类型的特点以及提供的命令，充分发挥⾃⼰的想象⼒，在⾃⼰的业务中去找到合适的场景去使⽤Redis的字符串类型</strong></p> 
+<p><strong>感谢你的收看</strong></p> 
+<p style="text-align:center;"><strong><img alt="" src="https://images2.imgbox.com/34/56/ujJRxYDa_o.gif"></strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b993b5133c105c4c2e5a10b0c9a1ff28/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MySQL的表级锁</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/260547e14cfbd548e82f28744a07120a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【梳理】k8s使用Operator搭建Flink集群（高可用可选）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

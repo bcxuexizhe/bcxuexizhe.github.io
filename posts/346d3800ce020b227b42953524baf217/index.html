@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【docker启动nginx】 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/346d3800ce020b227b42953524baf217/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【docker启动nginx】">
+  <meta property="og:description" content="docker启动nginx docker启动nginx1. 抓取镜像并生成目录2. 生成自签名证书（生产环境需要到CA申请）2.1 首先将openssl拷贝到nginx/ssl目录2.2 编辑 openssl.cnf2.3 生成证书 3. 生成Nginx basic认证密码3.1 安装httpd工具3.2 生成密码文件3.3 配置密码文件 4. 配置Nginx4.1 生成nginx.conf文件4.2 生成default.conf(包含各个server块，每个server块监听指定的server_name和port)4.3 生成80_server(将HTTP请求转发为对应的HTTPS请求)4.4 生成admin_9443_server文件(用于管理员访问etcd, es, kibana, grafana等)4.5 生成meta_locations(一般无需改变)4.6 生成extra_locations(一般无需改变)4.7 生成meta_server4.8 生成proxy选项 5. 启动Docker6. 打通防火墙7. 外部访问验证 docker启动nginx nginx一般用做web服务器，一般为了公网访问需要申请https证书，并进行配置，本次自己制作证书。
+使用容器后，需要考虑网络以及配置和日志的持久化，本次复用宿主机网络，生产环境一般来说做端口映射。
+集群一般在前置添加负载均衡即可。
+1. 抓取镜像并生成目录 docker pull nginx:1.21.6 &amp;&amp; mkdir -p /home/nginx/conf &amp;&amp; mkdir -p /home/nginx/logs &amp;&amp; mkdir -p /home/nginx/ssl &amp;&amp; mkdir -p /home/nginx/conf/conf.d 2. 生成自签名证书（生产环境需要到CA申请） 2.1 首先将openssl拷贝到nginx/ssl目录 cp /etc/pki/tls/openssl.cnf /home/nginx/ssl 2.2 编辑 openssl.cnf vi /home/nginx/ssl/openssl.cnf [ req ] req_extensions = v3_req //取消对应的注释 2.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-03T16:31:39+08:00">
+    <meta property="article:modified_time" content="2024-01-03T16:31:39+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【docker启动nginx】</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>docker启动nginx</h4> 
+ <ul><li><a href="#dockernginx_3" rel="nofollow">docker启动nginx</a></li><li><ul><li><a href="#1__9" rel="nofollow">1. 抓取镜像并生成目录</a></li><li><a href="#2_CA_17" rel="nofollow">2. 生成自签名证书（生产环境需要到CA申请）</a></li><li><ul><li><a href="#21_opensslnginxssl_18" rel="nofollow">2.1 首先将openssl拷贝到nginx/ssl目录</a></li><li><a href="#22__opensslcnf_22" rel="nofollow">2.2 编辑 openssl.cnf</a></li><li><a href="#23__29" rel="nofollow">2.3 生成证书</a></li></ul> 
+   </li><li><a href="#3_Nginx_basic_39" rel="nofollow">3. 生成Nginx basic认证密码</a></li><li><ul><li><a href="#31_httpd_40" rel="nofollow">3.1 安装httpd工具</a></li><li><a href="#32__44" rel="nofollow">3.2 生成密码文件</a></li><li><a href="#33__50" rel="nofollow">3.3 配置密码文件</a></li></ul> 
+   </li><li><a href="#4_Nginx_57" rel="nofollow">4. 配置Nginx</a></li><li><ul><li><a href="#41_nginxconf_58" rel="nofollow">4.1 生成nginx.conf文件</a></li><li><a href="#42_defaultconfserverserverserver_nameport_107" rel="nofollow">4.2 生成default.conf(包含各个server块，每个server块监听指定的server_name和port)</a></li><li><a href="#43_80_serverHTTPHTTPS_114" rel="nofollow">4.3 生成80_server(将HTTP请求转发为对应的HTTPS请求)</a></li><li><a href="#44_admin_9443_serveretcd_es_kibana_grafana_126" rel="nofollow">4.4 生成admin_9443_server文件(用于管理员访问etcd, es, kibana, grafana等)</a></li><li><a href="#45_meta_locations_205" rel="nofollow">4.5 生成meta_locations(一般无需改变)</a></li><li><a href="#46_extra_locations_403" rel="nofollow">4.6 生成extra_locations(一般无需改变)</a></li><li><a href="#47_meta_server_414" rel="nofollow">4.7 生成meta_server</a></li><li><a href="#48_proxy_753" rel="nofollow">4.8 生成proxy选项</a></li></ul> 
+   </li><li><a href="#5_Docker_767" rel="nofollow">5. 启动Docker</a></li><li><a href="#6__778" rel="nofollow">6. 打通防火墙</a></li><li><a href="#7__785" rel="nofollow">7. 外部访问验证</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="dockernginx_3"></a>docker启动nginx</h2> 
+<p>nginx一般用做web服务器，一般为了公网访问需要申请https证书，并进行配置，本次自己制作证书。<br> 使用容器后，需要考虑网络以及配置和日志的持久化，本次复用宿主机网络，生产环境一般来说做端口映射。<br> 集群一般在前置添加负载均衡即可。</p> 
+<h3><a id="1__9"></a>1. 抓取镜像并生成目录</h3> 
+<pre><code class="prism language-bash"><span class="token function">docker</span> pull nginx:1.21.6 <span class="token operator">&amp;&amp;</span>
+<span class="token function">mkdir</span> <span class="token parameter variable">-p</span> /home/nginx/conf <span class="token operator">&amp;&amp;</span>
+<span class="token function">mkdir</span> <span class="token parameter variable">-p</span> /home/nginx/logs <span class="token operator">&amp;&amp;</span>
+<span class="token function">mkdir</span> <span class="token parameter variable">-p</span> /home/nginx/ssl <span class="token operator">&amp;&amp;</span>
+<span class="token function">mkdir</span> <span class="token parameter variable">-p</span> /home/nginx/conf/conf.d
+</code></pre> 
+<h3><a id="2_CA_17"></a>2. 生成自签名证书（生产环境需要到CA申请）</h3> 
+<h4><a id="21_opensslnginxssl_18"></a>2.1 首先将openssl拷贝到nginx/ssl目录</h4> 
+<pre><code class="prism language-bash"><span class="token function">cp</span> /etc/pki/tls/openssl.cnf /home/nginx/ssl
+</code></pre> 
+<h4><a id="22__opensslcnf_22"></a>2.2 编辑 openssl.cnf</h4> 
+<pre><code class="prism language-bash"><span class="token function">vi</span> /home/nginx/ssl/openssl.cnf
+</code></pre> 
+<pre><code class="prism language-bash"><span class="token punctuation">[</span> req <span class="token punctuation">]</span> req_extensions <span class="token operator">=</span> v3_req  //取消对应的注释 
+</code></pre> 
+<h4><a id="23__29"></a>2.3 生成证书</h4> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> /home/nginx/ssl <span class="token operator">&amp;&amp;</span>
+openssl req <span class="token parameter variable">-x509</span> <span class="token parameter variable">-nodes</span> <span class="token parameter variable">-days</span> <span class="token number">36500</span> <span class="token parameter variable">-newkey</span> rsa:2048 <span class="token parameter variable">-config</span> openssl.cnf <span class="token parameter variable">-extensions</span> v3_req <span class="token parameter variable">-keyout</span> /home/nginx/ssl/nginx.key <span class="token parameter variable">-out</span> /home/nginx/ssl/nginx.crt
+</code></pre> 
+<p>上面的证书生成命令请依次输入口令：XX XX XX XX XX (回车) (回车)</p> 
+<pre><code class="prism language-bash"><span class="token function">cp</span> /home/nginx/ssl/nginx.crt /home/nginx/ssl/space.crt <span class="token operator">&amp;&amp;</span>
+<span class="token function">cp</span> /home/nginx/ssl/nginx.key /home/nginx/ssl/space.key
+</code></pre> 
+<h3><a id="3_Nginx_basic_39"></a>3. 生成Nginx basic认证密码</h3> 
+<h4><a id="31_httpd_40"></a>3.1 安装httpd工具</h4> 
+<pre><code class="prism language-bash">yum <span class="token function">install</span> httpd-tools <span class="token parameter variable">-y</span>
+</code></pre> 
+<h4><a id="32__44"></a>3.2 生成密码文件</h4> 
+<pre><code class="prism language-bash">htpasswd <span class="token parameter variable">-c</span> <span class="token parameter variable">-d</span> /home/nginx/conf/conf.d/admin_pwd admin
+</code></pre> 
+<p>然后输入16位随机密码</p> 
+<blockquote> 
+ <p>注意：如果要删除密码文件：htpasswd -D -d /home/nginx/conf/conf.d/admin_pwd admin</p> 
+</blockquote> 
+<h4><a id="33__50"></a>3.3 配置密码文件</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span> /home/nginx/conf/conf.d/admin_pwd.config <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+auth_basic           "login";
+auth_basic_user_file /etc/nginx/conf.d/admin_pwd;
+EOF</span>
+</code></pre> 
+<h3><a id="4_Nginx_57"></a>4. 配置Nginx</h3> 
+<h4><a id="41_nginxconf_58"></a>4.1 生成nginx.conf文件</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/nginx.conf <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+user  nginx;
+worker_processes  auto;
+worker_cpu_affinity auto;
+
+error_log  /var/log/nginx/error.log warn;
+pid        /var/run/nginx.pid;
+
+events {
+    worker_connections  1024;
+}
+
+http {
+    include       /etc/nginx/mime.types;
+    default_type  application/octet-stream;
+
+    log_format  main  '$remote_addr - $remote_user [$time_local] "$request" '
+                      '$status $body_bytes_sent "$http_referer" '
+                      '"$http_user_agent" "$http_x_forwarded_for"';
+
+    access_log  /var/log/nginx/access.log  main;
+
+    client_max_body_size    200m;
+
+    sendfile        on;
+    #tcp_nopush     on;
+
+    keepalive_timeout  65;
+proxy_connect_timeout 1s;
+
+    #gzip  on;
+
+    root /usr/share/nginx/html;
+
+    proxy_http_version 1.1;
+    proxy_set_header Host $http_host;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header X-Forwarded-For $remote_addr;  #如果不是第一层Nginx代理(例如学校防火墙就是Nginx代理)，则要配置为$proxy_add_x_forwarded_for;
+
+    include /etc/nginx/conf.d/*.conf;
+
+server_tokens off;
+}
+
+EOF</span>
+</code></pre> 
+<h4><a id="42_defaultconfserverserverserver_nameport_107"></a>4.2 生成default.conf(包含各个server块，每个server块监听指定的server_name和port)</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/default.conf <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+include /etc/nginx/conf.d/*_server;
+
+EOF</span>
+</code></pre> 
+<h4><a id="43_80_serverHTTPHTTPS_114"></a>4.3 生成80_server(将HTTP请求转发为对应的HTTPS请求)</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/80_server <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+server {
+    listen       80;
+    server_name  0.0.0.0;
+    #return      301 https://$host$request_uri;
+    rewrite ^(.*)$  https://$host$1 permanent;  
+}
+
+EOF</span>
+</code></pre> 
+<h4><a id="44_admin_9443_serveretcd_es_kibana_grafana_126"></a>4.4 生成admin_9443_server文件(用于管理员访问etcd, es, kibana, grafana等)</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/admin_9443_server <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+server {
+    listen 9443 ssl http2;
+    server_name 192.168.100.149;
+    ssl_certificate /etc/nginx/ssl/nginx.crt;  #使用自签名证书
+    ssl_certificate_key /etc/nginx/ssl/nginx.key;
+
+    ssl_protocols TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+    fastcgi_param   HTTPS               on;
+    fastcgi_param   HTTP_SCHEME         https;
+    server_tokens   off;
+
+    #charset koi8-r;
+    access_log  /var/log/nginx/access-admin.log;
+    error_log   /var/log/nginx/error-admin.log;
+
+    #添加basic认证
+    include /etc/nginx/conf.d/admin_pwd.config;
+
+    location /es {
+        rewrite /es(.*) $1 break;
+        proxy_pass http://libsys-cluster-3:9200;
+    }
+
+    location /es_log {
+        rewrite /es_log(.*) $1 break;
+        proxy_pass http://libsys-prom:9201;
+    }
+
+    location /kibana {
+        proxy_pass http://libsys-cluster-3:5601;
+    }
+
+    location /kibana_log {
+        proxy_pass http://libsys-prom:5602;
+    }
+
+    location /rc {
+        proxy_pass http://libsys-cluster-3:9877;
+    }
+    location /prom {
+       proxy_pass http://libsys-prom:9090;
+    }
+
+    location /grafana/ {
+       proxy_pass http://libsys-prom:3000/;
+       proxy_set_header X-WEBAUTH-USER admin;
+       proxy_set_header Authorization "";
+    }
+
+    location /tools-etcd {
+        proxy_pass http://127.0.0.1:8089;
+    }
+
+    location /nc {
+        proxy_pass http://127.0.0.1:8150;
+    }
+
+    location /bigdata-local {
+        proxy_pass http://libsys-mongo:8889;
+    }
+
+    location /libsys-ldbs {
+        proxy_pass http://127.0.0.1:8052;
+    }
+
+    location ~ ^/tools-etcd/.*\.(html|htm|gif|jpg|jpeg|bmp|png|ico|txt|js|css|json|woff|ttf|eof|woff2)$ {
+        gzip on;
+        gzip_min_length 100k;
+        gzip_types text/plain application/javascript application/x-javascript text/css application/xml application/json text/javascript;
+    }
+}
+
+EOF</span>
+</code></pre> 
+<h4><a id="45_meta_locations_205"></a>4.5 生成meta_locations(一般无需改变)</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/meta_locations <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+    location /meta-local/devops {
+        proxy_pass http://meta-devops;
+    }
+
+    location /meta-local/common {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/sys {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/user {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/job {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/admin {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/pdf {
+        proxy_pass http://meta-admin;
+    }
+
+    location /meta-local/acq {
+        proxy_pass http://meta-acq;
+    }
+
+    location /meta-local/serial {
+        proxy_pass http://meta-acq;
+    }
+    location /meta-local/ckb {
+        proxy_pass http://meta-acq;
+    }
+
+    location /meta-local/file {
+        proxy_pass http://meta-acq;
+    }
+
+    location /meta-local/res {
+        proxy_pass http://meta-res;
+    }
+
+    location /meta-local/dc {
+        proxy_pass http://meta-dc;
+    }
+
+    location /meta-local/cs {
+        proxy_pass http://meta-cs;
+    }
+
+    location /meta-local/erm {
+        proxy_pass http://meta-erm;
+    }
+
+    location /meta-local/social {
+        proxy_pass http://meta-social;
+    }
+
+    location = /meta-local/stat {
+        proxy_pass http://meta-stat;
+    }
+
+   location /meta-local/stat/ {
+        proxy_pass http://meta-stat;
+    }
+
+    location /meta-local/indexer {
+        proxy_pass http://meta-indexer;
+    }
+
+    location /meta-local/sync {
+        proxy_pass http://meta-sync;
+    }
+
+    location /meta-local/opac {
+        proxy_read_timeout 60;
+        proxy_pass http://meta-opac;
+    }
+
+    location /meta-local/wechat {
+        proxy_read_timeout 60;
+        proxy_pass http://meta-wechat;
+    }
+
+    location /meta-local/api {
+        proxy_pass http://meta-api;
+    }
+
+    location /meta-local/gateway {
+        proxy_pass http://gateway;
+    }
+
+    location /meta-local/app/server {
+        proxy_pass http://meta-appserver;
+    }
+
+    location /meta/ {
+        proxy_pass http://meta-web/;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
+    location ~ ^/meta/assets/(.*) {
+        proxy_pass http://meta-web;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+
+        rewrite ^/meta(.*) /$1 break;
+    }
+
+    location ~ ^/meta/(.*)\.(js|css|woff|woff2|ttf|svg|eot|otf)$ {
+        proxy_pass http://meta-web;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        #add_header x_debug $upstream_addr;
+        #add_header x_debug $request;
+
+        access_log off;
+        expires    1y;
+        add_header Cache-Control 'max-age=31536000'; # one year
+
+        rewrite ^/meta(.*) /$1 break;
+    }
+
+    location /space/ {
+        proxy_pass http://meta-space/;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
+    location ~ ^/space/(css|fonts|img|js) {
+        proxy_pass http://meta-space;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        #add_header x_debug $upstream_addr;
+        #add_header x_debug $request;
+
+        access_log off;
+        expires    1y;
+        add_header Cache-Control 'max-age=31536000'; # one year
+
+        rewrite ^/space(.*) /$1 break;
+    }
+
+    location /mspace/ {
+        proxy_pass http://meta-mspace/;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
+    location ~ ^/mspace/(css|fonts|img|js) {
+        proxy_pass http://meta-mspace;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        #add_header x_debug $upstream_addr;
+        #add_header x_debug $request;
+
+        access_log off;
+        expires    1y;
+        add_header Cache-Control 'max-age=31536000'; # one year
+
+        rewrite ^/mspace(.*) /$1 break;
+    }
+
+    #----- redirect to mobile check (starts) -----#
+    set $mobile_rewrite do_not_perform;
+    # this regex string is actually much longer to match more mobile devices
+    if ($http_user_agent ~* "android|ip(ad|hone|od)|kindle") {
+        set $mobile_rewrite perform;
+    }
+    if ($mobile_rewrite = perform) {
+        rewrite ^/space/(.*) /mspace/$1 redirect;
+        break;
+    }
+    if ($mobile_rewrite = do_not_perform) {
+        rewrite ^/mspace/(.*) /space/$1 redirect;
+        break;
+    }
+    #----- redirect to mobile check (ends) -----#
+
+EOF</span>
+</code></pre> 
+<h4><a id="46_extra_locations_403"></a>4.6 生成extra_locations(一般无需改变)</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/extra_locations <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+location /oss {
+    rewrite /oss(.*) $1 break;
+    proxy_set_header Host libsys-mongo:9000;
+    proxy_pass http://oss;
+}
+
+EOF</span>
+</code></pre> 
+<h4><a id="47_meta_server_414"></a>4.7 生成meta_server</h4> 
+<pre><code class="prism language-bash"><span class="token function">tee</span>  /home/nginx/conf/conf.d/meta_server <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+upstream oss {
+  server libsys-mongo:9000;
+}
+
+upstream meta-acq {
+  server 127.0.0.1:8021;
+}
+
+upstream meta-admin {
+  server 127.0.0.1:8020;
+}
+
+upstream meta-cs {
+  server 127.0.0.1:8024;
+}
+
+upstream meta-dc {
+  server 127.0.0.1:8023;
+}
+
+upstream meta-devops {
+  server 127.0.0.1:8028;
+}
+
+upstream meta-erm {
+  server 127.0.0.1:8025;
+}
+
+upstream gateway {
+  server 127.0.0.1:20000;
+}
+
+upstream meta-indexer {
+  server 127.0.0.1:8019;
+}
+
+upstream meta-opac {
+  server 127.0.0.1:8030;
+}
+
+upstream meta-res {
+  server 127.0.0.1:8022;
+}
+
+upstream meta-social {
+  server 127.0.0.1:8027;
+}
+
+upstream meta-stat {
+  server 127.0.0.1:8029;
+}
+
+upstream meta-sync {
+  server 127.0.0.1:8013;
+}
+
+upstream meta-web {
+  server 127.0.0.1:10010;
+}
+
+upstream meta-space {
+  server 127.0.0.1:10011;
+}
+
+upstream meta-mspace {
+  server 127.0.0.1:10012;
+}
+
+upstream meta-wechat {
+  server 127.0.0.1:8013;
+}
+
+upstream meta-api {
+  server 127.0.0.1:8012;
+}
+
+upstream meta-appserver {
+  server 127.0.0.1:8011;
+}
+
+server {
+    listen 443 ssl http2 default_server;
+    server_name 0.0.0.0;
+    ssl_certificate /etc/nginx/ssl/nginx.crt;
+    ssl_certificate_key /etc/nginx/ssl/nginx.key;
+
+    ssl_protocols TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+    fastcgi_param   HTTPS               on;
+    fastcgi_param   HTTP_SCHEME         https;
+    server_tokens   off;
+
+    #charset koi8-r;
+    access_log  /var/log/nginx/access-meta.log;
+    error_log   /var/log/nginx/error-meta.log;
+
+    proxy_read_timeout 1800;  #确定使用这么大的超时？对读者服务的可以使用较小的超时，例如opac,wechat
+
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types application/javascript
+               application/rss+xml
+               application/vnd.ms-fontobject
+               application/x-font
+               application/x-font-opentype
+               application/x-font-otf
+               application/x-font-truetype
+               application/x-font-ttf
+               application/x-javascript
+               application/xhtml+xml
+               application/xml
+               font/opentype
+               font/otf
+               font/ttf
+               image/svg+xml
+               image/x-icon
+               text/css
+               text/javascript
+               text/plain
+               text/xml;
+
+    include    /etc/nginx/conf.d/extra_locations;
+
+location ~ /(status|metrics|extra_metrics)(/?)$ {
+  return 404;
+}
+
+
+    include    /etc/nginx/conf.d/meta_locations;
+
+    #error_page   500 502 503 504  /50x.html;
+    #location = /50x.html {
+    #    root   /usr/share/nginx/html;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}
+
+server {
+    listen 8079;
+    server_name 127.0.0.1;
+
+    ssl_protocols TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+    fastcgi_param   HTTPS               on;
+    fastcgi_param   HTTP_SCHEME         https;
+    server_tokens   off;
+
+    #charset koi8-r;
+    access_log  /var/log/nginx/access-meta.log;
+    error_log   /var/log/nginx/error-meta.log;
+
+    proxy_read_timeout 1800;  #确定使用这么大的超时？对读者服务的可以使用较小的超时，例如opac,wechat
+
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types application/javascript
+               application/rss+xml
+               application/vnd.ms-fontobject
+               application/x-font
+               application/x-font-opentype
+               application/x-font-otf
+               application/x-font-truetype
+               application/x-font-ttf
+               application/x-javascript
+               application/xhtml+xml
+               application/xml
+               font/opentype
+               font/otf
+               font/ttf
+               image/svg+xml
+               image/x-icon
+               text/css
+               text/javascript
+               text/plain
+               text/xml;
+
+location ~ /(status|metrics|extra_metrics)(/?)$ {
+  return 404;
+}
+
+    include    /etc/nginx/conf.d/meta_locations;
+
+    #error_page   500 502 503 504  /50x.html;
+    #location = /50x.html {
+    #    root   /usr/share/nginx/html;
+    #}
+
+    # deny access to .htaccess files, if Apache's document root
+    # concurs with nginx's one
+    #
+    #location ~ /\.ht {
+    #    deny  all;
+    #}
+}
+
+server {
+    listen 443 ssl http2;
+    server_name _;
+    ssl_certificate /etc/nginx/ssl/space.crt;
+    ssl_certificate_key /etc/nginx/ssl/space.key;
+
+    ssl_protocols TLSv1.1 TLSv1.2;
+    ssl_prefer_server_ciphers on;
+    ssl_ciphers ECDHE-RSA-AES128-GCM-SHA256:ECDHE:ECDH:AES:HIGH:!NULL:!aNULL:!MD5:!ADH:!RC4;
+    fastcgi_param   HTTPS               on;
+    fastcgi_param   HTTP_SCHEME         https;
+    server_tokens   off;
+
+    #charset koi8-r;
+    access_log  /var/log/nginx/access-space.log;
+    error_log   /var/log/nginx/error-space.log;
+
+    gzip on;
+    gzip_disable "msie6";
+    gzip_vary on;
+    gzip_proxied any;
+    gzip_comp_level 6;
+    gzip_buffers 16 8k;
+    gzip_http_version 1.1;
+    gzip_types application/javascript
+               application/rss+xml
+               application/vnd.ms-fontobject
+               application/x-font
+               application/x-font-opentype
+               application/x-font-otf
+               application/x-font-truetype
+               application/x-font-ttf
+               application/x-javascript
+               application/xhtml+xml
+               application/xml
+               font/opentype
+               font/otf
+               font/ttf
+               image/svg+xml
+               image/x-icon
+               text/css
+               text/javascript
+               text/plain
+               text/xml;
+
+    include    /etc/nginx/conf.d/extra_locations;
+
+location ~ /(status|metrics|extra_metrics)(/?)$ {
+  return 404;
+}
+
+    location /meta-local/wechat {
+        proxy_pass http://meta-wechat;
+    }
+
+    location /meta-local/opac {
+        proxy_pass http://meta-opac;
+    }
+
+    location /space/ {
+        proxy_pass http://meta-space/;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
+    location ~ ^/space/(css|fonts|img|js) {
+        proxy_pass http://meta-space;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        #add_header x_debug $upstream_addr;
+        #add_header x_debug $request;
+
+        access_log off;
+        expires    1y;
+        add_header Cache-Control 'max-age=31536000'; # one year
+
+        rewrite ^/space(.*) /$1 break;
+    }
+
+    location /mspace/ {
+        proxy_pass http://meta-mspace/;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        add_header Cache-Control "no-store, no-cache, must-revalidate, proxy-revalidate";
+        expires 0;
+    }
+
+    location ~ ^/mspace/(css|fonts|img|js) {
+        proxy_pass http://meta-mspace;
+        include    /etc/nginx/conf.d/include.d/proxy;
+
+        #add_header x_debug $upstream_addr;
+        #add_header x_debug $request;
+
+        access_log off;
+        expires    1y;
+        add_header Cache-Control 'max-age=31536000'; # one year
+
+        rewrite ^/mspace(.*) /$1 break;
+    }
+
+    #----- redirect to mobile check (starts) -----#
+    set $mobile_rewrite do_not_perform;
+    # this regex string is actually much longer to match more mobile devices
+    if ($http_user_agent ~* "android|ip(ad|hone|od)|kindle") {
+        set $mobile_rewrite perform;
+    }
+    if ($mobile_rewrite = perform) {
+        rewrite ^/space/(.*) /mspace/$1 redirect;
+        break;
+    }
+    if ($mobile_rewrite = do_not_perform) {
+        rewrite ^/mspace/(.*) /space/$1 redirect;
+        break;
+    }
+    #----- redirect to mobile check (ends) -----#
+
+}
+
+EOF</span>
+</code></pre> 
+<h4><a id="48_proxy_753"></a>4.8 生成proxy选项</h4> 
+<pre><code class="prism language-bash"><span class="token function">mkdir</span> <span class="token parameter variable">-p</span> /home/nginx/conf/conf.d/include.d <span class="token operator">&amp;&amp;</span> 
+<span class="token function">tee</span>  /home/nginx/conf/conf.d/include.d/proxy <span class="token operator">&lt;&lt;-</span><span class="token string">'EOF'
+
+proxy_cache        off;
+proxy_redirect     off;
+proxy_set_header   X-Real-IP $remote_addr;
+proxy_set_header   X-Forwarded-Host $server_name;
+
+EOF</span>
+</code></pre> 
+<h3><a id="5_Docker_767"></a>5. 启动Docker</h3> 
+<pre><code class="prism language-bash"><span class="token function">docker</span> run <span class="token parameter variable">-d</span> <span class="token parameter variable">--net</span><span class="token operator">=</span>host <span class="token parameter variable">--name</span> nginx <span class="token parameter variable">--restart</span><span class="token operator">=</span>always <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /etc/localtime:/etc/localtime:ro <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /home/nginx/conf/nginx.conf:/etc/nginx/nginx.conf <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /home/nginx/conf/conf.d/:/etc/nginx/conf.d:ro <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /home/nginx/logs:/var/log/nginx <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /home/nginx/ssl:/etc/nginx/ssl:ro <span class="token punctuation">\</span>
+<span class="token parameter variable">-v</span> /home/nginx/html:/usr/share/nginx/html <span class="token punctuation">\</span>
+nginx:1.21.6
+</code></pre> 
+<h3><a id="6__778"></a>6. 打通防火墙</h3> 
+<pre><code class="prism language-bash">firewall-cmd <span class="token parameter variable">--permanen</span> --add-port <span class="token number">80</span>/tcp <span class="token operator">&amp;&amp;</span>
+firewall-cmd <span class="token parameter variable">--permanen</span> --add-port <span class="token number">443</span>/tcp <span class="token operator">&amp;&amp;</span>
+firewall-cmd <span class="token parameter variable">--permanen</span> --add-port <span class="token number">9443</span>/tcp <span class="token operator">&amp;&amp;</span>
+firewall-cmd <span class="token parameter variable">--reload</span>
+</code></pre> 
+<h3><a id="7__785"></a>7. 外部访问验证</h3>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/183baf16e08d39b13a7fbe82e51fbacf/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">详解静态网页数据获取以及浏览器数据和网络数据交互流程-Python</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/18c55cea7c8437f58138840c1ae72aef/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python在金融大数据分析中的AI应用实战</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

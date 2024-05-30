@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>docker 网络模式 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/304a3396a92af112bb9792db98dcc7ca/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="docker 网络模式">
+  <meta property="og:description" content="四种模式介绍 宿主机可上网,容器内便可上网.且能ping通宿主机同网段服务
+Docker网络模式
+配置
+说明
+host模式
+--net=host
+容器和宿主机共享Network namespace。
+container模式
+--net=container:NAME_or_ID
+容器和另外一个容器共享Network namespace。 kubernetes中的pod就是多个容器共享一个Network namespace。
+none模式
+--net=none
+容器有独立的Network namespace，但并没有对其进行任何网络设置，如分配veth pair 和网桥连接，配置IP等。
+bridge模式
+--net=bridge
+（默认为该模式）
+host模式
+如果启动容器的时候使用host模式，那么这个容器将不会获得一个独立的Network Namespace，而是和宿主机共用一个Network Namespace。容器将不会虚拟出自己的网卡，配置自己的IP等，而是使用宿主机的IP和端口。但是，容器的其他方面，如文件系统、进程列表等还是和宿主机隔离的。
+使用 --net=host 模式由于直接使用宿主机ip和端口，无需-p 手动映射端口了
+container模式
+这个模式指定新创建的容器和已经存在的一个容器共享一个 Network Namespace，而不是和宿主机共享。新创建的容器不会创建自己的网卡，配置自己的 IP，而是和一个指定的容器共享 IP、端口范围等。同样，两个容器除了网络方面，其他的如文件系统、进程列表等还是隔离的。两个容器的进程可以通过 lo 网卡设备通信。
+none模式
+使用none模式，Docker容器拥有自己的Network Namespace，但是，并不为Docker容器进行任何网络配置。也就是说，这个Docker容器没有网卡、IP、路由等信息。需要我们自己为Docker容器添加网卡、配置IP等。
+这种网络模式下容器只有lo回环网络，没有其他网卡。none模式可以在容器创建时通过--network=none来指定。这种类型的网络没有办法联网，封闭的网络能很好的保证容器的安全性。
+bridge模式(桥接模式,和宿主机处于同一网段)
+当Docker进程启动时，会在主机上创建一个名为docker0的虚拟网桥(桥接网络ifconfig docker0)，此主机上启动的Docker容器会连接到这个虚拟网桥上。虚拟网桥的工作方式和物理交换机类似，这样主机上的所有容器就通过交换机连在了一个二层网络中，形成一个局域网(LAN)，容器之间包括宿主机可以通过docker容器虚拟ip互相通讯。但想从不同主机访问容器需暴露到主机端口。想让跨主机间容器可以互相通讯需安装weave、fannel等跨主机网络通讯插件,用weave分配容器ip,这样跨主机容器间才可用ip互相通讯了，否则其他主机(包括其他主机的容器)通过容器ip访问不到docker容器，因为docker0是172.0.0.1(localhost)，其分配的容器ip也是172.0.0.2等，仅与本机属于同一网段。
+在默认的bridge模式下，docker0网络的默认网关即是宿主机。在Linux下，docker0网络通常会分配一个172.17.0.0/16的网段，其网关通常为172.17.0.1(localhost)；macOS下的网段则为192.168.65.0/24，网关为192.168.65.1。在容器中使用该网关IP地址即可访问宿主机上的各种服务(直接使用宿主机ip也可以)。注意：经由docker0网桥而来的流量不经过宿主机的本地回环，容器经由docker0网桥无法访问到监听地址是127.0.0.1(localhost)的应用，因此需要将宿主机上的应用（MySQL，Redis等）配置为监听0.0.0.0。
+从docker0子网中分配一个IP给容器使用，并设置docker0的IP地址为容器的默认网关。在主机上创建一对虚拟网卡veth pair设备，Docker将veth pair设备的一端放在新创建的容器中，并命名为eth0（容器的网卡），另一端放在主机中，以vethxxx这样类似的名字命名，并将这个网络设备加入到docker0网桥中。可以通过brctl show命令查看。
+bridge模式是docker的默认网络模式(k8s pod中的docker默认是container模式)，不写--net参数，就是bridge模式。使用docker run -p时，docker实际是在iptables做了DNAT规则，实现端口转发功能。可以使用iptables -t nat -vnL查看。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T22:02:05+08:00">
+    <meta property="article:modified_time" content="2024-05-23T22:02:05+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">docker 网络模式</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h5 style="text-align:justify;"><strong><strong><strong>四种模式介绍</strong></strong></strong></h5> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong>宿主机可上网,容器内便可上网.且能ping通宿主机同网段服务</strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<table style="margin-left:3.15pt;"><tbody><tr><td> <p style="margin-left:.0001pt;text-align:center;"><strong><strong>Docker网络模式</strong></strong></p> </td><td style="width:162.4pt;"> <p style="margin-left:.0001pt;text-align:center;"><strong><strong>配置</strong></strong></p> </td><td style="width:289.4pt;"> <p style="margin-left:.0001pt;text-align:center;"><strong><strong>说明</strong></strong></p> </td></tr><tr><td> <p style="margin-left:.0001pt;text-align:left;">host模式</p> </td><td style="width:162.4pt;"> <p style="margin-left:.0001pt;text-align:left;">--net=host</p> </td><td style="width:289.4pt;"> <p style="margin-left:.0001pt;text-align:left;">容器和宿主机共享Network namespace。</p> </td></tr><tr><td> <p style="margin-left:.0001pt;text-align:left;">container模式</p> </td><td style="width:162.4pt;"> <p style="margin-left:.0001pt;text-align:left;">--net=container:NAME_or_ID</p> </td><td style="width:289.4pt;"> <p style="margin-left:.0001pt;text-align:left;">容器和另外一个容器共享Network namespace。 kubernetes中的pod就是多个容器共享一个Network namespace。</p> </td></tr><tr><td> <p style="margin-left:.0001pt;text-align:left;">none模式</p> </td><td style="width:162.4pt;"> <p style="margin-left:.0001pt;text-align:left;">--net=none</p> </td><td style="width:289.4pt;"> <p style="margin-left:.0001pt;text-align:left;">容器有独立的Network namespace，但并没有对其进行任何网络设置，如分配veth pair 和网桥连接，配置IP等。</p> </td></tr><tr><td> <p style="margin-left:.0001pt;text-align:left;">bridge模式</p> </td><td style="width:162.4pt;"> <p style="margin-left:.0001pt;text-align:left;">--net=bridge</p> </td><td style="width:289.4pt;"> <p style="margin-left:.0001pt;text-align:left;">（默认为该模式）</p> </td></tr></tbody></table> 
+<p style="margin-left:.0001pt;text-align:justify;"><br><strong>host模式</strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;">如果启动容器的时候使用host模式，那么这个<strong>容器将不会获得一个独立的Network Namespace</strong>，而是<strong>和宿主机共用一个Network Namespace</strong>。容器将<strong>不会虚拟出自己的网卡，配置自己的IP</strong>等，而是<strong>使用宿主机的IP和端口</strong>。但是，<strong>容器的其他方面，如文件系统、进程列表等还是和宿主机隔离的</strong>。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>使用</strong></strong><strong><strong> --</strong></strong><strong><strong>net</strong></strong><strong><strong>=</strong></strong><strong><strong>host</strong></strong><strong> </strong><strong><strong>模式由于直接使用宿主机ip和端口</strong></strong><strong><strong>，</strong></strong><strong><strong>无需</strong></strong><strong><strong>-</strong></strong><strong><strong>p</strong></strong><strong> </strong><strong><strong>手动映射端口了</strong></strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong>container模式</strong></p> 
+<p style="margin-left:.0001pt;text-align:left;">这个模式指定新创建的容器和已经存在的一个容器共享一个 Network Namespace，而不是和宿主机共享。新创建的容器不会创建自己的网卡，配置自己的 IP，而是和一个指定的容器共享 IP、端口范围等。同样，两个容器除了网络方面，其他的如文件系统、进程列表等还是隔离的。两个容器的进程可以通过 lo 网卡设备通信。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong>none模式</strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;">使用none模式，Docker容器拥有自己的Network Namespace，但是，并不为Docker容器进行任何网络配置。也就是说，这个Docker容器没有网卡、IP、路由等信息。需要我们自己为Docker容器添加网卡、配置IP等。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">这种网络模式下容器只有lo回环网络，没有其他网卡。none模式可以在容器创建时通过--network=none来指定。<strong>这种类型的网络没有办法联网，封闭的网络能很好的保证容器的安全性。</strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong>bridge模式</strong><strong>(桥接模式,和宿主机处于同一网段</strong>)</p> 
+<p style="margin-left:.0001pt;text-align:left;">当Docker进程启动时，<strong>会在主机上创建一个名为docker0的虚拟网桥</strong><strong>(桥接网络</strong><strong>ifconfig docker0</strong><strong>)</strong>，<strong>此主机上启动的Docker容器会连接到这个虚拟网桥上</strong>。虚拟网桥的工作方式和物理交换机类似，这样<strong>主机上的所有容器就通过交换机</strong>连在了一个二层网络中，<strong>形成一个局域网</strong><strong>(LAN)，</strong><strong><span style="background-color:#00ff00;">容器之间包括宿主机</span></strong><strong>可以通过docker容器虚拟ip互相通讯</strong>。但<strong>想从不同主机访问容器</strong>需<strong>暴露到主机端口。想让跨主机间容器可以互相通讯需安装weave、fannel等跨主机网络通讯插件,用weave分配容器ip,这样跨主机容器间才可用ip互相通讯了</strong>，否则其他主机(<span style="background-color:#eeeeee;">包括其他主机的容器</span>)通过容器ip访问不到docker容器<span style="background-color:#eeeeee;">，因为docker0是172.0.0.1(localhost)，其分配的容器ip也是172.0.0.2等，仅与本机属于同一网段</span>。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">在默认的bridge模式下，docker0网络的默认网关即是宿主机。在<strong>Linux下，docker0网络通常会分配一个172.17.0.0/16的网段，其网关通常为172.17.0.1(localhost</strong>)；macOS下的网段则为192.168.65.0/24，网关为192.168.65.1。在容器中使用该网关IP地址即可访问宿主机上的各种服务(直接使用宿主机ip也可以)。<strong>注意：</strong>经由docker0网桥而来的流量不经过宿主机的本地回环，容器经由docker0网桥无法访问到监听地址是127.0.0.1(localhost)的应用，因此需要将宿主机上的应用（MySQL，Redis等）配置为监听0.0.0.0。</p> 
+<p style="margin-left:.0001pt;text-align:left;">从docker0子网中分配一个IP给容器使用，并设置docker0的IP地址为容器的默认网关。在主机上创建一对虚拟网卡veth pair设备，Docker将veth pair设备的一端放在新创建的容器中，并命名为eth0（容器的网卡），另一端放在主机中，以vethxxx这样类似的名字命名，并将这个网络设备加入到docker0网桥中。可以通过brctl show命令查看。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">bridge模式是<strong><span style="background-color:#ffff00;">docker的默认网络模式</span></strong><strong><span style="background-color:#ffff00;">(k8s pod中的docker默认是container模式)</span></strong>，不写--net参数，就是bridge模式。使用docker run -p时，docker实际是在iptables做了DNAT规则，实现端口转发功能。可以使用iptables -t nat -vnL查看。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><img alt="" height="516" src="https://images2.imgbox.com/6d/ca/ZrDgC5hh_o.png" width="601"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9b2526027417a160fbb072dffebadfd6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">python3如何查看是32位还是64位</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/6e84feb026a23f202443bdc56f3ed599/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">docker swarm多主机之间的端口无法访问，但能ping通 问题排查及解决</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

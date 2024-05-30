@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>太原理工大学大数据期末简答题 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f6cc793d51c9cf90b684a14afbfd1f11/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="太原理工大学大数据期末简答题">
+  <meta property="og:description" content="1.简述大数据云计算与物联网三者之间的区别和联系
+区别：大数据侧重于对海量数据存储处理分析，云计算旨在整合和优化各种IT资源，物联网发展目标是实现物物相连
+联系:云计算为大数据提供了技术基础,大数据为云计算提供了用武之地。物联网是大数据重要来源，大数据为物联网数据分析提供支撑。云计算为物联网提供了海量数据存储能力，物联网为云计算提供了广阔的应用空间。
+2.名称节点和数据节点各自的功能
+名称节点负责管理分布式文件系统的命名空间，Fsimage用于维护文件系统数据文件系统处中所有文件和文件夹的元数据，EditLog用于维护用于记录所有文件的创建删除重命名的操作；而数据节点是负责数据存储和读取。
+3.名称节点的工作过程
+名称节点在启动时，FsImage的内容加载到内存中然后执行EditLog文件中的各项操作，这个操作完成后就会创造一个FsImage和一个空的EditLog。在名称节点启动并正常运行后，HDFS的更新操作就会被写入EditLog
+4.第二名称节点工作过程
+第二名称节点会要求第一名称节点停止使用EditLog，将新到达的操作写入EditLog.new中，然后把FsImage和EditLog拉回本地，将两者进行合并，生成FsImage文件，第一名称节点会用这个去代替旧的FsImage，用EditLog.new代替EditLog。
+5.HDFS的冗余数据保存策略
+在集群内挑选一台磁盘充足、CPU不太忙的数据节点作为第一个副本存放点；第二副本存放点在与第一个副本不同机架的数据节点；第三副本存放在与第一副本存放点相同机架的不同节点；第四副本存放点从集群中随机挑选节点。
+6.数据复制主要是在数据写入和数据恢复的时候发生，HDFS数据复制是使用流水线复制的策略，请阐述该策略的细节
+每个块都会向HDFS集群中的名称节点发出写请求，名称节点会返回一个数据节点列表给客户端，客户端将数据写入列表中第一个数据节点时，同时把列表传给第一个数据节点；第一个节点在接收到数据写入本地的同时，会把数据传给第二个数据节点，同时第二个数据节点接收到数据时，会在写入的同时将数据发送给第三个节点，以此类推。
+7.请阐述HBase和BigTable底层技术的对应关系
+8. 试述HBase各功能组件及其作用
+库函数：链接到每一个客户端
+一个Master主服务器：管理和维护HBase表的分区信息和Region服务器列表及Region服务器，处理模式变化
+多个Region服务器（核心）：维护和分配给自己的Region，响应用户读写操作
+9.试述HBase系统基本架构以及每个组成部分的作用
+客户端：访问Hbase的接口，同时在缓存中维护已经访问过的Region位置信息
+Zookeeper服务器：帮助维护当前的集群中机器的服务状态，帮助选出一个“总管”，即保证在任何时刻总有唯一一个Master在运行（监听Region反应给Master）
+Master：负责表和Region的管理工作。管理用户对表的增删改查操作；实现Region服务器之间的负载平衡；负责重新调整Region的分布；对发生故障失效的Region服务器上的Region数据进行迁移
+Region服务器：负责维护分配给自己的Region，响应用户的读写请求
+10.试述HBase的三层结构中各层次的名称作用，以及三级寻址的过程
+Zookeeper：记录-Root表的位置信息
+-RooT表：记录.META表的Region信息（只有一个）
+.MATE.表：记录用户数据表的Region信息（多个）
+过程：首先通过Zookeeper获取-Root表的位置信息，然后访问-Root表得到.MATE表的位置信息，访问.MATE表，找到对应的Region位于哪个Region服务器上，再到相应的服务器上读取数据。
+11.请阐述Region服务器向HDFS文件系统中读写数据的基本原理
+用户写入数据时，分配相应的Region服务器去执行，首先会将数据写入MemStore和HLog中，commit（）调用才会返回给客户端
+用户读取数据时，Region服务器会先访问MemStore，如果数据不在缓存中才会去磁盘的StoreFile中寻找
+12.试述HLog的工作原理
+HBase系统为每个Region服务器配置了一个HLog文件，用户更新数据必须首先被计入日志后才能写入MemStore缓存（预写式日志），并且直到MemStore缓存内容对应的日志已经被写入磁盘之后，该缓存内容才会被刷新写入磁盘。
+13.NoSQL数据库的四大类型（括号里是缺点）
+键值数据库：使用哈希表，表中有一个特定的key和一个指针指向的value，key用来定位value（条件查询效率低）
+列族数据库：采样列族数据模型，数据库由多行构成，不同行可以有多个列族，属于同一列族的数据放在一起（功能少，大多不支持事务一致性）
+文档数据库：文档作为最小单位，文档以某种标准化格式封装加密数据（缺乏统一的数据查询语言）
+图数据库：使用图来存储数据（复杂性高，只支持一定数据规模）
+14.试述CAP理论的具体含义（三选二）
+C：一致性，多点分布环境中，多点的数据是一致的。
+A：可用性，指能够快速获取数据，可以在确定的时间内返回操作结果。
+P：分区容忍性，指出现网络分区的情况时，分离的系统也能正常运行。
+15.试述数据库的ACID四性的含义
+原子性、一致性、隔离性、持久性
+16.试述JobTracker和TaskTracker的功能
+JobTracker监测每个Map任务结束后，通知相关的Reduce任务来领取数据
+TaskTracker执行由JobTracker指派的任务
+17.分别描述Map端和Reduce端的Shuffle过程
+Map端：输入数据和执行map任务、写入缓存、溢写（分区、排序和合并）、文件归并
+Reduce端：领取数据、归并数据、把数据输入Reduce任务
+18.请描述YARN架构中各组件的功能，工作过程
+ResourceManager：处理客户端请求；启动/监控ApplicationMaster；监控NodeManager；资源分配与调度。
+ApplicationMaster：为应用程序申请资源，并二次分配给内部任务；任务调度、监控与容错。
+NodeManager：单个节点上的资源管理，处理来自ResourceManager的命令；处理来自ApplicationMaster的命令。
+过程：
+1） 用户编写客户端应用程序，向YARN提交应用程序；
+2） ResourceManager接到客户端应用程序请求后，为应用程序分配一个容器；同时与该容器的NodeManager通信，为该应用程序在容器中启动一个ApplicationMaster；
+3） ApplicationMaster向ResourceManager注册；
+4） ApplicaitonMaster采用轮询的方式通过RPC协议向ResourceMaster申请资源；
+5） ResourceManager以容器的形式分配资源，一旦ApplicationMaster申请到资源之后，就会与该容器坐在的NodeManager进行通信，要求它启动任务；
+6） 当容器启动任务时，Application会设置好运行环境，然后将任务启动命令写到一个脚本中，最后通过在容器中运行该脚本来启动任务；
+7） 各个任务通过PRC协议向AppicationMaster汇报自己的状态和进度；">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-05T21:47:43+08:00">
+    <meta property="article:modified_time" content="2024-05-05T21:47:43+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">太原理工大学大数据期末简答题</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>1.简述大数据云计算与物联网三者之间的区别和联系</p> 
+<p>区别：大数据侧重于对海量数据存储处理分析，云计算旨在整合和优化各种IT资源，物联网发展目标是实现物物相连</p> 
+<p>联系:云计算为大数据提供了技术基础,大数据为云计算提供了用武之地。物联网是大数据重要来源，大数据为物联网数据分析提供支撑。云计算为物联网提供了海量数据存储能力，物联网为云计算提供了广阔的应用空间。</p> 
+<p>2.名称节点和数据节点各自的功能</p> 
+<p>名称节点负责管理分布式文件系统的命名空间，Fsimage用于维护文件系统数据文件系统处中所有文件和文件夹的元数据，EditLog用于维护用于记录所有文件的创建删除重命名的操作；而数据节点是负责数据存储和读取。</p> 
+<p>3.名称节点的工作过程</p> 
+<p>名称节点在启动时，FsImage的内容加载到内存中然后执行EditLog文件中的各项操作，这个操作完成后就会创造一个FsImage和一个空的EditLog。在名称节点启动并正常运行后，HDFS的更新操作就会被写入EditLog</p> 
+<p>4.第二名称节点工作过程</p> 
+<p>第二名称节点会要求第一名称节点停止使用EditLog，将新到达的操作写入EditLog.new中，然后把FsImage和EditLog拉回本地，将两者进行合并，生成FsImage文件，第一名称节点会用这个去代替旧的FsImage，用EditLog.new代替EditLog。</p> 
+<p>5.HDFS的冗余数据保存策略</p> 
+<p>在集群内挑选一台磁盘充足、CPU不太忙的数据节点作为第一个副本存放点；第二副本存放点在与第一个副本不同机架的数据节点；第三副本存放在与第一副本存放点相同机架的不同节点；第四副本存放点从集群中随机挑选节点。</p> 
+<p>6.数据复制主要是在数据写入和数据恢复的时候发生，HDFS数据复制是使用流水线复制的策略，请阐述该策略的细节</p> 
+<p>每个块都会向HDFS集群中的名称节点发出写请求，名称节点会返回一个数据节点列表给客户端，客户端将数据写入列表中第一个数据节点时，同时把列表传给第一个数据节点；第一个节点在接收到数据写入本地的同时，会把数据传给第二个数据节点，同时第二个数据节点接收到数据时，会在写入的同时将数据发送给第三个节点，以此类推。</p> 
+<p style="text-align:center;">7.请阐述HBase和BigTable底层技术的对应关系<img src="https://images2.imgbox.com/4c/28/TamnS3qd_o.png" alt="ddb12ee292794da4a2f87b517059a177.png"></p> 
+<p>8. 试述HBase各<strong>功能组件</strong>及其作用</p> 
+<p>库函数：链接到每一个客户端</p> 
+<p>一个Master主服务器：管理和维护HBase表的分区信息和Region服务器列表及Region服务器，处理模式变化</p> 
+<p>多个Region服务器（核心）：维护和分配给自己的Region，响应用户读写操作</p> 
+<p>9.试述HBase系统<strong>基本架构</strong>以及每个组成部分的作用</p> 
+<p>客户端：访问Hbase的接口，同时在缓存中维护已经访问过的Region位置信息<br> Zookeeper服务器：帮助维护当前的集群中机器的服务状态，帮助选出一个“总管”，即保证在任何时刻总有唯一一个Master在运行（监听Region反应给Master）<br> Master：负责表和Region的管理工作。管理用户对表的增删改查操作；<u>实现Region服务器之间的负载平衡</u>；负责重新调整Region的分布；对发生故障失效的Region服务器上的Region数据进行迁移<br> Region服务器：负责维护分配给自己的Region，响应用户的读写请求</p> 
+<p>10.试述HBase的三层结构中各层次的名称作用，以及三级寻址的过程</p> 
+<p>Zookeeper：记录-Root表的位置信息</p> 
+<p>-RooT表：记录.META表的Region信息（只有一个）</p> 
+<p>.MATE.表：记录用户数据表的Region信息（多个）</p> 
+<p>过程：首先通过Zookeeper获取-Root表的位置信息，然后访问-Root表得到.MATE表的位置信息，访问.MATE表，找到对应的Region位于哪个Region服务器上，再到相应的服务器上读取数据。</p> 
+<p>11.请阐述Region服务器向HDFS文件系统中<strong>读写</strong>数据的基本原理</p> 
+<p>用户写入数据时，分配相应的Region服务器去执行，首先会将数据写入MemStore和HLog中，commit（）调用才会返回给客户端</p> 
+<p>用户读取数据时，Region服务器会先访问MemStore，如果数据不在缓存中才会去磁盘的StoreFile中寻找</p> 
+<p>12.试述HLog的工作原理</p> 
+<p>HBase系统为每个Region服务器配置了一个HLog文件，用户更新数据必须首先被计入日志后才能写入MemStore缓存（预写式日志），并且直到MemStore缓存内容对应的日志已经被写入磁盘之后，该缓存内容才会被刷新写入磁盘。</p> 
+<p>13.NoSQL数据库的四大类型（括号里是缺点）</p> 
+<p>键值数据库：使用哈希表，表中有一个特定的key和一个指针指向的value，key用来定位value（条件查询效率低）</p> 
+<p>列族数据库：采样列族数据模型，数据库由多行构成，不同行可以有多个列族，属于同一列族的数据放在一起（功能少，大多不支持事务一致性）</p> 
+<p>文档数据库：文档作为最小单位，文档以某种标准化格式封装加密数据（缺乏统一的数据查询语言）</p> 
+<p>图数据库：使用图来存储数据（复杂性高，只支持一定数据规模）</p> 
+<p>14.试述CAP理论的具体含义（三选二）</p> 
+<p>C：一致性，多点分布环境中，多点的数据是一致的。<br> A：可用性，指能够快速获取数据，可以在确定的时间内返回操作结果。<br> P：分区容忍性，指出现网络分区的情况时，分离的系统也能正常运行。</p> 
+<p>15.试述数据库的ACID四性的含义<br> 原子性、一致性、隔离性、持久性</p> 
+<p>16.试述JobTracker和TaskTracker的功能<br> JobTracker监测每个Map任务结束后，通知相关的Reduce任务来领取数据<br> TaskTracker执行由JobTracker指派的任务</p> 
+<p>17.分别描述Map端和Reduce端的Shuffle过程</p> 
+<p>Map端：输入数据和执行map任务、写入缓存、溢写（分区、排序和合并）、文件归并<br> Reduce端：领取数据、归并数据、把数据输入Reduce任务</p> 
+<p>18.请描述YARN架构中各组件的功能，工作过程<br> ResourceManager：处理客户端请求；启动/监控ApplicationMaster；监控NodeManager；资源分配与调度。<br> ApplicationMaster：为应用程序申请资源，并二次分配给内部任务；任务调度、监控与容错。<br> NodeManager：单个节点上的资源管理，处理来自ResourceManager的命令；处理来自ApplicationMaster的命令。</p> 
+<p>过程：</p> 
+<p>1） 用户编写客户端应用程序，向YARN提交应用程序；<br> 2） ResourceManager接到客户端应用程序请求后，为应用程序分配一个容器；同时与该容器的NodeManager通信，为该应用程序在容器中启动一个ApplicationMaster；<br> 3） ApplicationMaster向ResourceManager注册；<br> 4） ApplicaitonMaster采用轮询的方式通过RPC协议向ResourceMaster申请资源；<br> 5） ResourceManager以容器的形式分配资源，一旦ApplicationMaster申请到资源之后，就会与该容器坐在的NodeManager进行通信，要求它启动任务；<br> 6） 当容器启动任务时，Application会设置好运行环境，然后将任务启动命令写到一个脚本中，最后通过在容器中运行该脚本来启动任务；<br> 7） 各个任务通过PRC协议向AppicationMaster汇报自己的状态和进度；<br> 8） 应用程序完成后，ApplicationMaster向ResourceManager申请注销并关闭自己；如果因故失败，ResourceManager会检测到失败的情形，将其重新启动直到所有的任务执行完毕。</p> 
+<p>19.Hive与HDFS，pig，MapReduce，，HBase，Hadoop之间的关系</p> 
+<p>Hive是构建在Hadoop之上的数据仓库工具，借助HDFS和MapReduce实现数据的存储和处理，pig可以作为hive的替代工具，HBase可以提供数据实时访问功能，而Hive只能处理静态数据，两者互补。</p> 
+<p>20.试述流计算的一般处理流程<br> 数据实时采集、数据实时计算、实时查询服务。</p> 
+<p>21.比较Hadoop，spark streaming和Storm实时响应能力</p> 
+<p>Hadoop是进行离线批处理任务，不能实现对实时数据处理</p> 
+<p>spark streaming无法实现毫秒级的流计算</p> 
+<p>Storm适用于对实时数据要求非常高的实时处理任务，可以实现毫秒级响应</p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p> 
+<p> </p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8660631819f5fa470fde4c64e82f1e2c/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据结构算法——链表带环问题——数学深度解析</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7ce8e34f21a47c1fdbaa85772970c771/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【前端篇】微信小程序ActionSheet封装 -- 封装特性，开发只需要关注功能</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

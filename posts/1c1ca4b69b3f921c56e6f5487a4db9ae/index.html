@@ -1,0 +1,339 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>详解MySQL C API 相关接口(大白话就是：MySQL的c语言怎么写) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/1c1ca4b69b3f921c56e6f5487a4db9ae/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="详解MySQL C API 相关接口(大白话就是：MySQL的c语言怎么写)">
+  <meta property="og:description" content="文章目录 1、C API 官方文档2、初始化 MYSQL3、连接 MySQL设置连接字符集（使得客户端编码方式匹配） 4、下发 mysql 指令5、获取 mysql 查询结果(保存起来)获取行与列遍历存储结果 6、释放 MYSQL\_RES 对象7、关闭 MySQL 连接8、总结 1、C API 官方文档 关于C语言连接数据所涉及到的各种数据结构的介绍以及相关函数的使用其实在 MySQL C API 官方文档中已经给出了，我们可以通过它来快速了解并上手 MySQL C API。
+2、初始化 MYSQL 要使用 MySQL C语言库，需要先使用 mysql_init 函数完成对 MYSQL 结构体指针的初始化工作。
+MYSQL *mysql_init(MYSQL *mysql) 函数返回值：失败返回 NULL。 注意：mysql_init 函数的参数以及返回值都是 MYSQL 指针类型，对于 MYSQL，大家把它类比到C语言中的文件指针来理解即可。MYSQL 和C语言文件 FILE 一样，本质上都是一个结构体。
+MYSQL *mfp = mysql_init(nullptr); if(mfp == nullptr) { cerr &lt;&lt; &#34;mysql init error&#34; &lt;&lt; endl; return 1; } cout &lt;&lt; &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-25T22:12:32+08:00">
+    <meta property="article:modified_time" content="2024-04-25T22:12:32+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">详解MySQL C API 相关接口(大白话就是：MySQL的c语言怎么写)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-github-gist">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><ul><li><a href="#1C_API__1" rel="nofollow">1、C API 官方文档</a></li><li><a href="#2_MYSQL_9" rel="nofollow">2、初始化 MYSQL</a></li><li><a href="#3_MySQL_33" rel="nofollow">3、连接 MySQL</a></li><li><ul><li><a href="#_71" rel="nofollow">设置连接字符集（使得客户端编码方式匹配）</a></li></ul> 
+    </li><li><a href="#4_mysql__88" rel="nofollow">4、下发 mysql 指令</a></li><li><a href="#5_mysql__120" rel="nofollow">5、获取 mysql 查询结果(保存起来)</a></li><li><ul><li><a href="#_136" rel="nofollow">获取行与列</a></li><li><a href="#_152" rel="nofollow">遍历存储结果</a></li></ul> 
+    </li><li><a href="#6_MYSQL_RES__180" rel="nofollow">6、释放 MYSQL\_RES 对象</a></li><li><a href="#7_MySQL__192" rel="nofollow">7、关闭 MySQL 连接</a></li><li><a href="#8_204" rel="nofollow">8、总结</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h4><a id="1C_API__1"></a>1、C API 官方文档</h4> 
+<p>关于C语言连接数据所涉及到的各种<a href="https://dev.mysql.com/doc/c-api/5.7/en/c-api-data-structures.html" rel="nofollow">数据结构</a>的介绍以及相关<a href="https://dev.mysql.com/doc/c-api/5.7/en/c-api-basic-function-reference.html" rel="nofollow">函数</a>的使用其实在 MySQL C API 官方文档中已经给出了，我们可以通过它来快速了解并上手 MySQL C API。</p> 
+<p><img src="https://images2.imgbox.com/5f/0b/RosmLorP_o.png" alt="image-20231029131432088"></p> 
+<p><img src="https://images2.imgbox.com/82/fd/ggT0M6A3_o.png" alt="image-20231029131530338"></p> 
+<h4><a id="2_MYSQL_9"></a>2、初始化 MYSQL</h4> 
+<p>要使用 MySQL C语言库，需要先使用 <code>mysql_init</code> 函数完成对 MYSQL 结构体指针的初始化工作。</p> 
+<pre><code class="prism language-cpp">MYSQL <span class="token operator">*</span><span class="token function">mysql_init</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>mysql<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li>函数返回值：失败返回 NULL。</li></ul> 
+<p>注意：mysql_init 函数的参数以及返回值都是 MYSQL 指针类型，对于 MYSQL，大家把它类比到C语言中的文件指针来理解即可。MYSQL 和C语言文件 FILE 一样，本质上都是一个结构体。</p> 
+<p><img src="https://images2.imgbox.com/65/76/sYdM4QZQ_o.png" alt="image-20231029133239373"></p> 
+<p><img src="https://images2.imgbox.com/80/65/Yrd7q93p_o.png" alt="image-20231029133254539"></p> 
+<pre><code class="prism language-cpp">MYSQL <span class="token operator">*</span>mfp <span class="token operator">=</span> <span class="token function">mysql_init</span><span class="token punctuation">(</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token keyword">if</span><span class="token punctuation">(</span>mfp <span class="token operator">==</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"mysql init error"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span> <span class="token punctuation">}</span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"mysql init success"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c1/e4/490vi5cM_o.png" alt="image-20231029140828078"></p> 
+<p>注意：这里用C语言的 NULL 还是C++的 nullptr 都可以，因为它们在数值上都是0；区别在于在定义时 NULL 是一个整数，而 nullptr 则是被强转为了 void* 类型。</p> 
+<h4><a id="3_MySQL_33"></a>3、连接 MySQL</h4> 
+<p>初始化完毕后，我们需要使用 <code>mysql_real_connect</code> 函数来连接数据库。</p> 
+<pre><code class="prism language-cpp">MYSQL <span class="token operator">*</span>
+<span class="token function">mysql_real_connect</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>mysql<span class="token punctuation">,</span>       <span class="token comment">// MYSQL结构体指针对象</span>
+                   <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>host<span class="token punctuation">,</span>   <span class="token comment">// mysqld服务进程所在的主机</span>
+                   <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>user<span class="token punctuation">,</span>   <span class="token comment">// 登录MySQL的用户</span>
+                   <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>passwd<span class="token punctuation">,</span> <span class="token comment">// 用户密码</span>
+                   <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>db<span class="token punctuation">,</span>     <span class="token comment">// 要访问的数据库</span>
+                   <span class="token keyword">unsigned</span> <span class="token keyword">int</span> port<span class="token punctuation">,</span>  <span class="token comment">// mysqld服务进程的端口号</span>
+                   <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>unix_socket<span class="token punctuation">,</span>    <span class="token comment">// 默认设为NULL即可</span>
+                   <span class="token keyword">unsigned</span> <span class="token keyword">long</span> client_flag<span class="token punctuation">)</span>  <span class="token comment">// 默认设为0即可</span>
+
+</code></pre> 
+<ul><li>函数返回值：失败返回0，成功返回传入的MYSQL指针。</li></ul> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">HOST</span> <span class="token string">"127.0.0.1"</span> <span class="token comment">//MySQL不允许远程访问 出于安全考虑 所以只可以使用本地网络 127.0.0.1</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">USER</span> <span class="token string">"li_zheng_yang"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">PASS</span> <span class="token string">"Gaopengyan99999."</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">DBNAME</span> <span class="token string">"Five_in_a_row"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">PORT</span> <span class="token expression"><span class="token number">3306</span> </span><span class="token comment">//这是系统API接口默认的</span></span>
+<span class="token keyword">if</span><span class="token punctuation">(</span> <span class="token function">mysql_real_connect</span><span class="token punctuation">(</span>mysql<span class="token punctuation">,</span>HOST<span class="token punctuation">,</span>USER<span class="token punctuation">,</span>PASS<span class="token punctuation">,</span>DBNAME<span class="token punctuation">,</span>PORT<span class="token punctuation">,</span><span class="token constant">NULL</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">==</span><span class="token keyword">nullptr</span> <span class="token punctuation">)</span><span class="token comment">//第一个参数叫句柄</span>
+    <span class="token punctuation">{<!-- --></span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"connect failed"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token function">mysql_error</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//放入句柄 查看连接失败原因</span>
+        <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/72/32/tjXd9PIU_o.png" alt="image-20231029140931672"></p> 
+<h5><a id="_71"></a>设置连接字符集（使得客户端编码方式匹配）</h5> 
+<p>需要注意的是，我们之前在创建数据库时默认使用的字符集是 <code>utf8</code>，而C语言连接数据时默认的字符集是 <code>latin1</code> 的(拉丁)，这就会导致我们在向表中插入中文数据时，由于字符集不匹配，最终数据库中存储的数据显式出来是乱码。</p> 
+<p>所以，我们需要使用 <code>mysql_set_character_set</code> 函数设置连接字符集为 <code>utf8</code>。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">int</span> <span class="token function">mysql_set_character_set</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>mysql<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>csname<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li>函数返回值：返回0表示成功，非0表示失败。</li></ul> 
+<pre><code class="prism language-cpp"><span class="token keyword">int</span> n <span class="token operator">=</span> <span class="token function">mysql_set_character_set</span><span class="token punctuation">(</span>mfp<span class="token punctuation">,</span> <span class="token string">"utf8"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span>n <span class="token operator">!=</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> cout <span class="token operator">&lt;&lt;</span> <span class="token string">"warning: character set fail"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="4_mysql__88"></a>4、下发 mysql 指令</h4> 
+<p>在成功连接到数据库之后，我们就可以通过 <code>mysql_query</code> 函数来下发 mysql 指令了。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">int</span> <span class="token function">mysql_query</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>mysql<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span> <span class="token operator">*</span>stmt_str<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li>函数返回值：执行成功返回0，失败返回非0。</li></ul> 
+<pre><code class="prism language-cpp">	<span class="token comment">//增删改查 int mysql_query(MYSQL *mysql, const char *stmt_str) 这里的第二个参数前面必须加上 const</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> sql<span class="token operator">=</span><span class="token string">"insert stu values(null,'lzy',21,100,100,100);"</span><span class="token punctuation">;</span>
+    <span class="token comment">//const char* sql="update stu set ch=ch-1 where sn=1;";</span>
+    <span class="token comment">//const char* sql="delete from stu where sn=1;";</span>
+    <span class="token keyword">int</span> ret<span class="token operator">=</span><span class="token function">mysql_query</span><span class="token punctuation">(</span>mysql<span class="token punctuation">,</span>sql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>需要注意的是，我们在使用 mysql client 时，一条 sql 语句需要以分号结尾；但是在C语言中，sql 语句可以不用带分号，当然带上也没事。</p> 
+<p>检验是否插入成功：</p> 
+<pre><code class="prism language-mysql">select* from stu;
+</code></pre> 
+<p><img src="https://images2.imgbox.com/bb/77/81yCUs4H_o.png" alt="image-20240425213855738"></p> 
+<p>检验是否修改成功:</p> 
+<p><img src="https://images2.imgbox.com/0f/a2/jSrG6gwt_o.png" alt="image-20240425214241180"></p> 
+<h4><a id="5_mysql__120"></a>5、获取 mysql 查询结果(保存起来)</h4> 
+<p>我们上面是对数据库执行增删改操作，它们相对来说比较简单，因为我们只需要将指令下发给数据库即可，后面的事情我们不必关心。但==如果我们执行的是查询操作，则需要通过 <code>mysql_store_result</code> 函数来获取查询结果==。</p> 
+<pre><code class="prism language-cpp">MYSQL_RES <span class="token operator">*</span><span class="token function">mysql_store_result</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>mysql<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li>函数返回值：失败返回 NULL，成功返回一个非空的 MYSQL_RES 类型的结构体指针。</li></ul> 
+<p>实际上，<code>mysql_store_result</code> 函数会调用 <code>MYSQL</code> 结构体变量中的 st_mysql_methods 字段中的 read_rows 函数指针来获取查询的结果；然后将查询结果保存到 <code>MYSQL_RES</code> 结构体中并返回结构体指针。这样，当执行完 mysql_store_result 以后，其实数据都已经在MYSQL_RES 变量中了，我们直接从中获取即可。</p> 
+<p>需要注意的是，<code>MYSQL_RES</code> 是通过 malloc/new 空间的方式来保存查询结果的，所以当我们使用完毕之后，一定要记得释放 <code>MYSQL_RES</code> 对象，否则就会造成内存泄漏。同时，MYSQL_RES 结构体中存在查询结果的列数、列信息、行数、行内容等属性，我们需要使用对应的函数来获取这些信息。</p> 
+<p><img src="https://images2.imgbox.com/31/3d/DeD00Awk_o.png" alt="image-20231029152423987"></p> 
+<h5><a id="_136"></a>获取行与列</h5> 
+<p>行</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">mysql_num_rows</span><span class="token punctuation">(</span>MYSQL_RES <span class="token operator">*</span>result<span class="token punctuation">)</span>
+</code></pre> 
+<p>列</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">unsigned</span> <span class="token keyword">int</span> <span class="token function">mysql_num_fields</span><span class="token punctuation">(</span>MYSQL_RES <span class="token operator">*</span>result<span class="token punctuation">)</span>
+</code></pre> 
+<h5><a id="_152"></a>遍历存储结果</h5> 
+<pre><code class="prism language-cpp"><span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>num_row<span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">//MYSQL_ROW mysql_fetch_row(MYSQL_RES *result)</span>
+        MYSQL_ROW row<span class="token operator">=</span><span class="token function">mysql_fetch_row</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>num_col<span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{<!-- --></span>
+            cout <span class="token operator">&lt;&lt;</span> row<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"\t"</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p>当然，我们也可以通过调用 <code>mysql_fetch_fields</code> 函数一次获取到所有列的属性信息，然后分别打印。</p> 
+<pre><code class="prism language-cpp">MYSQL_FIELD <span class="token operator">*</span><span class="token function">mysql_fetch_fields</span><span class="token punctuation">(</span>MYSQL_RES <span class="token operator">*</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<ul><li>获取结果行数。</li></ul> 
+<pre><code class="prism language-cpp">my_ulonglong <span class="token function">mysql_num_rows</span><span class="token punctuation">(</span>MYSQL_RES <span class="token operator">*</span>result<span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="6_MYSQL_RES__180"></a>6、释放 MYSQL_RES 对象</h4> 
+<p>由于 MYSQL_RES 保存查询结果的空间是通过 malloc/new 得到的，所以当我们使用完毕后需要释放掉 MYSQL_RES 对象，防止内存泄露。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">mysql_free_result</span><span class="token punctuation">(</span>MYSQL_RES <span class="token operator">*</span>result<span class="token punctuation">)</span>
+</code></pre> 
+<pre><code class="prism language-cpp"><span class="token function">mysql_free_result</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="7_MySQL__192"></a>7、关闭 MySQL 连接</h4> 
+<p>最后，当我们使用完 MySQL 后，需要关闭 MySQL 之前建立的连接。</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">mysql_close</span><span class="token punctuation">(</span>MYSQL <span class="token operator">*</span>sock<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<pre><code class="prism language-cpp"><span class="token function">mysql_close</span><span class="token punctuation">(</span>mfp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="8_204"></a>8、总结</h4> 
+<p>使用 MySQL C API 连接数据库进行简单操作的步骤如下：</p> 
+<ol><li>初始化 MYSQL 结构体指针 – mysql_init。</li><li>连接 MySQL – mysql_real_connect：需要指定数据库服务所在主机、端口以及登录mysql的用户和密码等信息。</li><li>下发 MySQL 指令 – mysql_query。</li><li>获取 MySQL 查询结果：将查询结果转储到 MYSQL_RES 中 – mysql_store_result，获取查询结果的行数 – mysql_num_rows，获取查询结果列数 – mysql_num_fields，获取单个/所有列字段的 MYSQL_FIELD 属性信息 – mysql_fetch_field/mysql_fetch_fields，获取查询结果单行的内容 (不包含属性行) – mysql_fetch_row。</li><li>释放 MYSQL_RES 对象 – mysql_free_result。</li><li>关闭 MySQL 连接 – mysql_close。</li></ol> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;bits/stdc++.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;mysql/mysql.h&gt;</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">HOST</span> <span class="token string">"127.0.0.1"</span> <span class="token comment">//MySQL不允许远程访问 出于安全考虑 所以只可以使用本地网络 127.0.0.1</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">USER</span> <span class="token string">"root"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">PASS</span> <span class="token string">"Gaopengyan99999."</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">DBNAME</span> <span class="token string">"Five_in_a_row"</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">PORT</span> <span class="token expression"><span class="token number">3306</span> </span><span class="token comment">//这是系统API接口默认的</span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token comment">1.初始化MySQL句柄</span>
+    MYSQL<span class="token operator">*</span> mysql <span class="token operator">=</span> <span class="token function">mysql_init</span><span class="token punctuation">(</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//MYSQL *mysql_init(MYSQL *mysql) 传空 那么就是堆上申请空间</span>
+    <span class="token comment">//MYSQL 和C语言文件 FILE 一样，本质上都是一个结构体 所以mysql就相当于是结构体创建的节点 </span>
+    <span class="token comment">//类似于 ListNode* node</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>mysql<span class="token operator">==</span><span class="token keyword">nullptr</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"create fail"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+
+    <span class="token comment">/2.连接服务器</span>
+    <span class="token comment">/*MYSQL * mysql_real_connect(MYSQL *mysql,       // MYSQL结构体指针对象
+                   const char *host,   // mysqld服务进程所在的主机
+                   const char *user,   // 登录MySQL的用户
+                   const char *passwd, // 用户密码
+                   const char *db,     // 要访问的数据库
+                   unsigned int port,  // mysqld服务进程的端口号
+                   const char *unix_socket,    // 默认设为NULL即可
+                   unsigned long client_flag)  // 默认设为0即可*/</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span> <span class="token function">mysql_real_connect</span><span class="token punctuation">(</span>mysql<span class="token punctuation">,</span>HOST<span class="token punctuation">,</span>USER<span class="token punctuation">,</span>PASS<span class="token punctuation">,</span>DBNAME<span class="token punctuation">,</span>PORT<span class="token punctuation">,</span><span class="token constant">NULL</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token operator">==</span><span class="token keyword">nullptr</span> <span class="token punctuation">)</span><span class="token comment">//第一个参数叫句柄</span>
+    <span class="token punctuation">{<!-- --></span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"connect failed"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token function">mysql_error</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//放入句柄 查看连接失败原因</span>
+        <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">/3.设置客户端字符集///</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span> <span class="token function">mysql_set_character_set</span><span class="token punctuation">(</span>mysql<span class="token punctuation">,</span><span class="token string">"utf8"</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token number">0</span> <span class="token punctuation">)</span> <span class="token comment">//文档规定 为0则为成功 非0则失败了</span>
+    <span class="token punctuation">{<!-- --></span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"set character failed"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token function">mysql_error</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//放入句柄 查看连接失败原因</span>
+        <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">/4.选择要操作的数据库/</span>
+    <span class="token comment">//这一步不需要进行了 我们在连接服务器的时候实则已经默认选择过了</span>
+    <span class="token comment">//mysql_select_db(mysql,DBNAME);</span>
+
+
+    <span class="token comment">//5.执行sql语句//</span>
+    <span class="token comment">//增删改查 int mysql_query(MYSQL *mysql, const char *stmt_str) 这里的第二个参数前面必须加上 const</span>
+    <span class="token comment">//const char* sql="insert stu values(null,'lzy',21,100,100,100);";</span>
+    <span class="token comment">//const char* sql="update stu set ch=ch-1 where sn=1;";</span>
+    <span class="token comment">//const char* sql="delete from stu where sn=1;";</span>
+    <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> sql<span class="token operator">=</span><span class="token string">"select * from stu;"</span><span class="token punctuation">;</span>
+    <span class="token keyword">int</span> ret<span class="token operator">=</span><span class="token function">mysql_query</span><span class="token punctuation">(</span>mysql<span class="token punctuation">,</span>sql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span> ret<span class="token operator">!=</span><span class="token number">0</span> <span class="token punctuation">)</span><span class="token comment">//查询和增删改不一样 得保存数据到本地</span>
+    <span class="token punctuation">{<!-- --></span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token string">"find failed"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+        cout <span class="token operator">&lt;&lt;</span> <span class="token function">mysql_error</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//放入句柄 查看连接失败原因</span>
+        <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+
+    <span class="token comment">///6.select保存结构到本地/</span>
+    MYSQL_RES <span class="token operator">*</span>res<span class="token operator">=</span><span class="token function">mysql_store_result</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span> res <span class="token operator">==</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+
+    <span class="token comment">//7.获取行数与列数</span>
+    <span class="token comment">//unsigned int mysql_num_fields(MYSQL_RES *result)</span>
+    <span class="token comment">//unsigned int mysql_num_rows(MYSQL_RES *result)</span>
+    <span class="token keyword">int</span> num_row<span class="token operator">=</span><span class="token function">mysql_num_rows</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//res是上面用mysql_store_result获取出来保存进去的结果</span>
+    <span class="token keyword">int</span> num_col<span class="token operator">=</span><span class="token function">mysql_num_fields</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//8.遍历读取数据</span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>num_row<span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">//MYSQL_ROW mysql_fetch_row(MYSQL_RES *result)</span>
+        MYSQL_ROW row<span class="token operator">=</span><span class="token function">mysql_fetch_row</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">int</span> i<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>i<span class="token operator">&lt;</span>num_col<span class="token punctuation">;</span>i<span class="token operator">++</span><span class="token punctuation">)</span>
+        <span class="token punctuation">{<!-- --></span>
+            cout <span class="token operator">&lt;&lt;</span> row<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"\t"</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">//9.释放结果集///</span>
+    <span class="token function">mysql_free_result</span><span class="token punctuation">(</span>res<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">/10.关闭连接/</span>
+    <span class="token function">mysql_close</span><span class="token punctuation">(</span>mysql<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<hr>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/aabadcef9243650858755aa73b73ade1/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">如何看待当下AIGC技术？请思考我回答</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/5648e1393587d75ab322ec0fba6731e3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">7.MyBatis 操作数据库(初阶)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

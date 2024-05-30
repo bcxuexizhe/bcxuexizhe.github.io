@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>开源模型应用落地-工具使用篇-Spring AI-高阶用法（九） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c1b618d4002856fc03fa8c29b6e83597/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="开源模型应用落地-工具使用篇-Spring AI-高阶用法（九）">
+  <meta property="og:description" content="一、前言 通过“开源模型应用落地-工具使用篇-Spring AI-Function Call（八）-CSDN博客”文章的学习，已经掌握了如何通过Spring AI集成OpenAI以及如何进行function call的调用，现在将进一步学习Spring AI更高阶的用法，如：传递历史上下文对话，调整模型参数等。
+二、术语 2.1、Spring AI 是 Spring 生态系统的一个新项目，它简化了 Java 中 AI 应用程序的创建。它提供以下功能：
+支持所有主要模型提供商，例如 OpenAI、Microsoft、Amazon、Google 和 Huggingface。支持的模型类型包括“聊天”和“文本到图像”，还有更多模型类型正在开发中。跨 AI 提供商的可移植 API，用于聊天和嵌入模型。支持同步和流 API 选项。支持下拉访问模型特定功能。AI 模型输出到 POJO 的映射。 三、前置条件 3.1、JDK 17&#43; 下载地址：Java Downloads | Oracle
+​
+3.2、创建Maven项目 SpringBoot版本为3.2.3
+&lt;parent&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt; &lt;version&gt;3.2.3&lt;/version&gt; &lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt; &lt;/parent&gt; 3.3、导入Maven依赖包 &lt;dependency&gt; &lt;groupId&gt;org.projectlombok&lt;/groupId&gt; &lt;artifactId&gt;lombok&lt;/artifactId&gt; &lt;optional&gt;true&lt;/optional&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;ch.qos.logback&lt;/groupId&gt; &lt;artifactId&gt;logback-core&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;ch.qos.logback&lt;/groupId&gt; &lt;artifactId&gt;logback-classic&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;cn.hutool&lt;/groupId&gt; &lt;artifactId&gt;hutool-core&lt;/artifactId&gt; &lt;version&gt;5.8.24&lt;/version&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-12T16:14:51+08:00">
+    <meta property="article:modified_time" content="2024-03-12T16:14:51+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">开源模型应用落地-工具使用篇-Spring AI-高阶用法（九）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2><strong>一、前言</strong></h2> 
+<p>    通过“<a href="https://blog.csdn.net/qq839019311/article/details/136514465" title="开源模型应用落地-工具使用篇-Spring AI-Function Call（八）-CSDN博客">开源模型应用落地-工具使用篇-Spring AI-Function Call（八）-CSDN博客</a>”文章的学习，已经掌握了如何通过Spring AI集成OpenAI以及如何进行function call的调用，现在将进一步学习Spring AI更高阶的用法，如：传递历史上下文对话，调整模型参数等。</p> 
+<hr> 
+<h2><strong>二、术语</strong></h2> 
+<h3>2.1、Spring AI</h3> 
+<p>  是 Spring 生态系统的一个新项目，它简化了 Java 中 AI 应用程序的创建。它提供以下功能：</p> 
+<ul><li>支持所有主要模型提供商，例如 OpenAI、Microsoft、Amazon、Google 和 Huggingface。</li><li>支持的模型类型包括“聊天”和“文本到图像”，还有更多模型类型正在开发中。</li><li>跨 AI 提供商的可移植 API，用于聊天和嵌入模型。</li><li>支持同步和流 API 选项。</li><li>支持下拉访问模型特定功能。</li><li>AI 模型输出到 POJO 的映射。</li></ul> 
+<hr> 
+<h2><strong>三、前置条件</strong></h2> 
+<h3><strong>3.1、JDK 17+</strong></h3> 
+<p>    下载地址：<a href="https://www.oracle.com/java/technologies/downloads/#jdk17-windows" rel="nofollow" title="Java Downloads | Oracle">Java Downloads | Oracle</a></p> 
+<p>    <img alt="" height="296" src="https://images2.imgbox.com/95/3a/c8Y7CsM3_o.png" width="1200">​</p> 
+<p>  </p> 
+<h3><strong>3.2、创建Maven项目</strong></h3> 
+<p>    SpringBoot版本为3.2.3</p> 
+<div> 
+ <pre><code>&lt;parent&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-parent&lt;/artifactId&gt;
+    &lt;version&gt;3.2.3&lt;/version&gt;
+    &lt;relativePath/&gt; &lt;!-- lookup parent from repository --&gt;
+&lt;/parent&gt;</code></pre> 
+</div> 
+<h3><strong>3.3、导入Maven依赖包</strong></h3> 
+<div> 
+ <pre><code>&lt;dependency&gt;
+	&lt;groupId&gt;org.projectlombok&lt;/groupId&gt;
+	&lt;artifactId&gt;lombok&lt;/artifactId&gt;
+	&lt;optional&gt;true&lt;/optional&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+	&lt;groupId&gt;ch.qos.logback&lt;/groupId&gt;
+	&lt;artifactId&gt;logback-core&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+	&lt;groupId&gt;ch.qos.logback&lt;/groupId&gt;
+	&lt;artifactId&gt;logback-classic&lt;/artifactId&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+	&lt;groupId&gt;cn.hutool&lt;/groupId&gt;
+	&lt;artifactId&gt;hutool-core&lt;/artifactId&gt;
+	&lt;version&gt;5.8.24&lt;/version&gt;
+&lt;/dependency&gt;
+
+&lt;dependency&gt;
+	&lt;groupId&gt;org.springframework.ai&lt;/groupId&gt;
+	&lt;artifactId&gt;spring-ai-openai-spring-boot-starter&lt;/artifactId&gt;
+	&lt;version&gt;0.8.0&lt;/version&gt;
+&lt;/dependency&gt;
+</code></pre> 
+</div> 
+<p></p> 
+<h3><strong>3.4、 科学上网的软件</strong></h3> 
+<hr> 
+<h2><strong>四、技术实现</strong></h2> 
+<h3><strong>4.1、新增配置</strong></h3> 
+<pre><code>spring:
+  ai:
+    openai:
+      api-key: sk-xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx</code></pre> 
+<p>PS:</p> 
+<ol><li>  openai要替换自己的api-key</li><li>  模型参数根据实际情况调整</li></ol> 
+<h3><strong> 4.2、历史上下文对话传递</strong></h3> 
+<p><strong>  # 方式一</strong></p> 
+<p><strong>  </strong>使用 UserMessage 和 AssistantMessage 指定上下文</p> 
+<p><img alt="" height="347" src="https://images2.imgbox.com/60/a9/iho6qGe4_o.png" width="1200"></p> 
+<p></p> 
+<p><strong>  # 方式二</strong></p> 
+<p><strong>    </strong>使用 ChatMessage 指定上下文</p> 
+<p><img alt="" height="359" src="https://images2.imgbox.com/96/d3/0rTSldSM_o.png" width="1200"></p> 
+<h3><strong> 4.3、 调整模型参数</strong></h3> 
+<p><strong>  # 方式一</strong></p> 
+<p>  在配置文件中指定</p> 
+<p>  <img alt="" height="221" src="https://images2.imgbox.com/a6/62/rvD5VyWd_o.png" width="323"></p> 
+<p><strong>  # 方式二</strong></p> 
+<p><strong>  </strong>在代码中指定</p> 
+<p><img alt="" height="228" src="https://images2.imgbox.com/ca/f3/5zfDUrDO_o.png" width="1200"></p> 
+<hr> 
+<h2><strong>五、测试</strong></h2> 
+<p>在代码中指定的上下文：</p> 
+<table border="1" cellpadding="1" cellspacing="1" style="width:500px;"><tbody><tr><td style="text-align:center;width:120px;">对话次数</td><td style="text-align:center;width:160px;">用户</td><td style="text-align:center;width:219px;">AI</td></tr><tr><td style="width:120px;">第一轮</td><td style="width:160px;"> <pre>你好</pre> </td><td style="width:219px;"> <pre>你好！很高兴能为你提供帮助。有什么问题可以问我吗？</pre> </td></tr><tr><td style="width:120px;">第二轮</td><td style="width:160px;"> <pre>我家在广州，你呢？</pre> </td><td style="width:219px;"> <pre>我是一个人工智能助手，没有具体的居住地。不过我可以帮助你解答问题和提供信息。有什么我可以帮你的吗？</pre> </td></tr><tr><td style="width:120px;">第三轮</td><td style="width:160px;">我家有什么特产</td><td style="width:219px;"></td></tr></tbody></table> 
+<p>浏览器返回的结果：</p> 
+<p><img alt="" height="982" src="https://images2.imgbox.com/69/b1/FkLfNkLC_o.png" width="1200"></p> 
+<p>idea返回的结果：</p> 
+<p><img alt="" height="479" src="https://images2.imgbox.com/d4/56/mjq32H1Y_o.png" width="1200"></p> 
+<p>  结论：</p> 
+<p>  AI能识别出我家在广州，并给出广州的特产</p> 
+<hr> 
+<h2><strong>六、附带说明</strong></h2> 
+<p><strong>6.1、更多的模型参数配置</strong></p> 
+<p><a href="https://docs.spring.io/spring-ai/reference/api/clients/openai-chat.html#_auto_configuration" rel="nofollow" title="OpenAI Chat :: Spring AI Reference">OpenAI Chat :: Spring AI Reference</a></p> 
+<p><img alt="" height="783" src="https://images2.imgbox.com/34/70/H8q9rqQL_o.png" width="1030"></p> 
+<p><img alt="" height="879" src="https://images2.imgbox.com/a0/2f/uND2eGBA_o.png" width="1035"></p> 
+<p>​<img alt="" height="339" src="https://images2.imgbox.com/f5/e6/TNHTPU8U_o.png" width="1035"></p> 
+<p></p> 
+<p><strong>6.2、完整代码</strong></p> 
+<pre><code class="language-java">import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.map.MapUtil;
+import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
+import org.apache.commons.lang3.StringUtils;
+import org.springframework.ai.chat.Generation;
+import org.springframework.ai.chat.messages.*;
+import org.springframework.ai.chat.prompt.ChatOptions;
+import org.springframework.ai.chat.prompt.Prompt;
+import org.springframework.ai.chat.prompt.SystemPromptTemplate;
+import org.springframework.ai.openai.OpenAiChatClient;
+import org.springframework.ai.openai.OpenAiChatOptions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
+
+import java.util.List;
+
+@Slf4j
+@RestController
+@RequestMapping("/api")
+public class OpenaiTestController {
+    @Autowired
+    private OpenAiChatClient openAiChatClient;
+
+
+    @RequestMapping("/history")
+    public SseEmitter history(HttpServletResponse response) {
+        response.setContentType("text/event-stream");
+        response.setCharacterEncoding("UTF-8");
+        SseEmitter emitter = new SseEmitter();
+
+        String systemPrompt = "{prompt}";
+        SystemPromptTemplate systemPromptTemplate = new SystemPromptTemplate(systemPrompt);
+
+        String userPrompt = "我家有什么特产？";
+        Message userMessage = new UserMessage(userPrompt);
+
+        Message systemMessage = systemPromptTemplate.createMessage(MapUtil.of("prompt", "you are a helpful AI assistant"));
+
+        UserMessage userChatMessage1 = new UserMessage("你好");
+        AssistantMessage assistantChatMessage1 = new AssistantMessage("你好！很高兴能为你提供帮助。有什么问题可以问我吗？");
+
+        UserMessage userChatMessage2 = new UserMessage("我家在广州，你呢？");
+        AssistantMessage assistantChatMessage2 = new AssistantMessage("我是一个人工智能助手，没有具体的居住地。不过我可以帮助你解答问题和提供信息。有什么我可以帮你的吗？");
+
+//        ChatMessage userChatMessage2 = new ChatMessage(MessageType.USER, "你好");
+//        ChatMessage assistantChatMessage2 = new ChatMessage(MessageType.ASSISTANT, "你好！很高兴能为你提供帮助。有什么问题可以问我吗？");
+//
+//        ChatMessage userChatMessage2 = new ChatMessage(MessageType.USER, "我家在广州，你呢？");
+//        ChatMessage assistantChatMessage2 = new ChatMessage(MessageType.ASSISTANT, "我是一个人工智能助手，没有具体的居住地。不过我可以帮助你解答问题和提供信息。有什么我可以帮你的吗？");
+
+        OpenAiChatOptions openAiChatOptions = OpenAiChatOptions.builder()
+                .withModel("gpt-3.5-turbo")
+                .withTemperature(0.7f)
+                .withMaxTokens(4096)
+                .withN(1)
+                .withTopP(0.9f)
+                .build();
+
+        Prompt prompt = new Prompt(List.of(userChatMessage1, assistantChatMessage1, userChatMessage2, assistantChatMessage2, userMessage, systemMessage), openAiChatOptions);
+
+        log.info(prompt.toString());
+
+        openAiChatClient.stream(prompt).subscribe(x -&gt; {
+            try {
+                log.info("response: {}", x);
+                List&lt;Generation&gt; generations = x.getResults();
+                if (CollUtil.isNotEmpty(generations)) {
+                    for (Generation generation : generations) {
+                        AssistantMessage assistantMessage = generation.getOutput();
+                        String content = assistantMessage.getContent();
+                        if (StringUtils.isNotEmpty(content)) {
+                            emitter.send(content);
+                        } else {
+                            if (StringUtils.equals(content, "null"))
+                                emitter.complete(); // Complete the SSE connection
+                        }
+                    }
+                }
+
+
+            } catch (Exception e) {
+                emitter.complete();
+                log.error("流式返回结果异常", e);
+            }
+        });
+
+
+        return emitter;
+    }
+
+
+}
+</code></pre> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/5eb087f128d64600354f05bc00e35e11/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Fast-Planner(一)前端详解kinodynamic A*</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8478b964eb35d33ff01e882a9a6e0d81/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【动态规划】【map】【C&#43;&#43;算法】1289. 下降路径最小和 II</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

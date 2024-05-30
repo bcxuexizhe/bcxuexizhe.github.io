@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>优雅使用前端枚举Enum，符合国标的那种！ - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/4e3f6983354c9a4f7895b337f42e40a7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="优雅使用前端枚举Enum，符合国标的那种！">
+  <meta property="og:description" content="01、什么是枚举Enum？ 枚举Enum是在多种语言中都有的一种数据类型，用于表示一组特定相关的常量数据集合，如性别（男、女）、数据状态（可用、禁用）、垂直对齐（顶端、居中、底部）、星期等。特点是数据值固定，不会变，存储和显示的内容不同。
+然而在JavaScript中并没有枚举Enum类型，TypeScript算是有（本文中暂没用用TS的枚举）。在前端项目中还是会用到经常用到这类型数据的，本文就对枚举做一个通用封装，并进行尽量全局的总结。
+先来看看最常用的性别：
+❓你的系统中性别用的什么存储的呢？
+在UI上显示为Text文字描述，如表格、单选项。
+传输或存储时，一般会用一个有意义的字符编码，或者数字，两种方式都有也都可以。
+如果数据量少，可以用字符编码，如M（男）、Male（男），可读性更好，就是占用空间比数字类型多。
+推荐采用短整形数字表示，存储空间更小，采用一个字节的最小整形即可（值为0到255）。
+针对性别的枚举值，其实是有国家标准的，国标中就是用的整数值标识。
+📢参考国标：GB/T 2261.1-2003 个人基本信息分类与代码 第1部分:人的性别代码（可在线预览），早在2003年就颁布了。
+SO，我们用枚举的主要目的就是处理UI、存储（编码传输）的值转换问题，兼顾显示的友好、存储的性能。在一些面向对象语言如JAVA、C#中使用体验更佳，支持枚举值的代码提示输入，避免硬编码，还可以用位运算存储多个值（算是稍微高级一点的玩法了）。
+02、前端应用场景 1、表格数据绑定时，需要显示用户易懂的（中文）描述信息，用不同颜色样式区分，而后端返回的JSON数据中可能是编码值M/F，或1/2。
+2、直接显示枚举值的（中文）描述信息&#43;样式，如elementUI中的&lt;el-tag&gt;组件。
+3、作为表单组件的绑定数据源，如下拉选择、单选组、复选组表单组件。
+03、封装EnumFactory 3.1、EnumFactory 设计一个枚举工厂 EnumFactory（enumFactory.js），统一创建枚举所需的属性和方法：
+参数enumObj为要传入的枚举基础定义：标准模式（key:{text:&#39;&#39;,type:&#39;&#39;}）示例：{ 1: { text: &#39;男&#39;, type: &#39;priary&#39; }, 2: { text: &#39;女&#39;, type: &#39;warning&#39; }}简写模式（key:text），会被自动转换为标准模式，示例：{ left: &#39;左对齐&#39;, center: &#39;居中&#39;, right: &#39;右对齐&#39; }**value **数据结构约定：value值部分约定text为文本描述，type为样式类别（elementUI中的状态type：success/info/warning/danger），其他可随意。
+参数keyParseFunc 为key的转换函数，默认key为字符串，keyParseFunc 默认值为null（不转换），如果key为整数，则需要传入转换函数（传入JS内置parseInt即可）。
+返回值继承自参数enumObj，扩展了属性 keys、values、formatter。**keys**，枚举key数组，如 [0,1,2]、[&#34;male&#34;,&#34;female&#34;,&#34;other&#34;]。**values**，值数组，包含了key，结构[{key:&#39;&#39;,text:&#39;&#39;,type:&#39;&#39;}]。**formatter**：elementUI中表格绑定枚举数据文本的formatter函数。
+/** * 枚举创建工厂（构造函数），扩展枚举对象：keys、values(含key值的[{key,text,type}])、formatter。 * @param {*} enumObj 枚举值，支持标准模式{key:{text,type},}，简单模式{key:text,}（会自动转换为标准模式） * @param {*} keyParseFunc key的转换函数，默认null，如果key为整数则传 parseInt */ export default function EnumFactory(enumObj, keyParseFunc = null) { //复制（继承）enumObj Object.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-27T15:50:20+08:00">
+    <meta property="article:modified_time" content="2024-02-27T15:50:20+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">优雅使用前端枚举Enum，符合国标的那种！</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>01、什么是枚举Enum？</h2> 
+<p></p> 
+<p><strong>枚举</strong><code>Enum</code>是在多种语言中都有的一种数据类型，用于表示一组特定相关的<strong>常量</strong>数据集合，如性别（男、女）、数据状态（可用、禁用）、垂直对齐（顶端、居中、底部）、星期等。特点是数据值固定，不会变，存储和显示的内容不同。</p> 
+<p></p> 
+<p>然而在JavaScript中并没有枚举<code>Enum</code>类型，TypeScript算是有（本文中暂没用用TS的枚举）。在前端项目中还是会用到经常用到这类型数据的，本文就对枚举做一个通用封装，并进行尽量全局的总结。</p> 
+<p>先来看看最常用的性别：</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="" height="180" src="https://images2.imgbox.com/9e/02/7C2XHLm9_o.png" width="559"></p> 
+<blockquote> 
+ <p>❓你的系统中性别用的什么存储的呢？</p> 
+</blockquote> 
+<p></p> 
+<ul><li> <p>在UI上显示为<code>Text</code>文字描述，如表格、单选项。</p> </li></ul> 
+<p></p> 
+<ul><li> <p>传输或存储时，一般会用一个有意义的字符编码，或者数字，两种方式都有也都可以。</p> </li></ul> 
+<p></p> 
+<blockquote> 
+ <ul><li> <p>如果数据量少，可以用字符编码，如M（男）、Male（男），可读性更好，就是占用空间比数字类型多。</p> </li><li> <p>推荐采用短整形数字表示，存储空间更小，采用一个字节的最小整形即可（值为0到255）。</p> </li></ul> 
+</blockquote> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="363" src="https://images2.imgbox.com/68/d7/Io8c4qCl_o.png" width="1006"></p> 
+<p></p> 
+<p>针对性别的枚举值，其实是有国家标准的，国标中就是用的整数值标识。</p> 
+<p></p> 
+<blockquote> 
+ <p>📢参考国标：<a href="https://openstd.samr.gov.cn/bzgk/gb/newGbInfo?hcno=0FC942D542BC6EE3C707B2647EF81CD8" rel="nofollow" title="GB/T 2261.1-2003 个人基本信息分类与代码 第1部分:人的性别代码">GB/T 2261.1-2003 个人基本信息分类与代码 第1部分:人的性别代码</a>（可在线预览），早在2003年就颁布了。</p> 
+</blockquote> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="244" src="https://images2.imgbox.com/ce/73/rN5IkyZl_o.png" width="953"></p> 
+<p></p> 
+<p>SO，我们用枚举的主要目的就是处理UI、存储（编码传输）的值转换问题，兼顾显示的友好、存储的性能。在一些面向对象语言如JAVA、C#中使用体验更佳，支持枚举值的代码提示输入，避免硬编码，还可以用位运算存储多个值（算是稍微高级一点的玩法了）。</p> 
+<hr> 
+<h2>02、前端应用场景</h2> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="人员选择-选择bug2.gif" height="272" src="https://images2.imgbox.com/14/1e/GwXlwoF7_o.gif" width="458"></p> 
+<p></p> 
+<p>1、表格数据绑定时，需要显示用户易懂的（中文）描述信息，用不同颜色样式区分，而后端返回的JSON数据中可能是编码值<code>M/F，或1/2</code>。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="231" src="https://images2.imgbox.com/0a/d2/1JtGTB8C_o.png" width="575"></p> 
+<p></p> 
+<p>2、直接显示枚举值的（中文）描述信息+样式，如elementUI中的<code>&lt;el-tag&gt;</code>组件。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="103" src="https://images2.imgbox.com/fb/2b/595tOcya_o.png" width="266"></p> 
+<p></p> 
+<p>3、作为表单组件的绑定数据源，如下拉选择、单选组、复选组表单组件。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="161" src="https://images2.imgbox.com/29/28/9VD7Td1g_o.png" width="346"></p> 
+<p></p> 
+<hr> 
+<h2>03、封装EnumFactory</h2> 
+<p></p> 
+<h3>3.1、EnumFactory</h3> 
+<p></p> 
+<p>设计一个枚举工厂 <strong>EnumFactory</strong>（enumFactory.js），统一创建枚举所需的属性和方法：</p> 
+<p></p> 
+<ul><li> <p><strong>参数</strong><code>enumObj</code>为要传入的枚举基础定义：<strong>标准模式</strong>（<code>key:{text:'',type:''}</code>）示例：<code>{ 1: { text: '男', type: 'priary' }, 2: { text: '女', type: 'warning' }}</code><strong>简写模式</strong>（<code>key:text</code>），会被自动转换为标准模式，示例：<code>{ left: '左对齐', center: '居中', right: '右对齐' }</code>**value **数据结构约定：<code>value</code>值部分约定<code>text</code>为文本描述，<code>type</code>为样式类别（<code>elementUI</code>中的状态<code>type：success/info/warning/danger</code>），其他可随意。</p> </li></ul> 
+<p></p> 
+<ul><li> <p><strong>参数</strong><code>keyParseFunc</code> 为key的转换函数，默认key为字符串，<code>keyParseFunc</code> 默认值为null（不转换），如果key为整数，则需要传入转换函数（传入JS内置<code>parseInt</code>即可）。</p> </li></ul> 
+<p></p> 
+<ul><li> <p><strong>返回值</strong>继承自参数<code>enumObj</code>，扩展了属性 keys、values、formatter。<code>**keys**</code>，枚举key数组，如 <code>[0,1,2]</code>、<code>["male","female","other"]</code>。<code>**values**</code>，值数组，包含了key，结构<code>[{key:'',text:'',type:''}]</code>。<code>**formatter**</code>：elementUI中表格绑定枚举数据文本的formatter函数。</p> </li></ul> 
+<p></p> 
+<pre><code>/**
+ * 枚举创建工厂（构造函数），扩展枚举对象：keys、values(含key值的[{key,text,type}])、formatter。
+ * @param {*} enumObj 枚举值，支持标准模式{key:{text,type},}，简单模式{key:text,}（会自动转换为标准模式）
+ * @param {*} keyParseFunc key的转换函数，默认null，如果key为整数则传 parseInt
+ */
+export default function EnumFactory(enumObj, keyParseFunc = null) {
+  //复制（继承）enumObj
+  Object.assign(this, enumObj)
+ 
+  // keys：枚举的key集合[key]
+  Object.defineProperty(this, 'keys', {
+    value: keyParseFunc ? Object.keys(enumObj).map(s =&gt; keyParseFunc(s)) : Object.keys(enumObj)
+  })
+ 
+  // 处理 values
+  let values = []
+  const ovalues = Object.values(enumObj)
+  // 主要区分下value是简单类型（字符串）还是对象类型
+  if (typeof ovalues[0] === 'string') {
+    ovalues.forEach((text, index) =&gt; {
+      const obj = { key: this.keys[index], text }
+      values.push(obj)
+      this[this.keys[index]] = obj
+    })
+  }
+  else {
+    ovalues.forEach((item, index) =&gt; {
+      item.key = this.keys[index]
+      values.push(item)
+    })
+  }
+  // 设置values属性
+  Object.defineProperty(this, 'values', { value: values })
+ 
+  // formatter：element中表格绑定枚举数据文本的formatter函数
+  // r、c为行列，可传入null
+  Object.defineProperty(this, 'formatter', {
+    value: function(r, c, value) {
+      return values.filter(v =&gt; v.key == value || v.text == value)[0]?.text || 'notfound'
+    }
+  })
+ 
+  //枚举定义的数据都是常量，不可修改，冻结一下
+  Object.freeze(this)
+}</code></pre> 
+<p></p> 
+<h3>3.2、基于EnumFactory定义枚举值</h3> 
+<p></p> 
+<p>创建一个<code>enums.js</code>存放常用枚举常量：</p> 
+<p></p> 
+<ul><li> <p>性别枚举对象（key为整数）</p> </li><li> <p>使用状态</p> </li><li> <p>对齐方式</p> </li></ul> 
+<p></p> 
+<pre><code>import EnumFactory from "@/utils/enumFactory";
+ 
+/**
+ * 性别枚举对象（key为整数）
+ */
+export const enumGender = new EnumFactory({
+  1: { text: '男', type: 'priary' },
+  2: { text: '女', type: 'warning' },
+  9: { text: '其他', type: 'info' },
+},parseInt)
+ 
+/**
+ * 使用状态
+ */
+export const enumUse = new EnumFactory({
+  enable: { text: '启用', type: 'success' },
+  disable: { text: '禁用', type: 'danger' }
+})
+// 对齐方式
+const enumAlign = new EnumFactory({ left: '左', middle: '中', right: '右' })</code></pre> 
+<p></p> 
+<p><code>enumGender</code>的结构如下：</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="385" src="https://images2.imgbox.com/8f/21/9PZSUymi_o.png" width="303"></p> 
+<p></p> 
+<ul><li> <p><code>enumGender.keys</code>： <code>[0,1,2]</code></p> </li><li> <p><code>enumGender.values</code>： <code>[{"text":"其他","type":"info","key":0},{"text":"男","type":"priary","key":1},{"text":"女","type":"warning","key":2}]</code></p> </li></ul> 
+<hr> 
+<h2>04、ElementUI中使用</h2> 
+<p></p> 
+<p>1、表格数据绑定时，显示用户易懂的（中文）描述信息，用不同颜色样式区分。使用自<code>template</code>模板自定义，或者<code>formatter</code>函数，格式化函数就不支持样式状态了。</p> 
+<p></p> 
+<blockquote> 
+ <p>🚩关键代码：enumGender[scope.row.gender]?.text</p> 
+</blockquote> 
+<p></p> 
+<pre><code>&lt;el-table :data="table"&gt;
+  &lt;el-table-column label="姓名" prop="name"  width="220px"&gt;&lt;/el-table-column&gt;
+  &lt;el-table-column label="性别" prop="gender" align="center"  width="120px"&gt;
+    &lt;template slot-scope="scope"&gt;
+      &lt;el-tag :type="enumGender[scope.row.gender]?.type"&gt;{<!-- -->{ enumGender[scope.row.gender]?.text }}&lt;/el-tag&gt;
+    &lt;/template&gt;
+  &lt;/el-table-column&gt;
+  &lt;el-table-column label="方向" prop="align" :formatter="enumAlign.formatter"  width="120px"&gt;&lt;/el-table-column&gt;
+  &lt;el-table-column label="状态" prop="use" align="center" width="120px"&gt;
+    &lt;template slot-scope="scope"&gt;
+      &lt;el-tag :type="enumUse[scope.row.use]?.type"&gt;{<!-- -->{ enumUse[scope.row.use]?.text }}&lt;/el-tag&gt;
+    &lt;/template&gt;
+  &lt;/el-table-column&gt;
+&lt;/el-table&gt;</code></pre> 
+<p></p> 
+<p>效果：</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="231" src="https://images2.imgbox.com/98/f5/kQXEBImw_o.png" width="575"></p> 
+<p></p> 
+<p>2、直接显示枚举值的（中文）描述信息+样式，用<code>type</code>来绑定状态样式。</p> 
+<p></p> 
+<pre><code>&lt;el-form-item label="状态标签-all"&gt;
+  &lt;el-tag v-for="tag in enumGender.values" :key="tag.key" :type="tag.type" style="margin-right: 10px;"&gt;
+    {<!-- -->{tag.text }}
+  &lt;/el-tag&gt;
+&lt;/el-form-item&gt;
+&lt;el-form-item label="状态标签-值"&gt;
+  &lt;el-tag :type="enumGender[value]?.type"&gt;{<!-- -->{ enumGender[value]?.text }} : {<!-- -->{ value }}&lt;/el-tag&gt;
+&lt;/el-form-item&gt;</code></pre> 
+<p></p> 
+<p>效果：</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="103" src="https://images2.imgbox.com/e4/6a/Nqr5i1yF_o.png" width="266"></p> 
+<p></p> 
+<p>3、作为表单组件的绑定数据源，如下拉选择、单选组、复选组表单组件。</p> 
+<p></p> 
+<blockquote> 
+ <p>🚩用enumAlign.values作为源来绑定</p> 
+</blockquote> 
+<p></p> 
+<pre><code>&lt;el-form-item label="下拉选择"&gt;
+  &lt;el-select v-model="value"&gt;
+    &lt;el-option v-for="e in enumAlign.values" :key="e.key" :value="e.key" :label="e.text"&gt;&lt;/el-option&gt;
+  &lt;/el-select&gt;
+&lt;/el-form-item&gt;
+&lt;el-form-item label="单选组1"&gt;
+  &lt;el-radio-group v-model="value"&gt;
+    &lt;el-radio-button v-for="item in enumAlign.values" :key="item.key" :label="item.key"&gt;{<!-- -->{ item.text }}&lt;/el-radio-button&gt;
+  &lt;/el-radio-group&gt;
+&lt;/el-form-item&gt;
+&lt;el-form-item label="单选组2"&gt;
+  &lt;el-radio-group v-model="value"&gt;
+    &lt;el-radio v-for="item in enumAlign.values" :key="item.key" :label="item.key"&gt;{<!-- -->{ item.text }}&lt;/el-radio&gt;
+  &lt;/el-radio-group&gt;
+&lt;/el-form-item&gt;</code></pre> 
+<p></p> 
+<p>效果：</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="image.png" height="161" src="https://images2.imgbox.com/33/3b/tVgJRGw8_o.png" width="346"></p> 
+<p></p> 
+<hr> 
+<h2>总结</h2> 
+<p></p> 
+<p>其实本质上就是设计一个标准的数据结构，能够方便的获取所有枚举数据项，然后根据值快速获取显示的文本。</p> 
+<p></p> 
+<blockquote> 
+ <p><strong>文章转载自：</strong><a href="https://home.cnblogs.com/u/anding/" rel="nofollow" title="安木夕">安木夕</a></p> 
+ <p><strong>原文链接：</strong><a href="https://www.cnblogs.com/anding/p/17627416.html" rel="nofollow" title="https://www.cnblogs.com/anding/p/17627416.html">https://www.cnblogs.com/anding/p/17627416.html</a></p> 
+ <p><strong>体验地址：</strong><a href="http://www.jnpfsoft.com/?from=001" rel="nofollow" title="引迈 - JNPF快速开发平台_低代码开发平台_零代码开发平台_流程设计器_表单引擎_工作流引擎_软件架构">引迈 - JNPF快速开发平台_低代码开发平台_零代码开发平台_流程设计器_表单引擎_工作流引擎_软件架构</a></p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d8c02504bd2ed86ec363ea9a17a5fd9a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">全网最全！Stata16（数据分析）安装包、安装教程，以及Stata16中data frames(数据框)的使用方法~...</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e5ca4b78054940973fc5725c1f1fde86/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">利用学生认证部署 copilot-gpt4-service 白嫖 gpt-4.0</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

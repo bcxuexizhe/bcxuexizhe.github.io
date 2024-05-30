@@ -1,0 +1,2741 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C语言游戏实战（12）：植物大战僵尸（坤版） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/cf00fb136a4246e8de28a455fc801de4/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C语言游戏实战（12）：植物大战僵尸（坤版）">
+  <meta property="og:description" content="植物大战僵尸
+前言： 本游戏使用C语言和easyx图形库编写，通过这个项目我们可以深度的掌握C语言的各种语言特性和高级开发技巧，以及锻炼我们独立的项目开发能力，
+在开始编写代码之前，我们需要先了解一下游戏的基本规则和功能：
+游戏界面：游戏界面是一个矩形区域，玩家可以在区域内进行植物的放置和铲除等操作。
+僵尸：僵尸会从游戏界面的右侧向左测移动，靠近植物后会停下来吃植物。
+植物：不同的植物有不同的功能，在这里我们可以将植物分为三大类：
+1. 生产型植物（如太阳花）：这种植物的特点是在一定的时间生产出太阳，以增加太阳的产量。
+2.发射型植物（如豌豆射手）：这种植物的特点是发射相应类型的子弹，对僵尸产生伤害和特定的效果。
+3. 爆炸性植物（火爆辣椒）：这种植物的特点是对一定区域的所有僵尸产生高额伤害。（一次性植物）
+接下来，我们将通过以下几个步骤来实现这个游戏：
+初始化游戏界面。
+实现僵尸的创建、僵尸的更新、僵尸吃植物的检测。
+实现的植物的放置。
+实现植物的功能：
+对于生产型植物我们需要写出阳光的生产，以及阳光的收集操作。
+对于发射型植物我们需要判断植物是否发射子弹，发射子弹后还需更新子弹、检测子弹与僵尸的碰撞。
+对于爆炸型植物，我们需要判断僵尸是否在爆炸范围内，然后杀死在爆炸范围内的僵尸。
+1. 初始化游戏界面 我们需要先将游戏地图、卡牌和卡牌槽绘制出来。可以利用windows自带的画图工具测出游戏地图的位置，从而将这些卡牌和卡牌槽放置到合适的位置。
+//地图 putimage(-150, 0, &amp;img); //卡牌槽 putimagePNG(80, -10, &amp;imgBar);	//植物卡牌 for (int i = 0; i &lt; PLANT_COUNT &#43; 2; i&#43;&#43;) { if(i==PLANT_COUNT) putimagePNG(163 &#43; i * 65 &#43; 8, -5, &amp;imgCards[i]); else putimagePNG(163 &#43; i * 65, 0, &amp;imgCards[i]); } 2. 放置植物 因为需要在这个9*5的草地区域内放置植物，所以我们得计算出每个草方块的位置。我利用画图软件测出每个草方块大约是长81、宽100个像素点。 第一个草方块距离游戏窗口大约101个像素点。
+这样就可以得出每个草方块的位置：256 - 150 &#43; col * 81;100 &#43; row * 100 - 15； 每个植物都有相似的特性，所以我们需要写一个放置植物信息的结构体。然后创建一个5*9的结构体数组，用来表示每个草方块上的植物。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T13:00:31+08:00">
+    <meta property="article:modified_time" content="2024-05-23T13:00:31+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C语言游戏实战（12）：植物大战僵尸（坤版）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <div class="csdn-video-box"> 
+ <iframe id="r9o1JgGb-1715823308566" frameborder="0" src="https://live.csdn.net/v/embed/387797" allowfullscreen="true" data-mediaembed="csdn"></iframe> 
+ <p>植物大战僵尸</p> 
+</div> 
+<h2></h2> 
+<h2>前言：</h2> 
+<p>本游戏使用C语言和easyx图形库编写，通过这个项目我们可以深度的掌握C语言的各种语言特性和高级开发技巧，以及锻炼我们独立的项目开发能力，</p> 
+<p><strong>在开始编写代码之前，我们需要先了解一下游戏的基本规则和功能：</strong></p> 
+<p><strong>游戏界面：</strong>游戏界面是一个矩形区域，玩家可以在区域内进行植物的放置和铲除等操作。</p> 
+<p><strong>僵尸：</strong>僵尸会从游戏界面的右侧向左测移动，靠近植物后会停下来吃植物。</p> 
+<p><strong>植物：</strong>不同的植物有不同的功能，在这里我们可以将植物分为三大类：</p> 
+<blockquote> 
+ <p>1. 生产型植物（如太阳花）：这种植物的特点是在一定的时间生产出太阳，以增加太阳的产量。</p> 
+ <p>2.发射型植物（如豌豆射手）：这种植物的特点是发射相应类型的子弹，对僵尸产生伤害和特定的效果。</p> 
+ <p>3. 爆炸性植物（火爆辣椒）：这种植物的特点是对一定区域的所有僵尸产生高额伤害。（一次性植物）</p> 
+</blockquote> 
+<p><strong>接下来，我们将通过以下几个步骤来实现这个游戏：</strong></p> 
+<p>初始化游戏界面。</p> 
+<p>实现僵尸的创建、僵尸的更新、僵尸吃植物的检测。</p> 
+<p>实现的植物的放置。</p> 
+<p>实现植物的功能：</p> 
+<blockquote> 
+ <p>对于生产型植物我们需要写出阳光的生产，以及阳光的收集操作。</p> 
+ <p>对于发射型植物我们需要判断植物是否发射子弹，发射子弹后还需更新子弹、检测子弹与僵尸的碰撞。</p> 
+ <p>对于爆炸型植物，我们需要判断僵尸是否在爆炸范围内，然后杀死在爆炸范围内的僵尸。</p> 
+</blockquote> 
+<h2>1. 初始化游戏界面</h2> 
+<p><img alt="" height="787" src="https://images2.imgbox.com/21/5c/iuwDHw9W_o.png" width="1129"></p> 
+<p>我们需要先将游戏地图、卡牌和卡牌槽绘制出来。可以利用windows自带的画图工具测出游戏地图的位置，从而将这些卡牌和卡牌槽放置到合适的位置。</p> 
+<p><img alt="" height="853" src="https://images2.imgbox.com/a7/e2/vCslwnW3_o.png" width="1200"></p> 
+<pre><code class="language-cpp">//地图
+putimage(-150, 0, &amp;img);
+//卡牌槽
+putimagePNG(80, -10, &amp;imgBar);	
+//植物卡牌
+	for (int i = 0; i &lt; PLANT_COUNT + 2; i++)
+	{
+		if(i==PLANT_COUNT)
+			putimagePNG(163 + i * 65 + 8, -5, &amp;imgCards[i]);
+		else
+			putimagePNG(163 + i * 65, 0, &amp;imgCards[i]);
+	}</code></pre> 
+<h2>2.  放置植物</h2> 
+<p>因为需要在这个9*5的草地区域内放置植物，所以我们得计算出每个草方块的位置。我利用画图软件测出每个草方块大约是长81、宽100个像素点。 第一个草方块距离游戏窗口大约101个像素点。</p> 
+<p>这样就可以得出每个草方块的位置：256 - 150 + col * 81;100 + row * 100 - 15； </p> 
+<p><img alt="" height="778" src="https://images2.imgbox.com/81/84/Vyz4uwO3_o.png" width="1128"></p> 
+<p>每个植物都有相似的特性，所以我们需要写一个放置植物信息的结构体。然后创建一个5*9的结构体数组，用来表示每个草方块上的植物。</p> 
+<pre><code class="language-cpp">enum {
+	WAN_DOU, TAI_YANG, LA_JIAO, KUN_KUN, JIAN_GUO,
+	HAN_BING_WAN_DOU, YING_TAO, SAN_TOU_WAN_DOU, PLANT_COUNT
+};
+struct plant
+{
+	int type;//植物类型
+	int frameIndex;//植物动作帧
+	//bool catched;//是否被吃
+	int blood;//血量
+
+	int shootTime;//植物子弹的射速
+
+	int timer;//阳光生产的时间
+	int x, y;//植物坐标
+	bool shoot;//判断植物是否处于发射状态
+};
+struct plant map[5][9];
+</code></pre> 
+<p> 在 Windows 编程中，我们可以利用下面的变量获取鼠标信息。</p> 
+<pre><code class="language-cpp">ExMessage msg;
+msg.message</code></pre> 
+<pre><code class="language-cpp">ExMessage msg;
+static int status = 0;
+if (peekmessage(&amp;msg))//判断有没有消息
+{
+	if (msg.message == WM_LBUTTONDOWN)//左键按下
+	{
+        //鼠标是否在卡牌的位置按下
+		if (msg.x &gt; 163 &amp;&amp; msg.x &lt; 163 + 65 * (PLANT_COUNT+2) &amp;&amp; msg.y &lt; 96)
+		{
+			//mciSendString("play res/audio/bleep.mp3 alias BGM4", NULL, NULL, NULL);
+			PlaySound("res/audio/bleep.wav", NULL, SND_FILENAME | SND_ASYNC);
+			//PlaySound("res/sunshine.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+			int index = (msg.x - 163) / 65;
+			//坤坤
+		/*	if (index + 1 == KUN_KUN &amp;&amp; sunshine &gt;= 100)
+			{
+				curPlant = index + 1;
+				status = 1;
+				curX = msg.x;
+				curY = msg.y;
+				sunshine -= 100;
+			}*/
+			curPlant = index + 1;
+			status = 1;
+			curX = msg.x;
+			curY = msg.y;
+		}
+	}
+	else if (msg.message == WM_MOUSEMOVE &amp;&amp; status == 1)//鼠标移动
+	{
+		curX = msg.x;
+		curY = msg.y;
+	}
+	else if (msg.message == WM_LBUTTONUP)//鼠标放下
+	{
+		if (msg.x &gt; 256 - 150 &amp;&amp; msg.x &lt; Wide - 70 &amp;&amp; msg.y &gt; 100 &amp;&amp; msg.y &lt; 590)
+		{
+			int row = (msg.y - 100) / 102;
+			int col = (msg.x - 256 + 150 ) / 81;
+			
+			
+			if (map[row][col].type == 0 &amp;&amp; curPlant != PLANT_COUNT + 1 &amp;&amp; curPlant != PLANT_COUNT + 2)
+			{
+				//printf("%d\n", map[col][row].type);
+				map[row][col].type = curPlant;
+				map[row][col].frameIndex = 0;
+
+				if(curPlant!=0)
+					PlaySound("res/audio/coffee.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+				if (curPlant == 5)
+					map[row][col].blood = KUNKUN_BLOOD * 50;
+				else
+					map[row][col].blood = KUNKUN_BLOOD;
+
+				map[row][col].shootTime = 0;
+				map[row][col].shoot = false;
+
+				map[row][col].x = 256 - 150 + col * 81;
+				map[row][col].y = 100 + row * 100 - 15;
+				
+			}
+			else if (map[row][col].type != 0 &amp;&amp; curPlant == PLANT_COUNT + 1)
+			{
+				PlaySound("res/audio/coffee.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+				map[row][col].type = 0;
+				map[row][col].blood = 0;
+				
+			}
+		}
+	}
+	else if (msg.message == WM_RBUTTONDOWN)//鼠标右键
+	{
+		curPlant = 0;
+		status = 0;
+	}</code></pre> 
+<h2>3. 僵尸</h2> 
+<h3> 3.1 创建僵尸</h3> 
+<p>僵尸也是和植物一样需要创建一个结构体存放信息。然后创建一个结构体数组，作为一个僵尸池，当需要创建一个僵尸时，我们就从这个池里取一个<strong>未被使用</strong>的僵尸。</p> 
+<pre><code class="language-cpp">struct zm
+{
+	int x, y;//僵尸的坐标
+	int frameIndex;//僵尸动作帧
+	bool used;//僵尸是否被使用
+	int speed;//僵尸每一次移动的位移
+	int row;//僵尸所在行
+	int blood;//僵尸血量
+	bool dead;//僵尸是否死亡
+	bool eating;//僵尸是否在吃植物
+	bool boom;//僵尸是否被炸死
+	int zmSpeed;//僵尸的移动快慢
+};
+struct zm zms[ZM_MAX];</code></pre> 
+<pre><code class="language-cpp">//找一个可用的僵尸
+int i;
+for (i = 0; i &lt; zmMax &amp;&amp; zms[i].used &amp;&amp; zms[i].dead == false; i++);</code></pre> 
+<p>到一定的时间就创建一个僵尸。</p> 
+<pre><code class="language-cpp">
+void createZM()
+{
+	if (zmCount &gt;= zmCount_max)
+		return;
+
+	static int zmFre = 500;
+	static int count = 0;
+	
+    //控制僵尸的生成快慢
+	count++;
+	if (count &gt; zmFre)
+	{
+		count = 0;
+		zmFre = 200;
+		int i = 0;
+		int zmMax = sizeof(zms) / sizeof(zms[0]);
+		for (i = 0; i &lt; zmMax &amp;&amp; zms[i].used &amp;&amp; zms[i].dead == false; i++);
+		if (i &lt; zmMax)
+		{
+			memset(&amp;zms[i], 0, sizeof(zms[i]));
+			zms[i].used = true;
+			zms[i].speed = 2;
+			zms[i].row = rand() % 5;
+			zms[i].y = 100 + (zms[i].row) * 100 + 70;
+			zms[i].x = Wide;
+			zms[i].blood = ORDINARY_ZM_BLOOD;
+			zms[i].dead = false;
+			zms[i].boom = false;
+			zms[i].zmSpeed = 4;
+			zmCount++;
+		}
+	}
+}</code></pre> 
+<h3>3. 2 检测僵尸对植物的伤害检测</h3> 
+<p>僵尸靠近植物就将僵尸置为吃东西的状态，减植物的血量，当植物的血量小于等于0时，就去除植物。</p> 
+<pre><code class="language-cpp">void checkZM2Zhiwu()
+{
+	char name[64];
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; zCount; i++)
+	{
+		//killCount = 0;
+		if (zms[i].dead)continue;
+
+		//zms[i].chomptime = 0;
+		int row = zms[i].row;
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//if (map[row][j].type == 0)continue;
+			
+			//
+			int zhiwuX = 101 + j * 81;
+			int x1 = zhiwuX;
+			int x2 = zhiwuX + 81;
+			int x3 = zms[i].x + 100;
+			if (x3 &gt;= x1 &amp;&amp; x3 &lt;= x2)
+			{
+				if (map[row][j].blood &lt;= 0 || (map[row][j].type == 0 &amp;&amp; zms[i].eating != false))
+				{
+					map[row][j].blood = 0;
+					map[row][j].type = 0;
+					zms[i].eating = false;
+					//zms[i].frameIndex = 0;
+					zms[i].speed = 3;
+				}
+				else if (map[row][j].type != 0)
+				{
+					//mciSendString("play ZM_BGM repeat", NULL, NULL, NULL);
+					//mciSendString("play name repeat", NULL, 0, NULL);
+					zms[i].eating = true;
+					zms[i].speed = 0;
+					if (map[row][j].type != 3 &amp;&amp; map[row][j].type != 7)
+						map[row][j].blood--;
+					//zms[i].frameIndex = 0;
+				}
+
+			}
+			else if (x3 &gt; 830)
+			{
+				zms[i].eating = false;
+				zms[i].speed = 3;
+			}
+		}
+	}
+}</code></pre> 
+<h2>4. 植物子弹</h2> 
+<h3>4.1 发射子弹</h3> 
+<p>当僵尸出现在游戏界面时，与该僵尸同一行的发射性植物就发射出子弹。</p> 
+<p>同样需要创建一个结构体存放子弹的信息，然后创建一个子弹池。</p> 
+<pre><code class="language-cpp">//子弹
+struct bullet
+{
+	double x, y;//子弹的坐标
+	bool used;//子弹是否被使用
+	int row;//子弹所在行
+	int speed;//子弹速度
+	bool blast;//是否发生爆炸
+	int frameIndex;//帧序号
+};
+//坤坤
+struct bullet bullets[1000];</code></pre> 
+<p> 以坤坤为例：</p> 
+<pre><code class="language-cpp">void shoot()
+{
+	int lines[5] = { 0 };
+	int bulletMax = sizeof(bullets) / sizeof(bullets[0]);
+	
+	int zmCount = sizeof(zms) / sizeof(zms[0]);
+	int dangerX = Wide - 80;
+	for (int i = 0; i &lt; zmCount; i++)
+	{
+		if (zms[i].dead == false &amp;&amp; zms[i].x &lt; dangerX &amp;&amp; zms[i].x&gt;100)
+		{
+			lines[zms[i].row] = 1;
+		}
+	}
+
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//坤坤
+			if (map[i][j].type == KUN_KUN + 1 &amp;&amp; lines[i])
+			{
+				map[i][j].shootTime++;
+				if (map[i][j].shootTime &gt; 20)
+				{
+					map[i][j].shootTime = 0;
+                    //子弹池
+					int k;
+					for (k = 0; k &lt; bulletMax &amp;&amp; bullets[k].used; k++);
+					if (k &lt; bulletMax)
+					{
+						map[i][j].frameIndex = 3;
+						bullets[k].used = true;
+						bullets[k].row = i;
+						bullets[k].speed = 10;
+
+						bullets[k].blast = false;
+						bullets[k].frameIndex = 0;
+
+						int zwX = 256 - 150 + j * 81;
+						int zwY = 100 + i * 100 - 15;
+						bullets[k].x = zwX + imgPlant[map[i][j].type - 1][0]-&gt;getwidth() - 10;
+						bullets[k].y = zwY + 5;
+					}
+				}
+			}
+
+			
+		}
+	}
+}</code></pre> 
+<h3>4. 2  更新子弹</h3> 
+<p>不断的改变加子弹的横坐标，当子弹出游戏界面时，子弹就被置为未被使用。</p> 
+<p>以坤坤为例：</p> 
+<pre><code class="language-cpp">void updateBullets_kunkun()
+{
+	int countMax = sizeof(bullets) / sizeof(bullets[0]);
+	for (int i = 0; i &lt; countMax; i++)
+	{
+		if (bullets[i].used)
+		{
+			bullets[i].x += bullets[i].speed;
+			
+			if (bullets[i].x &gt; Wide)
+			{
+				bullets[i].used = false;
+			}
+
+		}
+	}
+}</code></pre> 
+<h3> 4.3 检测子弹对僵尸的伤害</h3> 
+<p>当子弹靠近僵尸时减去僵尸的一定量血量，然后对僵尸造成一定的效果（例如，坤坤子弹的效果是击退僵尸，那么我们只需要更改僵尸的横坐标即可。），最后将子弹置为未被使用。</p> 
+<p>以坤坤为例：</p> 
+<pre><code class="language-cpp">void checkBullet2Zm_kunkun()
+{
+	int bCount = sizeof(bullets) / sizeof(bullets[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; bCount; i++)
+	{
+		{
+			for (int j = 0; j &lt; zCount; j++)
+			{
+				if (zms[j].used == false)continue;
+				int x1 = zms[j].x + 80;
+				int x2 = zms[j].x + 110;
+				int x = bullets[i].x;
+				if (zms[j].dead == false &amp;&amp;
+					bullets[i].row == zms[j].row &amp;&amp; x &gt; x1 &amp;&amp; x &lt; x2 &amp;&amp; bullets[i].used) {
+					zms[j].blood -= 20;
+					zms[j].x += 1;
+					bullets[i].blast = true;
+					bullets[i].speed = 0;
+					//bullets[i].x = 0;
+
+					if (zms[j].blood &lt;= 0)
+					{
+						killCount++;
+
+						zms[j].dead = true;
+						zms[j].speed = 0;
+						zms[j].frameIndex = 0;
+					}
+					break;
+				}
+			}
+		}
+	}
+}</code></pre> 
+<h2> 5. 爆炸性植物</h2> 
+<p>爆炸性植物是一次性的，当植物的动作帧执行完最后一帧后植物就置为死亡，在爆炸范围内的僵尸也死亡。</p> 
+<p>以火爆辣椒为例：</p> 
+<p><img alt="" height="338" src="https://images2.imgbox.com/d9/ab/zTYn2hqR_o.png" width="1200"></p> 
+<pre><code class="language-cpp">void checkBoom2Zm()
+{
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//火爆辣椒
+			else if (map[i][j].type == LA_JIAO + 1)
+			{
+				if (map[i][j].frameIndex &gt; 7)
+				{
+					for (int k = 0; k &lt; zCount; k++)
+					{
+						if (zms[k].used == false)continue;
+
+						if (zms[k].row == i &amp;&amp; zms[k].x &lt; Wide - 80 - 70 &amp;&amp; zms[k].dead == false)
+						{
+							killCount++;
+
+							zms[k].boom = true;
+							zms[k].dead = true;
+							zms[k].speed = 0;
+							zms[k].frameIndex = 0;
+							zms[k].blood = 0;
+						}
+					}
+					if (map[i][j].frameIndex &gt; 14)
+					{
+						map[i][j].type = 0;
+						map[i][j].frameIndex = 0;
+					}
+				}
+			}
+		}
+	}
+}</code></pre> 
+<h2>6. 小推车</h2> 
+<p> 创建存放小车信息的结构体数组，小推车一条路一辆共5辆，所以我们只需写一个大小为5的结构体数组即可。</p> 
+<pre><code class="language-cpp">//小推车
+struct car
+{
+	bool move;//是否处于移动状态
+	int x, y;//位置
+	bool used;//是否被使用
+};
+struct car cars[5];</code></pre> 
+<h3>放置小推车 </h3> 
+<pre><code class="language-cpp">	for (int i = 0; i &lt; 5; i++)
+	{
+		cars[i].x = 50;
+		cars[i].y = 100 + i * 100 - 15;
+		cars[i].used = true;
+		cars[i].move = false;
+	}</code></pre> 
+<h3>检测小推车对小车的伤害 </h3> 
+<p>当僵尸的横坐标小于等于小推车最左端的坐标时，小车置为移动状态，处于小推车左边的僵尸死亡。</p> 
+<pre><code class="language-cpp">void checkcars2Zm()
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+		int carsX = cars[i].x + 70;
+		for (int j = 0; j &lt; ZM_MAX; j++)
+		{
+			if (zms[j].used &amp;&amp; zms[j].dead == false &amp;&amp; zms[j].row == i)
+			{
+				int zmX = zms[j].x + 80;
+				if (carsX &gt; zmX &amp;&amp; cars[i].used)
+				{
+					if (cars[i].move == false)
+						cars[i].move = true;
+					else
+					{
+						killCount++;
+						zms[j].dead = true;
+						zms[j].speed = 0;
+						zms[j].frameIndex = 0;
+					}
+				}
+			}
+		}
+	}
+}</code></pre> 
+<h3>更新小推车的位置</h3> 
+<p>当小车被置为移动时，小推车开始移动。</p> 
+<pre><code class="language-cpp">void updatecar()
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+		if (cars[i].move)
+		{
+			cars[i].x += 20;
+		}
+		if (cars[i].x &gt; Wide)
+		{
+			cars[i].move = false;
+			cars[i].used = false;
+		}
+	}
+}</code></pre> 
+<h2>源码：</h2> 
+<h3>test.cpp文件： </h3> 
+<pre><code class="language-cpp">#include"game.h"
+
+//判断文件是否存在
+bool fileExist(const char* name)
+{
+	FILE* pf = fopen(name, "r");
+	if (pf == NULL)
+	{
+		return false;
+	}
+	else
+	{
+		fclose(pf);
+		return true;
+	}
+}
+
+//初始化豌豆子弹的帧图片数组
+void bulletsInit()
+{
+	//坤坤篮球
+	loadimage(&amp;imgBulletNormal, "res/bullets/basketball.png", 40, 40);
+	memset(bullets, 0, sizeof(bullets));
+	//初始化豌豆子弹的帧图片数组
+	loadimage(&amp;imgBallBlast[3], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png");
+	for (int i = 0; i &lt; 3; i++)
+	{
+		float k = (i + 1) * 0.2;
+		loadimage(&amp;imgBallBlast[i], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png",
+			imgBallBlast[3].getwidth() * k,
+			imgBallBlast[3].getheight() * k, true);
+	}
+	//豌豆子弹
+	loadimage(&amp;imgBulletNormal_wandou, "res/bullets/bullet_normal.png");
+	memset(bullets_wandou, 0, sizeof(bullets_wandou));
+	//初始化豌豆子弹的帧图片数组
+	loadimage(&amp;imgBallBlast_wandou[3], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png");
+	for (int i = 0; i &lt; 3; i++)
+	{
+		float k = (i + 1) * 0.2;
+		loadimage(&amp;imgBallBlast_wandou[i], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png",
+			imgBallBlast_wandou[3].getwidth() * k,
+			imgBallBlast_wandou[3].getheight() * k, true);
+	}
+	//寒冰豌豆子弹
+	loadimage(&amp;imgBulletNormal_hanbing, "res/bullets/PeaIce/PeaIce_0.png");
+	memset(bullets_hanbing, 0, sizeof(bullets_hanbing));
+	//初始化豌豆子弹的帧图片数组
+	loadimage(&amp;imgBallBlast_hanbing[3], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png");
+	for (int i = 0; i &lt; 3; i++)
+	{
+		float k = (i + 1) * 0.2;
+		loadimage(&amp;imgBallBlast_hanbing[i], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png",
+			imgBallBlast_hanbing[3].getwidth() * k,
+			imgBallBlast_hanbing[3].getheight() * k, true);
+	}
+	//三头豌豆子弹
+	loadimage(&amp;imgBulletNormal_santou, "res/bullets/bullet_normal.png");
+	memset(bullets_santou, 0, sizeof(bullets_santou));
+	//初始化豌豆子弹的帧图片数组
+	loadimage(&amp;imgBallBlast_santou[3], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png");
+	for (int i = 0; i &lt; 3; i++)
+	{
+		float k = (i + 1) * 0.2;
+		loadimage(&amp;imgBallBlast_santou[i], "res/bullets/PeaNormalExplode/PeaNormalExplode_0.png",
+			imgBallBlast_santou[3].getwidth() * k,
+			imgBallBlast_santou[3].getheight() * k, true);
+	}
+}
+
+void gameInit()
+{
+	char name[64];
+	//音效
+	mciSendString("open res/bg.mp3 alias BGM", NULL, NULL, NULL);
+	mciSendString("open res/audio/UraniwaNi.mp3 alias BGM2", NULL, NULL, NULL);
+	mciSendString("open res/audio/WateryGraves.mp3 alias BGM3", NULL, NULL, NULL);
+	mciSendString("open res/audio/readysetplant.mp3 alias BGM4", NULL, NULL, NULL);
+	mciSendString("open res/audio/chomp.mp3 alias ZM_BGM", NULL, NULL, NULL);
+	
+	loadimage(&amp;img, "res/map/map0.jpg");
+	loadimage(&amp;imgBar, "res/bar5.png");
+	//loadimage(&amp;imgnotify, "res/screen/PanelBackground.png");
+	
+	memset(imgPlant, 0, sizeof(imgPlant));
+	memset(map, 0, sizeof(map));
+	memset(cars, 0, sizeof(cars));
+
+	//开场动画
+	for (int i = 0; i &lt; 29; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/yuanshen/%d.png", i + 1);
+		loadimage(&amp;imgopena[i], name, 1196, 670);
+	}
+
+	//植物卡牌
+	for (int i = 0; i &lt; PLANT_COUNT + 2; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/Cards/card_%d.png", i + 1);
+		loadimage(&amp;imgCards[i], name,64,89);
+
+		for (int j = 0; j &lt; 20; j++)
+		{
+			sprintf_s(name, sizeof(name), "res/zhiwu/%d/%d.png",i , j + 1);
+			//先判断文件是否存在
+			if (fileExist(name))
+			{
+				imgPlant[i][j] = new IMAGE;
+				if (i != 3)
+				{
+					loadimage(imgPlant[i][j], name);
+				}
+				else
+				{
+					loadimage(imgPlant[i][j], name,65,100);
+				}
+			}
+			else
+			{
+				break;
+			}
+		}
+	}
+
+	memset(balls, 0, sizeof(balls));
+	for (int i = 0; i &lt; 29; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/sunshine/%d.png", i + 1);
+		loadimage(&amp;imgSunshineBall[i], name);
+	}
+
+	curPlant = 0;
+	sunshine = 50;
+
+	initgraph(Wide, Hight);
+
+	//设置字体
+	LOGFONT f;
+	gettextstyle(&amp;f);
+	f.lfHeight = 30;
+	f.lfWeight = 15;
+	strcpy(f.lfFaceName, "Segoe UI Black");
+	f.lfQuality = ANTIALIASED_QUALITY;//抗锯齿效果
+	settextstyle(&amp;f);
+	setbkmode(TRANSPARENT);//字体透明
+	setcolor(BLACK);
+
+	//初始化子弹的帧图片数组
+	bulletsInit();
+
+	//初始化僵尸数据
+	memset(zms, 0, sizeof(zms));
+	for (int i = 0; i &lt; 22; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/zm/%d.png", i + 1);
+		loadimage(&amp;imgZm[i], name);
+	}
+
+	killCount = 0;
+	zmCount = 0;
+	gameStatus = GOING;
+
+	//初始化僵尸
+	for (int i = 0; i &lt; 38; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/zm_dead/%d.png",i + 1);
+		loadimage(&amp;imgZMDead[i], name);
+	}
+
+	for (int i = 0; i &lt; 21; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/zm_eat/%d.png", i + 1);
+		loadimage(&amp;imgZMEat[i], name);
+	}
+
+	for (int i = 0; i &lt; 11; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/zm_stand/%d.png", i + 1);
+		loadimage(&amp;imgZmStand[i], name);
+	}
+	for (int i = 0; i &lt; 20; i++)
+	{
+		sprintf_s(name, sizeof(name), "res/zm_dead2/%d.png", i + 1);
+		loadimage(&amp;imgzmboom[i], name);
+	}
+	//小推车
+	loadimage(&amp;imgcar, "res/Screen/car.png");
+	for (int i = 0; i &lt; 5; i++)
+	{
+		cars[i].x = 50;
+		cars[i].y = 100 + i * 100 - 15;
+		cars[i].used = true;
+		cars[i].move = false;
+	}
+	//StartButton
+	loadimage(&amp;imgready, "res/Screen/Boom.png");
+}
+
+void drawZm()
+{
+	int zmCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; zmCount; i++)
+	{
+		if (zms[i].used)
+		{//IMAGE* img = (zms[i].dead) ? &amp;imgZMDead[zms[i].frameIndex] : &amp;imgZm[zms[i].frameIndex];
+			IMAGE* img = NULL;
+			if (zms[i].dead)
+			{
+				if (zms[i].boom == true)
+					img = &amp;imgzmboom[zms[i].frameIndex];
+				else
+					img = &amp;imgZMDead[zms[i].frameIndex];
+			}
+			else if (zms[i].eating) img = &amp;imgZMEat[zms[i].frameIndex];
+			else img = &amp;imgZm[zms[i].frameIndex];
+
+			putimagePNG(zms[i].x, zms[i].y - img-&gt;getheight(), img);
+		}
+	}
+}
+
+void drawSunshine()
+{
+	int ballMax = sizeof(balls) / sizeof(balls[0]);
+	for (int i = 0; i &lt; ballMax; i++)
+	{
+		//if (balls[i].used || balls[i].xoff)
+		if(balls[i].used)
+		{
+			IMAGE* img = &amp;imgSunshineBall[balls-&gt;frameIndex];
+			//putimagePNG(balls[i].x, balls[i].y, img);
+			putimagePNG(balls[i].pCur.x, balls[i].pCur.y, img);
+		}
+	}
+}
+
+void drawBullets_kunkun()
+{
+	int bulletsMax = sizeof(bullets) / sizeof(bullets[0]);
+	for (int i = 0; i &lt; bulletsMax; i++)
+	{
+		if (bullets[i].used) {
+			if (bullets[i].blast) {
+				IMAGE* img = &amp;imgBallBlast[bullets[i].frameIndex];
+				putimagePNG(bullets[i].x, bullets[i].y - 10, img);
+			}
+			else {
+				putimagePNG(bullets[i].x, bullets[i].y, &amp;imgBulletNormal);
+			}
+		}
+	}
+}
+
+void drawBullets_wandou()
+{
+	int bulletsMax = sizeof(bullets_wandou) / sizeof(bullets_wandou[0]);
+	for (int i = 0; i &lt; bulletsMax; i++)
+	{
+		if (bullets_wandou[i].used) {
+			if (bullets_wandou[i].blast) {
+				IMAGE* img = &amp;imgBallBlast_wandou[bullets_wandou[i].frameIndex];
+				putimagePNG(bullets_wandou[i].x, bullets_wandou[i].y, img);
+			}
+			else {
+				putimagePNG(bullets_wandou[i].x, bullets_wandou[i].y, &amp;imgBulletNormal_wandou);
+			}
+		}
+	}
+}
+
+void drawBullets_hanbing()
+{
+	int bulletsMax = sizeof(bullets_hanbing) / sizeof(bullets_hanbing[0]);
+	for (int i = 0; i &lt; bulletsMax; i++)
+	{
+		if (bullets_hanbing[i].used) {
+			if (bullets_hanbing[i].blast) {
+				IMAGE* img = &amp;imgBallBlast_hanbing[bullets_hanbing[i].frameIndex];
+				putimagePNG(bullets_hanbing[i].x, bullets_hanbing[i].y, img);
+			}
+			else {
+				putimagePNG(bullets_hanbing[i].x, bullets_hanbing[i].y, &amp;imgBulletNormal_hanbing);
+			}
+		}
+	}
+}
+
+void drawBullets_santou()
+{
+	int bulletsMax = sizeof(bullets_santou) / sizeof(bullets_santou[0]);
+	for (int i = 0; i &lt; bulletsMax; i++)
+	{
+		if (bullets_santou[i].used) {
+			if (bullets_santou[i].blast) {
+				IMAGE* img = &amp;imgBallBlast_santou[bullets_santou[i].frameIndex];
+				putimagePNG(bullets_santou[i].x, bullets_santou[i].y, img);
+			}
+			else {
+				putimagePNG(bullets_santou[i].x, bullets_santou[i].y, &amp;imgBulletNormal_santou);
+			}
+		}
+	}
+}
+
+void drawBullets()
+{
+	//坤坤
+	drawBullets_kunkun();
+	//豌豆
+	drawBullets_wandou();
+	//寒冰豌豆
+	drawBullets_hanbing();
+	//三头豌豆
+	drawBullets_santou();
+}
+
+void show()//渲染游戏画面
+{
+	BeginBatchDraw();
+
+	putimage(-150, 0, &amp;img);
+	putimagePNG(80, -10, &amp;imgBar);
+	char scoreText[8];
+	char scoreText1[16];
+	sprintf_s(scoreText, sizeof(scoreText), "%d", sunshine);
+	sprintf_s(scoreText1, sizeof(scoreText1), "Wave %d zombies", wava_count);
+	//sprintf_s(name, sizeof(name), "res/yuanshen/%d.png", i + 1);
+	outtextxy(105, 60, scoreText);
+	outtextxy(700, 570, scoreText1);
+	//outtextxy(700, 570, "s");
+
+	//小推车
+	for (int i = 0; i &lt; 5; i++)
+	{
+		if(cars[i].used)
+			putimagePNG(cars[i].x, cars[i].y, &amp;imgcar);
+	}
+
+	//植物卡牌
+	for (int i = 0; i &lt; PLANT_COUNT + 2; i++)
+	{
+		if(i==PLANT_COUNT)
+			putimagePNG(163 + i * 65 + 8, -5, &amp;imgCards[i]);
+		else
+			putimagePNG(163 + i * 65, 0, &amp;imgCards[i]);
+	}
+
+
+	//植物
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			if (map[i][j].type &gt; 0)
+			{
+				/*int x = 256 - 150 + j * 81;
+				int y = 100 + i * 100 - 15;*/
+				int PlantType = map[i][j].type - 1;
+				int index = map[i][j].frameIndex;
+				if (map[i][j].type != 4 &amp;&amp; map[i][j].type != YING_TAO + 1 &amp;&amp; map[i][j].type != LA_JIAO + 1)
+				{
+					putimagePNG(map[i][j].x, map[i][j].y, imgPlant[PlantType][index]);
+				}
+				else if (map[i][j].type == YING_TAO + 1)
+				{
+					if (index == 8)
+						putimagePNG(map[i][j].x - 75, map[i][j].y-35, imgPlant[PlantType][index]);
+					else
+						putimagePNG(map[i][j].x - 22, map[i][j].y, imgPlant[PlantType][index]);
+				}
+				else if (map[i][j].type == LA_JIAO + 1)
+				{
+					if (index &gt; 7)
+						putimagePNG(100, map[i][j].y - 35, imgPlant[PlantType][index]);
+					else
+						putimagePNG(map[i][j].x, map[i][j].y, imgPlant[PlantType][index]);
+				}
+				else
+				{
+					putimagePNG(map[i][j].x + 5, map[i][j].y - 20, imgPlant[PlantType][index]);
+				}
+			}
+		}
+	}
+
+	//渲染子弹
+	drawBullets();
+
+	//铲子
+	if (curPlant != PLANT_COUNT + 1)
+	{
+		IMAGE* img = imgPlant[8][0];
+		putimagePNG(163 + 8 * 65 + 8, 0, img);
+	}
+
+	//僵尸
+	drawZm();
+
+	//渲染拖动中的植物
+	if (curPlant &gt; 0)
+	{
+		IMAGE* img = imgPlant[curPlant - 1][0];
+		putimagePNG(curX - img-&gt;getwidth() / 2, curY - img-&gt;getheight() / 2, img);
+	}
+
+	//渲染阳光
+	drawSunshine();
+	EndBatchDraw();
+}
+
+void collectSunshine(ExMessage* msg)
+{
+	int count = sizeof(balls) / sizeof(balls[0]);
+	int w = imgSunshineBall[0].getwidth();
+	int h = imgSunshineBall[0].getheight();
+	for (int i = 0; i &lt; count; i++)
+	{
+		if (balls[i].used)
+		{
+			//int x = balls[i].x;
+		    //int y = balls[i].y;
+			int x = balls[i].pCur.x;
+			int y = balls[i].pCur.y;
+
+			if (msg-&gt;x &gt; x &amp;&amp; msg-&gt;x&lt;x + w
+				&amp;&amp; msg-&gt;y&gt;y &amp;&amp; msg-&gt;y &lt; y + h)
+			{
+				sunshine += 25;
+				//balls[i].used = false;
+				balls[i].status = SUNSHINE_COLLECT;
+				//音效
+				//mciSendString("play res/sunshine.mp3", 0, 0, 0);
+				//不支持MP3格式
+				PlaySound("res/sunshine.wav", NULL, SND_FILENAME | SND_ASYNC);
+				balls[i].p1 = balls[i].pCur;
+				balls[i].p4 = vector2(100, 0);
+				balls[i].t = 0;
+				float distance = dis(balls[i].p1 - balls[i].p4);
+				float off = 8;
+				balls[i].speed = 1.0 / (distance / off);
+				break;
+				/*float destX = 0;
+				float destY = 262;
+				float angle = atan((y - destY) / (x - destX));
+				balls[i].xoff = 4 * cos(angle);
+				balls[i].yoff = 4 * sin(angle);*/
+			}
+		}
+	}
+}
+
+void userClick()
+{
+	ExMessage msg;
+	static int status = 0;
+	if (peekmessage(&amp;msg))//判断有没有消息
+	{
+		if (msg.message == WM_LBUTTONDOWN)//左键按下
+		{
+			if (msg.x &gt; 163 &amp;&amp; msg.x &lt; 163 + 65 * (PLANT_COUNT+2) &amp;&amp; msg.y &lt; 96)
+			{
+				//mciSendString("play res/audio/bleep.mp3 alias BGM4", NULL, NULL, NULL);
+				PlaySound("res/audio/bleep.wav", NULL, SND_FILENAME | SND_ASYNC);
+				//PlaySound("res/sunshine.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+				int index = (msg.x - 163) / 65;
+				//坤坤
+			/*	if (index + 1 == KUN_KUN &amp;&amp; sunshine &gt;= 100)
+				{
+					curPlant = index + 1;
+					status = 1;
+					curX = msg.x;
+					curY = msg.y;
+					sunshine -= 100;
+				}*/
+				curPlant = index + 1;
+				status = 1;
+				curX = msg.x;
+				curY = msg.y;
+			}
+			else
+			{
+				collectSunshine(&amp;msg);
+			}
+		}
+		else if (msg.message == WM_MOUSEMOVE &amp;&amp; status == 1)//鼠标移动
+		{
+			curX = msg.x;
+			curY = msg.y;
+		}
+		else if (msg.message == WM_LBUTTONUP)//鼠标放下
+		{
+			if (msg.x &gt; 256 - 150 &amp;&amp; msg.x &lt; Wide - 70 &amp;&amp; msg.y &gt; 100 &amp;&amp; msg.y &lt; 590)
+			{
+				int row = (msg.y - 100) / 102;
+				int col = (msg.x - 256 + 150 ) / 81;
+				
+				
+				if (map[row][col].type == 0 &amp;&amp; curPlant != PLANT_COUNT + 1 &amp;&amp; curPlant != PLANT_COUNT + 2)
+				{
+					//printf("%d\n", map[col][row].type);
+					map[row][col].type = curPlant;
+					map[row][col].frameIndex = 0;
+
+					if(curPlant!=0)
+						PlaySound("res/audio/coffee.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+					if (curPlant == 5)
+						map[row][col].blood = KUNKUN_BLOOD * 50;
+					else
+						map[row][col].blood = KUNKUN_BLOOD;
+
+					map[row][col].shootTime = 0;
+					map[row][col].shoot = false;
+
+					map[row][col].x = 256 - 150 + col * 81;
+					map[row][col].y = 100 + row * 100 - 15;
+					
+				}
+				else if (map[row][col].type != 0 &amp;&amp; curPlant == PLANT_COUNT + 1)
+				{
+					PlaySound("res/audio/coffee.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+					map[row][col].type = 0;
+					map[row][col].blood = 0;
+					
+				}
+				else if (curPlant == PLANT_COUNT + 2)
+				{
+
+					if (zmCount &gt;= ZM_MAX)
+						return;
+
+					int i = 0;
+					int zmMax = sizeof(zms) / sizeof(zms[0]);
+					for (i = 0; i &lt; zmMax &amp;&amp; zms[i].used; i++);
+					if (i &lt; zmMax)
+					{
+						PlaySound("res/audio/coffee.wav", NULL, SND_FILENAME | SND_ASYNC);
+						memset(&amp;zms[i], 0, sizeof(zms[i]));
+						zms[i].used = true;
+						zms[i].speed = 2;
+						zms[i].row = row;
+						zms[i].y = 100 + (zms[i].row) * 100 + 70;
+						zms[i].x = 256 - 150 + (col - 1) * 81;
+						zms[i].blood = ORDINARY_ZM_BLOOD;
+						zms[i].dead = false;
+						zms[i].boom = false;
+						zms[i].zmSpeed = 4;
+						zmCount++;
+					}
+				}
+			}
+		}
+		else if (msg.message == WM_RBUTTONDOWN)
+		{
+			curPlant = 0;
+			status = 0;
+		}
+	}
+}
+
+void createSunshine()
+{
+
+	static int count = 0;
+	static int fre = 200;
+	count++;
+	if (count &gt;= fre)
+	{
+		fre = 200 + rand() % 200;
+		count = 0;
+
+		//从阳光池取一个可以使用的
+		int ballMax = sizeof(balls) / sizeof(balls[0]);
+
+		int i;
+		for (i = 0; i &lt; ballMax &amp;&amp; balls[i].used; i++);
+			if (i &gt;= ballMax)return;
+
+			balls[i].used = true;
+			balls[i].frameIndex = 0;
+		/*	balls[i].x = 160 + rand() % 600;
+			balls[i].y = 60;
+			balls[i].destY = (rand() % 4) * 90 + 160;*/
+			balls[i].timer = 0;
+		/*	balls[i].xoff = 0;
+			balls[i].yoff = 0;*/
+
+			balls[i].status = SUNSHINE_DOWN;
+			balls[i].t = 0;
+			balls[i].p1 = vector2(160 + rand() % 600, 60);
+			balls[i].p4 = vector2(balls[i].p1.x, (rand() % 4) * 90 + 160);
+			int off = 2;
+			float distance = balls[i].p4.y - balls[i].p1.y;
+			balls[i].speed = 1.0 / (distance / off);
+	}
+
+	int ballMax = sizeof(balls) / sizeof(balls[0]);
+	//向日葵生产阳光
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			if (map[i][j].type == TAI_YANG + 1)
+			{
+				map[i][j].timer++;
+				if (map[i][j].timer &gt; 100)
+				{
+					map[i][j].timer = 0;
+
+					int k;
+					for (k = 0; k &lt; ballMax &amp;&amp; balls[k].used; k++);
+					if (k &gt;= ballMax)return;
+
+					balls[k].used = true;
+					balls[k].p1 = vector2(map[i][j].x, map[i][j].y);
+					int w = (40 + rand() % 50) * (rand() % 2 ? 1 : -1);
+					balls[k].p4 = vector2(map[i][j].x + w,
+						map[i][j].y + imgPlant[TAI_YANG][0]-&gt;getheight() - imgSunshineBall[0].getheight());
+					balls[k].p2 = vector2(balls[k].p1.x + w * 0.3, balls[k].p1.y - 100);
+					balls[k].p3 = vector2(balls[k].p1.x + w * 0.7, balls[k].p1.y - 100);
+					balls[k].status = SUNSHINE_RPODUCT;
+					balls[k].speed = 0.05;
+					balls[k].t = 0;
+				}
+			}
+		}
+	}
+
+}
+
+void updatSunshine()
+{
+	int ballMax = sizeof(balls) / sizeof(balls[0]);
+	for (int i = 0; i &lt; ballMax; i++)
+	{
+		if (balls[i].used)
+		{
+			balls[i].frameIndex = (balls[i].frameIndex + 1) % 29;
+			if (balls[i].status == SUNSHINE_DOWN)
+			{
+				struct sunshineBall* sun = &amp;balls[i];
+				sun-&gt;t += sun-&gt;speed;
+				sun-&gt;pCur = sun-&gt;p1 + sun-&gt;t * (sun-&gt;p4 - sun-&gt;p1);
+				if (sun-&gt;t &gt;= 1)
+				{
+					sun-&gt;status = SUNSHINE_GROUND;
+					sun-&gt;timer = 0;
+				}
+			}
+			else if (balls[i].status == SUNSHINE_GROUND)
+			{
+				balls[i].timer++;
+				if (balls[i].timer &gt; 100)
+				{
+					balls[i].used = false;
+					balls[i].timer = 0;
+				}
+			}
+			else if (balls[i].status == SUNSHINE_COLLECT)
+			{
+				struct sunshineBall* sun = &amp;balls[i];
+				sun-&gt;t += sun-&gt;speed;
+				sun-&gt;pCur = sun-&gt;p1 + sun-&gt;t * (sun-&gt;p4 - sun-&gt;p1);
+				if (sun-&gt;t &gt; 1)
+				{
+					sun-&gt;used = false;
+					sunshine += 25;
+				}
+			}
+			else if (balls[i].status == SUNSHINE_RPODUCT)
+			{
+				struct sunshineBall* sun = &amp;balls[i];
+				sun-&gt;t += sun-&gt;speed;
+				sun-&gt;pCur = calcBezierPoint(sun-&gt;t,sun-&gt;p1, sun-&gt;p2, sun-&gt;p3, sun-&gt;p4);
+				if (sun-&gt;t &gt; 1)
+				{
+					sun-&gt;status = SUNSHINE_GROUND;
+					sun-&gt;timer = 0;
+				}
+
+			}
+		}
+	}
+}
+
+int mciZmTime = 0;
+void createZM()
+{
+	if (zmCount &gt;= zmCount_max)
+		return;
+
+	static int zmFre = 5000000;
+	static int count = 0;
+	
+	count++;
+	if (count &gt; zmFre)
+	{
+		if (mciZmTime == 0)
+		{
+			mciSendString("play res/audio/awooga.mp3", 0, 0, 0);
+			mciZmTime++;
+		}
+		count = 0;
+		zmFre = 202 - 20 * wava_count;
+		int i = 0;
+		int zmMax = sizeof(zms) / sizeof(zms[0]);
+		for (i = 0; i &lt; zmMax &amp;&amp; zms[i].used &amp;&amp; zms[i].dead == false; i++);
+		if (i &lt; zmMax)
+		{
+			memset(&amp;zms[i], 0, sizeof(zms[i]));
+			zms[i].used = true;
+			zms[i].speed = 2;
+			zms[i].row = rand() % 5;
+			zms[i].y = 100 + (zms[i].row) * 100 + 70;
+			zms[i].x = Wide;
+			zms[i].blood = ORDINARY_ZM_BLOOD;
+			zms[i].dead = false;
+			zms[i].boom = false;
+			zms[i].zmSpeed = 4;
+			zmCount++;
+		}
+	}
+}
+
+int zmSpeed = 6;
+void updateZM()
+{
+	int zmMax = sizeof(zms) / sizeof(zms[0]);
+	static int count[ZM_MAX] = { 0 };
+	//更新僵尸的位置
+	for (int i = 0; i &lt; zmMax; i++)
+	{
+		count[i]++;
+		if (count[i] &gt;= (gameStatus == GOING ? zms[i].zmSpeed : zmSpeed))
+		{
+			//printf("%d ", (gameStatus == GOING ? zms[i].zmSpeed : zmSpeed));
+			count[i] = 0;
+
+			if (zms[i].used)
+			{
+				if (zms[i].dead)
+				{
+					zms[i].frameIndex++;
+					if (zms[i].boom == true)
+					{
+						if (zms[i].frameIndex &gt;= 20)
+						{
+							//printf("%d ", killCount);
+							zms[i].used = false;
+							zms[i].row = 0;
+							//killCount++;
+							if (killCount &gt;= ZM_MAX)
+								gameStatus = WIN;
+							else if (killCount &gt;= zmCount_max)
+							{
+								wava_count++;
+								zmCount_max *= 2;
+								killCount = 0;
+								zmCount = 0;
+							}
+						}
+					}
+					else
+					{
+						if (zms[i].frameIndex &gt;= 38)
+						{
+							//printf("%d ", killCount);
+
+							zms[i].used = false;
+							zms[i].row = 0;
+							
+							if (killCount &gt;= ZM_MAX)
+								gameStatus = WIN;
+							else if (killCount &gt;= zmCount_max)
+							{
+								wava_count++;
+								zmCount_max *= 2;
+								killCount = 0;
+								zmCount = 0;
+							}
+						}
+					}
+				}
+				else if (zms[i].eating)
+				{
+
+					//mciSendString("play res/audio/chomp.mp3", 0, 0, 0);
+					//mciSendString("play res/audio/chompsoft.mp3", 0, 0, 0);
+					zms[i].frameIndex = (zms[i].frameIndex + 1) % 21;
+				}
+				else
+				{
+					zms[i].frameIndex++;
+					if (zms[i].frameIndex &gt;= 22)
+					{
+						zms[i].frameIndex = 0;
+					}
+				}
+				zms[i].x -= zms[i].speed;
+				if (zms[i].x &lt; 0)
+				{
+					//printf("GAME OVER\n");
+					//MessageBox(NULL, "over", "over", 0);//待优化
+					//exit(0);//待优化
+					gameStatus = FAIL;
+				}
+			}
+		}
+	}
+}
+
+void shoot()
+{
+	int lines[5] = { 0 };
+	int bulletMax = sizeof(bullets) / sizeof(bullets[0]);
+	int bulletMax_wandou = sizeof(bullets_wandou) / sizeof(bullets_wandou[0]);
+	int bulletMax_hanbing = sizeof(bullets_hanbing) / sizeof(bullets_hanbing[0]);
+	int bulletMax_santou = sizeof(bullets_santou) / sizeof(bullets_santou[0]);
+	int zmCount = sizeof(zms) / sizeof(zms[0]);
+	int dangerX = Wide - 80;
+	for (int i = 0; i &lt; zmCount; i++)
+	{
+		if (zms[i].dead == false &amp;&amp; zms[i].x &lt; dangerX &amp;&amp; zms[i].x&gt;100)
+		{
+			lines[zms[i].row] = 1;
+		}
+	}
+
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//坤坤
+			if (map[i][j].type == KUN_KUN + 1 &amp;&amp; lines[i])
+			{
+				map[i][j].shootTime++;
+				if (map[i][j].shootTime &gt; 20)
+				{
+					map[i][j].shootTime = 0;
+
+					int k;
+					for (k = 0; k &lt; bulletMax &amp;&amp; bullets[k].used; k++);
+					if (k &lt; bulletMax)
+					{
+						map[i][j].frameIndex = 3;
+						bullets[k].used = true;
+						bullets[k].row = i;
+						bullets[k].speed = 10;
+
+						bullets[k].blast = false;
+						bullets[k].frameIndex = 0;
+
+						int zwX = 256 - 150 + j * 81;
+						int zwY = 100 + i * 100 - 15;
+						bullets[k].x = zwX + imgPlant[map[i][j].type - 1][0]-&gt;getwidth() - 10;
+						bullets[k].y = zwY + 5;
+					}
+				}
+			}
+
+			//豌豆
+			else if (map[i][j].type == WAN_DOU + 1 &amp;&amp; lines[i])
+			{
+				map[i][j].shootTime++;
+				if (map[i][j].shootTime &gt; 35)
+				{
+					map[i][j].shootTime = 0;
+					int k;
+					for (k = 0; k &lt; bulletMax_wandou &amp;&amp; bullets_wandou[k].used; k++);
+					if (k &lt; bulletMax_wandou)
+					{
+						//map[i][j].shoot = true;
+						//if(map[i][j].frameIndex &gt; 1)
+						map[i][j].frameIndex = 2;
+						bullets_wandou[k].used = true;
+						bullets_wandou[k].row = i;
+						bullets_wandou[k].speed = 8;
+
+						bullets_wandou[k].blast = false;
+						bullets_wandou[k].frameIndex = 0;
+
+						int zwX = 256 - 150 + j * 81;
+						int zwY = 100 + i * 100 - 15;
+						bullets_wandou[k].x = zwX + imgPlant[map[i][j].type - 1][0]-&gt;getwidth() - 10;
+						bullets_wandou[k].y = zwY + 5;
+					}
+				}
+			}
+
+			//寒冰豌豆
+			else if (map[i][j].type == HAN_BING_WAN_DOU + 1 &amp;&amp; lines[i])
+			{
+				map[i][j].shootTime++;
+				if (map[i][j].shootTime &gt; 35)
+				{
+					map[i][j].shootTime = 0;
+					int k;
+					for (k = 0; k &lt; bulletMax_hanbing &amp;&amp; bullets_hanbing[k].used; k++);
+					if (k &lt; bulletMax_hanbing)
+					{
+						//map[i][j].shoot = true;
+						//if(map[i][j].frameIndex &gt; 1)
+						map[i][j].frameIndex = 4;
+						bullets_hanbing[k].used = true;
+						bullets_hanbing[k].row = i;
+						bullets_hanbing[k].speed = 10;
+
+						bullets_hanbing[k].blast = false;
+						bullets_hanbing[k].frameIndex = 0;
+
+						int zwX = 256 - 150 + j * 81;
+						int zwY = 100 + i * 100 - 15;
+						bullets_hanbing[k].x = zwX + imgPlant[map[i][j].type - 1][0]-&gt;getwidth() - 10;
+						bullets_hanbing[k].y = zwY + 5;
+					}
+				}
+			}
+
+			//三头豌豆
+			else if (map[i][j].type == SAN_TOU_WAN_DOU + 1 &amp;&amp; lines[i])
+			{
+				map[i][j].shootTime++;
+				if (map[i][j].shootTime &gt; 35)
+				{
+					map[i][j].shootTime = 0;
+					int k;
+					for (int b = 0; b &lt; 3; b++)
+					{
+						for (k = 0; k &lt; bulletMax_santou &amp;&amp; bullets_santou[k].used; k++);
+						if (k &lt; bulletMax_santou)
+						{
+							//map[i][j].shoot = true;
+							//if(map[i][j].frameIndex &gt; 1)
+							//map[i][j].frameIndex = 2;
+							bullets_santou[k].used = true;
+							bullets_santou[k].row = i;
+							bullets_santou[k].speed = 8;
+
+							bullets_santou[k].blast = false;
+							bullets_santou[k].frameIndex = 0;
+
+							int zwX = 256 - 150 + j * 81;
+							int zwY = 100 + i * 100 - 15;
+							bullets_santou[k].x = zwX + imgPlant[map[i][j].type - 1][0]-&gt;getwidth() - 30;
+							bullets_santou[k].y = zwY + 16;
+							direction_santou[k] = b;
+							row_santou[k] = i;
+						}
+					}
+				}
+			}
+		}
+	}
+}
+
+void updateBullets_kunkun()
+{
+	int countMax = sizeof(bullets) / sizeof(bullets[0]);
+	for (int i = 0; i &lt; countMax; i++)
+	{
+		if (bullets[i].used)
+		{
+			//static double angle = 0;
+			bullets[i].x += bullets[i].speed;
+			//angle += bullets[i].speed;
+			//bullets[i].y += 10;
+
+			//bullets[i].x += bullets[i].speed;
+			if (bullets[i].x &gt; Wide)
+			{
+				bullets[i].used = false;
+			}
+
+			//待完善
+			if (bullets[i].blast)
+			{
+				bullets[i].frameIndex++;
+				if (bullets[i].frameIndex &gt;= 4)
+				{
+					bullets[i].used = false;
+				}
+			}
+		}
+	}
+}
+
+void updateBullets_wandou()
+{
+	int countMax_wandou = sizeof(bullets_wandou) / sizeof(bullets_wandou[0]);
+	for (int i = 0; i &lt; countMax_wandou; i++)
+	{
+		if (bullets_wandou[i].used)
+		{
+			//static double angle = 0;
+			bullets_wandou[i].x += bullets_wandou[i].speed;
+			//angle += bullets[i].speed;
+			//bullets[i].y += 10;
+
+			//bullets[i].x += bullets[i].speed;
+			if (bullets_wandou[i].x &gt; Wide)
+			{
+				bullets_wandou[i].used = false;
+			}
+
+			//待完善
+			if (bullets_wandou[i].blast)
+			{
+				bullets_wandou[i].frameIndex++;
+				if (bullets_wandou[i].frameIndex &gt;= 4)
+				{
+					bullets_wandou[i].used = false;
+				}
+			}
+		}
+	}
+}
+
+void updateBullets_hanbing()
+{
+	int countMax_hanbing = sizeof(bullets_hanbing) / sizeof(bullets_hanbing[0]);
+	for (int i = 0; i &lt; countMax_hanbing; i++)
+	{
+		if (bullets_hanbing[i].used)
+		{
+			//static double angle = 0;
+			bullets_hanbing[i].x += bullets_hanbing[i].speed;
+			//angle += bullets[i].speed;
+			//bullets[i].y += 10;
+
+			//bullets[i].x += bullets[i].speed;
+			if (bullets_hanbing[i].x &gt; Wide)
+			{
+				bullets_hanbing[i].used = false;
+			}
+
+			//待完善
+			if (bullets_hanbing[i].blast)
+			{
+				bullets_hanbing[i].frameIndex++;
+				if (bullets_hanbing[i].frameIndex &gt;= 4)
+				{
+					bullets_hanbing[i].used = false;
+				}
+			}
+		}
+	}
+}
+
+void updateBullets_santou()
+{
+	int countMax_santou = sizeof(bullets_santou) / sizeof(bullets_santou[0]);
+	for (int i = 0; i &lt; countMax_santou; i++)
+	{
+		if (bullets_santou[i].used)
+		{
+			if (direction_santou[i] == MIDDLE)
+			{//static double angle = 0;
+				bullets_santou[i].x += bullets_santou[i].speed;
+
+				//bullets[i].x += bullets[i].speed;
+				if (bullets_santou[i].x &gt; Wide)
+				{
+					bullets_santou[i].used = false;
+				}	
+			}
+			else if (direction_santou[i] == UP)
+			{
+				int destY = 85 + (row_santou[i] - 1) * 100;
+				//int zwX = 256 - 150 + j * 81;
+				float angle = atan(0.6);
+				bullets_santou[i].x += bullets_santou[i].speed;
+				bullets_santou[i].y -= bullets_santou[i].speed * tan(angle);
+				//printf("%d\n", row_santou[i]);
+				//printf("destY = %d\n", destY);
+				//printf("bullets[i].y = %lf\n", bullets[i].y);
+				if (bullets_santou[i].y &lt;= destY + 16)
+				{
+					direction_santou[i] = MIDDLE;
+				}
+
+			}
+			else if (direction_santou[i] == DOWN)
+			{
+				int destY = 85 + (row_santou[i] + 1) * 100;
+				float angle = atan(0.6);
+				bullets_santou[i].x += bullets_santou[i].speed;
+				bullets_santou[i].y += bullets_santou[i].speed * tan(angle);
+				if (bullets_santou[i].y &gt;= destY + 16)
+				{
+					direction_santou[i] = MIDDLE;
+				}
+			}
+			//待完善
+			if (bullets_santou[i].blast)
+			{
+				bullets_santou[i].frameIndex++;
+				if (bullets_santou[i].frameIndex &gt;= 4)
+				{
+					bullets_santou[i].used = false;
+				}
+			}
+		}
+	}
+}
+
+void updateBullets()
+{
+	//坤坤
+	updateBullets_kunkun();
+	//豌豆射手
+	updateBullets_wandou();
+	//寒冰豌豆
+	updateBullets_hanbing();
+	//三头豌豆
+	updateBullets_santou();
+}
+
+void checkBullet2Zm_kunkun()
+{
+	int bCount = sizeof(bullets) / sizeof(bullets[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; bCount; i++)
+	{
+		//if (bullets[i].used || bullets[i].blast == false)
+		{
+			for (int j = 0; j &lt; zCount; j++)
+			{
+				if (zms[j].used == false)continue;
+				int x1 = zms[j].x + 80;
+				int x2 = zms[j].x + 110;
+				int x = bullets[i].x;
+				if (zms[j].dead == false &amp;&amp;
+					bullets[i].row == zms[j].row &amp;&amp; x &gt; x1 &amp;&amp; x &lt; x2 &amp;&amp; bullets[i].used) {
+					zms[j].blood -= 20;
+					zms[j].x += 1;
+					bullets[i].blast = true;
+					bullets[i].speed = 0;
+					//bullets[i].x = 0;
+
+					if (zms[j].blood &lt;= 0)
+					{
+						killCount++;
+
+						zms[j].dead = true;
+						zms[j].speed = 0;
+						zms[j].frameIndex = 0;
+					}
+					break;
+				}
+			}
+		}
+	}
+}
+
+void checkBullet2Zm_wandou()
+{
+	int bCount = sizeof(bullets_wandou) / sizeof(bullets_wandou[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; bCount; i++)
+	{
+		//if (bullets[i].used || bullets[i].blast == false)
+			for (int j = 0; j &lt; zCount; j++)
+			{
+				if (zms[j].used == false)continue;
+				int x1 = zms[j].x + 80;
+				int x2 = zms[j].x + 110;
+				int x = bullets_wandou[i].x;
+				if (zms[j].dead == false &amp;&amp;
+					bullets_wandou[i].row == zms[j].row &amp;&amp; x &gt; x1 &amp;&amp; x &lt; x2 &amp;&amp; bullets_wandou[i].used) {
+					zms[j].blood -= 20;
+					bullets_wandou[i].blast = true;
+					bullets_wandou[i].speed = 0;
+					//bullets_wandou[i].x = 0;
+
+					if (zms[j].blood &lt;= 0)
+					{
+						killCount++;
+
+						zms[j].dead = true;
+						zms[j].speed = 0;
+						zms[j].frameIndex = 0;
+					}
+					break;
+				}
+			}
+	}
+}
+
+void checkBullet2Zm_hanbing()
+{
+	int bCount = sizeof(bullets_hanbing) / sizeof(bullets_hanbing[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; bCount; i++)
+	{
+		//if (bullets[i].used || bullets[i].blast == false)
+		for (int j = 0; j &lt; zCount; j++)
+		{
+			if (zms[j].used == false)continue;
+			int x1 = zms[j].x + 80;
+			int x2 = zms[j].x + 110;
+			int x = bullets_hanbing[i].x;
+			if (zms[j].dead == false &amp;&amp;
+				bullets_hanbing[i].row == zms[j].row &amp;&amp; x &gt; x1 &amp;&amp; x &lt; x2 &amp;&amp; bullets_hanbing[i].used) {
+				zms[j].blood -= 20;
+				zms[j].zmSpeed = 7;
+				bullets_hanbing[i].blast = true;
+				bullets_hanbing[i].speed = 0;
+				//bullets_hanbing[i].x = 0;
+
+				if (zms[j].blood &lt;= 0)
+				{
+					killCount++;
+					zms[j].dead = true;
+					zms[j].speed = 0;
+					zms[j].frameIndex = 0;
+					zms[j].zmSpeed = 4;
+				}
+				break;
+			}
+		}
+	}
+}
+
+void checkBullet2Zm_santou()
+{
+	int bCount = sizeof(bullets_santou) / sizeof(bullets_santou[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; bCount; i++)
+	{
+		bullets_santou[i].row = (bullets_santou[i].y - 85+5) / 100;
+		//if (bullets[i].used || bullets[i].blast == false)
+		for (int j = 0; j &lt; zCount; j++)
+		{
+			//100 + i * 100 - 15
+
+			if (zms[j].used == false)continue;
+			int x1 = zms[j].x + 80;
+			int x2 = zms[j].x + 110;
+			int x = bullets_santou[i].x;
+			if (zms[j].dead == false &amp;&amp;
+				bullets_santou[i].row == zms[j].row &amp;&amp; x &gt; x1 &amp;&amp; x &lt; x2 &amp;&amp; bullets_santou[i].used) {
+				zms[j].blood -= 20;
+				bullets_santou[i].blast = true;
+				bullets_santou[i].speed = 0;
+				//bullets_santou[i].x = 0;
+
+				if (zms[j].blood &lt;= 0)
+				{
+					killCount++;
+
+					zms[j].dead = true;
+					zms[j].speed = 0;
+					zms[j].frameIndex = 0;
+					zms[j].zmSpeed = 4;
+				}
+				break;
+			}
+		}
+	}
+}
+
+void checkBullet2Zm()
+{
+	//坤坤
+	checkBullet2Zm_kunkun();
+	//豌豆
+	checkBullet2Zm_wandou();
+	//寒冰豌豆
+	checkBullet2Zm_hanbing();
+	//三头豌豆
+	checkBullet2Zm_santou();
+}
+
+void checkBoom2Zm()
+{
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+
+	for (int i = 0; i &lt; 5; i++)
+	{
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//樱桃
+			if (map[i][j].type == YING_TAO + 1)
+			{
+				if (map[i][j].frameIndex &gt; 8)
+				{
+					PlaySound("res/audio/cherrybomb.wav", NULL, SND_FILENAME | SND_ASYNC);
+					//map[row][col].x = 256 - 150 + col * 81;
+					//map[row][col].y = 100 + row * 100 - 15;
+					map[i][j].type = 0;
+					map[i][j].frameIndex = 0;
+					int x1 = 100 + 81 * (j - 1);
+					int x2 = 100 + 81 * (j + 2);
+					int y1 = 85 + (i - 1) * 100;
+					int y2 = 85 + (i + 2) * 100;
+					for (int k = 0; k &lt; zCount; k++)
+					{
+						if (zms[k].used == false)continue;
+
+						int zmX = zms[k].x + imgZm[0].getwidth() / 2;
+						int zmY = zms[k].y;
+						if (zmX &lt;= x2 &amp;&amp; zmX &gt;= x1 &amp;&amp; zmY &gt;= y1 &amp;&amp; zmY &lt;= y2 &amp;&amp; zms[k].dead == false)
+						{
+							killCount++;
+
+							zms[k].boom = true;
+							zms[k].dead = true;
+							zms[k].speed = 0;
+							zms[k].frameIndex = 0;
+							zms[k].blood = 0;
+						
+						}
+					}
+				}
+			}
+			//火爆辣椒
+			else if (map[i][j].type == LA_JIAO + 1)
+			{
+				if (map[i][j].frameIndex &gt; 7)
+				{
+					if (map[i][j].frameIndex == 8)
+						PlaySound("res/audio/firepea.wav", NULL, SND_FILENAME | SND_ASYNC);
+
+					for (int k = 0; k &lt; zCount; k++)
+					{
+						if (zms[k].used == false)continue;
+
+						if (zms[k].row == i &amp;&amp; zms[k].x &lt; Wide - 80 - 70 &amp;&amp; zms[k].dead == false)
+						{
+							killCount++;
+
+							zms[k].boom = true;
+							zms[k].dead = true;
+							zms[k].speed = 0;
+							zms[k].frameIndex = 0;
+							zms[k].blood = 0;
+						}
+					}
+					if (map[i][j].frameIndex &gt; 14)
+					{
+						map[i][j].type = 0;
+						map[i][j].frameIndex = 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+void checkZM2Zhiwu()
+{
+	int chomp = 0;
+	//mciSendString("play ZM_BGM repeat", NULL, NULL, NULL);
+	char name[64];
+	int bCount = sizeof(bullets) / sizeof(bullets[0]);
+	int zCount = sizeof(zms) / sizeof(zms[0]);
+	for (int i = 0; i &lt; zCount; i++)
+	{
+		//killCount = 0;
+		if (zms[i].dead)continue;
+
+		//zms[i].chomptime = 0;
+		int row = zms[i].row;
+		for (int j = 0; j &lt; 9; j++)
+		{
+			//if (map[row][j].type == 0)continue;
+			
+			//
+			int zhiwuX = 101 + j * 81;
+			int x1 = zhiwuX;
+			int x2 = zhiwuX + 81;
+			int x3 = zms[i].x + 100;
+			if (x3 &gt;= x1 &amp;&amp; x3 &lt;= x2)
+			{
+				if (map[row][j].blood &lt;= 0 || (map[row][j].type == 0 &amp;&amp; zms[i].eating != false))
+				{
+					map[row][j].blood = 0;
+					map[row][j].type = 0;
+					zms[i].eating = false;
+					//zms[i].frameIndex = 0;
+					zms[i].speed = 3;
+				}
+				else if (map[row][j].type != 0)
+				{
+					//mciSendString("play ZM_BGM repeat", NULL, NULL, NULL);
+					//mciSendString("play name repeat", NULL, 0, NULL);
+					zms[i].eating = true;
+					zms[i].speed = 0;
+					if (map[row][j].type != 3 &amp;&amp; map[row][j].type != 7)
+						map[row][j].blood--;
+					//zms[i].frameIndex = 0;
+				}
+				if (zms[i].eating &amp;&amp; chomp == 0)
+					chomp = 1;
+
+			}
+			else if (x3 &gt; 830)
+			{
+				zms[i].eating = false;
+				zms[i].speed = 3;
+			}
+		}
+	}
+	static int chomp_time = 0;
+	chomp_time++;
+	if (chomp&amp;&amp;chomp_time&gt;20)
+	{
+		chomp_time = 0;
+		PlaySound("res/audio/chomp.wav", NULL, SND_FILENAME | SND_ASYNC);
+		//mciSendString("play ZM_BGM", NULL, NULL, NULL);
+		//printf("1 ");
+	}
+}
+
+void checkcars2Zm()
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+		int carsX = cars[i].x + 70;
+		for (int j = 0; j &lt; ZM_MAX; j++)
+		{
+			if (zms[j].used &amp;&amp; zms[j].dead == false &amp;&amp; zms[j].row == i)
+			{
+				int zmX = zms[j].x + 80;
+				if (carsX &gt; zmX &amp;&amp; cars[i].used)
+				{
+					if (cars[i].move == false)
+						cars[i].move = true;
+					else
+					{
+						killCount++;
+						zms[j].dead = true;
+						zms[j].speed = 0;
+						zms[j].frameIndex = 0;
+					}
+				}
+			}
+		}
+	}
+}
+
+void collistionCheck()
+{
+	//子弹对僵尸的检测
+	checkBullet2Zm();
+	//僵尸对植物的检测
+	checkZM2Zhiwu();
+	//爆炸对植物的检测
+	checkBoom2Zm();
+	//小推车对僵尸的检测
+	checkcars2Zm();
+}
+
+void updatecar()
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+		if (cars[i].move)
+		{
+			cars[i].x += 20;
+		}
+		if (cars[i].x &gt; Wide)
+		{
+			cars[i].move = false;
+			cars[i].used = false;
+		}
+	}
+}
+
+void updateGame()
+{
+	srand((unsigned)time(NULL));
+	static int count = 0;
+	count++;
+	if (count &gt; 4)
+	{
+		count = 0;
+		for (int i = 0; i &lt; 5; i++)
+		{
+			for (int j = 0; j &lt; 9; j++)
+			{
+				if (map[i][j].type &gt; 0)
+				{
+					map[i][j].frameIndex++;
+					int PlantType = map[i][j].type - 1;
+					int index = map[i][j].frameIndex;
+					if (map[i][j].shoot)
+					{
+						if (map[i][j].frameIndex &gt; 1)
+						{
+							map[i][j].shoot = false;
+						}
+					}
+					else
+					{
+						if (imgPlant[PlantType][index] == NULL)
+						{
+							map[i][j].frameIndex = 0;
+						}
+					}
+				}
+			}
+		}
+	}
+
+	createSunshine();//创建阳光
+	updatSunshine();//更新阳光状态
+
+	createZM();//创建僵尸
+	updateZM();//更新僵尸状态
+
+	shoot();//发射豌豆子弹
+	updateBullets();//更新子弹
+	collistionCheck();//实现豌豆子弹的碰撞检测
+
+	updatecar();//更新小推车
+}
+
+void menu()
+{
+	mciSendString("play BGM", NULL, NULL, NULL);
+
+	IMAGE imgBg, imgMenu1, imgMenu2;
+	loadimage(&amp;imgBg, "res/menu.png");
+	loadimage(&amp;imgMenu1, "res/menu2.png");
+	loadimage(&amp;imgMenu2, "res/menu1.png");
+	int flag = 0;
+
+	while (1)
+	{
+		BeginBatchDraw();
+		putimage(0, 0, &amp;imgBg);
+		putimagePNG(474, 75, flag ? &amp;imgMenu1 : &amp;imgMenu2);
+
+		ExMessage msg;
+		if (peekmessage(&amp;msg))
+		{
+			if (msg.message == WM_LBUTTONDOWN &amp;&amp;
+				msg.x &gt; 474 &amp;&amp; msg.x &lt; 474 + 300 &amp;&amp;
+				msg.y&gt;75 &amp;&amp; msg.y &lt; 75 + 140)
+			{
+				flag = 1;
+				PlaySound("res/audio/bleep.wav", NULL, SND_FILENAME | SND_ASYNC);
+			}
+			else if (msg.message == WM_LBUTTONUP &amp;&amp; flag == 1)
+			{
+				EndBatchDraw();
+				break;
+			}
+		}
+		EndBatchDraw();
+	}
+}
+
+void viewScence()
+{
+	mciSendString("play BGM3", NULL, NULL, NULL);
+
+	//开头场景时僵尸的位置
+	vector2 points[9] = {
+		{550,80},{530,160},{630,170},{530,200},{515,270},
+		{565,370},{605,340},{705,280},{690,340}
+	};
+	int index[9];
+	for (int i = 0; i &lt; 9; i++)
+	{
+		index[i] = rand() % 11;
+	}
+
+	int count = 0;
+	for (int i = 0; i &gt;= -500; i-=3)
+	{
+		BeginBatchDraw();
+		putimage(i, 0, &amp;img);
+
+		count++;
+		for (int k = 0; k &lt; 9; k++)
+		{
+			putimagePNG(points[k].x + 500 + i,
+				points[k].y, &amp;imgZmStand[index[k]]);
+			if (count &gt;= 10)
+			{
+				index[k] = (index[k] + 1) % 11;
+			} 
+		}
+		if (count &gt;= 10)count = 0;
+		EndBatchDraw();
+		Sleep(10);
+	}
+	
+	for (int i = 0; i &lt; 60; i++)
+	{
+		BeginBatchDraw();
+
+		putimage(-500, 0, &amp;img);
+		for (int k = 0; k &lt; 9; k++)
+		{
+			putimagePNG(points[k].x, points[k].y, &amp;imgZmStand[index[k]]);
+			index[k] = (index[k] + 1) % 11;
+		}
+
+		EndBatchDraw();
+		Sleep(50);
+	}
+
+	for (int i = -500; i &lt;= -150; i += 2)
+	{
+		BeginBatchDraw();
+
+		putimage(i, 0, &amp;img);
+		count++;
+		for (int k = 0; k &lt; 9; k++)
+		{
+			putimagePNG(points[k].x + 500 + i,
+				points[k].y, &amp;imgZmStand[index[k]]);
+			if (count &gt;= 10)
+			{
+				index[k] = (index[k] + 1) % 11;
+			}
+			if (count &gt;= 10) count = 0;
+		}
+		EndBatchDraw();
+		Sleep(10);
+	}
+
+}
+
+void barsDown()
+{
+	int height = imgBar.getheight();
+	for (int y = -height; y &lt;= -10; y++)
+	{
+		BeginBatchDraw();
+
+		putimagePNG(80, y, &amp;imgBar);
+		for (int i = 0; i &lt; PLANT_COUNT + 2; i++)
+		{
+			putimagePNG(163 + i * 65, y + 10, &amp;imgCards[i]);
+		}
+		
+		EndBatchDraw();
+		Sleep(10);
+	}
+	for (int i = 0; i &lt; 5; i++)
+	{
+		putimagePNG(50, 100 + i * 100 - 15, &amp;imgcar);
+	}
+	mciSendString("close BGM3", NULL, 0, NULL);
+	mciSendString("play BGM4", NULL, NULL, NULL);
+	Sleep(1000);
+	putimagePNG(450 - imgready.getwidth()/2, 300 - imgready.getheight()/2, &amp;imgready);
+	Sleep(200);
+}
+
+void failScence()
+{
+	for (int i = -150; i &lt;= -100; i += 1)
+	{
+		BeginBatchDraw();
+		//zmSpeed = 6;
+		putimage(i, 0, &amp;img);
+		//show();
+		drawZm();
+		//updateGame();
+		createZM();//创建僵尸
+		updateZM();//更新僵尸状态
+		
+		EndBatchDraw();
+		Sleep(50);
+	}
+}
+
+bool checkOver()
+{
+	int ret = false;
+	if (gameStatus == WIN)
+	{
+		mciSendString("close BGM2", NULL, NULL, NULL);
+
+		loadimage(0, "res/win2.png");
+		mciSendString("play res/win.mp3", 0, 0, 0);
+		ret = true;
+	}
+	else if (gameStatus == FAIL)
+	{
+		mciSendString("close BGM2", NULL, NULL, NULL);
+
+		mciSendString("play res/lose.mp3", 0, 0, 0);
+		failScence();
+		Sleep(500);
+		loadimage(0, "res/fail2.png");
+		ret = true;
+	}
+	return ret;
+}
+
+void OpeningAnimation()
+{
+	mciSendString("play res/audio/yuanshen.mp3", 0, 0, 0);
+	for (int i = 0; i &lt; 29; i++)
+	{
+		BeginBatchDraw();
+		putimage(-148, -35, &amp;imgopena[i]);
+
+		EndBatchDraw();
+		Sleep(50);
+	}
+	Sleep(4000);
+}
+
+int main()
+{
+	//加载游戏画面
+	gameInit();
+	//开场动画
+	OpeningAnimation();
+	menu();
+	mciSendString("close BGM", NULL, 0, NULL);
+	//游戏开始时的场景切换
+	viewScence();
+	//游戏开始时卡牌和卡牌槽的下落
+	barsDown();
+	int timer = 0;
+	bool flag = true;
+	
+	mciSendString("play BGM2 repeat", NULL, NULL, NULL);
+	while (1)
+	{
+		//用户操作
+		userClick();
+		//游戏更新时间
+		timer += getDelay();
+		if (timer &gt; 20)
+		{
+			flag = true;
+			timer = 0;
+		}
+		if (flag)
+		{
+			flag = false;
+			//绘制游戏画面
+			show();
+			//更新游戏画面
+			updateGame();
+			if(checkOver()) break;
+		}
+	}
+	closegraph;
+	system("pause");
+	return 0;
+}</code></pre> 
+<h3>game.h文件</h3> 
+<pre><code class="language-cpp">#pragma once
+#define _CRT_SECURE_NO_WARNINGS 1
+
+#include&lt;easyx.h&gt;
+#include&lt;stdio.h&gt;
+#include&lt;time.h&gt;
+#include&lt;math.h&gt;
+#include"tools.h"
+#include&lt;mmsystem.h&gt;
+#include"vector2.h"
+#pragma comment(lib,"winmm.lib")
+
+#define Wide 900
+#define Hight 600
+#define KUNKUN_BLOOD 100//非坚果植物的血量
+#define ORDINARY_ZM_BLOOD 1270*3//僵尸血量
+#define ZM_MAX 1024//创建僵尸的最大数量
+
+enum {
+	WAN_DOU, TAI_YANG, LA_JIAO, KUN_KUN, JIAN_GUO,
+	HAN_BING_WAN_DOU, YING_TAO, SAN_TOU_WAN_DOU, PLANT_COUNT
+};
+IMAGE img;//地图
+IMAGE imgBar;//卡牌槽
+IMAGE imgCards[PLANT_COUNT + 2];//卡牌
+IMAGE* imgPlant[PLANT_COUNT + 2][20];//植物动作
+IMAGE imgZmStand[11];//开场僵尸的站立
+IMAGE imgcar;//小推车
+IMAGE imgopena[29];//开场动画
+IMAGE imgready;
+IMAGE imgnotify;
+
+int curX, curY;//当前选中植物，在移动过程中植物的坐标
+int curPlant;// 0：没有选中，1：选中了第一种种植物
+int sunshine;
+
+enum { GOING, WIN, FAIL };
+int killCount;//已经杀掉的僵尸个数
+int zmCount;//已经出现的僵尸个数
+int zmCount_max = 1;//每波出现的僵尸数量
+int gameStatus;//游戏的状态
+int wava_count = 1;//第wava_count波僵尸
+
+struct plant
+{
+	int type;//植物类型
+	int frameIndex;//植物动作帧
+	//bool catched;//是否被吃
+	int blood;//血量
+
+	int shootTime;//植物子弹的射速
+
+	int timer;//阳光生产的时间
+	int x, y;//植物坐标
+	bool shoot;//判断植物是否处于发射状态
+};
+struct plant map[5][9];
+
+enum { SUNSHINE_DOWN, SUNSHINE_GROUND, SUNSHINE_COLLECT, SUNSHINE_RPODUCT };
+
+struct sunshineBall
+{
+	int x, y;
+	int frameIndex;//当前显示的图片帧序号
+	int destY;//飘落的目标位置的y坐标
+	bool used;//是否在使用
+	int timer;
+
+	float xoff;
+	float yoff;
+
+	float t;//贝塞尔曲线的时间点
+	vector2 p1, p2, p3, p4;
+	vector2 pCur;//当前时刻阳光球的位置
+	float speed;
+	int status;
+};
+
+//10个阳光球
+struct sunshineBall balls[10];
+IMAGE imgSunshineBall[29];
+
+struct zm
+{
+	int x, y;//僵尸的坐标
+	int frameIndex;//僵尸动作帧
+	bool used;//僵尸是否被使用
+	int speed;//僵尸每一次移动的位移
+	int row;//僵尸所在行
+	int blood;//僵尸血量
+	bool dead;//僵尸是否死亡
+	bool eating;//僵尸是否在吃植物
+	bool boom;//僵尸是否被炸死
+	int zmSpeed;//僵尸的移动快慢
+};
+struct zm zms[ZM_MAX];
+IMAGE imgZm[22];
+IMAGE imgZMDead[38];
+IMAGE imgzmboom[20];
+IMAGE imgZMEat[21];
+
+//子弹
+struct bullet
+{
+	double x, y;//子弹的坐标
+	bool used;//子弹是否被使用
+	int row;//子弹所在行
+	int speed;//子弹速度
+	bool blast;//是否发生爆炸
+	int frameIndex;//帧序号
+};
+//坤坤
+struct bullet bullets[10000];
+IMAGE imgBulletNormal;
+IMAGE imgBallBlast[4];
+//豌豆
+struct bullet bullets_wandou[200];
+IMAGE imgBallBlast_wandou[4];
+IMAGE imgBulletNormal_wandou;
+//寒冰豌豆
+struct bullet bullets_hanbing[200];
+IMAGE imgBallBlast_hanbing[4];
+IMAGE imgBulletNormal_hanbing;
+//三头豌豆
+struct bullet bullets_santou[200];
+IMAGE imgBallBlast_santou[4];
+IMAGE imgBulletNormal_santou;
+int direction_santou[200];
+int row_santou[200];//三头豌豆发射子弹时所在的行数
+enum { MIDDLE, UP, DOWN };
+
+//小推车
+struct car
+{
+	bool move;//是否处于移动状态
+	int x, y;//位置
+	bool used;//是否被使用
+};
+struct car cars[5];
+/*
+* 增加植物的步骤：
+* 1. 创建子弹的相关变量
+* 2. 加载植物子弹图片
+* 3. 渲染植物子弹
+* 4. 发射植物子弹
+* 5. 检查植物子弹与僵尸的碰撞
+* 6. 更新植物子弹
+*/
+</code></pre> 
+<h3>vector2.cpp文件（贝塞尔曲线）</h3> 
+<pre><code class="language-cpp">//头文件要求
+#include &lt;cmath&gt;
+#include "vector2.h"
+
+//加法
+vector2 operator +(vector2 x, vector2 y) { 
+	return vector2(x.x + y.x, x.y + y.y ); 
+}
+
+//减法
+vector2 operator -(vector2 x, vector2 y) {
+	return vector2(x.x - y.x, x.y - y.y);
+}
+
+// 乘法
+vector2 operator *(vector2 x, vector2 y) {
+	return vector2(x.x * y.x - x.y * y.y, x.y * y.x + x.x * y.y);
+}
+
+// 乘法
+vector2 operator *(vector2 y, float x) {
+	return vector2(x*y.x, x*y.y);
+}
+
+vector2 operator *(float x, vector2 y) {
+	return vector2(x * y.x, x * y.y);
+}
+
+//叉积
+long long cross(vector2 x, vector2 y) { return x.y * y.x - x.x * y.y; }
+
+//数量积 点积
+long long dot(vector2 x, vector2 y) { return x.x * y.x + x.y * y.y; }
+
+//四舍五入除法
+long long dv(long long a, long long b) {//注意重名！！！ 
+	return b &lt; 0 ? dv(-a, -b)
+		: (a &lt; 0 ? -dv(-a, b)
+			: (a + b / 2) / b);
+}
+
+//模长平方
+long long len(vector2 x) { return x.x * x.x + x.y * x.y; }
+
+//模长
+long long dis(vector2 x) { return sqrt(x.x * x.x + x.y * x.y); }
+
+//向量除法
+vector2 operator /(vector2 x, vector2 y) {
+	long long l = len(y);
+	return vector2(dv(dot(x, y), l), dv(cross(x, y), l));
+}
+
+//向量膜
+vector2 operator %(vector2 x, vector2 y) { return x - ((x / y) * y); }
+
+//向量GCD 
+vector2 gcd(vector2 x, vector2 y) { return len(y) ? gcd(y, x % y) : x; }
+
+
+vector2 calcBezierPoint(float t, vector2 p0, vector2 p1, vector2 p2, vector2 p3) {
+	float u = 1 - t;
+	float tt = t * t;
+	float uu = u * u;
+	float uuu = uu * u;
+	float ttt = tt * t;
+
+	vector2 p = uuu * p0;
+	p = p + 3 * uu * t * p1;
+	p = p + 3 * u * tt * p2;
+	p = p + ttt * p3;
+
+	return p;
+}
+</code></pre> 
+<h3>vector2.h文件</h3> 
+<pre><code class="language-cpp">#pragma once
+
+//头文件要求
+#include &lt;cmath&gt;
+
+struct vector2 {
+	vector2(int _x=0, int _y=0) :x(_x), y(_y) {}
+	vector2(int* data) :x(data[0]), y(data[1]){}
+	long long x, y;
+};
+
+//加法
+vector2 operator +(vector2 x, vector2 y);
+
+//减法
+vector2 operator -(vector2 x, vector2 y);
+
+// 乘法
+vector2 operator *(vector2 x, vector2 y);
+vector2 operator *(vector2, float);
+vector2 operator *(float, vector2);
+
+//叉积
+long long cross(vector2 x, vector2 y);
+
+//数量积 点积
+long long dot(vector2 x, vector2 y);
+
+//四舍五入除法
+long long dv(long long a, long long b);
+
+
+//模长平方
+long long len(vector2 x);
+
+//模长
+long long dis(vector2 x);
+
+//向量除法
+vector2 operator /(vector2 x, vector2 y);
+
+//向量膜
+vector2 operator %(vector2 x, vector2 y);
+
+//向量GCD 
+vector2 gcd(vector2 x, vector2 y);
+
+vector2 calcBezierPoint(float t, vector2 p0, vector2 p1, vector2 p2, vector2 p3);</code></pre> 
+<h3>tools.cpp文件（透明贴图）</h3> 
+<pre><code class="language-cpp">#include "tools.h"
+
+
+// 载入PNG图并去透明部分
+void _putimagePNG(int  picture_x, int picture_y, IMAGE* picture) //x为载入图片的X坐标，y为Y坐标
+{
+	DWORD* dst = GetImageBuffer();    // GetImageBuffer()函数，用于获取绘图设备的显存指针，EASYX自带
+	DWORD* draw = GetImageBuffer();
+	DWORD* src = GetImageBuffer(picture); //获取picture的显存指针
+	int picture_width = picture-&gt;getwidth(); //获取picture的宽度，EASYX自带
+	int picture_height = picture-&gt;getheight(); //获取picture的高度，EASYX自带
+	int graphWidth = getwidth();       //获取绘图区的宽度，EASYX自带
+	int graphHeight = getheight();     //获取绘图区的高度，EASYX自带
+	int dstX = 0;    //在显存里像素的角标
+
+	// 实现透明贴图 公式： Cp=αp*FP+(1-αp)*BP ， 贝叶斯定理来进行点颜色的概率计算
+	for (int iy = 0; iy &lt; picture_height; iy++)
+	{
+		for (int ix = 0; ix &lt; picture_width; ix++)
+		{
+			int srcX = ix + iy * picture_width; //在显存里像素的角标
+			int sa = ((src[srcX] &amp; 0xff000000) &gt;&gt; 24); //0xAArrggbb;AA是透明度
+			int sr = ((src[srcX] &amp; 0xff0000) &gt;&gt; 16); //获取RGB里的R
+			int sg = ((src[srcX] &amp; 0xff00) &gt;&gt; 8);   //G
+			int sb = src[srcX] &amp; 0xff;              //B
+			if (ix &gt;= 0 &amp;&amp; ix &lt;= graphWidth &amp;&amp; iy &gt;= 0 &amp;&amp; iy &lt;= graphHeight &amp;&amp; dstX &lt;= graphWidth * graphHeight)
+			{
+				dstX = (ix + picture_x) + (iy + picture_y) * graphWidth; //在显存里像素的角标
+				int dr = ((dst[dstX] &amp; 0xff0000) &gt;&gt; 16);
+				int dg = ((dst[dstX] &amp; 0xff00) &gt;&gt; 8);
+				int db = dst[dstX] &amp; 0xff;
+				draw[dstX] = ((sr * sa / 255 + dr * (255 - sa) / 255) &lt;&lt; 16)
+					| ((sg * sa / 255 + dg * (255 - sa) / 255) &lt;&lt; 8)
+					| (sb * sa / 255 + db * (255 - sa) / 255);
+			}
+		}
+	}
+}
+
+// 适用于 y &lt;0 以及x&lt;0的任何情况
+void putimagePNG(int x, int y, IMAGE* picture) {
+
+	IMAGE imgTmp, imgTmp2, imgTmp3;
+	int winWidth = getwidth();
+	int winHeight = getheight();
+	if (y &lt; 0) {
+		SetWorkingImage(picture);
+		getimage(&amp;imgTmp, 0, -y,
+			picture-&gt;getwidth(), picture-&gt;getheight() + y);
+		SetWorkingImage();
+		y = 0;
+		picture = &amp;imgTmp;
+	}
+	else if (y &gt;= getheight() || x &gt;= getwidth()) {
+		return;
+	}
+	else if (y + picture-&gt;getheight() &gt; winHeight) {
+		SetWorkingImage(picture);
+		getimage(&amp;imgTmp, x, y, picture-&gt;getwidth(), winHeight - y);
+		SetWorkingImage();
+		picture = &amp;imgTmp;
+	}
+
+	if (x &lt; 0) {
+		SetWorkingImage(picture);
+		getimage(&amp;imgTmp2, -x, 0, picture-&gt;getwidth() + x, picture-&gt;getheight());
+		SetWorkingImage();
+		x = 0;
+		picture = &amp;imgTmp2;
+	}
+
+	if (x &gt; winWidth - picture-&gt;getwidth()) {
+		SetWorkingImage(picture);
+		getimage(&amp;imgTmp3, 0, 0, winWidth - x, picture-&gt;getheight());
+		SetWorkingImage();
+		picture = &amp;imgTmp3;
+	}
+
+
+	_putimagePNG(x, y, picture);
+}
+
+int getDelay() {
+	static unsigned long long lastTime = 0;
+	unsigned long long currentTime = GetTickCount();
+	if (lastTime == 0) {
+		lastTime = currentTime;
+		return 0;
+	}
+	else {
+		int ret = currentTime - lastTime;
+		lastTime = currentTime;
+		return ret;
+	}
+}</code></pre> 
+<h3>tools.cpp文件 </h3> 
+<pre><code class="language-cpp">#pragma once
+#include &lt;graphics.h&gt;
+
+void putimagePNG(int  picture_x, int picture_y, IMAGE* picture);
+int getDelay();</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/33a347499a198b91653fdd2d0c2c4549/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">spring 事务的实现方式原理是什么？</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/67ba12996a17c87c1ded7847378643f3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Linux 基础笔记（一）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

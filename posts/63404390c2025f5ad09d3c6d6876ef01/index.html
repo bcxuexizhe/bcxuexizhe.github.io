@@ -1,0 +1,399 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>FloodFill算法---BFS - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/63404390c2025f5ad09d3c6d6876ef01/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="FloodFill算法---BFS">
+  <meta property="og:description" content="目录
+一、前言
+二、算法模板套路
+2.1 创建所需的全局变量：
+2.2 BFS模板：
+2.3 细节处理：
+三、例题练习
+3.1 例题1：图像渲染
+3.2 例题2：岛屿数量
+3.3 例题3：岛屿的最大面积
+3.4 例题4：被围绕的区域
+一、前言 在这之前我们已经学习了如何使用 DFS 解决 FloodFill 算法，如果有友友对 FloodFill 算法不太熟悉的话可以先看看我之前写的文章：FloodFill算法---DFS。里面详细介绍了什么是FloodFill算法和如何使用DFS来解决。通常 FloodFill 算法使用 DFS 或者 BFS 都可以，DFS 的代码会简洁一些，但是 BFS 可以用来解决最短路问题和拓扑排序。所以本文章可以说是为了后续使用 BFS 解决最短路问题和拓扑排序打下基础。
+• 关于BFS的遍历特性：若初始点为左上角，遍历特性如下图所示。
+二、算法模板套路 2.1 创建所需的全局变量： 最好设置为静态，因为非静态只有在leetcode上才行，在竞赛中都是要我们自己写Main类的因为main是静态方法所以在方法外面的全局变量要设置为静态的才能被main方法调用。
+static boolean[][] vis;//（ 不一定要有） static int[ ] dx = {0 , 0 , 1 , -1 }; static int[ ] dy = {1 , -1 , 0 , 0 }; • vis这个布尔类型数组来标记我们已经走过的路，防止重复走导致死循环：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-14T12:57:11+08:00">
+    <meta property="article:modified_time" content="2024-05-14T12:57:11+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">FloodFill算法---BFS</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><strong>目录</strong></p> 
+<p id="%E4%B8%80%E3%80%81%E5%89%8D%E8%A8%80%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E5%89%8D%E8%A8%80%EF%BC%9A" rel="nofollow">一、前言</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E7%AE%97%E6%B3%95%E6%A8%A1%E6%9D%BF%E5%A5%97%E8%B7%AF%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E7%AE%97%E6%B3%95%E6%A8%A1%E6%9D%BF%E5%A5%97%E8%B7%AF%EF%BC%9A" rel="nofollow">二、算法模板套路</a></p> 
+<p id="2.1%C2%A0%E5%88%9B%E5%BB%BA%E6%89%80%E9%9C%80%E7%9A%84%E5%85%A8%E5%B1%80%E5%8F%98%E9%87%8F%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.1%C2%A0%E5%88%9B%E5%BB%BA%E6%89%80%E9%9C%80%E7%9A%84%E5%85%A8%E5%B1%80%E5%8F%98%E9%87%8F%EF%BC%9A" rel="nofollow">2.1 创建所需的全局变量：</a></p> 
+<p id="%C2%A02.2%20BFS%E6%A8%A1%E6%9D%BF%EF%BC%9A-toc" style="margin-left:40px;"><a href="#%C2%A02.2%20BFS%E6%A8%A1%E6%9D%BF%EF%BC%9A" rel="nofollow">2.2 BFS模板：</a></p> 
+<p id="2.3%20%E7%BB%86%E8%8A%82%E5%A4%84%E7%90%86%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.3%20%E7%BB%86%E8%8A%82%E5%A4%84%E7%90%86%EF%BC%9A" rel="nofollow">2.3 细节处理：</a></p> 
+<p id="%E4%B8%89%E3%80%81%E4%BE%8B%E9%A2%98%E7%BB%83%E4%B9%A0-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81%E4%BE%8B%E9%A2%98%E7%BB%83%E4%B9%A0" rel="nofollow">三、例题练习</a></p> 
+<p id="%C2%A03.1%20%E4%BE%8B%E9%A2%981%EF%BC%9A%E5%9B%BE%E5%83%8F%E6%B8%B2%E6%9F%93-toc" style="margin-left:40px;"><a href="#%C2%A03.1%20%E4%BE%8B%E9%A2%981%EF%BC%9A%E5%9B%BE%E5%83%8F%E6%B8%B2%E6%9F%93" rel="nofollow">3.1 例题1：图像渲染</a></p> 
+<p id="3.2%20%E4%BE%8B%E9%A2%982%EF%BC%9A%E5%B2%9B%E5%B1%BF%E6%95%B0%E9%87%8F-toc" style="margin-left:40px;"><a href="#3.2%20%E4%BE%8B%E9%A2%982%EF%BC%9A%E5%B2%9B%E5%B1%BF%E6%95%B0%E9%87%8F" rel="nofollow">3.2 例题2：岛屿数量</a></p> 
+<p id="3.3%20%E4%BE%8B%E9%A2%983%EF%BC%9A%E5%B2%9B%E5%B1%BF%E7%9A%84%E6%9C%80%E5%A4%A7%E9%9D%A2%E7%A7%AF-toc" style="margin-left:40px;"><a href="#3.3%20%E4%BE%8B%E9%A2%983%EF%BC%9A%E5%B2%9B%E5%B1%BF%E7%9A%84%E6%9C%80%E5%A4%A7%E9%9D%A2%E7%A7%AF" rel="nofollow">3.3 例题3：岛屿的最大面积</a></p> 
+<p id="3.4%20%E4%BE%8B%E9%A2%984%EF%BC%9A%E8%A2%AB%E5%9B%B4%E7%BB%95%E7%9A%84%E5%8C%BA%E5%9F%9F-toc" style="margin-left:40px;"><a href="#3.4%20%E4%BE%8B%E9%A2%984%EF%BC%9A%E8%A2%AB%E5%9B%B4%E7%BB%95%E7%9A%84%E5%8C%BA%E5%9F%9F" rel="nofollow">3.4 例题4：被围绕的区域</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E5%89%8D%E8%A8%80%EF%BC%9A">一、前言</h2> 
+<p>在这之前我们已经学习了如何使用 DFS 解决 FloodFill 算法，如果有友友对 FloodFill 算法不太熟悉的话可以先看看我之前写的文章：<a class="link-info" href="http://t.csdnimg.cn/qb127" rel="nofollow" title="FloodFill算法---DFS">FloodFill算法---DFS</a>。里面详细介绍了什么是FloodFill算法和如何使用DFS来解决。通常 FloodFill 算法使用 DFS 或者 BFS 都可以，DFS 的代码会简洁一些，但是 BFS 可以用来解决<span style="color:#fe2c24;">最短路问题</span>和<span style="color:#fe2c24;">拓扑排序</span>。所以本文章可以说是为了后续使用 BFS 解决最短路问题和拓扑排序打下基础。</p> 
+<p>• 关于BFS的遍历特性：若初始点为左上角，遍历特性如下图所示。</p> 
+<p><img alt="" height="912" src="https://images2.imgbox.com/f0/56/hq6BOjuB_o.png" width="1119"></p> 
+<h2 id="%E4%BA%8C%E3%80%81%E7%AE%97%E6%B3%95%E6%A8%A1%E6%9D%BF%E5%A5%97%E8%B7%AF%EF%BC%9A">二、算法模板套路</h2> 
+<h3 id="2.1%C2%A0%E5%88%9B%E5%BB%BA%E6%89%80%E9%9C%80%E7%9A%84%E5%85%A8%E5%B1%80%E5%8F%98%E9%87%8F%EF%BC%9A">2.1 创建所需的全局变量：</h3> 
+<p><span style="color:#ff9900;">最好设置为静态</span>，因为非静态只有在leetcode上才行，在竞赛中都是要我们自己写Main类的因为main是静态方法所以在方法外面的全局变量要设置为静态的才能被main方法调用。</p> 
+<pre><code class="language-java">static boolean[][] vis;//（ 不一定要有）
+
+static int[ ] dx = {0 , 0 , 1 , -1 };
+
+static int[ ] dy = {1 , -1 , 0 , 0 };</code></pre> 
+<p><strong>• vis这个布尔类型数组来标记我们已经走过的路，防止重复走导致死循环：</strong></p> 
+<p>还有一种可以不用创建 vis 来标记，直接修改原来数据的值，这个如果是在面试的时候要问一下面试官，原来数组的数值是否可以修改。</p> 
+<p><strong>• 利用dx，dy 来实现上下左右移动（如果是8个方向的也行）：</strong></p> 
+<pre><code class="language-java">for(int k = 0;k &lt; 4;k++){
+    int x = i + dx[k];
+    int y = j + dy[k];
+}</code></pre> 
+<p> 如果是 8 个方向的话可以先画出下图。</p> 
+<p><img alt="" height="888" src="https://images2.imgbox.com/77/e7/o6NGBKTM_o.png" width="1200"></p> 
+<p>在把黄色对应的8个位置写入到dx和dy中。例如：</p> 
+<p>下面这个例子是从上到下，从左到右写的。</p> 
+<pre><code class="language-java">static int[] dx = {-1,-1,-1,0,0,1,1,1};
+static int[] dy = {-1,0,1,-1,1,-1,0,1};</code></pre> 
+<h3 id="%C2%A02.2%20BFS%E6%A8%A1%E6%9D%BF%EF%BC%9A">2.2 BFS模板：</h3> 
+<p>我们利用 int[ ]来存储坐标。</p> 
+<p>• 至于要不要回溯，要根据题目要求什么来进行决定。</p> 
+<p>• x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m 这个可以说是默写了，因为这就是防止越界，每道题目都是这么写的。</p> 
+<pre><code class="language-java">public void bfs(char[][] grid, int i, int j) {
+        Queue&lt;int[]&gt; queue = new LinkedList&lt;&gt;();
+        queue.add(new int[] { i, j });
+        while (!queue.isEmpty()) {
+            int[] tmp = queue.poll();
+            int a = tmp[0];
+            int b = tmp[1];
+            vis[a][b] = true;///1
+            for (int k = 0; k &lt; 4; k++) {
+                int x = a + dx[k];
+                int y = b + dy[k];
+                if(x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m &amp;&amp; !vis[x][y]){
+                    queue.add(new int[]{x,y});
+                    vis[x][y] = true;///2
+                }
+            }
+        }
+    }</code></pre> 
+<h3 id="2.3%20%E7%BB%86%E8%8A%82%E5%A4%84%E7%90%86%EF%BC%9A">2.3 细节处理：</h3> 
+<p>不知道大家有没有注意到在模板那里，我在代码里标记了1和2，现在我要问问友友们，2处的代码能否省略？</p> 
+<p>答：<strong>不能省略</strong>。因为如果不加上代码2的话，有些节点会重复进入，导致代码超时（这个要想清楚，因为我当时没有代码2，检查代码检查半天才找到😭😭😭）。友友们在学完下面几个例题后可以去  <a class="link-info" href="https://leetcode.cn/problems/number-of-islands/" rel="nofollow" title="岛屿数量">岛屿数量</a> 上面试一下。</p> 
+<p>如果疑惑哪个元素会被重复进入，可以看看下图（有点丑😭），蓝色元素会被两个红色元素扩散重复进入。如果加上代码 2 就不会有这种情况。</p> 
+<p><img alt="" height="622" src="https://images2.imgbox.com/03/3d/kPnaVtYc_o.png" width="988"></p> 
+<h2 id="%E4%B8%89%E3%80%81%E4%BE%8B%E9%A2%98%E7%BB%83%E4%B9%A0">三、例题练习</h2> 
+<h3 id="%C2%A03.1%20%E4%BE%8B%E9%A2%981%EF%BC%9A%E5%9B%BE%E5%83%8F%E6%B8%B2%E6%9F%93">3.1 例题1：图像渲染</h3> 
+<p>• 题目链接：<a class="link-info" href="https://leetcode.cn/problems/flood-fill/description/" rel="nofollow" title="图像渲染">图像渲染</a></p> 
+<p>• 问题描述：</p> 
+<p>有一幅以 <code>m x n</code> 的二维整数数组表示的图画 <code>image</code> ，其中 <code>image[i][j]</code> 表示该图画的像素值大小。</p> 
+<p>你也被给予三个整数 <code>sr</code> ,  <code>sc</code> 和 <code>newColor</code> 。你应该从像素 <code>image[sr][sc]</code> 开始对图像进行 上色<strong>填充</strong> 。</p> 
+<p>为了完成<strong> 上色工作</strong> ，从初始像素开始，记录初始坐标的 <strong>上下左右四个方向上</strong> 像素值与初始坐标相同的相连像素点，接着再记录这四个方向上符合条件的像素点与他们对应 <strong>四个方向上</strong> 像素值与初始坐标相同的相连像素点，……，重复该过程。将所有有记录的像素点的颜色值改为 <code>newColor</code> 。</p> 
+<p>最后返回 <em>经过上色渲染后的图像 </em>。</p> 
+<p><img alt="" height="1010" src="https://images2.imgbox.com/3e/91/COCNogjy_o.png" width="1200"></p> 
+<p>• 解题思路：</p> 
+<p>可以利用深搜（DFS）或者宽搜（BFS），遍历到与该点相连的所有像素相同的点，然后将其修改成指定的像素即可。因为这个可以直接在原来数组上修改，那么我们就不用创建 vis 来标记我们已经走过的路，由于本文章主要讲解 BFS 所以本题采用 BFS 来进行解决。最后一个小优化，如果要修改的值和原来的值相同，那么直接返回即可。</p> 
+<p>• 代码编写：</p> 
+<pre><code class="language-java">class Solution {
+    int[] dx = {0,0,-1,1};
+    int[] dy = {1,-1,0,0};
+    public int[][] floodFill(int[][] image, int sr, int sc, int color) {
+        if(image[sr][sc] == color){//处理边界情况
+            return image;
+        }
+        int n = image.length;
+        int m = image[0].length;
+        int prev = image[sr][sc];
+        Queue&lt;int[]&gt; queue = new LinkedList&lt;&gt;();
+        queue.add(new int[]{sr,sc});//创建队列
+        while(!queue.isEmpty()){
+            int[] tmp = queue.poll();
+            int i = tmp[0],j = tmp[1];
+            image[i][j] = color;
+            for(int k = 0;k &lt; 4;k++){
+                int x = i + dx[k];
+                int y = j + dy[k];
+                if(x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m &amp;&amp; image[x][y] == prev){
+                    queue.offer(new int[]{x,y});
+                }
+            }
+        }
+        return image;
+    }
+}</code></pre> 
+<p><img alt="" height="855" src="https://images2.imgbox.com/84/1b/xqNhY5T8_o.png" width="1200"></p> 
+<h3 id="3.2%20%E4%BE%8B%E9%A2%982%EF%BC%9A%E5%B2%9B%E5%B1%BF%E6%95%B0%E9%87%8F">3.2 例题2：岛屿数量</h3> 
+<p>• 题目链接：<a class="link-info" href="https://leetcode.cn/problems/number-of-islands/description/" rel="nofollow" title="岛屿数量">岛屿数量</a></p> 
+<p>• 问题描述：</p> 
+<p>给你一个由 <code>'1'</code>（陆地）和 <code>'0'</code>（水）组成的的二维网格，请你计算网格中岛屿的数量。</p> 
+<p>岛屿总是被水包围，并且每座岛屿只能由水平方向和/或竖直方向上相邻的陆地连接形成。</p> 
+<p>此外，你可以假设该网格的四条边均被水包围。</p> 
+<p><img alt="" height="431" src="https://images2.imgbox.com/b8/1d/t099jSjt_o.png" width="1200"></p> 
+<p>• 解题思路：</p> 
+<p>遍历整个矩阵，每次找到一块陆地的时候，岛屿数量 + 1，并且将这个陆地相连的所有陆地，全都修改，这样我们下次遍历到这里就不会影响最终的结果。当我们遍历完全部的矩阵的时候，岛屿数量也就找到了。</p> 
+<p>• 代码编写：</p> 
+<p>我们直接在原数据上修改，不用 vis 了。</p> 
+<pre><code class="language-java">class Solution {
+    int[] dx = { 0, 0, 1, -1 };
+    int[] dy = { 1, -1, 0, 0 };
+    int n;
+    int m;
+    public int numIslands(char[][] grid) {
+        int count = 0;// 最后统计岛屿数量
+        n = grid.length;
+        m = grid[0].length;
+        for (int i = 0; i &lt; n; i++) {
+            for (int j = 0; j &lt; m; j++) {
+                if (grid[i][j] == '1') {//找到陆地
+                    bfs(grid, i, j);//标记
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    public void bfs(char[][] grid, int i, int j) {
+        Queue&lt;int[]&gt; queue = new LinkedList&lt;&gt;();
+        queue.add(new int[] { i, j });
+        while (!queue.isEmpty()) {
+            int[] tmp = queue.poll();
+            int a = tmp[0];
+            int b = tmp[1];
+            grid[a][b] = '2';///1
+            for (int k = 0; k &lt; 4; k++) {
+                int x = a + dx[k];
+                int y = b + dy[k];
+                if(x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m &amp;&amp; grid[x][y] == '1'){
+                    queue.add(new int[]{x,y});
+                     grid[x][y] = '2';///2
+                }
+            }
+        }
+    }
+}</code></pre> 
+<p><img alt="" height="786" src="https://images2.imgbox.com/d0/a4/QxcPTNpC_o.png" width="1200"></p> 
+<p>如果没有代码块 2 就会出现下面这种情况：超时啦！</p> 
+<p> <img alt="" height="703" src="https://images2.imgbox.com/8d/67/90G9H3F1_o.png" width="1200"></p> 
+<h3 id="3.3%20%E4%BE%8B%E9%A2%983%EF%BC%9A%E5%B2%9B%E5%B1%BF%E7%9A%84%E6%9C%80%E5%A4%A7%E9%9D%A2%E7%A7%AF">3.3 例题3：岛屿的最大面积</h3> 
+<p>• 题目链接：<a class="link-info" href="https://leetcode.cn/problems/max-area-of-island/description/" rel="nofollow" title="岛屿的最大面积">岛屿的最大面积</a></p> 
+<p>• 问题描述：</p> 
+<p>给你一个大小为 <code>m x n</code> 的二进制矩阵 <code>grid</code> 。</p> 
+<p><strong>岛屿</strong> 是由一些相邻的 <code>1</code> (代表土地) 构成的组合，这里的「相邻」要求两个 <code>1</code> 必须在 <strong>水平或者竖直的四个方向上 </strong>相邻。你可以假设 <code>grid</code> 的四个边缘都被 <code>0</code>（代表水）包围着。</p> 
+<p>岛屿的面积是岛上值为 <code>1</code> 的单元格的数目。</p> 
+<p>计算并返回 <code>grid</code> 中最大的岛屿面积。如果没有岛屿，则返回面积为 <code>0</code> 。</p> 
+<p><img alt="" height="1137" src="https://images2.imgbox.com/ef/d5/SyVg5VOn_o.png" width="1199"></p> 
+<p>• 解题思路：</p> 
+<p>遍历整个矩阵，每当遇到一块土地的时候，就用深搜或者宽搜将与这块土地相连的整个岛屿的面积计算出来。 然后在搜索得到的所有的岛屿面积求一个最大值即可。 在搜索过程中，为了防止搜到重复的土地。也可以将原始矩阵的 1 修改成 2，当然我们也可以使用 vis 数组来保存我们走过的路。</p> 
+<p>• 代码编写：</p> 
+<pre><code class="language-java">class Solution {
+    int n,m;
+    int[] dx = {0,0,1,-1};
+    int[] dy = {1,-1,0,0};
+    public int maxAreaOfIsland(int[][] grid) {
+        int max = 0;
+        n = grid.length;
+        m = grid[0].length;
+        for(int i = 0;i &lt; n;i++){
+            for(int j = 0;j &lt; m;j++){
+                if(grid[i][j] == 1){
+                    max = Math.max(bfs(grid,i,j),max);//找出最大面积
+                }
+            }
+        }
+        return max;
+    }
+    public int bfs(int[][] grid,int i,int j){
+        Queue&lt;int[]&gt; queue = new LinkedList&lt;&gt;();
+        queue.offer(new int[]{i,j});
+        int count = 1;
+        while(!queue.isEmpty()){
+            int[] tmp = queue.poll();
+            int a = tmp[0],b = tmp[1];
+            grid[a][b] = 2;
+            for(int k = 0;k &lt; 4;k++){
+                int x = a + dx[k];
+                int y = b + dy[k];
+                if(x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m &amp;&amp; grid[x][y] == 1){
+                    count++;
+                    queue.offer(new int[]{x,y});
+                    grid[x][y] = 2;//直接修改原数组的值即可。
+                }
+            }
+        }
+        return count;//返回岛屿的数量
+    }
+}</code></pre> 
+<p><img alt="" height="917" src="https://images2.imgbox.com/c4/a8/eOSLIZbf_o.png" width="1200"></p> 
+<h3 id="3.4%20%E4%BE%8B%E9%A2%984%EF%BC%9A%E8%A2%AB%E5%9B%B4%E7%BB%95%E7%9A%84%E5%8C%BA%E5%9F%9F">3.4 例题4：被围绕的区域</h3> 
+<p>• 题目链接：<a class="link-info" href="https://leetcode.cn/problems/surrounded-regions/description/" rel="nofollow" title="被围绕的区域">被围绕的区域</a></p> 
+<p>• 问题描述：</p> 
+<p>给你一个 <code>m x n</code> 的矩阵 <code>board</code> ，由若干字符 <code>'X'</code> 和 <code>'O'</code> ，找到所有被 <code>'X'</code> 围绕的区域，并将这些区域里所有的 <code>'O'</code> 用 <code>'X'</code> 填充。</p> 
+<p>• 解题思路：</p> 
+<p>我们可以发现直接做难度还是挺大的，要处理的边界和各种条件还是比较多的，这里我们采用一种<span style="color:#fe2c24;">正难则反</span>的思路来解决这道问题。</p> 
+<p>1. 先处理边界上的 O 区域，因为这个 O 一定不会是被围绕的，所以遍历边界来一次搜索即可。</p> 
+<p>2. 扫描矩阵，进行还原。</p> 
+<p>这题我们采用 vis 来标记我们走过的路。</p> 
+<p>• 代码编写：</p> 
+<pre><code class="language-java">class Solution {
+    boolean[][] vis;
+    int[] dx = {0,0,1,-1};
+    int[] dy = {1,-1,0,0};
+    int n,m;
+    public void solve(char[][] board) {
+        n = board.length;m = board[0].length;
+        vis = new boolean[n][m];
+        //遍历边界
+        for(int i = 0;i &lt; m;i++){
+            //第一行
+            if(board[0][i] == 'O'){
+                bfs(board,0,i);
+            }
+            //最后一行
+            if(board[n - 1][i] == 'O'){
+                bfs(board,n - 1,i);
+            }
+        }
+        for(int i = 0;i &lt; n;i++){
+            //第一列
+            if(board[i][0] == 'O'){
+                bfs(board,i,0);
+            }
+            //最后一列
+            if(board[i][m - 1] == 'O'){
+                bfs(board,i,m - 1);
+            }
+        }
+        //还原矩阵
+        for(int i = 0;i &lt; n;i++){
+            for(int j = 0;j &lt; m;j++){
+                if(board[i][j] == 'O' &amp;&amp; !vis[i][j]){
+                    board[i][j] = 'X';
+                }
+            }
+        }
+    }
+    public void bfs(char[][] board,int i,int j){
+        vis[i][j] = true;
+        Queue&lt;int[]&gt; queue = new LinkedList&lt;&gt;();
+        queue.offer(new int[]{i,j});
+        while(!queue.isEmpty()){
+            int[] tmp = queue.poll();
+            int a = tmp[0];
+            int b = tmp[1];
+            for(int k = 0;k &lt; 4;k++){
+                int x = a + dx[k];
+                int y = b + dy[k];
+                if(x &gt;= 0 &amp;&amp; x &lt; n &amp;&amp; y &gt;= 0 &amp;&amp; y &lt; m &amp;&amp; board[x][y] == 'O' &amp;&amp; !vis[x][y]){
+                    queue.offer(new int[]{x,y});
+                    vis[x][y] = true;
+                }
+            }
+        }
+    }
+}</code></pre> 
+<p><img alt="" height="984" src="https://images2.imgbox.com/46/41/knKJal81_o.png" width="1200"></p> 
+<p>• 总结：BFS 来解决 FloodFill 类问题的模板是比较固定的，希望友友们要掌握好，因为我们后续还要利用 BFS 来解决最短路问题和拓扑排序。算法模板里面的细节处理一定要想清楚，其他的其实和之前 DFS 解决这类问题是一样的。</p> 
+<p><strong>结语：</strong></p> 
+<p><strong>其实写博客不仅仅是为了教大家，同时这也有利于我巩固知识点，和做一个学习的总结，由于作者水平有限，对文章有任何问题还请指出，非常感谢。如果大家有所收获的话还请不要吝啬你们的点赞收藏和关注，这可以激励我写出更加优秀的文章。</strong></p> 
+<p><img alt="" height="400" src="https://images2.imgbox.com/dc/b7/RFy1A8FN_o.png" width="1080"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/868ae83a9356cc0fcfac4cc76c75cbea/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【MySQL数据库】初步认识数据库，实现基本操作</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/bb78e42bc778b98cfabf2ffd8d58143f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">苹果将在iPhone上安装ChatGPT；中国大模型团队首登ICLR演讲 | AI 头条</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,764 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta name="generator" content="Hugo 0.126.1">
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="编程学习者的博客">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="编程学习者">
+  <meta property="og:description" content="编程学习者的博客">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="website">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+	<link rel="alternate" type="application/rss+xml" href="/index.xml" title="编程学习者">
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main list" role="main">
+	<article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/b32d81bd47aeca12e5ec72b3cfad8761/" rel="bookmark">
+			分布式WEB应用中会话管理的变迁之路
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		优质博文：IT-BLOG-CN
+Session一词直译为“会话”，意指有始有终的一系列动作／消息。Session是Web应用蓬勃发展的产物之一，在Web应用中隐含有“面向连接”和“状态保持”两个含义，同时也指代了Web服务器与客户端之间进行状态保持的解决方案。
+在Web应用诞生之初，应用服务器不浏览器之间仅仅只是基于HTTP协议进行通信。而HTTP协议是无状态的，也就是说每一个请求之间都是相于独立的，互不关联。但是随着应用业务复杂化，服务器需要按照用户的一系列业务操作向用户提供某些特定的、按需的内容。这时候就需要通过保存用户状态，将用户的请求关联起来。Session管理正是这一问题的解决方案。
+早期的Web应用基本都采用的是单体架构，也就是把一个使用了分层架构的Web应用部署在单节点Web服务器上的架构类型。在这种架构中，虽然采用了分层架构，将整个应用分为了表现层、业务逻辑层和数据访问层，每一层各司其职，让Web应用的各个方面都有所改善。但这样的分层只是停留于逻辑上。由于将所有代码部署在单个服务器节点上，随着应用不断迭代开发，单体应用将会发展成巨石型应用，臃肿不堪，难以维护。
+在这样的单体架构中，由于所有的用户请求都是由这个唯一的服务器进行响应处理，所以只要把保存了用户信息和状态的Session对象，存放在应用服务器内存里，就能轻松地达到保持用户状态的目的。
+随着Web应用的发展，用户访问量和业务复杂度与日俱增，应用的性能和代码的维护难度成为应用的瓶颈，为了突破瓶颈，开发者开始尝试在应用架构中引入负载均衡器，继而演化出了集群和分布式两种架构类型。
+集群，是指在多个服务器节点上部署相同的应用，例如上图中的服务器B和C，然后通过负载均衡器的分发功能，把用户请求分发到集群中的任意一个服务器节点上。如果有更大的访问量，只要向集群中增加服务器节点，就能改善压力。集群既能保证应用的高可用，又能提高应用的负载能力。
+分布式，是把原来的单体架构应用，通过分而治之的手段，按照业务功能，切分成一些小的模块应用，部署在不同服务器节点上，例如上图中的服务器A和B。然后通过负载均衡器和门户应用整合起来，组成一个完整的应用。
+集群和分布式架构中，后端包含了多个服务器节点。当用户进行登录时，登录请求是由其中一个服务器节点进行响应，而后续的用户请求将可能被负载均衡器分发到其他服务器节点，这时候就可能因为这个服务器节点上没有用户Session，导致服务器判定用户是未登录状态，让用户重新登录。
+所以，在集群和分布式架构中，必须保证用户进行登陆后，架极中的所有服务器节点都能共享Session数据。常用的Session管理方案有如下3种：
+1、将Session对象保存在Cookie，然后存放在浏览器端。每次浏览器向服务器发送请求的时候，都会把整个Session对象放在请求里一起发送到服务器，以此来实现Session共享。这样的方案实现起来特别方便，但是由于Cookie的存储容量比较小，所以这个方案只适用于Session数据量小的场景。
+2、Session复制。部分应用服务器能够支持Session复制功能，例如Tomcat。用户可以通过修改配置文件，让应用服务器进行Session复制，保持每一个服务节点的Session数据达到一致。但是这个方案的实现依赖于应用服务器。当应用被大量用户访问时，每个服务器都需要有一部分内存用来存放Session，同时因为大量Session通过网路传输进行复制，将会卙用网络资源，迓可能因为网络延迟导致程序异常。
+3、Session粘滞。利用负载均衡器的分发能力，将同一浏览器上同一用户的请求，都定向发送到固定服务器上，让这个服务器处理诠用户的所有请求，这样只要这个服务器上保存了用户Session，就能保讷用户的状态一致性。但是这个方案依赖于负载均衡器，而丏只适用于横向扩展的集群场景，不能满赼分布式场景。
+4、Session集中管理。这边我简单介绍一下Spring Session。Spring Session是Spring提供的一套Session管理方案，通过一个SessionFilter将所有访问应用的请求都拦截下来，然后使用Request包装类接管Session管理。将session从web容器中拦截下来后，Session会被存储在独立的存储服务器中。目前支持多种形式的session存储器：Redis、Database、MogonDB等。当request进入web容器，根据request获取session时，由Spring Session负责存存储器中获取session，如果存在则返回，如果不存在则创建并持久化至存储器中。Spring Session不与应用服务器耦合，能适用于常规服务器。同时还提供了在浏览器下对同一应用存储多个 Session等功能。
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/b01deccadb94fbc87ce030fb28fee161/" rel="bookmark">
+			20240428 每日AI必读资讯
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		🌍图灵诺奖得主等大佬齐聚海淀！清华版Sora震撼首发
+4月27日，2024中关村论坛年会「人工智能主题日」举办。
+生数科技联合清华大学，共同发布了最新的视频大模型「Vidu」。
+全球首个低碳、高性能多语言LLM全面开源。
+🔗 图灵诺奖得主等大佬齐聚海淀！清华版Sora震撼首发，硬核AI盛会破算力黑洞-CSDN博客
+🌐通义千问发布Qwen1.5-110B 首款超1000亿参数模型 - Qwen1.5-110B是Qwen1.5系列中的新成员，也是该系列首个拥有超过1000亿参数的模型。
+- 该模型在基础模型评估中表现出色，与Meta-Llama3-70B相媲美，并在聊天模型评估（包括MT-Bench和AlpacaEval 2.0）中表现出色。
+- 模型支持多语言，包括英语、中文、法语、西班牙语等，上下文长度可达32K令牌。
+🔗详细：https://qwenlm.github.io/blog/qwen1.5-110b/
+🔗 https://blink.csdn.net/details/1689342
+🤖Sanctuary AI发布其第七代机器人：更接近人类！
+- 24小时之内就能学会新任务。
+- 相比前代有了巨大的改进，更长的运行时间、更低的材料成本。
+- 新机器人在手腕、手和肘部的动作范围得到了扩展，更为灵活和精确。
+🔗 https://blink.csdn.net/details/1689335
+🧠WebLlama：基于 Llama-3-8B 能通过对话进行网页浏览的智能代理
+- 能够处理连续的对话，听取用户的指令，自动浏览网页，执行搜索、导航和信息检索、完成如预定酒店、购物或查找信息等任务。
+- 能在实际的浏览器环境中执行各种动作，如点击、滚动、填写表单等。
+- 在专业的智能代理基准测试中，在多个方面都优于 GPT-4V。
+- 可以被训练来从网页收集特定信息，并将其用于不同的应用，比如自动化的数据汇总。
+🔗 https://blink.csdn.net/details/1689340
+🛠️LLaVA++ ： 赋予Phi-3 和 Llama-3 视觉能力
+- 在通过扩展原有的LLaVA模型，将 Phi-3 和Llama-3 进行整合集成，并赋予它们视觉处理能力。
+- 模型能够更准确地理解和执行与视觉内容相关的复杂指令。
+- 在处理需要理解图像和文本的学术任务时，展现了更高的准确率和效率。
+🔗GitHub：https://github.com/mbzuai-oryx/LLaVA-pp
+🎨 IntrinsicAnything：调整图片光照 保持物体材质
+- 生成模型学习材料，规范优化过程，提高准确性
+- 模型基于漫反射和镜面反射着色项，增加准确性
+- 采用从粗到精的训练策略，实现稳定且准确的材质回收结果
+🔗 IntrinsicAnything
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/1f76562bac86c87b7781aa9eaef93944/" rel="bookmark">
+			Guitar Pro 8 Mac/Win版许可证安装激活教程（附许可证网盘）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		Guitar Pro是一款专业的吉他制谱软件，现在已更新至Guitar Pro8，新增了支持添加音频轨道、支持嵌套连音符、直观的效果器视图、让指法一目了然的音阶示意图等实用新功能。下面我们来看Guitar Pro8 Windows如何安装激活。
+一、Guitar Pro 8 安装 1、Guitarpro 8 Win/Mac安装包
+https://pan.baidu.com/s/1tYjaPA4NE6PM6bTQasnytQ?pwd=deqh 提取码: deqh Guitarpro 8 许可证秘钥网盘：https://pan.baidu.com/s/1ezQmJAjIx796NEr9WZbcOg 提取码: 8w61
+2、双击下载好的Guitar Pro8安装包。
+3.默认语言是【简体中文】，点击【确定】。
+4.勾选【我同意此协议】，点击【下一步】。
+5.此处可更改软件的安装位置，点击【下一步】。
+6.点击【下一步】。
+7.点击【下一步】。
+8.点击【安装】。
+9.等待安装进程
+10.出现以下界面就代表Guitar Pro 8安装完成了，点击【完成】。
+二、Guitar Pro 8激活 1.点击【输入许可证】。
+2.将从网盘里下载好的注册码复制输入至下图中，勾选【我同意并遵守Guitar Pro的使用许可证协议】，点击【激活】。
+3.出现下图就代表软件激活成功，可以使用软件内部的所有功能了。
+注意：Guitar Pro8序列号仅能授权1台计算机使用，支持1次换机，换机后在新电脑上重新安装Guitar Pro软件并激活即可，同一台电脑仅重装系统后可直接激活（仅重装系统不视为换机），为避免激活次数过多被系统封禁序列号，请不要在多台电脑上激活。
+三、Guitar Pro8如何换机 1.点击【帮助】找到【关于Guitar Pro8】。
+2.点击【移除许可证】，将软件卸载，新设备上安装Guitar Pro8并激活即可完成换机。
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/1541d08872e037e0be1d52363ffc5dd3/" rel="bookmark">
+			打水问题（贪心算法）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		 题目：有n个人排队到r个水龙头去打水，他们装满水桶的时间t1、t2………tn为整数且各不相等，应如何安排他们的打水顺序才能使他们总共花费的时间最少？通过键盘输入排队打水的人数以及每人打水的时间和水龙头数，使用贪心算法求出所有人完成打水总共花费的时间的最小值。
+#include&lt;bits/stdc++.h&gt; using namespace std; const int N=100010; int t[N]; //打水时间 int s[N]; //每个人等待的时间 int res=0; //总花费时间 signed main(){ int n,r; cin&gt;&gt;n&gt;&gt;r; for(int i=1;i&lt;=n;i++) cin&gt;&gt;t[i]; sort(t+1,t+1+n); //从大到小 //前r个前缀和直接等于本身 for(int i=1;i&lt;=r;i++) s[i]=t[i]; //纵向前缀和 ，在前面人接水的过程中，后面的人需要等待 for(int i=r+1;i&lt;=n;i++) s[i]=s[i-r]+t[i]; //求总和等待时间 for(int i=1;i&lt;=n-r;i++) res+=s[i]; cout&lt;&lt;res&lt;&lt;endl; return 0; } 
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/abacef97399d67a1ca1a0be2629342bb/" rel="bookmark">
+			spring boot3登录开发-微信小程序用户登录设计与实现
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		⛰️个人主页: 蒾酒
+🔥系列专栏：《spring boot实战》
+目录
+写在前面
+登录流程
+流程解析
+具体实现
+相关代码
+说明
+服务端
+小程序端
+写在最后
+写在前面 本文介绍了springboot开发微信小程序后端服务中，用户登录功能的设计与实现，坚持看完相信对你有帮助。
+同时欢迎订阅springboot系列专栏，持续分享spring boot的使用经验。
+登录流程 如图：
+这是微信官方文档中微信小程序登录的流程时序图，我在图中红色序号标注的五步就是完整的微信小程序登录流程。
+流程解析 小程序端通过wx.login()获取用户登录凭证code。小程序将code发送到服务端的登录接口。服务端的登录接口使用该code、小程序的AppID和AppSecret向微信服务器发起请求，获取用户的openid。服务端拿到openid后，可以根据业务需求生成用户令牌（Token），通常包括用户信息、权限等，并返回给小程序。小程序在本地缓存该用户令牌。后续小程序发起请求时，在请求头中携带该用户令牌(Token)。服务端接收到请求时，验证用户令牌的有效性，确保用户是经过认证和授权的。 具体实现 登录接口设计思路
+接收小程序端传递的code参数。使用code、小程序的AppID和AppSecret向微信服务器发起请求，获取用户的openid。在数据库用户表中查询是否存在该openid。如果存在该openid，则使用查询到的用户信息生成令牌(Token)。如果不存在该openid，则进行用户注册操作，将新用户信息插入数据库用户表，并生成令牌(Token)。返回生成的令牌(Token)给小程序端。 相关代码 说明 下面代码基于jdk17，发请求用的时jdk自带的http工具类，如果你的jdk版本低于11，可以使用okhttp依赖来发请求，然后jwt相关工具类代码在我本专栏的其他文章里面，用到的ORM框架为mybatis-plus整合相关代码也在本专栏。
+服务端 登录dto
+@Data public class UserLoginDTO { @NotBlank(message = "code不能为空") private String code; private Map&lt;String,Object&gt; userInfo;//用户完善信息 } 登录返回vo
+@Data @Builder public class UserLoginVO implements Serializable { private Long id; //用户id private String openid;//用户在小程序唯一标识 private String token;//用户登录凭证 } 获取openid方法
+使用的是jdk17自带的HttpClient,也可以使用okhttp,或者糊涂工具包里面的。
+private String getOpenid(String code) { HttpClient httpClient = HttpClient.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/abacef97399d67a1ca1a0be2629342bb/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/176437101e4abc9d6d079afb713de7c8/" rel="bookmark">
+			使用LM Studio与Anything LLM基于Llama-3高效构建本地知识库系统
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		本文详细介绍了如何使用LM Studio和Anything LLM工具来构建和部署本地知识库。文中首先解释了安装和配置大模型的步骤，随后展示了如何将模型部署为后台服务，并通过API进行调用。此外，文章还涉及了如何使用这些工具快速构建知识库应用，包括知识库的配置和问答系统的设置。整个过程强调了无需深厚编程知识即可实现快速部署和使用，适合业务专家和产品设计人员使用。
+业务背景 最近一直在寻找一套最佳的基于大模型的知识库系统解决方案，需要具有如下能力：
+能够快速将大型模型进行本地化的部署使用。
+结合大语言模型，能有一套良好的知识库系统，方便使用。
+针对业务专家和产品设计人员，即使不懂代码，也能快速构建产品原型，了解基于大型模型知识体系的构建过程，并能选型大语言模型。
+针对算法人员，“套壳”大模型或微调大模型，可通过一款工具完成本地化的快速部署和分发，而不需要自己单独写一个服务。
+针对开发人员，可将算法开发好的模型快速构建成后台服务，且为OpenAI标准的服务API，能让开发团队快速进行大型模型的接入测试和验证。
+针对测试人员，可以在构建的大型模型和知识库问答应用中进行快速测试，并跟踪各个环节的结果，如embedding的召回结果是否覆盖所有知识点，可通过接口调用日志进行快速查看。
+针对甲方的企业要快速验证知识库项目的可行性，可以使用这两个工具搭建本地的测试环境。这样可以对一些关键技术进行全流程化的跟踪调试，待验证没有问题再进行立项或系统的集成。
+最终选择了LM studio + Anything LLM搭建本地知识库。
+LM Studio安装部署及使用 安装 LM Studio是一款桌面软件，安装后，经过简单的配置即可使用。登录https://lmstudio.ai/ 即可看到如下界面，按自己的操作系统进行下载即可。
+​
+安装完成之后，登录系统的主界面如下图所，可以看到其默认界面如下：
+​
+安装完成！！！
+下载和管理大模型 在LMs studio的首页即提供了大模型列表及搜索能力，可以从hugging Face上获取支持的大模型列表，并可以通过搜索获取关注的大模型。如下图搜索最近也比较火的Mistral：
+​
+点击“download”可以将想要的大模型下载到本地磁盘中。
+​
+查看下载进度条
+​
+2. 点击My models图标，即可查看本地下载的大模型列表，在这里我本身下载了4个大模型（LLama-3、LLama-3 chinese、gemma，刚刚下载的mistral）、一个embedding Model（据说是一个比较好的embedding算法），还有一个是自己通过LLama-3套壳的本地模型：
+​
+AI chat 下载了模型之后，就来验证一下这个模型能否正常使用，进入AI chat界面：
+​
+是选择模型，选择我们刚下载的mistral，左侧可以显示该模型在执行时的内存及cpu占用情况。
+是针对该模型的聊天历史
+是针对该模型进行对话时的参数配置，这里我们默认即可
+是聊天的主交互界面。
+以下是Mistral模型回答的结果，问题都理解出错了：
+​
+换成最近超火的LLama 3:8b之后结果还是不错的：
+​
+​
+将大模型部署为后台服务 点击“local server“，进入服务配置界面：
+​
+选择做为后台服务的大语言模型，在这里选择llama3
+embedding算法，这里选择了一个社区比较推荐的nomic-ai-nomic embed text算法
+配置做为后台服务的端口，并启动server
+针对python在不同的场景下的示例代码
+服务器的logs界面，每一次api的调用日志在这里都可以看得到，方便进行问题排查，还有就是embedding算法返回结果是否召回的验证非常有帮助，方便算法和测试人员进行模型测试和调优使用。
+用Anything LLM快速构建知识库应用 Anything LLM有两个版本，一是桌面安装版本，另一是通过Docker进行部署的版本。我选择安装桌面版，有兴趣的同学可以研究一下Docker版本，它增加了用户权限管理功能，并可以进行企业级应用部署。它是开源的，可以在真正的生产环境中使用Anything LLM作为知识库的后台系统，并开放API供前端业务系统集成。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/176437101e4abc9d6d079afb713de7c8/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/7ea648647bcf98658f12bbf7cfa728f1/" rel="bookmark">
+			23种设计模式学习导航（Java完整版）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		本篇文章是作者对23种设计模式学习的一个总结，包含设计模式的三大分类（创建型5种，结构型7种，行为型11种）和七个面向对象设计原则，为了方便大家学习，现将23种设计模式的链接进行了整理，希望对大家有所帮助。 23种设计模式源码地址：GitHub - lkydog/Design-Pattern: ⭐java实现，23种设计模式
+一、什么是设计模式 设计模式一种在软件开发种非常重要的编程技巧，它提供了经过验证的解决方案，可以使代码更加可读、可扩展和可维护，我们可以将常见的变成模式抽象出来，从而形成一组通用的解决方案，应用于不同的情况。
+ps：设计模式代表的是一种思想，至于怎么千变万化就看大家的了。
+二、设计模式的三大分类及对应模式（导航） 注意：以下学习难度和使用频率的星级，仅代表个人观点。
+2.1 创建型模式（5种） 定义：主要涉及对象创建的机制，按照合适的方式避免直接创建对象，在系统运行过程中降低对象创建和管理的负担。
+1.单例模式-Singleton Pattern【学习难度：★☆☆☆☆，使用频率：★★★★☆】 定义：确保一个类最多只有一个实例，并提供一个全局访问点。描述：包含饿汉式2种、懒汉式4种、静态内部类、枚举等实现方式。 2.工厂模式-Factory Pattern【学习难度：★★☆☆☆，使用频率：★★★★★】 定义：提供一个公共的接口，使得可以在不暴露对象创建逻辑的情况下创建。描述：包含简单工厂模式、方法工厂模式以及抽象工厂模式。简单工厂和方法工厂以卖包子为例，抽象工厂以卖包子和卖蛋糕为例。 3.抽象工厂模式（工厂模式已包含，不再赘述） 4.建造者模式-Builder Pattern【学习难度：★★★☆☆，使用频率：★★☆☆☆】 定义：封装一个复杂对象构造过程，并允许按步骤构造。描述：以肯德基套餐为例。 5.原型模式-Prototype Pattern【学习难度：★★★☆☆，使用频率：★★★☆☆】 定义：通过复制现有实例来创建新的实例，无需知道相应类的信息。描述：以英雄联盟塞拉斯窃取其他英雄大招为例。 2.2 结构型模式（7种） 定义：主要关注对象组合的方式，解决对象之间的关系，解决子系统之间的耦合度和扩展问题。
+1.适配器模式-Adapter Pattern【学习难度：★★☆☆☆，使用频率：★★★☆☆】 定义：允许不兼容的接口之间进行合作。描述：以英汉互译为例，包含类适配器、对象适配器、接口适配器。 2.装饰者模式-Decorator Pattern【学习难度：★★★☆☆，使用频率：★★★☆☆】 定义：动态的将新功能附加到对象上。描述：以LOL中盲僧学习技能（Q、W、E、R）为例。 3.代理模式-Proxy Pattern【学习难度：★★☆☆☆，使用频率：★★★★☆】 定义：给某一个对象提供一个代理对象，并由代理对象控制对原有对象的引用。描述：以房屋中介为例，包含静态代理、JDK动态代理和Cglib代理。 4.外观模式-Facade Pattern【学习难度：★☆☆☆☆，使用频率：★★★★★】 定义：隐藏了系统的复杂性，并向客户端提供了一个可以访问系统的接口。描述：以旅行社为例。 5.桥接模式-Bridge Pattern【学习难度：★★★☆☆，使用频率：★★☆☆☆】 定义：将抽象部分与它的实现部分分离，使它们都可以独立地变化。描述：以不同品牌手机和蓝牙耳机为例。 6.组合模式-Composite Pattern【学习难度：★★★☆☆，使用频率：★★★★☆】 定义：将对象组合成树形的层次结构，用来表示“整体-部分”的关系。描述：以算数表达式为例。 7.享元模式-Flyweight Pattern【学习难度：★★★★☆，使用频率：★★☆☆☆】 定义：通过共享的方式减少创建对象的数量，以减少内存占用和提升性能。描述：以共享单车为例。 2.3 行为型模式（11种） 定义：主要关注对象之间的交流和协作，解决类或对象之间的交互问题。
+1.策略模式-Strategy Pattern【学习难度：★☆☆☆☆，使用频率：★★★★★】 定义：定义了一系列的算法，并将每个算法封装起来，是他们可以相互替换。描述：以刷视频选择视频平台为例。 2.模板模式-Template Pattern【学习难度：★★☆☆☆，使用频率：★★★★☆】 定义：在抽象类中定义算法的骨架，把具体的操作留给子类来实现。描述：以订外卖为例。 3.观察者模式-Observer Pattern【学习难度：★★★☆☆，使用频率：★★★★☆】 定义：它定义了对象之间的一对多依赖关系，当一个对象的状态发生变化时，它所有的依赖对象都会自动收到通知并更新自身。描述：以报纸和报纸订阅者为例。 4.迭代器模式-Iterator Pattern【学习难度：★★★☆☆，使用频率：★★★★☆】 定义：提供了一种统一的方式来访问集合对象中的元素，而不是暴露集合内部的表示方式。描述：以遍历班级学生为例。 5.解释器模式-Interpreter Pattern【学习难度：★★★★★，使用频率：★☆☆☆☆】 定义：定义了一种语言，并定义该语言中语句的解释器，从而允许以编程方式定义语法、解析语法以及处理语法中的解释器。描述：以四则运算为例。 6.中介者模式-Mediator Pattern【学习难度：★★★☆☆，使用频率：★★☆☆☆】 定义：用于降低多个对象之间的耦合度，通过引入一个中介者对象来协调对象之间的交互。描述：以物流公司协调运输公司和商家为例。 7.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/7ea648647bcf98658f12bbf7cfa728f1/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/0791d8924a0df6d847fb3ef1afc76557/" rel="bookmark">
+			Spring Boot3整合Redis
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		⛰️个人主页: 蒾酒
+🔥系列专栏：《spring boot实战》
+目录
+前置条件
+1.导依赖
+2.配置连接信息以及连接池参数
+3.配置序列化方式
+4.编写测试
+前置条件 已经初始化好一个spring boot项目且版本为3X，项目可正常启动。
+作者版本为3.2.2
+初始化教程：
+新版idea(2023)创建spring boot3项目-CSDN博客https://blog.csdn.net/qq_62262918/article/details/135785412?spm=1001.2014.3001.5501
+1.导依赖 pom.xml:
+&lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-data-redis&lt;/artifactId&gt; &lt;/dependency&gt; 如果还没安装redis可以参照这篇：
+阿里云ECS使用docke搭建redis服务-CSDN博客https://blog.csdn.net/qq_62262918/article/details/135707725?spm=1001.2014.3001.5502
+2.配置连接信息以及连接池参数 application.yml：
+server: port: 8080 spring: data: redis: # Redis连接配置 host: localhost # Redis主机地址 port: 6379 # Redis端口号 password: 123456 # 访问Redis所需密码 database: 0 # 使用的数据库编号 lettuce: #Lettuce客户端配置 pool: # 连接池配置 max-active: 8 # 最大活跃连接数 max-wait: -1 # 最大等待时间（-1表示无限等待） max-idle: 8 # 最大空闲连接数 min-idle: 0 # 最小空闲连接数 修改为你的连接信息即可。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/0791d8924a0df6d847fb3ef1afc76557/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/39f88dd1c60ab575bfcdaadb4bbb9b69/" rel="bookmark">
+			Spring Web MVC入门（2）——请求
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		目录
+一、传递单个参数
+基础类型和包装类型的区别
+1、基础类型
+（1）不传参
+（2）传字符串
+2、包装类型
+（1）不传参
+（2）传字符串
+3、小结
+二、传递多个参数
+三、传递对象
+四、后端参数重命名（后端参数映射）
+五、传递数组
+六、传递集合
+不加注解@RequestParam
+加注解@RequestParam
+七、传递JSON数据
+1、JSON概念
+JSON于JavaScript的关系：
+2、JSON语法
+（1）JSON的语法：
+（2）JSON的两种结构：
+3、JSON字符串和Java对象互转
+4、JSON优点
+5、传递JSON对象
+八、获取URL中参数@PathVariable
+九、上传文件@RequestPart
+十、获取Cookie / Session
+1、回顾Cookie
+2、理解Session
+3、Cookie 和 Session 的区别（面试常考）
+4、获取Cookie
+（1）传统获取Cookie
+（2）简洁获取Cookie
+5、获取Session
+（1）Session 存储
+（2）传统获取Session
+（3）简洁获取 Session(1)
+（4）简洁获取 Session(2)
+下面讨论一下Spring从传统获取Session到简洁获取Session：
+十一、获取Header
+1、传统获取Header
+2、简洁获取Header
+访问不同的路径，就是发送不同的请求。在发送请求时，可能会带一些参数，所以学习Spring的请求，主要是学习如何传递参数到后端，以及后端如何接收。
+传递参数，这里主要使用Postman来模拟，浏览器也可以，但是Postman会更方便。
+后端开发人员无需过度关注如何传递参数，了解即可，实际开发中以Postman测试为主。比如餐厅里的厨师，不需要关注用户是在店里下单还是外卖平台下单，只需要知道如何接收订单，根据订单做出对应的菜肴即可。
+一、传递单个参数 接收单个参数，在Spring MVC中直接使用方法中的参数就可以了，比如以下代码：
+import org.springframework.web.bind.annotation.RequestMapping; import org.springframework.web.bind.annotation.RestController; @RestController @RequestMapping("/Demo1") public class Demo1 { @RequestMapping("/test") public String test(String name) { return "
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/39f88dd1c60ab575bfcdaadb4bbb9b69/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/079052967201e7f71138f78012416960/" rel="bookmark">
+			Hugging Face全攻略：轻松下载Llama 3模型，探索NLP的无限可能！【实操】
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		Hugging Face：自然语言处理的强大开源模型库
+在数字化时代，自然语言处理（NLP）技术的崛起为人工智能的发展注入了新的活力。而Hugging Face，作为这一领域的佼佼者，凭借其强大的模型仓库、易用的API以及活跃的社区支持，成为无数NLP研究人员、开发者和爱好者的首选平台。
+一、Hugging Face：NLP的瑞士军刀
+Hugging Face，就像一把多功能的瑞士军刀，为NLP领域的研究者和实践者提供了丰富的工具与资源。无论是顶尖的Transformer模型，还是各种实用的NLP数据集，你都能在这里找到。更重要的是，Hugging Face让这一切变得简单高效，让你能够轻松驾驭NLP的复杂世界。
+二、为何Hugging Face如此受欢迎？
+模型宝库： Hugging Face的模型仓库堪称NLP领域的“淘宝”，这里有BERT、GPT、RoBERTa等顶级Transformer模型，它们经过大量数据的预训练，能够轻松应对各种NLP任务。易用性至上： 使用Hugging Face的Transformers库，你可以像操作玩具一样轻松加载和使用这些预训练模型。无论是文本生成、情感分析还是问答系统，都能轻松搞定。社区力量大： Hugging Face拥有一个庞大的NLP社区，这里汇聚了来自世界各地的NLP爱好者。他们分享模型、代码和见解，共同推动着NLP技术的发展。 三、如何轻松拥抱Hugging Face？
+网页一键下载： 打开Hugging Face的模型中心，搜索你需要的模型，点击下载即可。简单快捷，无需任何技术门槛。命令行神器： 使用Hugging Face官方提供的命令行工具huggingface-cli，你可以轻松下载和管理模型。只需几行命令，就能将顶级模型收入囊中。Git Clone高级玩法： 虽然这不是推荐的方法，但如果你对Git操作比较熟悉，也可以尝试使用git clone命令从仓库中下载模型。不过要注意，这种方法可能会占用较多磁盘空间，且不支持断点续传。 四、Hugging Face下载Llama 3？
+Meta Llama 3 是 Meta AI在2024 年 4 月 18日 发布的。这是一款功能强大的开源大型语言模型，具有 8B 和 70B 两种参数版本。Llama 3 在多项基准测试中表现出色，支持广泛的用例，包括推理和代码生成。此外，它还引入了分组查询注意力（GQA）并在超过** 15T 个标记的预训练数据**（超恐怖！！）上进行了训练。
+以下载Llama 3模型为例，以下是几种从Hugging Face（HF）平台下载模型到本地的方法：
+方法一：使用Hugging Face的命令行工具huggingface-cli
+首先，确保你已经安装了huggingface_hub库。如果还没有安装，你可以使用以下命令安装：
+pip install -U huggingface_hub 接下来，使用huggingface-cli工具下载Llama 3模型。模型的仓库地址通常可以在Hugging Face的模型页面上找到。以Llama 3为例，运行以下命令：
+huggingface-cli download llama/llama-3 这条命令会自动从Hugging Face的模型仓库中下载Llama 3模型到本地。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/079052967201e7f71138f78012416960/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/24fa7f533f52378c970c2db7aaea746b/" rel="bookmark">
+			党务学习|基于SprinBoot&#43;vue的大学生党务学习平台(源码&#43;数据库&#43;文档)
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		党务学习目录
+目录
+基于SprinBoot+vue的大学生党务学习平台
+一、前言
+二、系统设计
+三、系统功能设计 1 入党申请管理
+2 党课管理
+3 公告管理
+4 公告类型管理
+四、数据库设计
+五、核心代码 六、论文参考
+七、最新计算机毕设选题推荐
+八、源码获取：
+博主介绍：✌️大厂码农|毕设布道师，阿里云开发社区乘风者计划专家博主，CSDN平台Java领域优质创作者，专注于大学生项目实战开发、讲解和毕业答疑辅导。✌️
+主要项目：小程序、SpringBoot、SSM、Vue、Html、Jsp、Nodejs等设计与开发。
+🍅文末获取源码联系🍅
+基于SprinBoot+vue的大学生党务学习平台 一、前言 大学生党务学习平台管理系统按照操作主体分为管理员和用户。管理员的功能包括档案管理、党课管理、党课收藏管理、党课评价管理、党课报名管理、字典管理、试卷管理、试卷选题管理、试题表管理、考试记录表管理、答题详情表管理、错题表管理、公告信息管理、党务工作者管理、签到信息管理、谈心谈话管理、入党申请管理、提醒管理、在线学习管理、在线学习收藏管理、在线学习留言管理、用户管理、作业管理、作业提交管理、管理员管理。用户的功能等。该系统采用了Mysql数据库，Java语言，Spring Boot框架等技术进行编程实现。
+大学生党务学习平台管理系统可以提高大学生党务学习平台信息管理问题的解决效率，优化大学生党务学习平台信息处理流程，保证大学生党务学习平台信息数据的安全，它是一个非常可靠，非常安全的应用程序。
+关键词：大学生党务学习平台管理系统；入党申请,党课Mysql数据库；Java语言
+二、系统设计 系统功能结构如图
+三、系统功能设计 管理员功能实现
+1 入党申请管理 图5.1 即为编码实现的入党申请管理界面，管理员在入党申请管理界面中可以对界面中显示，可以对入党申请信息的入党申请状态进行查看，可以添加新的入党申请信息等。
+图5.1 入党申请管理界面
+2 党课管理 图5.2 即为编码实现的党课管理界面，管理员在党课管理界面中查看党课种类信息，党课描述信息，新增党课信息等。
+图5.2 党课管理界面
+3 公告管理 图5.3 即为编码实现的公告管理界面，管理员在公告管理界面中新增公告，可以删除公告。
+图5.3 公告管理界面
+4 公告类型管理 图5.4 即为编码实现的公告类型管理界面，管理员在公告类型管理界面查看公告的工作状态，可以对公告的数据进行导出，可以添加新公告的信息，可以编辑公告信息，删除公告信息。
+图5.4 公告类型管理界面
+四、数据库设计 （1）下图是签到信息实体和其具备的属性。
+签到信息实体属性图
+（2）下图是用户实体和其具备的属性。
+用户实体属性图
+（3）下图是答题详情表实体和其具备的属性。
+答题详情表实体属性图
+（4）下图是公告信息实体和其具备的属性。
+公告信息实体属性图
+数据库表的设计，如下表：
+表4.1档案表
+序号
+列名
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/24fa7f533f52378c970c2db7aaea746b/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/e894467027359736d2d0e3e2d3d5cc85/" rel="bookmark">
+			【数据结构与算法】：手搓顺序表（Python篇）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		文章目录 一、顺序表的概念二、顺序表的实现1. 顺序表的创建1.1 扩容1.2 整体建立顺序表 2. 顺序表的基本运算算法2.1 顺序表的添加（尾插）2.2 指定位置插入2.3 指定位置删除2.4 顺序表的查找2.5 顺序表元素的索引访问2.6 顺序表元素的修改2.7 顺序表长度2.8 顺序表的输出 三、完整代码四、代码验证 一、顺序表的概念 顺序表是一种线性的数据结构，其中数据元素按照特定的顺序依次存储在连续的内存空间中。它由一系列元素组成，每个元素都与唯一的索引（或者叫下标）相关联，索引从 0 开始递增。
+顺序表是用一段物理地址连续的存储单元依次存储数据元素的线性结构，一般情况下采用数组存储。在数组上完成数据的增删查改。
+下面这张图中，最下面那行数字0~9代表的是元素的索引，天蓝色的柱子中的数字代表的是顺序表中的元素，顺序表中的元素必须是同一数据类型的，数据类型可以是整数、浮点数、字符串等等。
+二、顺序表的实现 设计顺序表类为SqList，主要包含存放元素的data列表和表示实际元素个数的size属性。因为Python属于弱类型语言，没必要专门设计像C++或则Java中的泛型类，在应用SqList时可以指定其元素为任意合法数据类型。
+创建顺序表类：
+# 顺序表类 class SqList: # 初始化 def __init__(self): self.initcapacity = 5 # 初始容量设置为5 self.capacity = self.initcapacity # 容量设置为初始容量 self.data = [None] * self.capacity # 设置顺序表的空间 self.size = 0 # 长度设为0 1. 顺序表的创建 1.1 扩容 顺序表在实现各种基本运算如插入和删除时会涉及到容量的更新，所以要设计一个方法将data列表的容量改变为newcapacity。
+# 扩容 def resize(self, newcapacity): # 改变顺序表的容量为newcapacity assert newcapacity &gt;= 0 oldata = self.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/e894467027359736d2d0e3e2d3d5cc85/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/71b7fac3895c88eee99f2ec86218fbcf/" rel="bookmark">
+			【建议带走】10个经典的GPT 提示词，助力玩转AI
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		1.1 GPT 能帮我们做什么？ 🧊GPTs - 用户无需任何代码，全程支持可视化点击操作，走进全民自定义 ChatGPT 助手的时代！🌐 联网搜索 - 获取实时信息，无论是最新新闻还是刚刚发生的某产品发布会，统统都有！🔧 插件 - 维基百科、PDF 对话、AI 总结论文、获取文献… 成千上百插件等你探索！📊 数据分析 - 丢给他数据，直接出图表！数据分析者必备工具，效率 upup！🚀 文件上传 - Excel、TXT、PDF…统统可以扔进去，成为你数据的一部分！📌 图片识别 - 把自行车坏的部位拍给他，会直接告诉你怎么修，就是这么强大！📐 绘图 Dall-e-3 - 堪比 Midjourney，从此你拥有一个乙方设计师，随时下需求！🧱All toos - 集合 GPT 全部功能！对话+绘画+联网+分析… 一应俱全。 1.2 如何写好提示词 明确具体：尽量详细具体地描述你需要的信息或任务，这有助于模型更精准地理解和回应。包含关键词：使用与你查询内容直接相关的关键词或术语，这有助于模型聚焦于相关主题。适当的长度：提示词不应过于简短，缺乏必要的上下文；同时也不应过于冗长，以避免引入无关信息。利用例子：如果可能，提供一个或几个例子可以帮助模型更好地理解你的期望输出格式或内容风格。考虑句式：明确询问或命令式的句子往往能获得更直接的回答。 算了，说了这么多，你也不会用，直接上 10 个经典例子吧！！！
+玩转AI - 100个GPT 提示词大全：https://lb8kbu4q8a.feishu.cn/docx/UEVFdI87Doipt0xxWvTc7esEnPc
+2 10 个经典 GPT 提示词 2.1 写作助理 👉 最常使用的 prompt，用于优化文本的语法、清晰度和简洁度，提高可读性。
+中文润色：
+作为一名中文写作改进助理，你的任务是改进所提供文本的拼写、语法、清晰、简洁和整体可读性，同时分解长句，减少重复，并提供改进建议。请只提供文本的更正版本，避免包括解释。请从编辑以下文本开始：[文章内容］
+英文润色：
+As a writing improvement assistant, your task is to improve the spelling, grammar, clarity, concision, and overall readability of the text provided, while breaking down long sentences, reducing repetition, and providing suggestions for improvement.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/71b7fac3895c88eee99f2ec86218fbcf/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/eade6e951f24be3dc432b661a0ca1551/" rel="bookmark">
+			Ubuntu20.04安装配置stable diffusion 超详细教程
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		1. 搭建Python环境 使用conda创建单独的虚拟环境sd, 打开终端，运行： conda create -n sd python==3.10.9 然后激活环境： conda activate sd 安装torch 查看自己的cuda版本，在pytorch官网链接: link
+选择对应的torch版本，并直接拷贝安装命令。
+// 查案cuda版本 nvcc -V 我根据我的电脑cuda版本（10.2）安装torch指令为：
+// 安装torch conda install pytorch==1.12.1 torchvision==0.13.1 torchaudio==0.12.1 cudatoolkit=10.2 -c pytorch 2. 下载stable-diffusion-webui 可以直接用链接下载使用git命令下载stable-diffusion-webui源码（二选一即可）：
+// 下载stable-diffusion-webui（二选一，下面一行更稳定） git clone https://github.com/AUTOMATIC1111/stable-diffusion-webui.git git clone https://gitee.com/yiouyou/automatic1111-stable-diffusion-webui.git 3. 下载训练模型 打开链接 link，下载训练模型v2-1_768-ema-pruned.ckpt至stable-diffusion-webui的models/Stable-diffusion目录下，这个目录专门存放用于生成AI绘图的绘图元素的基础模型库。
+4. 安装依赖 升级pip并更改默认库包下载地址为清华镜像 // 可以不换，只是这样更稳定 python -m pip install --upgrade pip pip config set global.index-url https://pypi.tuna.tsinghua.edu.cn/simple 切换到webui目录下，安装依赖 cd stable-diffusion-webui/ pip install -r requirements_versions.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/eade6e951f24be3dc432b661a0ca1551/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/71228584a2fb1c680f46c6cb2bfd273a/" rel="bookmark">
+			CentOS 7配置hadoop和hbase伪分布式模式保姆级教程（近乎零基础跟着配也能配对）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		前置准备： VMware17
+Tabby：https://github.com/Eugeny/tabby/releases/tag/v1.0.207
+jdk-8u401：https://www.java.com/en/download/
+hbase-1.3.1：https://archive.apache.org/dist/hbase/1.3.1/
+hadoop-2.7.7：https://archive.apache.org/dist/hadoop/common/hadoop-2.7.7/
+CentOS-7安装镜像：去找其他链接吧
+打包在以下百度网盘链接里了
+链接：https://pan.baidu.com/s/1VQGGVFOZ5uSo-9P-9reF9A?pwd=igcd
+提取码：igcd
+1、安装VMware17和Tabby 这里不再详细展开如何安装
+2、安装centos7 顺带一提，装好后关机打个快照可以方便之后克隆装好虚拟机的最纯净状态，不必再次安装虚拟机（能省半个小时它不香吗？）
+3、配置静态ip vim /etc/sysconfig/network-scripts/ifcfg-ens33 按a可以进入编辑模式
+不会看自己网段的看下图
+要改的
+BOOTPROTO="static" 要新增的
+IPADDR="192.168.88.102" GATEWAY="192.168.88.2" NETMASK="255.255.255.0" DNS="192.168.88.2" 配完后如下图
+注意保存是先按esc键进入命令模式再输入:wq回车
+重启网络
+systemctl restart network 查看下ip
+ifconfig 打个快照保存下，然后转战tabby
+右键左侧当前虚拟机的名称选择快照-&gt;拍摄快照
+4、Tabby连接虚拟机并上传文件 选择ssh连接
+Tabby上传文件
+查看一下上传的目录
+ls /usr/local/ 5、解压并配置环境变量 先给jdk创建一个新目录
+mkdir -p /export/server 解压jdk：
+tar -zxvf /usr/local/jdk-8u401-linux-x64.tar.gz -C /export/server/ 解压hadoop：
+tar -zxvf /usr/local/hadoop-2.7.7.tar.gz -C /usr/local/ 解压hbase：
+tar -zxvf /usr/local/hbase-1.3.1-bin.tar.gz -C /usr/local/ 改名jdk：
+mv /export/server/jdk1.8.0_401 /export/server/jdk 改名hadoop：
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/71228584a2fb1c680f46c6cb2bfd273a/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/57d55007bd62aab4c5811f59c2bfe66f/" rel="bookmark">
+			【Leetcode】vector刷题
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		🔥个人主页：Quitecoder
+🔥专栏：Leetcode刷题
+目录 1.只出现一次的数字2.杨辉三角3.删除有序数组中的重复项4.只出现一次的数字II5.只出现一次的数字III6.电话号码的字母组合 1.只出现一次的数字 题目链接：136.只出现一次的数字
+题目描述：
+这道题很简单，我们只需要遍历一遍数组，利用异或操作的性质（一个数与自身异或结果为0，任何数与0异或还是其本身）
+class Solution { public: int singleNumber(vector&lt;int&gt;&amp; nums) { int value =0; for(auto v:nums) { value^=v; } return value; } }; 2.杨辉三角 题目链接：118.杨辉三角
+题目描述：
+这道题我们需要构造二维数组，典型的vector的嵌套使用
+首先，我们先构建二维数组，开辟行数大小：
+vector&lt;vector&lt;int&gt;&gt; v(numRows); 接着对每一行进行开辟空间，并将两端初始化为1
+for(int i=0;i&lt;numRows;i++) { v[i].resize(i+1); v[i][0]=1;v[i][i]=1; } 注意，resize是会进行初始化的，我们没有传值，默认为零
+所以我们只需要遍历一遍，遍历到的位置为0，进行相加操作
+完整代码如下：
+class Solution { public: vector&lt;vector&lt;int&gt;&gt; generate(int numRows) { vector&lt;vector&lt;int&gt;&gt; v(numRows); for(int i=0;i&lt;numRows;i++) { v[i].resize(i+1); v[i][0]=1;v[i][i]=1; } for(int i=0;i&lt;numRows;i++) { for(int j=0;j&lt;i;j++) { if(v[i][j]==0) { v[i][j]=v[i-1][j]+v[i-1][j-1]; } } } return v; } }; 3.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/57d55007bd62aab4c5811f59c2bfe66f/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/92c72a90cad7cb2911bd035aba8990d3/" rel="bookmark">
+			Kafka 3.x.x 入门到精通（03）——Kafka基础生产消息
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		Kafka 3.x.x 入门到精通（03）——对标尚硅谷Kafka教程 2. Kafka基础2.1 集群部署2.2 集群启动2.3 创建主题2.4 生产消息2.4.1 生产消息的基本步骤2.4.2 生产消息的基本代码2.4.3 发送消息2.4.3.1 拦截器2.4.3.1.1 增加拦截器类2.4.3.1.2 配置拦截器 2.4.3.2 回调方法2.4.3.3 异步发送2.4.3.4 同步发送 2.4.4 消息分区2.4.4.1 指定分区2.4.4.2 未指定分区⚠️2.4.4.3 分区器2.4.4.3.1 增加分区器类2.4.4.3.2 配置分区器 2.4.5 消息可靠性2.4.5.1 ACK = 02.4.5.2 ACK = 12.4.5.3 ACK = -1（ALL）(默认) 2.4.6 消息去重 &amp; 有序2.4.6.1数据重试2.4.6.2数据乱序2.4.6.3 数据幂等性2.4.6.4数据事务2.4.6.4.1 普通数据发送流程2.4.6.4.2 事务数据发送流程2.4.6.4.3 事务提交流程2.4.6.4.4 事务操作代码 2.4.6.5 数据传输语义 我自己的一个小总结： 本文档参看的视频是：
+尚硅谷Kafka教程，2024新版kafka视频，零基础入门到实战黑马程序员Kafka视频教程，大数据企业级消息队列kafka入门到精通小朋友也可以懂的Kafka入门教程，还不快来学https://zhuanlan.zhihu.com/p/375538383kafka高级特性之生产者,消费者 本文档参看的文档是：
+尚硅谷官方文档，并在基础上修改 完善！非常感谢尚硅谷团队！！！！ 在这之前大家可以看我以下几篇文章，循序渐进：
+❤️Kafka 3.x.x 入门到精通（01）——对标尚硅谷Kafka教程
+❤️Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程
+2. Kafka基础 2.1 集群部署 ❤️Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程
+2.2 集群启动 ❤️Kafka 3.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/92c72a90cad7cb2911bd035aba8990d3/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/4066d175d95361b97a9e97e7c49ff403/" rel="bookmark">
+			Linux快速部署大语言模型LLaMa3，Web可视化j交互（Ollama&#43;Open Web UI）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		本文在个人博客同步发布，前往阅读
+1 介绍 本文将介绍使用开源工具Ollama(60.6k⭐)部署LLaMa大模型，以及使用Open WebUI搭建前端Web交互界面的方法。
+我们先来过一遍几个相关的概念，对这块比较熟悉的朋友可跳过。
+1.1 大规模语言模型 大规模语言模型（Large Language Models, LLMs），顾名思义是指在大量语料数据的基础上训练成的模型，能够模拟人类的语言风格生成较为生动的文本。这类模型的主要特征有：
+规模大：训练所使用的数据量非常庞大，有时超过1000亿个参数。复杂性高：模型结构比较复杂具有较好的上下文理解能力：大规模语言模型可以理解文本的上下文和细微差别 1.2 LLaMa LLaMA是一种大规模语言模型，由Meta AI基于Transformer深度学习框架开发。该模型旨在生成各种风格的高质量文本（例如创意写作、对话甚至诗歌），能够胜任以下工作：
+自然语言处理（NLP）：理解和生成自然语言。机器学习：根据数据和算法学习新的信息和技能。对话生成：可以与用户进行对话，并根据情况生成合适的回应。 1.3 Ollama 官网：Ollama
+API文档：ollama/docs/api.md at main · ollama/ollama (github.com)
+支持的模型列表：library
+一款可以快速部署大模型的工具。
+1.4 Open WebUI 官网：Open WebUI
+相关介绍及源码：open-webui/open-webui: User-friendly WebUI for LLMs (Formerly Ollama WebUI) (github.com)
+Open WebUI 是一个可视化的Web交互环境，它拥有清新简约的UI风格，具有可扩展、功能丰富、用户友好、自托管的特点，可以完全离线运行。它支持各种 LLM 运行程序，包括 Ollama 和 OpenAI 兼容的 API。
+2 部署LLM服务 本文介绍的方法使用于Linux系统，同样适用于Windows系统的WSL（安装方法可参见我的这篇文章）。
+2.1 部署Ollama 1、下载Ollama
+Linux系统的安装命令如下：
+curl -fsSL https://ollama.com/install.sh | sh ※此外官方还提供了macOS和Windows的下载方式。
+2、下载llama3模型
+ollama run llama3 ※在这里可以看到该命令的相关介绍。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/4066d175d95361b97a9e97e7c49ff403/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/2da9598ede93b27434bbafa2a45d9a8c/" rel="bookmark">
+			伪分布式数据库搭建（hadoop&#43;spark&#43;scala）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		一，安装hadoop 1.安装java环境 一，下载JDK安装包
+官网：https://www.oracle.com/java /technologies /javase-jdk8-downloads.html
+二，卸载openJDK
+命令：rpm -qa | grep java
+java --version
+三，安装JDK
+命令：tar -zxvf jdk-8u152-linux-x64.tar.gz -C /usr/local/src/
+ls /usr/local/src/
+四，设置java环境变量
+命令：vi /etc/profile
+在文件的最后增加如下两行：
+export JAVA_HOME=/usr/local/src/jdk1.8.0_152
+export PATH=$PATH:$JAVA_HOME/bin
+source /etc/profile
+java -version
+2，实现免密登录 一，创建ssh秘钥 命令： ssh-keygen -t dsa -P '' -f ~/.ssh/id_dsa
+二，将master公钥进行公钥认证，实现本机免密登陆 命令：ssh-copy-id -i /root/.ssh/id_dsa.pub master
+ssh master
+exit
+3，hadoop环境的安装与配置 一，将/root/hadoop-2.7.1.tar.gz解压到/opt目录下，并将解压文件改名为hadoop 命令：tar -zxvf /root/hadoop-2.7.1.tar.gz -C /opt
+cd /opt
+mv hadoop-2.7.1 hadoop
+二，修改环境变量 命令：vim /etc/profile
+export HADOOP_HOME=/opt/hadoop
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/2da9598ede93b27434bbafa2a45d9a8c/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/76c02a1b661cc6c7fa769d27f7c33a10/" rel="bookmark">
+			XYCTF 2024 部分web wp
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		1、ezhttp 打开靶机
+使用御剑扫描得到
+跟进之后，发现了账号密码，登录又得到提示
+登录得到提示
+那我们使用bp抓包添加Referer即可得到下一步提示。
+发现还不是XYCTF的浏览器那我们改改浏览器User-Agent：XYCTF
+还需要本地用户，那我们在修改一个client-IP:127.0.0.1添加上去即可
+还需要一个代理，网上查找了一下伪造代理就发现使用via即可。
+那我们就传cookie即可
+2、ezMake 打开靶机
+随便输入一个ls试试看
+这里的SHELL := /bin/bash：这行设置了 Makefile 里命令执行的 shell 环境为 /bin/bash。
+ifndef PATH 和 override PATH :=：这两行检查环境变量 PATH 是否被定义，如果没有定义或者已经被定义，它们都会将 PATH 环境变量置空。这可能会导致问题，因为 PATH 是一个重要的环境变量，它定义了 shell 查找可执行文件的位置。
+所以我们可以尝试一下echo $(&lt; flag)试试看
+返回一个echo，$被过滤了，那我们双写试试看。
+3、ez?Make 打开靶机，跟1一样，随便输一个试试看。
+被过滤了，那就换一个查。
+既然可以pwd，那就试试能不能cd。
+开始构造payload
+cd ..&amp;&amp;cd ..&amp;&amp;cd ..&amp;&amp;cat /flag 检查发现cat /flag被过滤了，那我们换more，至于flag我们可以使用区间取值。
+cd ..&amp;&amp;cd ..&amp;&amp;cd ..&amp;&amp;more [d-h][k-m][9-z][e-h] 4、εZ?¿м@Kε¿? 打开靶机
+解析
+这个命令看起来是在尝试使用两个输入重定向符号来传递输入给一个空的文件描述符。通常，&lt;符号用于
+输入重定向，而 &lt; 是一种 s h e l l 变量，表示从标准输入中读取。但是在这个命令中， &lt;是一种shell变量，表示从标准输入中读取。但是在这个命令中， &lt;是一种shell变量，表示从标准输入中读取。但是在这个命令中，$表示当前shell的进
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/76c02a1b661cc6c7fa769d27f7c33a10/">Read more…</a>
+	</div>
+</article>
+</main>
+
+<div class="pagination">
+	<a class="pagination__item pagination__item--prev btn" href="/page/30/">«</a>
+	<span class="pagination__item pagination__item--current">31/71</span>
+	<a class="pagination__item pagination__item--next btn" href="/page/32/">»</a>
+</div>
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

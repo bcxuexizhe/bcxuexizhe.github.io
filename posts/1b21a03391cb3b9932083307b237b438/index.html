@@ -1,0 +1,203 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AI探索实践8 - 本地运行大模型 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/1b21a03391cb3b9932083307b237b438/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="AI探索实践8 - 本地运行大模型">
+  <meta property="og:description" content="大家好，我是feng，感谢你阅读我的博文，如果你也关注AI应用开发，欢迎关注公众号和我一起​探索。如果文章对你有所启发，请为我点赞！
+全栈技术探索
+一、大模型LLMs简介 大模型LLMs，即大型语言模型（Large Language Models）简称为大模型，是一种基于人工智能和机器学习技术构建的先进模型，旨在理解和生成自然语言文本、图片、视频等。这些模型通过分析和学习海量的文本数据，掌握语言的结构、语法、语义和上下文等复杂特性，从而能够执行各种语言相关的任务。LLM的能力包括但不限于文本生成、问答、文本摘要、翻译、情感分析等。
+LLMs例如GPT、LLama、Mistral系列等，通过深度学习的技术架构，如Transformer，使得这些模型能够捕捉到文本之间深层次的关联和含义。模型首先在广泛的数据集上进行预训练，学习语言的一般特征和模式，然后可以针对特定的任务或领域进行微调，以提高其在特定应用中的表现。
+预训练阶段让LLMs掌握了大量的语言知识和世界知识，而微调阶段则使模型能够在特定任务上达到更高的性能。这种训练方法赋予了LLMs在处理各种语言任务时的灵活性和适应性，能够为用户提供准确、多样化的信息和服务。
+我们可以将大模型想象成人类大脑。预训练“大脑”的过程，就好像人类从幼儿园开始，直到大学毕业的学习知识的过程。这个过程，让“大脑”掌握了大量的知识。当你发送给这个“大脑”信息，“大脑”会反馈给你另一些信息。
+请注意，大家平常使用的ChatGPT、通义千问、文心一言、Gemini、Midjourney等，严格意义上来说是大模型的应用，是一个利用大模型的能力，向用户提供智能服务的应用软件或者API，而非大模型本身。
+二、本地大模型的必要性 我们可以很方便的在线使用Kimi上传文件来回答我们的问题、使用Dreamina、Midjourney来生成图片、使用Sora来生成视频（OpenAI的文生视频产品，至今尚未发布）等，所以的这些都属于：线上大模型服务。
+线上大模型服务向我们提供智能、便捷的服务的同时，也存在以下问题：
+2.1 线上大模型服务的问题 2.1.1 个人数据隐私 在线上LLMs的使用过程中，个人数据的隐私成为了一个显著的担忧点，特别是对于那些注重内部数据安全的企业用户。用户与LLM的互动，以及上传的文档，都可能被服务提供商收集用于模型的微调和优化。
+2.1.2 模型性能与成本 服务提供商为了平衡成本和性能，可能会使用不同规模的LLM。较小的模型（如7B或13B参数）虽然可以减少计算资源消耗，提高响应速度，但其推理能力可能不足以处理复杂的查询或生成高质量的文本。用户在选择服务时，可能难以获悉所使用的模型规模和性能，导致实际应用中的效果与预期存在差异。这种不透明性可能会影响用户的使用体验和满意度。
+2.1.3 内容完整性 针对长文档的处理，存在一个问题是LLM是否能够完整地获取和理解整个文档内容。由于技术限制，一些服务可能只会处理文档的一部分内容，如仅分析前几百个词。这种处理方式可能会导致LLM遗漏关键信息，从而影响到生成内容的准确性和相关性。用户可能无法了解其提交的内容是否被完整处理，进而对结果的可靠性产生疑问。
+2.1.4 检索增强的生成模型（RAG）策略 RAG的切割方式和回调策略直接影响LLM的效果，特别是在处理需要广泛知识检索的查询时。不同的切割方法和回调策略决定了LLM访问和整合信息的方式，从而影响到最终生成的答案的准确性和完整性。如果这些策略没有恰当选择或优化，LLM可能无法看到或利用相关的信息来生成最佳的回答。用户通常无法控制或知晓这些内部处理细节，这增加了结果不确定性。
+2.2 适用场景 本地化大模型运行，适用于以下的场景：
+2.2.1 对数据敏感 发送给大模型的数据，属于企业内部的、机密不宜外传的数据，或者对于目标设定、日记撰写、财务管理、情感交流等个人化领域时的个人数据中包含的能反映个人高度敏感的数据。这些类型的数据一旦被泄露，可能会给用户造成不可挽回的伤害。在这样的背景下，本地开源LLMs的应用就显得尤为重要和必要。
+2.2.2 业务场景涉及多重信息加工、多任务 在多任务和多重信息加工领域，涉及到的操作和处理逻辑非常复杂，尤其是在电脑上进行的活动。这些活动不仅仅是简单的执行命令，更多的是涉及到对用户意图的判断、数据之间的传输和交互，以及如何根据当前的上下文来做出响应。这里面涉及到的Token消耗主要是因为这些操作需要大量的计算资源来处理和响应用户的需求。
+在这个过程中，每一个步骤所需的系统提示（System Prompt）、上下文对话的逻辑处理等，都需要根据具体情况进行个性化和差异化的设计。这种情况下的“千人千面”，是指系统必须能够根据每个用户的具体需求和上下文来提供定制化的服务。这与基于推荐算法的“千人千面”有着本质的差异。本质上的差异在于：
+处理的动态性与静态性： 多任务和多重信息加工领域的处理是动态的，依赖于当前的上下文和用户的即时需求，而基于推荐算法的处理更多是静态的，依赖于用户的历史数据。个性化程度： 虽然两者都追求“千人千面”，但多任务处理更加注重在特定情境下对用户需求的精准响应，推荐算法更多是依据历史数据或者类似用户的数据进行的一般性预测。交互性： 多任务处理涉及到与用户的实时交互，而推荐算法则更多是一种单向的内容推送。 请注意，这个本质的差异决定了本地LLMs是解决多重信息加工甚至多任务的唯一解决办法，但它有可能是一个闭源LLM。
+2.2.3 大容量、高频的数据请求 如果我们需要分析和处理大量的文档、对于历史遗漏的各类日志需要进行智能分析与预测时，与大模型的每一次交互，需要的较长的上下文长度（可能动辄数十万字符）。而线上大模型服务大都提供最大32000个字符（大约10，666个汉字）长度来说，远远不够。
+在有限的、昂贵的大模型推理计算资源的情况下，在线LLM服务对于用户的请求，往往采用排队的方式来处理用户的请求，以控制和降低其运营成本。这无法满足一些企业内部大量的业务请求的需求。
+2.2.4 需要低护栏的大模型 在当前的技术环境中，线上LLM在提供服务的同时，不得不面对各种法律法规和伦理道德的约束。这些约束往往通过增设“护栏”来实施，目的是为了防止模型生成不当内容，如误导信息、侵犯隐私、散播仇恨言论等。然而，这些护栏在一定程度上限制了LLM的功能和知识的完整使用，尤其是在需要较高自由度的应用场景中，如角色扮演、创意写作等。在这些场景下，内容的过滤和限制可能会阻碍创意的发挥和用户体验的深化。
+在此背景下，本地部署的LLMs提供了一种解决方案。通过本地部署，用户可以根据自己的需求和责任范围，调整内容过滤的标准，既能规避法律风险，又能保留更高的创意自由度和个性化服务。这种灵活性在某些业务场景中尤为重要，能够为用户提供更加丰富和深入的互动体验。
+三、部署和运行本地大模型的方法 有多个软件或工具可以帮助我们部署和运行本地大模型。比如LM Studio、llamafile、GPT4All、Ollama等。这里我们介绍其中的一种：Ollama。
+3.1 安装Ollama Ollama 是一个开源的、基于LLama.cpp的轻量级、可扩展的框架，用于在本地构建和运行语言模型。我们可以访问官网，查看和下载Ollama。
+其开源地址：https://github.com/ollama/ollama
+图1
+Mac版本的Ollama是压缩包，解压并放入应用程序中。启动Ollama的过程，是将Ollama运行时路径加入到系统的环境变量的过程，当我们点击完成按钮时，已经可以在终端中使用Ollama命令:
+图2
+在控制台中执行：ollama run 模型名称，将会启动指定名称的模型。图2是运行名称为：ollama的模型，当然并没有这个模型，因此会提示文件并不存在。
+Ollama支持很多的模型本地化运行，可以访问 library 来查看支持的模型列表，这里有一个简表：
+ModelParametersSizeDownloadLlama 27B3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-08T08:19:10+08:00">
+    <meta property="article:modified_time" content="2024-03-08T08:19:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">AI探索实践8 - 本地运行大模型</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>大家好，我是feng，感谢你阅读我的博文，如果你也关注AI应用开发，欢迎关注公众号和我一起​探索。如果文章对你有所启发，请为我点赞！</p> 
+<p class="img-center"><img alt="" height="258" src="https://images2.imgbox.com/8e/99/l6I1uDot_o.png" width="258"></p> 
+<p style="text-align:center;">全栈技术探索</p> 
+<h3>一、大模型LLMs简介</h3> 
+<p>大模型LLMs，即大型语言模型（Large Language Models）简称为大模型，是一种基于人工智能和机器学习技术构建的先进模型，旨在理解和生成自然语言文本、图片、视频等。这些模型通过分析和学习海量的文本数据，掌握语言的结构、语法、语义和上下文等复杂特性，从而能够执行各种语言相关的任务。LLM的能力包括但不限于文本生成、问答、文本摘要、翻译、情感分析等。</p> 
+<p>LLMs例如GPT、LLama、Mistral系列等，通过深度学习的技术架构，如Transformer，使得这些模型能够捕捉到文本之间深层次的关联和含义。模型首先在广泛的数据集上进行预训练，学习语言的一般特征和模式，然后可以针对特定的任务或领域进行微调，以提高其在特定应用中的表现。</p> 
+<p>预训练阶段让LLMs掌握了大量的语言知识和世界知识，而微调阶段则使模型能够在特定任务上达到更高的性能。这种训练方法赋予了LLMs在处理各种语言任务时的灵活性和适应性，能够为用户提供准确、多样化的信息和服务。</p> 
+<p>我们可以将大模型想象成人类大脑。预训练“大脑”的过程，就好像人类从幼儿园开始，直到大学毕业的学习知识的过程。这个过程，让“大脑”掌握了大量的知识。当你发送给这个“大脑”信息，“大脑”会反馈给你另一些信息。</p> 
+<p>请注意，大家平常使用的ChatGPT、通义千问、文心一言、Gemini、Midjourney等，严格意义上来说是大模型的应用，是一个利用大模型的能力，向用户提供智能服务的应用软件或者API，而非大模型本身。</p> 
+<p></p> 
+<h3>二、本地大模型的必要性</h3> 
+<p>我们可以很方便的在线使用Kimi上传文件来回答我们的问题、使用Dreamina、Midjourney来生成图片、使用Sora来生成视频（OpenAI的文生视频产品，至今尚未发布）等，所以的这些都属于：<strong>线上大模型服务。</strong></p> 
+<p>线上大模型服务向我们提供智能、便捷的服务的同时，也存在以下问题：</p> 
+<h4>2.1 线上大模型服务的问题</h4> 
+<h4>2.1.1 个人数据隐私</h4> 
+<p>在线上LLMs的使用过程中，个人数据的隐私成为了一个显著的担忧点，特别是对于那些注重内部数据安全的企业用户。用户与LLM的互动，以及上传的文档，都可能被服务提供商收集用于模型的微调和优化。</p> 
+<h4>2.1.2 模型性能与成本</h4> 
+<p>服务提供商为了平衡成本和性能，可能会使用不同规模的LLM。较小的模型（如7B或13B参数）虽然可以减少计算资源消耗，提高响应速度，但其推理能力可能不足以处理复杂的查询或生成高质量的文本。用户在选择服务时，可能难以获悉所使用的模型规模和性能，导致实际应用中的效果与预期存在差异。这种不透明性可能会影响用户的使用体验和满意度。</p> 
+<h4>2.1.3 内容完整性</h4> 
+<p>针对长文档的处理，存在一个问题是LLM是否能够完整地获取和理解整个文档内容。由于技术限制，一些服务可能只会处理文档的一部分内容，如仅分析前几百个词。这种处理方式可能会导致LLM遗漏关键信息，从而影响到生成内容的准确性和相关性。用户可能无法了解其提交的内容是否被完整处理，进而对结果的可靠性产生疑问。</p> 
+<h4>2.1.4 检索增强的生成模型（RAG）策略</h4> 
+<p>RAG的切割方式和回调策略直接影响LLM的效果，特别是在处理需要广泛知识检索的查询时。不同的切割方法和回调策略决定了LLM访问和整合信息的方式，从而影响到最终生成的答案的准确性和完整性。如果这些策略没有恰当选择或优化，LLM可能无法看到或利用相关的信息来生成最佳的回答。用户通常无法控制或知晓这些内部处理细节，这增加了结果不确定性。</p> 
+<h4>2.2 适用场景</h4> 
+<p>本地化大模型运行，适用于以下的场景：</p> 
+<h4>2.2.1 对数据敏感</h4> 
+<p>发送给大模型的数据，属于企业内部的、机密不宜外传的数据，或者对于目标设定、日记撰写、财务管理、情感交流等个人化领域时的个人数据中包含的能反映个人高度敏感的数据。这些类型的数据一旦被泄露，可能会给用户造成不可挽回的伤害。在这样的背景下，本地开源LLMs的应用就显得尤为重要和必要。</p> 
+<h4>2.2.2 业务场景涉及多重信息加工、多任务</h4> 
+<p>在多任务和多重信息加工领域，涉及到的操作和处理逻辑非常复杂，尤其是在电脑上进行的活动。这些活动不仅仅是简单的执行命令，更多的是涉及到对用户意图的判断、数据之间的传输和交互，以及如何根据当前的上下文来做出响应。这里面涉及到的Token消耗主要是因为这些操作需要大量的计算资源来处理和响应用户的需求。</p> 
+<p>在这个过程中，每一个步骤所需的系统提示（System Prompt）、上下文对话的逻辑处理等，都需要根据具体情况进行个性化和差异化的设计。这种情况下的“千人千面”，是指系统必须能够根据每个用户的具体需求和上下文来提供定制化的服务。这与基于推荐算法的“千人千面”有着本质的差异。本质上的差异在于：</p> 
+<ol><li><strong>处理的动态性与静态性：</strong> 多任务和多重信息加工领域的处理是动态的，依赖于当前的上下文和用户的即时需求，而基于推荐算法的处理更多是静态的，依赖于用户的历史数据。</li><li><strong>个性化程度：</strong> 虽然两者都追求“千人千面”，但多任务处理更加注重在特定情境下对用户需求的精准响应，推荐算法更多是依据历史数据或者类似用户的数据进行的一般性预测。</li><li><strong>交互性：</strong> 多任务处理涉及到与用户的实时交互，而推荐算法则更多是一种单向的内容推送。</li></ol> 
+<p><em>请注意，这个本质的差异决定了本地LLMs是解决多重信息加工甚至多任务的唯一解决办法，但它有可能是一个闭源LLM。</em></p> 
+<h4>2.2.3 大容量、高频的数据请求</h4> 
+<p>如果我们需要分析和处理大量的文档、对于历史遗漏的各类日志需要进行智能分析与预测时，与大模型的每一次交互，需要的较长的上下文长度（可能动辄数十万字符）。而线上大模型服务大都提供最大32000个字符（大约10，666个汉字）长度来说，远远不够。</p> 
+<p>在有限的、昂贵的大模型推理计算资源的情况下，在线LLM服务对于用户的请求，往往采用排队的方式来处理用户的请求，以控制和降低其运营成本。这无法满足一些企业内部大量的业务请求的需求。</p> 
+<h4>2.2.4 需要低护栏的大模型</h4> 
+<p>在当前的技术环境中，线上LLM在提供服务的同时，不得不面对各种法律法规和伦理道德的约束。这些约束往往通过增设“护栏”来实施，目的是为了防止模型生成不当内容，如误导信息、侵犯隐私、散播仇恨言论等。然而，这些护栏在一定程度上限制了LLM的功能和知识的完整使用，尤其是在需要较高自由度的应用场景中，如角色扮演、创意写作等。在这些场景下，内容的过滤和限制可能会阻碍创意的发挥和用户体验的深化。</p> 
+<p>在此背景下，本地部署的LLMs提供了一种解决方案。通过本地部署，用户可以根据自己的需求和责任范围，调整内容过滤的标准，既能规避法律风险，又能保留更高的创意自由度和个性化服务。这种灵活性在某些业务场景中尤为重要，能够为用户提供更加丰富和深入的互动体验。</p> 
+<p></p> 
+<h3>三、部署和运行本地大模型的方法</h3> 
+<p>有多个软件或工具可以帮助我们部署和运行本地大模型。比如LM Studio、llamafile、GPT4All、Ollama等。这里我们介绍其中的一种：Ollama。</p> 
+<h4>3.1 安装Ollama</h4> 
+<p><a href="https://link.zhihu.com/?target=https%3A//ollama.com/" rel="nofollow" title="Ollama">Ollama</a> 是一个开源的、基于LLama.cpp的轻量级、可扩展的框架，用于在本地构建和运行语言模型。我们可以访问官网，查看和下载Ollama。</p> 
+<p>其开源地址：<a href="https://link.zhihu.com/?target=https%3A//github.com/ollama/ollama" title="https://github.com/ollama/ollama">https://github.com/ollama/ollama</a></p> 
+<p></p> 
+<p class="img-center"><img alt="" height="517" src="https://images2.imgbox.com/f8/a7/on9Algvz_o.png" width="935"></p> 
+<p style="text-align:center;">图1</p> 
+<p>Mac版本的Ollama是压缩包，解压并放入应用程序中。启动Ollama的过程，是将Ollama运行时路径加入到系统的环境变量的过程，当我们点击完成按钮时，已经可以在终端中使用Ollama命令:</p> 
+<p></p> 
+<p class="img-center"><img alt="" height="267" src="https://images2.imgbox.com/38/78/IU6ysdwo_o.png" width="644"></p> 
+<p style="text-align:center;">图2</p> 
+<p>在控制台中执行：ollama run 模型名称，将会启动指定名称的模型。图2是运行名称为：ollama的模型，当然并没有这个模型，因此会提示文件并不存在。</p> 
+<p>Ollama支持很多的模型本地化运行，可以访问 <a href="https://link.zhihu.com/?target=https%3A//ollama.com/library" rel="nofollow" title="library">library</a> 来查看支持的模型列表，这里有一个简表：</p> 
+<table><tbody><tr><th>Model</th><th>Parameters</th><th>Size</th><th>Download</th></tr><tr><td>Llama 2</td><td>7B</td><td>3.8GB</td><td>ollama run llama2</td></tr><tr><td>Mistral</td><td>7B</td><td>4.1GB</td><td>ollama run mistral</td></tr><tr><td>Dolphin Phi</td><td>2.7B</td><td>1.6GB</td><td>ollama run dolphin-phi</td></tr><tr><td>Phi-2</td><td>2.7B</td><td>1.7GB</td><td>ollama run phi</td></tr><tr><td>Neural Chat</td><td>7B</td><td>4.1GB</td><td>ollama run neural-chat</td></tr><tr><td>Starling</td><td>7B</td><td>4.1GB</td><td>ollama run starling-lm</td></tr><tr><td>Code Llama</td><td>7B</td><td>3.8GB</td><td>ollama run codellama</td></tr><tr><td>Llama 2 Uncensored</td><td>7B</td><td>3.8GB</td><td>ollama run llama2-uncensored</td></tr><tr><td>Llama 2 13B</td><td>13B</td><td>7.3GB</td><td>ollama run llama2:13b</td></tr><tr><td>Llama 2 70B</td><td>70B</td><td>39GB</td><td>ollama run llama2:70b</td></tr><tr><td>Orca Mini</td><td>3B</td><td>1.9GB</td><td>ollama run orca-mini</td></tr><tr><td>Vicuna</td><td>7B</td><td>3.8GB</td><td>ollama run vicuna</td></tr><tr><td>LLaVA</td><td>7B</td><td>4.5GB</td><td>ollama run llava</td></tr><tr><td>Gemma</td><td>2B</td><td>1.4GB</td><td>ollama run gemma:2b</td></tr><tr><td>Gemma</td><td>7B</td><td>4.8GB</td><td>ollama run gemma:7b</td></tr></tbody></table> 
+<p></p> 
+<h4>3.2 运行大模型</h4> 
+<p>以阿里巴巴的千问大模型为例：<a href="https://link.zhihu.com/?target=https%3A//ollama.com/library/qwen" rel="nofollow" title="qwen">qwen</a> ，终端执行命令：ollama run qwen:4b。如果模型不存在，会首先下载模型，完成模型本地化安装和部署后，我们可以在终端直接发送一个消息。如图3。</p> 
+<p></p> 
+<p class="img-center"><img alt="" height="444" src="https://images2.imgbox.com/38/2e/C7BKlZEg_o.png" width="720"></p> 
+<p style="text-align:center;">图3</p> 
+<p></p> 
+<p>我们也可以通过api的方式，来发送问题。</p> 
+<p></p> 
+<p class="img-center"><img alt="" height="441" src="https://images2.imgbox.com/d0/06/i0Q4jh0O_o.png" width="720"></p> 
+<p style="text-align:center;">图4</p> 
+<p>图4所示，在终端发送一个get请求。指定模型和提示语，我们可以观察到控制台会逐行打印（也就是我们平时在网页上看到的打字机效果）出大模型的回复。</p> 
+<p></p> 
+<h3>四、总结</h3> 
+<p>大模型的本地化运行，是创建企业内部AI应用重要组成部分。选取开源的、对中文支持友好的、开源协议友好的开源大模型可以帮助我们快速建立低成本、高性能的AI应用。通过使用Ollama软件，让我们能够轻松搭建和运行一个本地大模型实例。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/45e9c59037d914ed99c5af3bf002f081/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">值得收藏！2024年人工智能顶级会议投稿信息汇总（机器学习领域）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e91b708f3c7ce3acff4931d8d4c36e10/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">微信开发者工具的安装和使用以及小程序的创建和资源目录介绍（最全！！）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

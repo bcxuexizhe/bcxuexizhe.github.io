@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>封装了一个iOS中间放大的collectionView layout - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/743871afea9bcbb8d2c55a2ca687f0ec/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="封装了一个iOS中间放大的collectionView layout">
+  <meta property="og:description" content="效果图如下所示
+原理：就是首先确定一个放大和缩小系数和原大小对应的基准位置，然后根据距离每个布局属性到视图中心的距离和基准点到中心的距离的差距/基准点到中心的距离， 计算出每个布局属性的缩放系数
+下面是代码
+// // LBHorizontalCenterLayout.m // LBHorizontalCenterLayout // // Created by mac on 2024/5/24. // #import &#34;LBHorizontalCenterLayout.h&#34; @interface LBHorizontalCenterLayout () @property (nonatomic, assign) NSInteger index; @end @implementation LBHorizontalCenterLayout - (NSArray&lt;__kindof UICollectionViewLayoutAttributes *&gt; *)layoutAttributesForElementsInRect:(CGRect)rect { NSArray *array = [super layoutAttributesForElementsInRect:rect]; array = [self getCopyOfAttributes:array]; //屏幕中线 CGFloat centerX = self.collectionView.contentOffset.x &#43; self.collectionView.bounds.size.width/2.0f; //刷新cell 缩放 for (UICollectionViewLayoutAttributes *attributes in array) { if (self.scrollDirection == UICollectionViewScrollDirectionHorizontal) { //分四种情况，以44 的item为基准，68和35 对应系数分别是1.56 和 0.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-25T13:59:17+08:00">
+    <meta property="article:modified_time" content="2024-05-25T13:59:17+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">封装了一个iOS中间放大的collectionView layout</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>效果图如下所示</p> 
+<p><img src="https://images2.imgbox.com/17/d5/ElfY2jM0_o.gif" alt="请添加图片描述"></p> 
+<p>原理：就是首先确定一个放大和缩小系数和原大小对应的基准位置，然后根据距离每个布局属性到视图中心的距离和基准点到中心的距离的差距/基准点到中心的距离， 计算出每个布局属性的缩放系数</p> 
+<p>下面是代码</p> 
+<pre><code>//
+//  LBHorizontalCenterLayout.m
+//  LBHorizontalCenterLayout
+//
+//  Created by mac on 2024/5/24.
+//
+
+#import "LBHorizontalCenterLayout.h"
+
+@interface LBHorizontalCenterLayout ()
+
+@property (nonatomic, assign) NSInteger index;
+
+@end
+
+@implementation LBHorizontalCenterLayout
+
+- (NSArray&lt;__kindof UICollectionViewLayoutAttributes *&gt; *)layoutAttributesForElementsInRect:(CGRect)rect
+{
+    NSArray *array = [super layoutAttributesForElementsInRect:rect];
+    array = [self getCopyOfAttributes:array];
+    //屏幕中线
+    CGFloat centerX = self.collectionView.contentOffset.x + self.collectionView.bounds.size.width/2.0f;
+    //刷新cell 缩放
+    for (UICollectionViewLayoutAttributes *attributes in array) {
+        if (self.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+            //分四种情况，以44 的item为基准，68和35 对应系数分别是1.56 和 0.8
+            CGFloat baseW = self.minimumLineSpacing + self.itemSize.width;
+            CGFloat apartScale;
+            CGFloat distance = fabs(attributes.center.x - centerX);
+            attributes.alpha = 1.0;
+            if (distance &lt;= baseW) {
+                apartScale = 1 + (baseW - distance) / baseW * 0.56;
+            } else {
+                apartScale = 1 - (distance - baseW) / baseW * 0.2;
+                //设置透明度
+                if (attributes.center.x - centerX &lt; 0) {
+                    CGFloat alpha = (distance - baseW) / baseW;
+                    attributes.alpha = 1 - alpha;
+                }
+            }
+            //设置cell的缩放，按照余弦函数，越居中越趋近于1
+            attributes.transform = CGAffineTransformMakeScale(apartScale, apartScale);
+        }
+    }
+    return array;
+}
+
+- (BOOL)shouldInvalidateLayoutForBoundsChange:(CGRect)newBounds
+{
+    //把collectionview 本身的中心位位置（固定的）， 转换成collectionView 整个内容上的point
+    // convert the center position of the collectionView itself (fixed) to a point on the
+    //entire content of the collectionView
+    CGPoint pInView = [self.collectionView.superview convertPoint:self.collectionView.center toView:self.collectionView];
+    
+    NSIndexPath *indexPath = [self.collectionView indexPathForItemAtPoint:pInView];
+    if (indexPath.item == 0) {
+        if (newBounds.origin.x &lt; self.collectionView.bounds.size.width / 2) {
+            if (self.index != indexPath.item) {
+                self.index = 0;
+                if (self.delegate &amp;&amp; [self.delegate respondsToSelector:@selector(collectionViewScrollToIndex:)]) {
+                    [self.delegate collectionViewScrollToIndex:self.index];
+                }
+            }
+        }
+    } else {
+        if (self.index != indexPath.item) {
+            self.index = indexPath.item;
+            if (self.delegate &amp;&amp; [self.delegate respondsToSelector:@selector(collectionViewScrollToIndex:)]) {
+                [self.delegate collectionViewScrollToIndex:self.index];
+            }
+        }
+    }
+    [super shouldInvalidateLayoutForBoundsChange:newBounds];
+    return YES;
+}
+
+- (CGPoint)targetContentOffsetForProposedContentOffset:(CGPoint)proposedContentOffset withScrollingVelocity:(CGPoint)velocity
+{
+    CGFloat minOffset = CGFLOAT_MAX;
+    CGFloat horizontalCenter = proposedContentOffset.x + self.collectionView.bounds.size.width/2;
+    CGRect visibleRec = CGRectMake(proposedContentOffset.x, 0, self.collectionView.bounds.size.width, self.collectionView.bounds.size.height);
+    NSArray *visibleAttributes = [super layoutAttributesForElementsInRect:visibleRec];
+    for (UICollectionViewLayoutAttributes *atts in visibleAttributes) {
+        CGFloat itemCenterX = atts.center.x;
+        if (fabs(itemCenterX - horizontalCenter) &lt;= fabs(minOffset)) {
+            minOffset = itemCenterX - horizontalCenter;
+        }
+    }
+    
+    CGFloat centerOffsetX = proposedContentOffset.x + minOffset;
+    //快速轻扫的时候， 距离过短，时间过短， 会导致无法进行翻页，及时很快的轻扫也让他能左右翻页
+    if (fabs(velocity.x) &gt; 0.7 &amp;&amp; fabs(velocity.x) &lt; 1.5 &amp;&amp; fabs(minOffset) &lt;= (self.collectionView.bounds.size.width / 2.0)) {
+        if (velocity.x &gt; 0) {
+            centerOffsetX = (self.index + 1) * (self.itemSize.width + self.minimumLineSpacing);
+        } else {
+            centerOffsetX = (self.index - 1) * (self.itemSize.width + self.minimumLineSpacing);
+        }
+    }
+    
+    if (centerOffsetX &lt; 0) {
+        centerOffsetX = 0;
+    }
+    
+    if (centerOffsetX &lt; self.collectionView.contentSize.width - (self.sectionInset.left + self.sectionInset.right + self.itemSize.width)) {
+        centerOffsetX = floor(centerOffsetX);
+    }
+    return CGPointMake(centerOffsetX, proposedContentOffset.y);
+}
+//防止报错，先复制attributes
+
+- (NSArray *)getCopyOfAttributes:(NSArray *)attributes
+{
+    NSMutableArray *array = [NSMutableArray array];
+    for (UICollectionViewLayoutAttributes *attribute in attributes) {
+        [array addObject:[attribute copy]];
+    }
+    return array;
+}
+
+@end
+
+</code></pre> 
+<p>下面这一段是计算放大系数的核心逻辑</p> 
+<pre><code>   if (self.scrollDirection == UICollectionViewScrollDirectionHorizontal) {
+            //分四种情况，以44 的item为基准，68和35 对应系数分别是1.56 和 0.8
+            CGFloat baseW = self.minimumLineSpacing + self.itemSize.width;
+            CGFloat apartScale;
+            CGFloat distance = fabs(attributes.center.x - centerX);
+            attributes.alpha = 1.0;
+            if (distance &lt;= baseW) {
+                apartScale = 1 + (baseW - distance) / baseW * 0.56;
+            } else {
+                apartScale = 1 - (distance - baseW) / baseW * 0.2;
+                //设置透明度
+                if (attributes.center.x - centerX &lt; 0) {
+                    CGFloat alpha = (distance - baseW) / baseW;
+                    attributes.alpha = 1 - alpha;
+                }
+            }
+            //设置cell的缩放，按照余弦函数，越居中越趋近于1
+            attributes.transform = CGAffineTransformMakeScale(apartScale, apartScale);
+</code></pre> 
+<p>支持pod</p> 
+<pre><code>
+pod 'LBHorizontalCenterLayout'
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b298967d51212e873e5448cd0d372f7a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">世界上首位AI程序员诞生，AI将成为人类的对手吗？</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/36e2db1230b7aef7d7d4311960d2c8dd/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">如何解决VSCode Git插件差异查看器 无法读取文件 Error: 无法解析不存在的文件 的问题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

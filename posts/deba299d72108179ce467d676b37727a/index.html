@@ -1,0 +1,533 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Java】实现一个简单的线程池 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/deba299d72108179ce467d676b37727a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Java】实现一个简单的线程池">
+  <meta property="og:description" content="📝个人主页：哈__
+期待您的关注 目录
+​编辑
+一、线程池的模式
+二、线程池的一些参数 三、代码实现
+1.BlockingQueue
+2.ThreadPool
+四、拒绝策略
+一、线程池的模式 线程池顾名思义就是管理线程的一个池子，我们把创建线程的过程交给线程池来处理，而这个线程池当中的线程都会从阻塞队列当中取获取任务执行。
+我们不在直接把任务的创建过程写到我们初始化的线程对象中，而是通过调用线程池的execute()方法，同时把我们的具体任务交作为参数传给线程池，之后线程池就会把任务添加到阻塞队列当中，而线程池当中的线程会从阻塞队列当中获取任务并执行。
+二、线程池的一些参数 corePoolSize：线程池核心线程大小，即最小线程数（初始化线程数）。线程池会维护当前数量的线程在线程池中，即使这些线程一直处于闲置状态，也不会被销毁，除非设置了allowCoreThreadTimeOut。maximumPoolSize：线程池最大线程数量。当任务提交到线程池后，如果当前线程数小于核心线程数，则会创建新线程来处理任务；如果当前线程数大于或等于核心线程数，但小于最大线程数，并且任务队列已满，则会创建新线程来处理任务。keepAliveTime：空闲线程的存活时间。当线程池中的线程数量大于核心线程数且线程处于空闲状态时，在指定时间后，这个空闲线程将会被销毁，从而逐渐恢复到稳定的核心线程数数量。unit：keepAliveTime的存活时间的计量单位，通常使用TimeUnit枚举类中的方法，如TimeUnit.SECONDS表示秒级。workQueue：任务队列。用于存放等待执行的任务，常见的实现类有LinkedBlockingQueue、ArrayBlockingQueue等。threadFactory：线程工厂。用于创建新的线程，可以自定义线程的名称、优先级等。handler：拒绝策略。当任务无法执行（如线程池已满）时，可以选择的策略有：AbortPolicy（抛出异常）、CallerRunsPolicy（调用者运行）、DiscardOldestPolicy（丢弃最老的任务）、DiscardPolicy（无声丢弃）。 三、代码实现 因为我们只是简单的实现，所以有一些情况和实际不太相似。
+1.BlockingQueue 先来看看我们阻塞队列当中的一些参数，为了在多线程环境下防止并发问题，我使用了ReentrantLock，使用它的目的是为了创建多个不同的阻塞条件。
+在我们调用一个对象的await()方法后，我们的当前线程就会加入到一个特定的队列当中去等待，直到有调用了这个对象的notify()方法后才会从这个队列中抽取一个线程唤醒。
+举个例子，我们去医院的时候，一个医生同一时间只能看一个病人，剩下的人都只能等待，如果只有一个大厅的话，看不同病的病人都只能等待在一个候诊室中。使用ReentrentLock的意思就是为了创建多个不同的候诊室，将不同医生的病人分开在不同的候诊室当中。
+//1.阻塞队列 private Deque&lt;T&gt; deque = new ArrayDeque&lt;&gt;(); //2.实现阻塞的锁 private ReentrantLock lock = new ReentrantLock(); //3. 生产者等待条件 private Condition fullWaitSet = lock.newCondition(); //4.消费者等待条件 private Condition emptyWaitSet = lock.newCondition(); //5.阻塞队列的大小 private int CAPACITY; 在自定义的阻塞队列中，我使用了一个双向队列来存储任务，并且设置了一个队列大小的属性，在我们创建这个队列的时候我们可以进行初始化。
+先来看看阻塞队列任务的添加过程。这个逻辑并不难，我们在代码的上方上锁，在finally中解锁。如果这时我们的队列是满的，就无法在继续添加任务了，这个时候我们就把当前线程挂起（注意我们的挂起条件）。如果队列不是满的话那我们就加入到队尾，同时把另一类挂起的线程唤醒（这类线程在队列为空的时候挂起，等待任务的添加）。
+// 生产者放入数据 public void put(T t) { lock.lock(); try { while (deque.size() == CAPACITY) { fullWaitSet.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-30T17:22:41+08:00">
+    <meta property="article:modified_time" content="2024-04-30T17:22:41+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Java】实现一个简单的线程池</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p class="img-center"><img alt="" height="150" src="https://images2.imgbox.com/29/d3/HsLhs4Nu_o.png" width="150"></p> 
+<p style="text-align:center;"> <strong> 📝个人主页：<a class="link-info" href="https://blog.csdn.net/qq_61024956?type=blog" title="哈__">哈__</a></strong></p> 
+<p style="text-align:center;"><span style="color:#fe2c24;">期待您的关注 </span></p> 
+<h2 id="%E2%80%8B%E7%BC%96%E8%BE%91" style="text-align:center;"><img alt="" height="100" src="https://images2.imgbox.com/b5/b5/JnVDRG0s_o.gif" width="1000"></h2> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91-toc" style="margin-left:0px;"><a href="#%E2%80%8B%E7%BC%96%E8%BE%91" rel="nofollow">​编辑</a></p> 
+<p id="%E4%B8%80%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E6%A8%A1%E5%BC%8F-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E6%A8%A1%E5%BC%8F" rel="nofollow">一、线程池的模式</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E4%B8%80%E4%BA%9B%E5%8F%82%E6%95%B0%C2%A0-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E4%B8%80%E4%BA%9B%E5%8F%82%E6%95%B0%C2%A0" rel="nofollow">二、线程池的一些参数 </a></p> 
+<p id="%E4%B8%89%E3%80%81%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0" rel="nofollow">三、代码实现</a></p> 
+<p id="1.BlockingQueue-toc" style="margin-left:40px;"><a href="#1.BlockingQueue" rel="nofollow">1.BlockingQueue</a></p> 
+<p id="2.ThreadPool-toc" style="margin-left:40px;"><a href="#2.ThreadPool" rel="nofollow">2.ThreadPool</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E6%8B%92%E7%BB%9D%E7%AD%96%E7%95%A5-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E6%8B%92%E7%BB%9D%E7%AD%96%E7%95%A5" rel="nofollow">四、拒绝策略</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E6%A8%A1%E5%BC%8F">一、线程池的模式</h2> 
+<p>线程池顾名思义就是管理线程的一个池子，我们把创建线程的过程交给线程池来处理，而这个线程池当中的线程都会从阻塞队列当中取获取任务执行。</p> 
+<p>我们不在直接把任务的创建过程写到我们初始化的线程对象中，而是通过调用线程池的execute()方法，同时把我们的具体任务交作为参数传给线程池，之后线程池就会把任务添加到阻塞队列当中，而线程池当中的线程会从阻塞队列当中获取任务并执行。</p> 
+<p><img alt="" height="453" src="https://images2.imgbox.com/ee/47/EDbJJ0Gw_o.png" width="1200"></p> 
+<h2 id="%E4%BA%8C%E3%80%81%E7%BA%BF%E7%A8%8B%E6%B1%A0%E7%9A%84%E4%B8%80%E4%BA%9B%E5%8F%82%E6%95%B0%C2%A0">二、线程池的一些参数 </h2> 
+<ol><li><strong>corePoolSize</strong>：线程池核心线程大小，即最小线程数（初始化线程数）。线程池会维护当前数量的线程在线程池中，即使这些线程一直处于闲置状态，也不会被销毁，除非设置了allowCoreThreadTimeOut。</li><li><strong>maximumPoolSize</strong>：线程池最大线程数量。当任务提交到线程池后，如果当前线程数小于核心线程数，则会创建新线程来处理任务；如果当前线程数大于或等于核心线程数，但小于最大线程数，并且任务队列已满，则会创建新线程来处理任务。</li><li><strong>keepAliveTime</strong>：空闲线程的存活时间。当线程池中的线程数量大于核心线程数且线程处于空闲状态时，在指定时间后，这个空闲线程将会被销毁，从而逐渐恢复到稳定的核心线程数数量。</li><li><strong>unit</strong>：keepAliveTime的存活时间的计量单位，通常使用TimeUnit枚举类中的方法，如TimeUnit.SECONDS表示秒级。</li><li><strong>workQueue</strong>：任务队列。用于存放等待执行的任务，常见的实现类有LinkedBlockingQueue、ArrayBlockingQueue等。</li><li><strong>threadFactory</strong>：线程工厂。用于创建新的线程，可以自定义线程的名称、优先级等。</li><li><strong>handler</strong>：拒绝策略。当任务无法执行（如线程池已满）时，可以选择的策略有：AbortPolicy（抛出异常）、CallerRunsPolicy（调用者运行）、DiscardOldestPolicy（丢弃最老的任务）、DiscardPolicy（无声丢弃）。</li></ol> 
+<h2 id="%E4%B8%89%E3%80%81%E4%BB%A3%E7%A0%81%E5%AE%9E%E7%8E%B0">三、代码实现</h2> 
+<p>因为我们只是简单的实现，所以有一些情况和实际不太相似。</p> 
+<h3 id="1.BlockingQueue">1.BlockingQueue</h3> 
+<p>先来看看我们阻塞队列当中的一些参数，为了在多线程环境下防止并发问题，我使用了ReentrantLock，使用它的目的是为了创建多个不同的阻塞条件。</p> 
+<p>在我们调用一个对象的await()方法后，我们的当前线程就会加入到一个特定的队列当中去等待，直到有调用了这个对象的notify()方法后才会从这个队列中抽取一个线程唤醒。</p> 
+<p>举个例子，我们去医院的时候，一个医生同一时间只能看一个病人，剩下的人都只能等待，如果只有一个大厅的话，看不同病的病人都只能等待在一个候诊室中。使用ReentrentLock的意思就是为了创建多个不同的候诊室，将不同医生的病人分开在不同的候诊室当中。</p> 
+<pre><code class="language-java">    //1.阻塞队列
+    private Deque&lt;T&gt; deque = new ArrayDeque&lt;&gt;();
+    //2.实现阻塞的锁
+    private ReentrantLock lock = new ReentrantLock();
+    //3. 生产者等待条件
+    private Condition fullWaitSet = lock.newCondition();
+    //4.消费者等待条件
+    private Condition emptyWaitSet = lock.newCondition();
+    //5.阻塞队列的大小
+    private  int CAPACITY;</code></pre> 
+<p>在自定义的阻塞队列中，我使用了一个双向队列来存储任务，并且设置了一个队列大小的属性，在我们创建这个队列的时候我们可以进行初始化。</p> 
+<p><strong>先来看看阻塞队列任务的添加过程。</strong>这个逻辑并不难，我们在代码的上方上锁，在finally中解锁。如果这时我们的队列是满的，就无法在继续添加任务了，这个时候我们就把当前线程挂起<strong>（注意我们的挂起条件）</strong>。如果队列不是满的话那我们就加入到队尾，同时把另一类挂起的线程唤醒<strong>（这类线程在队列为空的时候挂起，等待任务的添加）</strong>。</p> 
+<p></p> 
+<pre><code class="language-java"> // 生产者放入数据
+    public void put(T t) {
+        lock.lock();
+        try {
+            while (deque.size() == CAPACITY) {
+                fullWaitSet.await();
+            }
+            deque.addLast(t);
+            emptyWaitSet.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }</code></pre> 
+<p><strong>在看看我们取任务的过程</strong>。同样加锁，当我们的队列为空的时候，线程挂起，等待任务的添加之后线程唤醒，如果队列不为空的话，我们从队列头部取出一个任务，并且唤起一类线程<strong>（这类线程在任务已经满了的时候无法在添加任务了，进行挂起，等待队列不为满）</strong>。</p> 
+<pre><code class="language-java">  // 消费者从线程池当中获取任务
+    public T take(){
+        T t = null;
+        lock.lock();
+        try {
+            while(deque.size() == 0){
+                emptyWaitSet.await();
+            }
+            t = deque.removeFirst();
+            fullWaitSet.signal();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+        }
+        return t;
+    }</code></pre> 
+<p>我们上边的代码展示的队列的存取的过程都是死等状态，什么是死等状态？就是任务添加不进去或者取不出来的时候，线程会被一直挂起。真实并不是如此，这里只是简单的展示。</p> 
+<p>阻塞队列需要的就是这两个存取的过程。</p> 
+<h3 id="2.ThreadPool">2.ThreadPool</h3> 
+<p>先看看线程池当中的属性。把刚才创建的任务队列加进去，因为线程池要时常和任务队列沟通。然后创建了一个HashSet结构用于存储我们的线程。下边的都是我们线程池需要的一些参数了，拒绝策略在这里没有写。</p> 
+<pre><code class="language-java">    // 任务队列
+    private BlockedQueue&lt;Runnable&gt; taskQueue;
+
+    // 线程集合
+    private HashSet&lt;Worker&gt; workers = new HashSet&lt;&gt;();
+
+    //核心线程数
+    private int coreSize;
+
+    // 超时时间
+    private int timeout;
+
+    // 超时单位
+    private TimeUnit timeUnit;
+</code></pre> 
+<p>来看看我们的线程池是如何工作的吧，可以看到我们线程池保存的是Worker对象，我们来看看这个Worker对象是干啥的。这个Worker对象实现了Runnable接口，我们可以把这个类当作线程类，这个类中有一个task属性，因为我们线程池当中的线程是要获取任务执行的，这个任务就用这个task属性代表。</p> 
+<p>这个Worker类一直在干一件事情，就是不断地从我们的任务队列当中获取任务（Worker类是ThreadPool的内部类），如果获取的任务不为空的话就执行任务，一旦没有任务可以执行那么就把当前的线程从线程池当中移除。</p> 
+<pre><code class="language-java">class Worker implements Runnable{
+        private Runnable task;
+        public Worker(Runnable task){
+            this.task = task;
+        }
+        @Override
+        public void run() {
+            while(task!=null || (task = taskQueue.take())!=null){
+                System.out.println("取出的任务是"+task);
+                try {
+                    task.run();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    task = null;
+                }
+                synchronized (workers){
+                    workers.remove(this);
+                }
+            }
+        }
+    }</code></pre> 
+<p>那什么时候用到这个Worker类呢？当我们调用ThreadPool中的execute()方法时，线程池中的线程会就调用这个run()方法。</p> 
+<p>来看我们的execute()方法。当我们的线程数小于我们的核心线程数的时候，我们可以直接创建一个新的线程，并且把我们的任务直接交给这个核心线程。反之我们不能创建，而是把任务添加到我们的任务队列当中，等待核心线程去执行这个任务。</p> 
+<pre><code class="language-java"> // 任务执行
+    public void execute(Runnable task){
+        synchronized (workers){
+            if(workers.size() &lt; coreSize){
+                // 创建核心线程
+                Worker worker = new Worker(task);
+                workers.add(worker);
+                Thread thread = new Thread(worker);
+                thread.start();
+            }else {
+               
+                taskQueue.put(task);
+            }
+        }
+
+    }</code></pre> 
+<p>写完了上边的代码我们测试一下。</p> 
+<pre><code class="language-java"> public static void main(String[] args) {
+        ThreadPool threadPool = new ThreadPool(2,10,TimeUnit.MILLISECONDS,10);
+        for(int i = 0;i&lt;12;i++){
+            int j = i;
+            threadPool.execute(()-&gt;{
+                System.out.println("当前线程"+Thread.currentThread().getName()+"task "+j+" is running");
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }</code></pre> 
+<p><img alt="" height="250" src="https://images2.imgbox.com/02/30/9LuqivxC_o.png" width="797"></p> 
+<p>方法运行了之后，即使任务全部执行，线程也不会结束。这是因为我们的worker类中的run方法调用了任务队列的take()方法，而take方法是会一直挂起的。</p> 
+<p>我们现在换一种带超时获取，在规定时间内获取不到任务就自动结束任务。这时候就用到我们传入的时间参数了，我们不再调用await()方法了，而是调用awaitNanos()方法，方法可以接收一个时间参数，这个方法可以消耗我们的nanos时间，在这个时间内如果获取不到的话线程就不在挂起了，这时还会进入到我们的while循环当中，判断我们的nanos是不是被消耗完了，如果被消耗完了就说明在规定时间内获取不到任务，直接return结束线程。</p> 
+<pre><code class="language-java"> // 带超时获取
+    public T poll(int timeout,TimeUnit timeUnit){
+        T t = null;
+        lock.lock();
+        try {
+            long nanos = timeUnit.toNanos(timeout);
+            while(deque.size() == 0){
+                if(nanos &lt;= 0){
+                    return null;
+                }
+                nanos = emptyWaitSet.awaitNanos(nanos);
+            }
+
+            t = deque.removeFirst();
+            fullWaitSet.signal();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+        }
+        return t;
+    }</code></pre> 
+<p> 修改Worker类。</p> 
+<pre><code class="language-java"> class Worker implements Runnable{
+        private Runnable task;
+        public Worker(Runnable task){
+            this.task = task;
+        }
+        @Override
+        public void run() {
+            while(task!=null || (task = taskQueue.poll(timeout,timeUnit))!=null){
+                System.out.println("取出的任务是"+task);
+                try {
+                    task.run();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    task = null;
+                }
+                synchronized (workers){
+                    workers.remove(this);
+                }
+            }
+        }
+    }</code></pre> 
+<p><img alt="" height="239" src="https://images2.imgbox.com/a8/ed/03UOCfU5_o.png" width="665"></p> 
+<p>现在就可以正常结束了。</p> 
+<h2 id="%E5%9B%9B%E3%80%81%E6%8B%92%E7%BB%9D%E7%AD%96%E7%95%A5">四、拒绝策略</h2> 
+<p>全部代码如下。要使用拒绝策略，我们定义一个函数式接口，同时写一个参数传给线程池，参数的具体内容就是拒绝策略的拒绝方法，是我们自己定义的。</p> 
+<p>同时我们的execute()方法不在使用put来添加任务了，而是使用tryPut，如果大家对这一块感兴趣的话，可以在bilibili上观看黑马程序员的课程学习一下。</p> 
+<pre><code class="language-java">/**
+ * 自定义线程池
+ */
+public class TestPool {
+    public static void main(String[] args) {
+        ThreadPool threadPool = new ThreadPool(2,10,TimeUnit.SECONDS,10,((queue, task) -&gt; {queue.put(task);}));
+        for(int i = 0;i&lt;12;i++){
+            int j = i;
+            threadPool.execute(()-&gt;{
+                System.out.println("当前线程"+Thread.currentThread().getName()+"task "+j+" is running");
+                try {
+                    Thread.currentThread().sleep(1000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+    }
+}
+
+/**
+ * 拒绝策略
+ */
+@FunctionalInterface
+interface RejectPolicy&lt;T&gt;{
+    void reject(BlockedQueue&lt;T&gt; queue,T task);
+}
+/**
+ * 阻塞队列
+ */
+class BlockedQueue &lt;T&gt;{
+    //1.阻塞队列
+    private Deque&lt;T&gt; deque = new ArrayDeque&lt;&gt;();
+    //2.实现阻塞的锁
+    private ReentrantLock lock = new ReentrantLock();
+    //3. 生产者等待条件
+    private Condition fullWaitSet = lock.newCondition();
+    //4.消费者等待条件
+    private Condition emptyWaitSet = lock.newCondition();
+    //5.阻塞队列的大小
+    private  int CAPACITY;
+
+    public BlockedQueue(int queueCapacity) {
+        this.CAPACITY = queueCapacity;
+    }
+
+    // 生产者放入数据
+    public void put(T t) {
+        lock.lock();
+        try {
+            while (deque.size() == CAPACITY) {
+                fullWaitSet.await();
+            }
+            deque.addLast(t);
+            emptyWaitSet.signal();
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+    }
+    // 带超时添加
+    public boolean offer(T t,int timeout,TimeUnit timeUnit) {
+        lock.lock();
+        long nanos = timeUnit.toNanos(timeout);
+        try {
+            while (deque.size() == CAPACITY) {
+                if(nanos &lt;= 0){
+                    return  false;
+                }
+                nanos = fullWaitSet.awaitNanos(nanos);
+            }
+            deque.addLast(t);
+            emptyWaitSet.signal();
+            return  true;
+        } catch (InterruptedException e) {
+            e.printStackTrace();
+        } finally {
+            lock.unlock();
+        }
+        return true;
+    }
+    // 带超时获取
+    public T poll(int timeout,TimeUnit timeUnit){
+        T t = null;
+        lock.lock();
+        try {
+            long nanos = timeUnit.toNanos(timeout);
+            while(deque.size() == 0){
+                if(nanos &lt;= 0){
+                    return null;
+                }
+                nanos = emptyWaitSet.awaitNanos(nanos);
+            }
+
+            t = deque.removeFirst();
+            fullWaitSet.signal();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+        }
+        return t;
+    }
+    // 消费者从线程池当中获取任务
+    public T take(){
+        T t = null;
+        lock.lock();
+        try {
+            while(deque.size() == 0){
+                emptyWaitSet.await();
+            }
+            t = deque.removeFirst();
+            fullWaitSet.signal();
+        }catch (Exception e){
+            e.printStackTrace();
+        }finally {
+            lock.unlock();
+        }
+        return t;
+    }
+
+    public void tryPut(RejectPolicy&lt;T&gt; rejectPolicy, T task) {
+        lock.lock();
+        try {
+            if(deque.size()==CAPACITY){
+                rejectPolicy.reject(this,task);
+            }else{
+                deque.addLast(task);
+                emptyWaitSet.signal();
+
+            }
+        } finally {
+            lock.unlock();
+        }
+    }
+}
+/**
+ * 线程池
+ */
+class ThreadPool{
+    // 任务队列
+    private BlockedQueue&lt;Runnable&gt; taskQueue;
+
+    // 线程集合
+    private HashSet&lt;Worker&gt; workers = new HashSet&lt;&gt;();
+
+    //核心线程数
+    private int coreSize;
+
+    // 超时时间
+    private int timeout;
+
+    // 超时单位
+    private TimeUnit timeUnit;
+
+    //拒绝策略
+    private RejectPolicy&lt;Runnable&gt; rejectPolicy;
+
+    // 任务执行
+    public void execute(Runnable task){
+        synchronized (workers){
+            if(workers.size() &lt; coreSize){
+                // 创建核心线程
+                Worker worker = new Worker(task);
+                workers.add(worker);
+                Thread thread = new Thread(worker);
+                thread.start();
+            }else {
+                // 任务队列
+                //taskQueue.offer(task,timeout,timeUnit);
+                taskQueue.tryPut(rejectPolicy,task);
+                //taskQueue.put(task);
+            }
+        }
+
+    }
+    public ThreadPool(int coreSize, int timeout, TimeUnit timeUnit,int queueCapacity,RejectPolicy&lt;Runnable&gt; rejectPolicy){
+        this.coreSize = coreSize;
+        this.timeout = timeout;
+        this.timeUnit = timeUnit;
+        this.taskQueue = new BlockedQueue&lt;&gt;(queueCapacity);
+
+        this.rejectPolicy = rejectPolicy;
+    }
+
+
+    class Worker implements Runnable{
+        private Runnable task;
+        public Worker(Runnable task){
+            this.task = task;
+        }
+        @Override
+        public void run() {
+            while(task!=null || (task = taskQueue.poll(timeout,timeUnit))!=null){
+                System.out.println("取出的任务是"+task);
+                try {
+                    task.run();
+                }catch (Exception e){
+                    e.printStackTrace();
+                }finally {
+                    task = null;
+                }
+                synchronized (workers){
+                    workers.remove(this);
+                }
+            }
+        }
+    }
+}</code></pre> 
+<p><strong>这个代码我自己觉得是有些问题，因为如果我的任务队列大小有10的时候，我给出了13个任务，两个交给核心线程不占任务队列大小，另外10个任务正好占满，剩下一个放不进去，这时就会卡住不输出。---------未解决</strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3a0ba73b538d79ac83657ca390e79f1f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Java之抽象类和接口</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ccf1993ed78dc9a7f739dd7e668b49bd/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Spring】SpringBoot整合Redis，用Redis实现限流（附Redis解压包）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

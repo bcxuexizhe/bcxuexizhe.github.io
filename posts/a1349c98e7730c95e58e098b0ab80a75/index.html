@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Java生态/Redis中如何使用Lua脚本 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a1349c98e7730c95e58e098b0ab80a75/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Java生态/Redis中如何使用Lua脚本">
+  <meta property="og:description" content="文章目录 一、安装LUA1）简单使用 二、lua语法简介1、注释1）单行注释2）多行注释 2、关键字3、变量1）全局变量2）局部变量 4、数据类型1）Lua数组2）字符串操作 5、if-else6、循环1）for循环1&gt; 数组for循环2&gt; 泛型for循环 2）while循环3）break提前退出循环 7、函数 三、Java中执行Lua脚本1、字符串方式2、文件方式3、Luaj概述1）线程安全问题2）性能问题 四、Redis &#43; Lua（EVAL命令）1、EVAL命令使用示例 五、总结 一、安装LUA Mac上安装LUA很简单，直接使用brew相关命令；
+brew install lua 使用lua -v命令可以看到lua已经安装完毕。
+1）简单使用 创建一个test.lua文件，内容为：
+执行命令：
+lua test.lua 输出为：
+二、lua语法简介 Lua 提供了交互式编程和脚本式编程：
+交互式编程：直接在命令行中输入语法，可以立即执行并查看到执行效果。脚本是编程：编写脚本文件，然后再执行。 官方文档：http://www.lua.org/manual/5.4/
+1、注释 lua提供两种注释方式：单行注释和多行注释
+1）单行注释 使用两个减号；
+-- 2）多行注释 --[[ 多行注释 多行注释 --]] 2、关键字 下列为 Lua 的保留关键字，和Java一样 保留关键字不能作为常量或变量。
+3、变量 默认的情况下，定义一个变量都是全局变量；如果要用局部变量 需要声明为local；
+1）全局变量 全局变量不需要声明，给一个变量赋值后便创建了这个全局变量；
+访问一个没有初始化的全局变量也不会出错，只不过会得到结果：nil 想删除一个全局变量，只需要将变量赋值为nil；换言之，当且仅当一个变量不等于nil时，这个变量存在。
+此外，一般以下划线开头连接一串大写字母的名字（比如 _VERSION）被保留用于 Lua 内部全局变量。
+2）局部变量 -- 局部变量赋值 local b=2 4、数据类型 Lua 是一个动态类型语言，变量不要类型定义，只需要为变量赋值。 值可以存储在变量中，作为参数传递或结果返回。
+Lua 中有 8 个基本类型分别为：nil、boolean、number、string、userdata、function、thread 和 table。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-03-06T21:32:23+08:00">
+    <meta property="article:modified_time" content="2023-03-06T21:32:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Java生态/Redis中如何使用Lua脚本</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#LUA_1" rel="nofollow">一、安装LUA</a></li><li><ul><li><a href="#1_12" rel="nofollow">1）简单使用</a></li></ul> 
+  </li><li><a href="#lua_26" rel="nofollow">二、lua语法简介</a></li><li><ul><li><a href="#1_34" rel="nofollow">1、注释</a></li><li><ul><li><a href="#1_37" rel="nofollow">1）单行注释</a></li><li><a href="#2_44" rel="nofollow">2）多行注释</a></li></ul> 
+   </li><li><a href="#2_53" rel="nofollow">2、关键字</a></li><li><a href="#3_58" rel="nofollow">3、变量</a></li><li><ul><li><a href="#1_60" rel="nofollow">1）全局变量</a></li><li><a href="#2_73" rel="nofollow">2）局部变量</a></li></ul> 
+   </li><li><a href="#4_79" rel="nofollow">4、数据类型</a></li><li><ul><li><a href="#1Lua_86" rel="nofollow">1）Lua数组</a></li><li><a href="#2_91" rel="nofollow">2）字符串操作</a></li></ul> 
+   </li><li><a href="#5ifelse_107" rel="nofollow">5、if-else</a></li><li><a href="#6_122" rel="nofollow">6、循环</a></li><li><ul><li><a href="#1for_123" rel="nofollow">1）for循环</a></li><li><ul><li><a href="#1_for_126" rel="nofollow">1&gt; 数组for循环</a></li><li><a href="#2_for_138" rel="nofollow">2&gt; 泛型for循环</a></li></ul> 
+    </li><li><a href="#2while_156" rel="nofollow">2）while循环</a></li><li><a href="#3break_172" rel="nofollow">3）break提前退出循环</a></li></ul> 
+   </li><li><a href="#7_175" rel="nofollow">7、函数</a></li></ul> 
+  </li><li><a href="#JavaLua_200" rel="nofollow">三、Java中执行Lua脚本</a></li><li><ul><li><a href="#1_214" rel="nofollow">1、字符串方式</a></li><li><a href="#2_239" rel="nofollow">2、文件方式</a></li><li><a href="#3Luaj_277" rel="nofollow">3、Luaj概述</a></li><li><ul><li><a href="#1_283" rel="nofollow">1）线程安全问题</a></li><li><a href="#2_287" rel="nofollow">2）性能问题</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Redis__LuaEVAL_290" rel="nofollow">四、Redis + Lua（EVAL命令）</a></li><li><ul><li><a href="#1EVAL_307" rel="nofollow">1、EVAL命令</a></li><li><ul><li><a href="#_328" rel="nofollow">使用示例</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_342" rel="nofollow">五、总结</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="LUA_1"></a>一、安装LUA</h2> 
+<p>Mac上安装LUA很简单，直接使用<code>brew</code>相关命令；</p> 
+<pre><code class="prism language-powershell">brew install lua
+</code></pre> 
+<p><img src="https://images2.imgbox.com/23/17/OyEDqQd7_o.png" alt="在这里插入图片描述"></p> 
+<p>使用<code>lua -v</code>命令可以看到lua已经安装完毕。</p> 
+<h3><a id="1_12"></a>1）简单使用</h3> 
+<p>创建一个test.lua文件，内容为：<br> <img src="https://images2.imgbox.com/01/8b/K3mR8fic_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>执行命令：</strong></p> 
+<pre><code class="prism language-powershell">lua test<span class="token punctuation">.</span>lua
+</code></pre> 
+<p><strong>输出为：</strong></p> 
+<p><img src="https://images2.imgbox.com/17/95/wo1VyfMM_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="lua_26"></a>二、lua语法简介</h2> 
+<p>Lua 提供了交互式编程和脚本式编程：</p> 
+<ul><li>交互式编程：直接在命令行中输入语法，可以立即执行并查看到执行效果。</li><li>脚本是编程：编写脚本文件，然后再执行。</li></ul> 
+<p><strong>官方文档：<a href="http://www.lua.org/manual/5.4/" rel="nofollow">http://www.lua.org/manual/5.4/</a></strong></p> 
+<h3><a id="1_34"></a>1、注释</h3> 
+<p>lua提供两种注释方式：单行注释和多行注释</p> 
+<h4><a id="1_37"></a>1）单行注释</h4> 
+<p>使用两个减号；</p> 
+<pre><code class="prism language-powershell"> <span class="token operator">--</span>
+</code></pre> 
+<h4><a id="2_44"></a>2）多行注释</h4> 
+<pre><code class="prism language-powershell"><span class="token operator">--</span><span class="token punctuation">[</span><span class="token punctuation">[</span>
+ 多行注释
+ 多行注释
+ <span class="token operator">--</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+</code></pre> 
+<h3><a id="2_53"></a>2、关键字</h3> 
+<p>下列为 Lua 的保留关键字，和Java一样 保留关键字不能作为常量或变量。</p> 
+<p><img src="https://images2.imgbox.com/93/73/T2nWHHgC_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="3_58"></a>3、变量</h3> 
+<p>默认的情况下，定义一个变量都是全局变量；如果要用局部变量 需要声明为<code>local</code>；</p> 
+<h4><a id="1_60"></a>1）全局变量</h4> 
+<p>全局变量不需要声明，给一个变量赋值后便创建了这个全局变量；</p> 
+<ul><li>访问一个没有初始化的全局变量也不会出错，只不过会得到结果：nil</li></ul> 
+<p><img src="https://images2.imgbox.com/dc/f2/0YyoD2wk_o.png" alt="在这里插入图片描述"></p> 
+<p>想删除一个全局变量，只需要将变量赋值为nil；换言之，<font color="blue">当且仅当一个变量不等于nil时，这个变量存在</font>。</p> 
+<p><img src="https://images2.imgbox.com/c1/74/HSLWtm0a_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>此外，一般以下划线开头连接一串大写字母的名字（比如 _VERSION）被保留用于 Lua 内部全局变量。</strong></p> 
+<h4><a id="2_73"></a>2）局部变量</h4> 
+<pre><code class="prism language-powershell"><span class="token operator">--</span> 局部变量赋值
+local b=2 
+</code></pre> 
+<h3><a id="4_79"></a>4、数据类型</h3> 
+<p>Lua 是一个动态类型语言，变量不要类型定义，只需要为变量赋值。 值可以存储在变量中，作为参数传递或结果返回。</p> 
+<p>Lua 中有 8 个基本类型分别为：nil、boolean、number、string、userdata、function、thread 和 table。</p> 
+<p><img src="https://images2.imgbox.com/c5/89/Y63in1ux_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="1Lua_86"></a>1）Lua数组</h4> 
+<p>在Lua 数组中，索引值是从 1 开始，可以指定为从 0 开始。</p> 
+<p><img src="https://images2.imgbox.com/f1/e5/BkxTenZP_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="2_91"></a>2）字符串操作</h4> 
+<ul><li><code>..</code> 连接两个字符串；</li><li><code>string.sub()</code> 用于截取字符串；<pre><code class="prism language-lua">string<span class="token punctuation">.</span><span class="token function">sub</span><span class="token punctuation">(</span>s<span class="token punctuation">,</span> i <span class="token punctuation">[</span><span class="token punctuation">,</span> j<span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre> 
+  <ul><li>s：要截取的字符串；</li><li>i：截取开始位置；</li><li>j：截取结束位置，默认为 -1，最后一个字符；</li></ul> </li><li><code>string.find()</code> 用于字符串查找<pre><code class="prism language-lua">string<span class="token punctuation">.</span><span class="token function">find</span> <span class="token punctuation">(</span>str<span class="token punctuation">,</span> substr<span class="token punctuation">,</span> <span class="token punctuation">[</span>init<span class="token punctuation">,</span> <span class="token punctuation">[</span>plain<span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre> 
+  <ul><li>在一个指定的目标字符串 str 中搜索指定的内容 substr，如果找到了一个匹配的子串，就会返回这个子串的起始索引和结束索引，不存在则返回 nil。</li><li><code>init</code> 指定了搜索的起始位置，默认为 1，可以一个负数，表示从后往前数的字符个数。</li><li><code>plain</code> 表示是否使用简单模式，默认为 false，true 只做简单的查找子串的操作，false 表示使用正则模式匹配。</li></ul> </li></ul> 
+<h3><a id="5ifelse_107"></a>5、if-else</h3> 
+<p>条件表达式结果可以是任何值，Lua认为false和nil为假，true和非nil为真。</p> 
+<p>整体的if-else结构和我们使用的高级语言（Java、GO）类似，区别在于：LUA中的if()表达式满足之后想要做一些其余逻辑，需要紧跟<code>then</code>，并且流程控制以<code>end</code>结尾。</p> 
+<pre><code class="prism language-powershell"><span class="token keyword">if</span><span class="token punctuation">(</span>xxx<span class="token punctuation">)</span> then
+    print<span class="token punctuation">(</span><span class="token string">"xxx"</span><span class="token punctuation">)</span>
+<span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>xx<span class="token punctuation">)</span> then
+    print<span class="token punctuation">(</span><span class="token string">"xx"</span><span class="token punctuation">)</span>
+<span class="token keyword">else</span>
+   print<span class="token punctuation">(</span><span class="token string">"x"</span><span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+</code></pre> 
+<h3><a id="6_122"></a>6、循环</h3> 
+<h4><a id="1for_123"></a>1）for循环</h4> 
+<p>Lua 编程语言中 for语句有两大类：数组for循环、泛型for循环</p> 
+<h5><a id="1_for_126"></a>1&gt; 数组for循环</h5> 
+<p><strong>语法格式：</strong></p> 
+<pre><code class="prism language-powershell"><span class="token keyword">for</span> <span class="token keyword">var</span>=exp1<span class="token punctuation">,</span>exp2<span class="token punctuation">,</span>exp3 <span class="token keyword">do</span>  
+    &lt;执行体&gt;  
+<span class="token keyword">end</span>  
+</code></pre> 
+<ul><li>var 从 exp1 变化到 exp2，每次变化以 exp3 为步长递增 var，并执行一次 “执行体”。exp3 是可选的，如果不指定，默认为1。</li></ul> 
+<p><img src="https://images2.imgbox.com/de/e5/II37GwR5_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2_for_138"></a>2&gt; 泛型for循环</h5> 
+<p>通过一个迭代器函数来遍历所有值，类似 java 中的 foreach 语句；</p> 
+<p><strong>语法格式：</strong></p> 
+<pre><code class="prism language-powershell"><span class="token operator">--</span>打印数组a的所有值  
+a = <span class="token punctuation">{<!-- --></span><span class="token string">"one"</span><span class="token punctuation">,</span> <span class="token string">"two"</span><span class="token punctuation">,</span> <span class="token string">"three"</span><span class="token punctuation">}</span>
+<span class="token keyword">for</span> i<span class="token punctuation">,</span> v in ipairs<span class="token punctuation">(</span>a<span class="token punctuation">)</span> <span class="token keyword">do</span>
+    print<span class="token punctuation">(</span>i<span class="token punctuation">,</span> v<span class="token punctuation">)</span>
+<span class="token keyword">end</span> 
+</code></pre> 
+<ul><li><font color="red">i 是数组索引值，v 是对应索引的数组元素值</font>。</li><li><font color="blue">ipairs是Lua提供的一个迭代器函数，用来迭代数组</font>。</li></ul> 
+<p><img src="https://images2.imgbox.com/5b/99/jIPOudHh_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="2while_156"></a>2）while循环</h4> 
+<p>while 循环语句在判断条件为 true 时会重复执行循环体语句。</p> 
+<p><strong>语法格式：</strong></p> 
+<pre><code class="prism language-powershell"><span class="token keyword">while</span><span class="token punctuation">(</span>condition<span class="token punctuation">)</span>
+<span class="token keyword">do</span>
+   statements
+<span class="token keyword">end</span>
+</code></pre> 
+<ul><li>statements(循环体语句) 可以是一条或多条语句，condition(条件) 可以是任意表达式；</li><li>在 condition(条件) 为 true 时执行循环体语句。</li></ul> 
+<p><img src="https://images2.imgbox.com/02/07/cdjnnLku_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="3break_172"></a>3）break提前退出循环</h4> 
+<p>和Java中的break一个作用，用于退出当前循环或语句；</p> 
+<h3><a id="7_175"></a>7、函数</h3> 
+<p>在Lua中，函数是对语句和表达式进行抽象的主要方法。类似于Java中的方法。</p> 
+<p><strong>Lua 函数主要有两种用途：</strong></p> 
+<ul><li>完成指定的任务，这种情况下函数作为调用语句使用；</li><li>计算并返回值，这种情况下函数作为赋值语句的表达式使用；</li></ul> 
+<p><strong>函数的编写方式如下：</strong></p> 
+<pre><code class="prism language-powershell"><span class="token operator">--</span><span class="token punctuation">[</span><span class="token punctuation">[</span> 函数返回两个值的最大值 <span class="token operator">--</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+<span class="token keyword">function</span> max<span class="token punctuation">(</span>num1<span class="token punctuation">,</span> num2<span class="token punctuation">)</span>
+   <span class="token keyword">if</span> <span class="token punctuation">(</span>num1 &gt; num2<span class="token punctuation">)</span> then
+      result = num1<span class="token punctuation">;</span>
+   <span class="token keyword">else</span>
+      result = num2<span class="token punctuation">;</span>
+   <span class="token keyword">end</span>
+   <span class="token keyword">return</span> result<span class="token punctuation">;</span> 
+<span class="token keyword">end</span>
+<span class="token operator">--</span> 调用函数
+print<span class="token punctuation">(</span><span class="token string">"两值比较最大值为 "</span><span class="token punctuation">,</span>max<span class="token punctuation">(</span>10<span class="token punctuation">,</span>4<span class="token punctuation">)</span><span class="token punctuation">)</span>
+print<span class="token punctuation">(</span><span class="token string">"两值比较最大值为 "</span><span class="token punctuation">,</span>max<span class="token punctuation">(</span>5<span class="token punctuation">,</span>6<span class="token punctuation">)</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e0/8b/JtRaCts6_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="JavaLua_200"></a>三、Java中执行Lua脚本</h2> 
+<p>Java中执行Lua脚本有两种方式：字符串的方式、文件的方式；</p> 
+<p>Java中想要执行LUA脚本，首先需要在pom中引入相关依赖：</p> 
+<pre><code class="prism language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.luaj<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>luaj-jse<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">&gt;</span></span>3.0.1<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<h3><a id="1_214"></a>1、字符串方式</h3> 
+<p>对于简单的lua脚本，可以直接用java字符串写；</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>saint<span class="token punctuation">.</span>base<span class="token punctuation">.</span>lua</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span></span><span class="token class-name">Globals</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span></span><span class="token class-name">LuaValue</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span>lib<span class="token punctuation">.</span>jse<span class="token punctuation">.</span></span><span class="token class-name">JsePlatform</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">LuaString</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">String</span> luaStr <span class="token operator">=</span> <span class="token string">"print 'Saint is best man'"</span><span class="token punctuation">;</span>
+        <span class="token class-name">Globals</span> globals <span class="token operator">=</span> <span class="token class-name">JsePlatform</span><span class="token punctuation">.</span><span class="token function">standardGlobals</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LuaValue</span> luaValue <span class="token operator">=</span> globals<span class="token punctuation">.</span><span class="token function">load</span><span class="token punctuation">(</span>luaStr<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        luaValue<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>控制台输出：</strong></p> 
+<p><img src="https://images2.imgbox.com/b2/ae/7fBqjxFM_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_239"></a>2、文件方式</h3> 
+<p>对于一些比较常用的、复杂的脚本可以选择存放在文件中，在Java中再调用lua文件；</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>saint<span class="token punctuation">.</span>base<span class="token punctuation">.</span>lua</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span></span><span class="token class-name">Globals</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span></span><span class="token class-name">LuaValue</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>luaj<span class="token punctuation">.</span>vm2<span class="token punctuation">.</span>lib<span class="token punctuation">.</span>jse<span class="token punctuation">.</span></span><span class="token class-name">JsePlatform</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">FileNotFoundException</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">LuaFile</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">FileNotFoundException</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// lua脚本的文件路径</span>
+        <span class="token class-name">String</span> luaPath <span class="token operator">=</span> <span class="token string">"/xxxx/javaTest.lua"</span><span class="token punctuation">;</span>
+        <span class="token class-name">Globals</span> globals <span class="token operator">=</span> <span class="token class-name">JsePlatform</span><span class="token punctuation">.</span><span class="token function">standardGlobals</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">//加载脚本文件login.lua，并编译</span>
+        globals<span class="token punctuation">.</span><span class="token function">loadfile</span><span class="token punctuation">(</span>luaPath<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">LuaValue</span> func1 <span class="token operator">=</span> globals<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">LuaValue</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token string">"print1"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        func1<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">LuaValue</span> func2 <span class="token operator">=</span> globals<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">LuaValue</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token string">"print2"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> luaResp <span class="token operator">=</span> func2<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token class-name">LuaValue</span><span class="token punctuation">.</span><span class="token function">valueOf</span><span class="token punctuation">(</span><span class="token string">"saint-input-param"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"lua file return is : "</span> <span class="token operator">+</span> luaResp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>lua脚本文件：</strong></p> 
+<p><img src="https://images2.imgbox.com/85/78/IUbWHX31_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>控制台输出：</strong></p> 
+<p><img src="https://images2.imgbox.com/74/3d/PMcXMbtH_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="3Luaj_277"></a>3、Luaj概述</h3> 
+<p>Luaj在包装执行具体的Lua代码时, 有三种不同的模式；</p> 
+<ul><li>纯脚本解析执行(不选用任何Compiler)</li><li>To Lua字节码(LuaC, lua-to-lua-bytecode compiler)（<font color="blue">默认选用</font>）</li><li>To Java字节码(LuaJC, lua-to-java-bytecode compiler)</li></ul> 
+<h4><a id="1_283"></a>1）线程安全问题</h4> 
+<p>Luaj中的Globals对象不是线程安全的, 因此最佳实践是每个线程一个Globals对象。</p> 
+<ul><li>事实上, 可以采用ThreadLocal的方式来存储该对象。</li></ul> 
+<h4><a id="2_287"></a>2）性能问题</h4> 
+<p>Lua脚本在JAVA中运行，相比于直接运行Java代码会慢很多，大约1000倍。</p> 
+<h2><a id="Redis__LuaEVAL_290"></a>四、Redis + Lua（EVAL命令）</h2> 
+<p>在使用Redisson、Jedis+Lua时，我们可以通过redis客户端集成的、手写的LUA脚本来保证一系列命令在Redis中可以"原子执行"。</p> 
+<ul><li>在redis执行lua脚本时，相当于一个redis级别的锁，不能执行其他操作，类似于原子操作，这也是redisson实现的一个关键点。</li></ul> 
+<p><strong>比如Redisson中的lua脚本：</strong><br> <img src="https://images2.imgbox.com/24/51/591igBAC_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>Redisson如何实现分布式锁，可以看文章：<a href="https://saint.blog.csdn.net/article/details/128176338" rel="nofollow">https://saint.blog.csdn.net/article/details/128176338</a></li></ul> 
+<p><strong>lua脚本中有如下几个概念：</strong></p> 
+<blockquote> 
+ <ol><li><strong>redis.call()</strong>：执行redis命令。</li><li><strong>KEYS[n]</strong>：指脚本中第n个参数，比如KEYS[1]指脚本中的第一个参数。</li><li><strong>ARGV[n]</strong>：指脚本中第n个参数的值，比如ARGV[1]指脚本中的第一个参数的值。</li><li><strong>返回值中nil与false同一个意思。</strong></li></ol> 
+</blockquote> 
+<h3><a id="1EVAL_307"></a>1、EVAL命令</h3> 
+<p>redis2.6.0版本起 采用内置的Lua解释器 通过EVAL命令去执行脚本；</p> 
+<p>redis中的EVAL命令可以用于执行一段lua代码。<strong>命令格式如下：</strong></p> 
+<p><img src="https://images2.imgbox.com/9f/9e/A4JEstgq_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>第一个参数script：表示lua脚本的内容；</li><li>第二参数numkeys：表示有多少个键值对。</li><li>其余参数：先把numkeys个key列出来，再把numkeys个arg列出来。</li></ul> 
+<p><strong>Lua脚本中可以使用2个函数调用redis命令；</strong></p> 
+<ul><li>redis.call()</li><li>redis.pcall()</li></ul> 
+<p><strong>redis.call()与redis.pcall()相似，二者唯一不同之处：</strong></p> 
+<ul><li>如果执行的redis命令执行失败，redis.call()将产生一个Lua error，从而迫使EVAL命令返回一个错误给命令的调用者；</li><li>然而redis.pcall()将会捕捉这个错误，并返回代表这个错误的Lua表。</li></ul> 
+<h4><a id="_328"></a>使用示例</h4> 
+<p>有那么一段逻辑；</p> 
+<ul><li>如果Redis某个key的整数值 和 某个value相等，则将key对应的整数值 + 1000；否则将key的值设置为9999；</li></ul> 
+<p><strong>lua脚本执行命令如下：</strong></p> 
+<pre><code class="prism language-lua">EVAL <span class="token string">"if redis.call('get', KEYS[1]) == ARGV[1] then return redis.call('INCRBY', KEYS[1], 1000); else redis.call('set', KEYS[1], 9999); return nil; end;"</span> <span class="token number">1</span> test <span class="token number">100</span>
+</code></pre> 
+<p><strong>根据test值的不同，不同的执行结果如下：</strong></p> 
+<p><img src="https://images2.imgbox.com/c0/02/yPz4mspR_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_342"></a>五、总结</h2> 
+<p>Lua入个门，知道基本的Lua脚本怎么写，尤其是Redis + lua的使用。</p> 
+<p>再到很多网关中都会使用一些lua脚本。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8b80e0ee1f80572791f87fec458c1b2d/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MySQL数据库设计作业 ——《网上书店系统》数据库设计实验报告</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0c289f51cb8ec6bdda1a8c8bbed715ad/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">史上最全若依管理系统修改页面标题和logo</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

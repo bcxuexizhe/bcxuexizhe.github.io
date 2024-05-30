@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>简单讲讲在一台机器上用docker部署hadoop HDFS - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0b5ff3c4db4a4c027801ed7aae8b857d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="简单讲讲在一台机器上用docker部署hadoop HDFS">
+  <meta property="og:description" content="为什么写这篇文章? 老东西叫我用vmvare部署hadoop,我觉得这简直蠢毙了,让我们用docker和docker-compose来快速的过一遍如何使用docker-compose来部署简单的hadoop集群范例
+写在前面,一定要看我!!! windows。。。看着用吧
+hadoop版本不同改下Dockerfile中的内容，具体来说是这里-3.3.6改成你的版本比如3.1.3
+还有注意！Hadoop中的主机名不能带-或者_
+注意了!一定注意存储空间大小,确保机器至少有10G左右的空余,不然跑不起来的
+如果出现如下问题,请调整docker-compose文件中分给容器的容量,然后删除并重建容器:
+$ hdfs namenode
+WARNING: /export/server/hadoop/logs does not exist. Creating.
+mkdir: cannot create directory &#39;/export/server/hadoop/logs&#39;: No space left on device
+ERROR: Unable to create /export/server/hadoop/logs. Aborting.
+Hadoop HDFS 简摘 Hadoop HDFS需要三个角色:
+NameNode,主节点管理者DateNode,从节点工作者SecondaryNameNode,主节点辅助 我们需要三个容器:
+暂且称之为
+masternode,slavenode1,slavenode2
+这三个容器扮演的角色分别是 masternode:NameNode,DateNode,SecondaryNameNodeslavenode1:DateNodeslavenode2: DateNode 使用脚本跳过所有的前置工作（假设你已经对Hadoop有了解） 注意！建立在你会的基础上，不会的话看着脚本敲命令
+克隆项目后确保目录如：
+git clone https://github.com/rn-consider/Hadoop_docker.git
+然后确保使用docker-compose up -d 创建的容器也可以运行
+给所有sh脚本附加执行权限，然后运行./一键式部署请确保已经下载了hadoop压缩包.sh，然后等待脚本执行完成像是：
+，完成后直接跳转到运行hadoop章节
+前置工作 我们需要三个docker容器来实现masternode,slavenode1,slavenode2,它们需要一些基本的配置,比如说固定的Ip,ssh的安装,jdk8的安装等,所幸我们可以使用docker-compose来大大简化这些基本的配置工作,新建一目录假设命名为hadoop_t,然后按照以下命令,(注意!因为我们使用的是docker所以只需要按照我的步骤来且docker,docker-compose版本号满足要求,那么环境配置必然会成功)
+git clone https://github.com/rn-consider/Hadoop_docker.git 项目结构应该如,其中hadoop压缩包也可从官方获得,或者使用RumMeFirst下载在项目结构如下时在往下阅读:确保机器上docker版本大于等于20.10.25,docker-compose版本大于等于2.20.3,不清楚docker-compose二进制安装方式可以看为Linux安装软件包时后面标注的arm,aarch到底是什么玩意儿以二进制安装docker-compose为例_生生世世是所说的的博客-CSDN博客运行docker-compose up -d 后运行docker ps可以看到:接下来我们所有的环境设置都将在这三个容器中进行 环境配置 基本配置 主机名以及IP地址映射 docker-compose会自动创建docker网络和dns映射让各个容器可以通过容器的服务名来访问各自的容器,我们可以愉快的跳过这个配置">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-09-26T14:04:45+08:00">
+    <meta property="article:modified_time" content="2023-09-26T14:04:45+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">简单讲讲在一台机器上用docker部署hadoop HDFS</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>为什么写这篇文章?</h2> 
+<p>老东西叫我用vmvare部署hadoop,我觉得这简直蠢毙了,让我们用docker和docker-compose来快速的过一遍如何使用docker-compose来部署简单的hadoop集群范例</p> 
+<h2>写在前面,一定要看我!!!</h2> 
+<p>windows。。。看着用吧</p> 
+<p>hadoop版本不同改下Dockerfile中的内容，具体来说是这里-3.3.6改成你的版本比如3.1.3</p> 
+<p><img alt="" height="72" src="https://images2.imgbox.com/4a/ec/XuXjTzRq_o.png" width="923"></p> 
+<p>还有注意！Hadoop中的主机名不能带-或者_</p> 
+<p><span style="color:#fe2c24;"><strong>注意了!一定注意存储空间大小,确保机器至少有10G左右的空余,不然跑不起来的</strong></span></p> 
+<ul><li> <p><span style="color:#fe2c24;"><strong>如果出现如下问题,请调整docker-compose文件中分给容器的容量,然后删除并重建容器</strong></span>:</p> </li><li> 
+  <blockquote> 
+   <p>$ hdfs namenode<br> WARNING: /export/server/hadoop/logs does not exist. Creating.<br> mkdir: cannot create directory '/export/server/hadoop/logs': No space left on device<br> ERROR: Unable to create /export/server/hadoop/logs. Aborting.</p> 
+  </blockquote> </li></ul> 
+<h2>Hadoop HDFS 简摘</h2> 
+<p>Hadoop HDFS需要三个角色:</p> 
+<blockquote> 
+ <ol><li>NameNode,主节点管理者</li><li>DateNode,从节点工作者</li><li>SecondaryNameNode,主节点辅助</li></ol> 
+</blockquote> 
+<p>我们需要三个容器:</p> 
+<p>暂且称之为</p> 
+<p>masternode,slavenode1,slavenode2</p> 
+<blockquote> 
+ <h2>这三个容器扮演的角色分别是</h2> 
+ <ol><li>masternode:NameNode,DateNode,SecondaryNameNode</li><li>slavenode1:DateNode</li><li>slavenode2: DateNode</li></ol> 
+</blockquote> 
+<h2>使用脚本跳过所有的前置工作（假设你已经对Hadoop有了解）</h2> 
+<blockquote> 
+ <p>   <strong>注意！建立在你会的基础上，不会的话看着脚本敲命令</strong></p> 
+ <p>   克隆项目后确保目录如：</p> 
+ <p>git clone https://github.com/rn-consider/Hadoop_docker.git</p> 
+ <p><img alt="" height="340" src="https://images2.imgbox.com/f1/ce/Wdra0vxH_o.png" width="442"></p> 
+ <p>然后确保使用docker-compose up -d 创建的容器也可以运行</p> 
+ <p><img alt="" height="119" src="https://images2.imgbox.com/6d/59/jnG4cinm_o.png" width="1200"></p> 
+ <p>给所有sh脚本附加执行权限，然后运行./一键式部署请确保已经下载了hadoop压缩包.sh，<span style="color:#fe2c24;"><strong>然后等待脚本执行完成</strong></span>像是：</p> 
+ <p><img alt="" height="284" src="https://images2.imgbox.com/6b/54/1R1His3P_o.png" width="1200"></p> 
+ <p>，完成后直接跳转到运行hadoop章节</p> 
+</blockquote> 
+<h2> 前置工作</h2> 
+<blockquote> 
+ <p>我们需要三个docker容器来实现masternode,slavenode1,slavenode2,它们需要一些基本的配置,比如说固定的Ip,ssh的安装,jdk8的安装等,所幸我们可以使用docker-compose来大大简化这些基本的配置工作,新建一目录假设命名为hadoop_t,然后按照以下命令,(注意!因为我们使用的是docker所以只需要按照我的步骤来且docker,docker-compose版本号满足要求,那么环境配置必然会成功)</p> 
+</blockquote> 
+<ol><li> <pre><code class="language-bash">git clone https://github.com/rn-consider/Hadoop_docker.git</code></pre> </li><li> 项目结构应该如,其中hadoop压缩包也可从官方获得,或者使用RumMeFirst下载在项目结构如下时在往下阅读:</li><li><img alt="" height="340" src="https://images2.imgbox.com/88/c7/h7K2ByT7_o.png" width="442"></li><li>确保机器上docker版本大于等于20.10.25,docker-compose版本大于等于2.20.3,不清楚docker-compose二进制安装方式可以看</li><li><a href="https://blog.csdn.net/qq_42901723/article/details/132500419?ops_request_misc=&amp;request_id=ce62f4ca54124996852bbf36a279b245&amp;biz_id=&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~koosearch~default-3-132500419-null-null.268%5Ev1%5Econtrol&amp;utm_term=docker" title="为Linux安装软件包时后面标注的arm,aarch到底是什么玩意儿以二进制安装docker-compose为例_生生世世是所说的的博客-CSDN博客">为Linux安装软件包时后面标注的arm,aarch到底是什么玩意儿以二进制安装docker-compose为例_生生世世是所说的的博客-CSDN博客</a></li><li>运行docker-compose up -d 后运行docker ps可以看到:</li><li><img alt="" height="119" src="https://images2.imgbox.com/d9/95/3ALZXajr_o.png" width="1200"></li><li>接下来我们所有的环境设置都将在这三个容器中进行</li></ol> 
+<h2>环境配置</h2> 
+<h3>     基本配置</h3> 
+<h4>         主机名以及IP地址映射</h4> 
+<blockquote> 
+ <p>          docker-compose会自动创建docker网络和dns映射让各个容器可以通过容器的服务名来访问各自的容器,我们可以愉快的跳过这个配置</p> 
+</blockquote> 
+<h4>         防火墙关闭</h4> 
+<blockquote> 
+ <p>       Docker 使用官方的 Ubuntu 镜像默认情况下不会启动防火墙，因为容器通常被设计成相对独立的环境。这意味着容器内的网络通信通常是不受防火墙限制的。</p> 
+ <p>所以这一步我们也可以愉快的跳过.</p> 
+</blockquote> 
+<h4>SSH免密登录-注意是Hadoop用户间的免密登录</h4> 
+<blockquote> 
+ <p>   传统方式下我们进入每一台虚拟机并使用ssh-copy-id node1,node2...类似的方式,在docker下我们可以编写一个简单的shell脚本解决这个问题,只需要执行项目中的脚本就行:</p> 
+ <p><img alt="" height="407" src="https://images2.imgbox.com/71/3a/rqzJxH9X_o.png" width="1200"></p> 
+ <p></p> 
+</blockquote> 
+<h4>         时区同步设置</h4> 
+<blockquote> 
+ <p>    简单的执行shell脚本即可,我们使用<code>ntpdate</code> 来同步阿里云的ntp服务器<img alt="" height="627" src="https://images2.imgbox.com/fb/0a/iR0fcfTi_o.png" width="1200"></p> 
+</blockquote> 
+<h4>      JDK以及HADOOP安装</h4> 
+<blockquote> 
+ <p>我们的Dockerfile构建的镜像已经自动的安装了JDK8并将本地目录下的HADOOP压缩包复制解压到了容器中的/etc/export/hadoop下,我们也可以愉快的跳过这一步</p> 
+</blockquote> 
+<h3>     masternode环境配置</h3> 
+<p>   也可直接运行脚本,直接拷贝放置在fileconfig目录下的配置文件:</p> 
+<p>   <img alt="" height="96" src="https://images2.imgbox.com/21/c2/fiSYAR8p_o.png" width="1200"></p> 
+<ol><li> <p>我们可以看下HADOOP的文件夹结构:</p> </li></ol> 
+<p><img alt="" height="613" src="https://images2.imgbox.com/aa/89/1Ux1IhY5_o.png" width="961"></p> 
+<h5>      我们要配置的文件在/etc/hadoop文件夹下,配置HDFS集群,我们主要涉及到以下文件的修改:</h5> 
+<ul><li>   workers:    配置从节点(DateNode)有哪些</li><li>   hadoop-env.sh: 配置Hadoop相关的环境变量</li><li>   core-site.xml:   Hadoop核心配置文件</li><li>   hdfs-site.xml  :  HDFS核心配置文件</li></ul> 
+<p>          这些文件均存在于$HADOOP_HOME/etc/hadoop文件夹中.</p> 
+<p>ps:$HADOOP_HOME我们将在后续设置它,其指代Hadoop安装文件夹即/export/server/hadoop</p> 
+<ul><li> <h5> workers文件的修改</h5> </li></ul> 
+<ol><li>根据我们上面为三个容器分配的角色,我们在workers文件中填入:</li><li><img alt="" height="100" src="https://images2.imgbox.com/a0/a0/f7pZGXuI_o.png" width="226"></li></ol> 
+<ul><li> <h5> hadoop-env.sh文件配置</h5> </li><li>如果使用我的项目,那么我们的配置都应该如,不用动脑复制粘贴即可:</li></ul> 
+<pre><code class="language-bash">export JAVA_HOME=/usr/lib/jvm/java-1.8.0-openjdk-amd64 # where we use apt download
+export HADOOP_HOME=/export/server/hadoop
+export HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
+export HADOOP_LOG_DIR=$HADOOP_HOME/logs
+</code></pre> 
+<ul><li>配置core-site.xml文件</li><li>在configures中填入:</li><li><img alt="" height="214" src="https://images2.imgbox.com/2e/da/b1IBnoOL_o.png" width="1178"></li></ul> 
+<p></p> 
+<ul><li> <pre><code class="language-bash">&lt;configuration&gt;
+        &lt;property&gt;
+                &lt;name&gt;fs.defaultFS&lt;/name&gt;
+                &lt;value&gt;hdfs://masternode:8020&lt;/value&gt;
+        &lt;/property&gt;
+        &lt;property&gt;
+                &lt;name&gt;io.file.buffer.size&lt;/name&gt;
+                &lt;value&gt;131072&lt;/value&gt;
+        &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre> </li></ul> 
+<blockquote> 
+ <ul><li>hdfs://masternode:8020为整个HDFS内部的通讯地址,应用协议为hdfs://(HADOOP内置协议)</li><li>表明DataNode将与masternode的8020端口通讯,masternode是NameNode所在机器</li><li>此配置固定了masternode必须启动NameNode进程</li></ul> 
+</blockquote> 
+<h5>        hdfs-site.xml配置 </h5> 
+<p></p> 
+<pre><code class="language-bash">&lt;configuration&gt;
+
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.datanode.data.dir.perm&lt;/name&gt;
+
+		&lt;value&gt;700&lt;/value&gt;
+
+	&lt;/property&gt;
+
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.namenode.name.dir&lt;/name&gt;
+
+		&lt;value&gt;/data/nn&lt;/value&gt;
+
+	&lt;/property&gt;
+
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.namenode.hosts&lt;/name&gt;
+
+		&lt;value&gt;masternode,slavenode1,slavenode2&lt;/value&gt;
+
+	&lt;/property&gt;
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.blocksize&lt;/name&gt;
+
+		&lt;value&gt;268435456&lt;/value&gt;
+
+	&lt;/property&gt;
+
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.namenode.handler.count&lt;/name&gt;
+
+		&lt;value&gt;100&lt;/value&gt;
+
+	&lt;/property&gt;
+
+	&lt;property&gt;
+
+		&lt;name&gt;dfs.datanode.data.dir&lt;/name&gt;
+
+		&lt;value&gt;/data/dn&lt;/value&gt;
+
+	&lt;/property&gt;
+
+&lt;/configuration&gt;</code></pre> 
+<ul><li> <h5> masternode配置结束,恭喜</h5> </li></ul> 
+<h3>准备数据目录</h3> 
+<ul><li>在masternode节点:</li><li>mkdir -p /data/nn</li><li>mkdir /data/dn</li><li>在剩余两个节点:</li><li>mkdir -p /data/dn</li></ul> 
+<p>脚本运行<img alt="" height="63" src="https://images2.imgbox.com/61/87/rWz66wos_o.png" width="272"> </p> 
+<h3>分发Hadoop文件夹</h3> 
+<ul><li>使用vmvare这个步骤将会耗费很长时间,但使用docker的情况下我们使用一个简单的shell脚本解决问题</li><li><img alt="" height="146" src="https://images2.imgbox.com/48/7d/fjMDNekF_o.png" width="1083"></li></ul> 
+<h3>配置环境变量</h3> 
+<ul><li>为了方便操作HADOOP可以将HADOOP的一些脚本和程序配置到PATH中,方便后续使用</li><li>此处直接运行脚本,<span style="color:#fe2c24;"><strong>注意!由于docker容器的特性,你需要在进入容器终端时手动source以激活环境变量</strong></span>:</li><li><img alt="" height="332" src="https://images2.imgbox.com/cb/78/ZtJeWdLN_o.png" width="942"></li></ul> 
+<p></p> 
+<h3>授权HADOOP用户-用户密码是123456</h3> 
+<ul><li>在Dockerfile中我们已经加上了创建Hadoop用户的代码</li><li>让我们来对Hadoop用户进行授权</li><li>依次进入每个容器并执行,并等待命令执行完成</li><li> <pre><code class="language-bash">chown -R hadoop:hadoop /data
+
+chown -R hadoop:hadoop /export
+
+chown -R hadoop:hadoop /home</code></pre> </li><li>或者使用,这个脚本需要比较长的等待时间</li><li><img alt="" height="85" src="https://images2.imgbox.com/8d/62/a0yzmVaB_o.png" width="949"></li></ul> 
+<h3>运行HADOOP</h3> 
+<p>    所有前期准备全部完成,现在对整个文件系统执行初始化</p> 
+<h4>    进入masternode</h4> 
+<p><img alt="" height="91" src="https://images2.imgbox.com/2d/a4/XgxJNsHG_o.png" width="1081"></p> 
+<p>别忘了source一下</p> 
+<p><img alt="" height="89" src="https://images2.imgbox.com/35/0b/307SHJIA_o.png" width="775">  </p> 
+<ul><li>    格式化namenode</li><li>     <pre><code class="language-bash">su - hadoop
+
+hdfs namenode -format</code></pre> </li><li>出现这个对话框，输入Y</li><li><img alt="" height="109" src="https://images2.imgbox.com/f1/da/bLlQcAVM_o.png" width="964"></li><li> 成功</li><li><img alt="" height="348" src="https://images2.imgbox.com/97/38/rEpVJ47S_o.png" width="1200"></li><li>启动hadoop</li><li>start-dfs.sh 启动</li><li><img alt="" height="240" src="https://images2.imgbox.com/4b/ab/lcdjE2Qx_o.png" width="1029"></li><li>可以在/data/nn/current目录下看到数据这就说明hadoop启动成功</li><li><img alt="" height="249" src="https://images2.imgbox.com/d2/8a/ViYEgI4M_o.png" width="950"></li><li>可以用JPS看到当前的进程</li><li><img alt="" height="120" src="https://images2.imgbox.com/f7/a7/BXDmfMZ1_o.png" width="440"></li><li>可以看下slavenode1,成功</li><li><img alt="" height="242" src="https://images2.imgbox.com/bf/f8/NZi5Pako_o.png" width="1200"></li><li>stop-dfs.sh 停止</li></ul> 
+<p>使用docker inspect可以看到docker容器的ip地址：</p> 
+<p><img alt="" height="450" src="https://images2.imgbox.com/90/14/0cEkaOhg_o.png" width="1058"></p> 
+<p>docker-compose文件定义了桥接网络到宿主机，直接在宿主机访问172.21.0.2:9870（就是masternode被分配的子网地址）就能看到HDFS WEBUI： <img alt="" height="647" src="https://images2.imgbox.com/68/f4/YyFTp2nV_o.png" width="1200"></p> 
+<h3>在ubuntu上获取hadoop压缩包</h3> 
+<p>获取压缩包</p> 
+<pre><code class="language-bash">wget -b https://archive.apache.org/dist/hadoop/common/hadoop-3.3.6/hadoop-3.3.6.tar.gz
+</code></pre> 
+<p> 查看进度</p> 
+<pre><code>cat wget-log</code></pre> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8d90472bd4c77dc8f915a7e12fbcaa7a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">this指针</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/76f4e293c63d73951b548e04df42b68e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">网络爬虫——urllib（1）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

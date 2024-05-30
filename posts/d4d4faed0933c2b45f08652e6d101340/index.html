@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>提高 AI 训练算力效率：蚂蚁 DLRover 故障自愈技术的创新实践 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d4d4faed0933c2b45f08652e6d101340/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="提高 AI 训练算力效率：蚂蚁 DLRover 故障自愈技术的创新实践">
+  <meta property="og:description" content="本文来自蚂蚁 DLRover 开源负责人王勤龙（花名长凡）在 2024 全球开发者先锋大会(GDC)的分享——《DLRover 训练故障自愈：大幅提升大规模 AI 训练的算力效率》。
+🌟欢迎大家在 GitHub 上 Star 我们：
+DLRover：
+https://github.com/intelligent-machine-learning/dlrover
+GLake：
+https://github.com/intelligent-machine-learning/glake
+王勤龙，长期在蚂蚁从事 AI 基础设施的研发，主导了蚂蚁分布式训练的弹性容错与自动扩缩容项目的建设。先后参与多个开源项目，如 ElasticDL 和 DLRover，开放原子基金会 2023 活力开源贡献者，蚂蚁集团 2022 T-Star 优秀工程师。目前为蚂蚁 AI Infra 开源项目 DLRover 的架构师，专注于打造稳定、可扩展和高效的大规模分布式训练系统。
+当前大规模语言模型训练需要大量的加速卡来训练，如 GPU 等。由于 GPU 机器的故障率较高，频繁的故障会导致训练中断、计算浪费和集群空转，从而造成大量的时间和算力浪费。为此，DLRover 开源了训练故障自愈技术，长凡在演讲中介绍了 DLRover 如何通过快速的节点状态检测、弹性扩缩容、动态组网和 Flash Checkpoint 等技术，最大程度地降低故障导致的算力浪费。
+大规模 AI 分布式训练面临的挑战 随着大模型从十亿参数迈向万亿参数，训练规模的增长导致了集群成本的飙升，同时也影响了系统的稳定性。如此规模的系统带来的高额运维成本，成为了大模型训练过程中亟需解决的问题。
+参数量大：大模型参数迈向万亿，如何在庞大的计算资源上实现高效的模型训练？成本高：大规模集群需要更多的硬件资源，导致成本显著增加，如何降低 AI 训练成本？稳定性：随着集群规模的扩大，单节点故障率不变的情况下，整体故障概率增加，如何提高分布式训练的稳定性？ 蚂蚁 AI 训练工程实践 上图展示了蚂蚁 AI 训练的工程技术栈，分布式训练引擎 DLRover 支持了蚂蚁的对话、代码、视频和多模态等模型的多样训练任务。以下是 DLRover 提供的主要功能：
+训练故障自愈：将千卡分布式训练有效时间占比 &gt;97%，降低大规模训练故障的算力成本；训练优化 ATorch：自动根据模型和硬件选择最优的分布式训练策略。将千卡(A100)集群硬件算力利用率 &gt;60% ；训练优化器：相比 AdamW 提升 1.5x 的收敛加速。相关成果分别发表在ECML PKDD ’21 ，KDD’23，NeurIPS ’23；显存与传输优化 GLake：显存&#43;传输一体化优化和全局显存优化，将训练显存需求降低 2-10 倍。成果发布在 ASPLOS’24。 机器故障大幅增加训练成本 蚂蚁之所以会特别关注训练故障的问题，主要因为训练过程中的机器故障大幅增加了训练成本。例如，Meta 训练 OPT-175B 模型时，使用了 992 80GB A100 GPU，共 124 台 8 卡机器，按照 AWS 的 GPU 价格，每天需要耗费约 70 万。因故障导致训练周期延长 20 多天，从而增加了上千万元的算力成本。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-11T16:21:25+08:00">
+    <meta property="article:modified_time" content="2024-04-11T16:21:25+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">提高 AI 训练算力效率：蚂蚁 DLRover 故障自愈技术的创新实践</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>本文来自<strong>蚂蚁 DLRover 开源负责人王勤龙</strong>（花名长凡）在 2024 全球开发者先锋大会(GDC)的分享——《DLRover 训练故障自愈：大幅提升大规模 AI 训练的算力效率》。</p> 
+<p>🌟欢迎大家在 GitHub 上 Star 我们：</p> 
+<p>DLRover：</p> 
+<p><a href="https://github.com/intelligent-machine-learning/dlrover">https://github.com/intelligent-machine-learning/dlrover</a></p> 
+<p>GLake：</p> 
+<p><a href="https://github.com/intelligent-machine-learning/glake">https://github.com/intelligent-machine-learning/glake</a></p> 
+<p>王勤龙，长期在蚂蚁从事 AI 基础设施的研发，主导了蚂蚁分布式训练的弹性容错与自动扩缩容项目的建设。先后参与多个开源项目，如 ElasticDL 和 DLRover，开放原子基金会 2023 活力开源贡献者，蚂蚁集团 2022 T-Star 优秀工程师。目前为蚂蚁 AI Infra 开源项目 DLRover 的架构师，专注于打造稳定、可扩展和高效的大规模分布式训练系统。</p> 
+<p>当前大规模语言模型训练需要大量的加速卡来训练，如 GPU 等。由于 GPU 机器的故障率较高，频繁的故障会导致训练中断、计算浪费和集群空转，从而造成大量的时间和算力浪费。为此，DLRover 开源了训练故障自愈技术，长凡在演讲中介绍了 DLRover 如何通过快速的节点状态检测、弹性扩缩容、动态组网和 Flash Checkpoint 等技术，最大程度地降低故障导致的算力浪费。</p> 
+<h3><a id="_AI__19"></a>大规模 AI 分布式训练面临的挑战</h3> 
+<p>随着大模型从十亿参数迈向万亿参数，训练规模的增长导致了集群成本的飙升，同时也影响了系统的稳定性。如此规模的系统带来的高额运维成本，成为了大模型训练过程中亟需解决的问题。</p> 
+<ul><li>参数量大：大模型参数迈向万亿，如何在庞大的计算资源上实现高效的模型训练？</li><li>成本高：大规模集群需要更多的硬件资源，导致成本显著增加，如何降低 AI 训练成本？</li><li>稳定性：随着集群规模的扩大，单节点故障率不变的情况下，整体故障概率增加，如何提高分布式训练的稳定性？</li></ul> 
+<h3><a id="_AI__27"></a>蚂蚁 AI 训练工程实践</h3> 
+<p><img src="https://images2.imgbox.com/45/17/ZGNf6RLZ_o.png" alt="图片"></p> 
+<p>上图展示了蚂蚁 AI 训练的工程技术栈，分布式训练引擎 DLRover 支持了蚂蚁的对话、代码、视频和多模态等模型的多样训练任务。<strong>以下是 DLRover 提供的主要功能：</strong></p> 
+<ul><li>训练故障自愈：将千卡分布式训练有效时间占比 &gt;97%，降低大规模训练故障的算力成本；</li><li>训练优化 ATorch：自动根据模型和硬件选择最优的分布式训练策略。将千卡(A100)集群硬件算力利用率 &gt;60% ；</li><li>训练优化器：相比 AdamW 提升 1.5x 的收敛加速。相关成果分别发表在ECML PKDD ’21 ，KDD’23，NeurIPS ’23；</li><li>显存与传输优化 GLake：显存+传输一体化优化和全局显存优化，将训练显存需求降低 2-10 倍。成果发布在 ASPLOS’24。</li></ul> 
+<h3><a id="_38"></a>机器故障大幅增加训练成本</h3> 
+<p>蚂蚁之所以会特别关注训练故障的问题，主要因为训练过程中的机器故障大幅增加了训练成本。例如，Meta 训练 OPT-175B 模型时，使用了 992 80GB A100 GPU，共 124 台 8 卡机器，按照 AWS 的 GPU 价格，每天需要耗费约 70 万。因故障导致训练周期延长 20 多天，从而增加了上千万元的算力成本。</p> 
+<p><img src="https://images2.imgbox.com/f3/c9/Cp71V8sB_o.png" alt="图片"></p> 
+<p><strong>为什么训练故障会造成这么大的影响呢？</strong></p> 
+<ul><li>首先，分布式训练是多个节点协同工作的，任一节点发生故障（无论是软件、硬件、网卡或 GPU 问题），整个训练流程均需暂停。</li><li>其次，训练故障发生后，排查费时费力，比如现在大家常用的手动检查方式二分法，查一次至少需要 1-2 个小时。</li><li>最后，训练是有状态的，训练重启需要从之前的训练状态里面恢复再继续，隔一段时间就要保存训练状态。而保存的过程耗时很长，而且故障回滚也会造成计算的浪费。上方的右图展示了我们上线故障自愈之前的训练耗时分布，可以看到有效训练时间大概只有 72%。</li></ul> 
+<h3><a id="DLRover__50"></a>DLRover 训练故障自愈流程</h3> 
+<p>DLRover引入了一套完善的故障自愈机制，包括自动节点检测、自动扩缩容及快速 checkpoint 功能。</p> 
+<p><img src="https://images2.imgbox.com/c0/b3/kgBYbmhH_o.png" alt="图片"></p> 
+<h4><a id="_57"></a>自动节点检测</h4> 
+<p>自动节点检测是指在训练中断时，系统会自动进行硬件和通信检测，识别并隔离故障节点，随后启动新的节点替代。</p> 
+<h4><a id="_61"></a>自动扩缩容</h4> 
+<p>针对训练过程中可能出现的节点变化，DLRover运用自动扩缩容技术，通过动态组网和弹性调度确保训练在可控节点数量下持续进行，全程无需人工介入。</p> 
+<p><img src="https://images2.imgbox.com/e4/ca/onXE8ERo_o.png" alt="图片"></p> 
+<p>以右图所示为例，初始状态下系统中有 6 个运行正常的节点，这些节点在 K8s 环境中分别对应着 6 个 Pod。运行一段时间后，Pod 5 由于硬件故障宕机。系统会立即启动响应机制，尝试从集群中调度一个新的 Pod 6 替代失效的 Pod 5。但由于集群内已有 1 台机器出现故障，导致可用计算资源受限，新的 Pod 6 无法成功调度。这时，系统会智能地进行自动化调整，将该作业的节点规模缩减至 4 个，以确保作业能在现有可用资源下继续运行。这里选择保留 4 个而非 5 个节点的原因在于，考虑到大模型算法的实际需求，需要对节点数量加以合理控制，避免资源过度分配而影响训练效率。当先前故障的第 6 个节点修复并重新接入集群，系统将恢复至 6 个节点的状态，从而加快整个训练进程。</p> 
+<h4><a id="Flash_Checkpoint_69"></a>Flash Checkpoint</h4> 
+<p>训练故障恢复过程中，关键在于模型状态的保存与恢复。传统的 Checkpoint 方法由于保存耗时较长，往往导致训练效率低下。为解决这一问题，DLRover 创新性地提出了 Flash Checkpoint 方案，能够在训练过程中近乎实时地将模型状态从 GPU 显存导出至内存，同时辅以内存间的备份机制，确保即使节点故障，也能迅速从备份节点内存中恢复训练状态，极大地缩短了故障恢复时间。</p> 
+<p><img src="https://images2.imgbox.com/cb/19/bhv5L5Dj_o.png" alt="图片"></p> 
+<p>如上图所示，实验证明，采用 Flash Checkpoint 方案后，无论是单机多卡环境还是多机多卡环境，模型状态的保存和恢复速度均有显著提升。</p> 
+<h3><a id="_77"></a>训练自愈在国产卡训练的实践</h3> 
+<p><img src="https://images2.imgbox.com/97/5e/31YRjuRW_o.png" alt="图片"></p> 
+<p>除了支持 GPU，DLRover 故障自愈还支持国产加速卡的分布式训练。例如，我们在华为 Ascend 910 平台上运行 LLama-7B 模型时，采用了 256 张卡进行大规模训练。起初，我们采用的是 KubeFlow 的 PyTorchJob，但该工具不具备容错功能，导致训练进程在持续约十几个小时后会自动终止，一旦发生这种情况，用户必须手动重新提交任务；否则，集群资源将处于闲置状态。第二个图表描绘了在启用训练故障自愈功能后的整个训练过程。在训练进行到20小时时，出现了一次通信 timeout 故障，此时系统自动重启了训练进程并恢复训练。大约四十多个小时后，遇到一次机器硬件故障，系统迅速隔离故障机器并重启了一个 pod 继续训练。除了对华为 Ascend 910 的支持，我们还兼容了阿里的含光 PPU，并与沐曦科技合作，在其自主研发的 GPU 上运用 DLRover 进行大模型训练。</p> 
+<h3><a id="_84"></a>训练自愈在千卡训练的实践</h3> 
+<p><img src="https://images2.imgbox.com/cf/2b/Nq3iUsWe_o.png" alt="图片"></p> 
+<p>上图展示了 DLRover 训练故障自愈在千卡训练上的实践效果：<strong>使用 1000 多张 H800 卡运行大型模型训练，在故障频率为每天一次的情况下，引入训练故障自愈功能后，有效训练时间占比超过了 97%。</strong> 右侧对比表格显示，在采用阿里云高性能存储 FSDP 的情况下，单次保存仍需大约五分钟的时间，而我们的 Flash Checkpoint 技术仅需 0.3 秒即可完成。此外，通过优化，节点效率提升了近一分钟左右。在导出间隔方面，原先每 2 小时执行一次导出操作，而在上线 Flash Checkpoint 功能后，可以实现每 10 分钟一次的高频导出。一周内 save 操作的累计耗时几乎可以忽略不计。同时，回滚时间相较于之前降低了 5 倍左右。</p> 
+<h3><a id="_90"></a>开源共建&amp;共享</h3> 
+<p><img src="https://images2.imgbox.com/89/24/allpWwVG_o.png" alt="图片"></p> 
+<p>技术进步始于开放合作，欢迎大家到 GitHub 上关注和参与我们的开源项目。</p> 
+<p><strong>DLRover：</strong></p> 
+<p><a href="https://github.com/intelligent-machine-learning/dlrover">https://github.com/intelligent-machine-learning/dlrover</a></p> 
+<p><strong>GLake：</strong></p> 
+<p><a href="https://github.com/intelligent-machine-learning/glake">https://github.com/intelligent-machine-learning/glake</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/5b1cc5de9b7535e5345e6a39d01afb5b/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">最简单方法解决启动hive时报错：Exception in thread “main“ java.lang.RuntimeException: org.apache.hadoop.hdfs.serve</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d72dcb8b6012180793f0bc359060a978/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Linux系统本地搭建DbGate数据库并结合内网穿透实现无公网IP远程连接</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

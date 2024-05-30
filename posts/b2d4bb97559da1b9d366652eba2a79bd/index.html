@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>VMware centos7下通过idea实现Hadoop MapReduce经典案例之一的TopN案例 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b2d4bb97559da1b9d366652eba2a79bd/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="VMware centos7下通过idea实现Hadoop MapReduce经典案例之一的TopN案例">
+  <meta property="og:description" content="一：案例需求
+现假设有数据文件num.txt，现要求使用MapReduce技术提取上述文本中最大的5个数据，并最终将结果汇总到一个文件中。先设置MapReduce分区为1，即ReduceTask个数一定只有一个。我们需要提取TopN，即全局的前N条数据，不管中间有几个Map、Reduce，最终只能有一个用来汇总数据。在Map阶段，使用TreeMap数据结构保存TopN的数据，TreeMap默认会根据其键的自然顺序进行排序，也可根据创建映射时提供的 Comparator进行排序，其firstKey()方法用于返回当前集合最小值的键。在Reduce阶段，将Map阶段输出数据进行汇总，选出其中的TopN数据，即可满足需求。这里需要注意的是，TreeMap默认采取正序排列，需求是提取5个最大的数据，因此要重写Comparator类的排序方法进行倒序排序。
+二：案例实施
+​第一步：下载idea以及需要的工具，可以参考Centos7安装并使用IntelliJ IDEA这篇文章。注意下载Linux版本。
+​
+第二步：下载并安装完idea，先启动Hadoop，使用命令：start-all.sh 启动完成后使用jps查看Hadoop集群是否启动成功。启动Hadoop成功后启动idea。
+第三步：在虚拟机上创建文本文件
+1.expor目录下创建topn目录，输入命令：mkdir /export/topn 2.在topn目录下创建num.txt文件，输入命令：touch /export/topn/num.txt 3输入命令：vim /export/topn/num.txt 向num.txt文件添加如下内容：
+10 3 8 7 6 5 1 2 9 4
+11 12 17 14 15 20 19 18 13 16
+4上传文件到HDFS指定目录 （1）创建/topn/input目录，输入命令：hdfs dfs -mkdir -p /topn/input （2）将文本文件num.txt，上传到HDFS的/topn/input目录，输入命令：hdfs dfs -put /export/topn/num.txt /topn/input （3）在hadoop webui查看文件是否上传成功。 注意：这时候你要查看是否可以下载到本机，如果不可以下载的话，参考我另一篇文章。 三：Map阶段实现 使用IntelliJ开发工具创建Maven项目TopN，并且新建net.hw.mr包，在该路径下编写自定义Mapper类TopNMapper，主要用于将文件中的每行数据进行切割提取，并把数据保存到TreeMap中，判断TreeMap是否大于5，如果大于5就需要移除最小的数据。TreeMap保存了当前文件最大5条数据后，再输出到Reduce阶段。
+（1）创建Maven项目：TopN
+1.在idea左上角新建项目。包名：net.army.mr配置好如下图，单击【Create】按钮
+2.删除【Main】主类：右击【Main】类，单击【Delete】 3.添加相关依赖，在pom.xml文件里添加hadoop和junit依赖，添加内容如下： &lt;dependencies&gt; &lt;!--hadoop客户端--&gt; &lt;dependency&gt; &lt;groupId&gt;org.apache.hadoop&lt;/groupId&gt; &lt;artifactId&gt;hadoop-client&lt;/artifactId&gt; &lt;version&gt;3.3.4&lt;/version&gt; &lt;/dependency&gt; &lt;!--单元测试框架--&gt; &lt;dependency&gt; &lt;groupId&gt;junit&lt;/groupId&gt; &lt;artifactId&gt;junit&lt;/artifactId&gt; &lt;version&gt;4.13.2&lt;/version&gt; &lt;/dependency&gt; &lt;/dependencies&gt; 4 刷新本地的maven仓库，如果没有下载，会自动下载依赖到本地：单击【Maven】，单击【刷新】按钮 （这个过程需要idea自己下载，过程可能有点慢，耐心等待） 5创建日志属性文件 （1）在resources目录里创建log4j.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-17T17:34:58+08:00">
+    <meta property="article:modified_time" content="2024-05-17T17:34:58+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">VMware centos7下通过idea实现Hadoop MapReduce经典案例之一的TopN案例</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="margin-left:.0001pt;text-align:justify;"><span style="background-color:#ffffff;"><strong>一：案例需求</strong></span></p> 
+<p style="margin-left:.0001pt;text-align:justify;">现假设有数据文件num.txt，现要求使用MapReduce技术提取上述文本中最大的5个数据，并最终将结果汇总到一个文件中。先设置MapReduce分区为1，即ReduceTask个数一定只有一个。我们需要提取TopN，即全局的前N条数据，不管中间有几个Map、Reduce，最终只能有一个用来汇总数据。在Map阶段，使用TreeMap数据结构保存TopN的数据，TreeMap默认会根据其键的自然顺序进行排序，也可根据创建映射时提供的 Comparator进行排序，其firstKey()方法用于返回当前集合最小值的键。在Reduce阶段，将Map阶段输出数据进行汇总，选出其中的TopN数据，即可满足需求。这里需要注意的是，TreeMap默认采取正序排列，需求是提取5个最大的数据，因此要重写Comparator类的排序方法进行倒序排序。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<p></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><span style="background-color:#ffffff;"><strong>二：案例实施</strong></span></p> 
+<p style="margin-left:.0001pt;text-align:justify;">​第一步：下载idea以及需要的工具，可以参考<span style="color:#fe2c24;">Centos7安装并使用IntelliJ IDEA</span>这篇文章。注意下载Linux版本。<br> ​</p> 
+<p style="margin-left:.0001pt;text-align:justify;">第二步：下载并安装完idea，先启动Hadoop，使用命令：start-all.sh  启动完成后使用jps查看Hadoop集群是否启动成功。启动Hadoop成功后启动idea。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<p style="margin-left:.0001pt;text-align:justify;">第三步：在虚拟机上创建文本文件</p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>1.expor目录下创建topn目录，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">mkdir /export/topn</span></span></strong></span></h5> 
+<p><img alt="" height="302" src="https://images2.imgbox.com/3b/8e/W8jMCPGq_o.png" width="831"></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>2.在topn目录下创建num.txt文件，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">touch /export/topn/num.txt</span></span></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>3</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">vim /export/topn/num.txt</span></span></strong></span></h5> 
+<p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">向num.txt文件添加如下内容：</span></span></p> 
+<p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#fbebd4;"><span style="background-color:#fbebd4;"><span style="color:#000000;">10 3 8 7 6 5 1 2 9 4</span></span></span></p> 
+<p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#fbebd4;"><span style="background-color:#fbebd4;"><span style="color:#000000;">11 12 17 14 15 20 </span></span></span></p> 
+<p style="margin-left:.0001pt;text-align:left;"><span style="background-color:#fbebd4;"><span style="background-color:#fbebd4;"><span style="color:#000000;">19 18 13 16</span></span></span></p> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><span style="color:#4f4f4f;">4上传文件到HDFS指定目录</span></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>（1）</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>创建/topn/input目录，输入命令：</strong></span></span></strong><strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;"><strong>hdfs dfs -mkdir -p /topn/input</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>（2）</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>将文本文件num.txt，上传到HDFS的/topn/input目录，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">hdfs dfs -put /export/topn/num.txt /topn/inp</span></span><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">ut</span></span></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><strong><strong><strong><span style="color:#4d4d4d;"><span style="background-color:#ffffff;">（3）在hadoop webui查看文件是否上传成功。</span></span></strong></strong></strong></h5> 
+<p><img alt="" height="284" src="https://images2.imgbox.com/38/00/5J0805a5_o.png" width="831"></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>注意：这时候你要查看是否可以下载到本机，如果不可以下载的话，参考我另一篇文章。</strong></span></span></strong></strong></span></h5> 
+<p></p> 
+<p></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>三：</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>Map阶段实现</strong></span></span></strong></strong></span></h5> 
+<p>使用IntelliJ开发工具创建Maven项目TopN，并且新建net.hw.mr包，在该路径下编写自定义Mapper类TopNMapper，主要用于将文件中的每行数据进行切割提取，并把数据保存到TreeMap中，判断TreeMap是否大于5，如果大于5就需要移除最小的数据。TreeMap保存了当前文件最大5条数据后，再输出到Reduce阶段。</p> 
+<p><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>（1）创建Maven项目：TopN</strong></span></strong></strong></span></p> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">     1.</span><span style="color:#4d4d4d;">在idea左上角新建项目。包名：net.army.mr</span><span style="color:#4d4d4d;">配置好如下图，单击【Create】按钮</span></span></p> 
+<h5 style="text-align:left;"><img alt="" height="947" src="https://images2.imgbox.com/1e/a4/KOk03K4x_o.png" width="831"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>2</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>.删除【Main】主类：右击【Main】类，单击【Delete】</strong></span></span></strong></strong></span></h5> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>3</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>.添加相关依赖，</strong></span></span></strong></strong></span><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>在pom.xml文件里添加hadoop和junit依赖，添加内容如下：</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>&lt;dependencies&gt;                                        </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;!--hadoop客户端--&gt;                                  </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;dependency&gt;                                      </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;groupId&gt;org.apache.hadoop&lt;/groupId&gt;          </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;artifactId&gt;hadoop-client&lt;/artifactId&gt;        </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;version&gt;3.3.4&lt;/version&gt;                      </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;/dependency&gt;                                     </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;!--单元测试框架--&gt;                                     </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;dependency&gt;                                      </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;groupId&gt;junit&lt;/groupId&gt;                      </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;artifactId&gt;junit&lt;/artifactId&gt;                </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        &lt;version&gt;4.13.2&lt;/version&gt;                     </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    &lt;/dependency&gt;                                     </strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>&lt;/dependencies&gt;         </strong></span></span></strong></strong></span></h5> 
+<p><img alt="" height="842" src="https://images2.imgbox.com/36/01/YBGKYMtk_o.png" width="831"></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>4</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> 刷新本地的maven仓库，如果没有下载，会自动下载依赖到本地：单击【Maven】，单击【刷新】按钮</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>（这个过程需要idea自己下载，过程可能有点慢，耐心等待）</strong></span></span></strong></strong></span><img alt="" height="977" src="https://images2.imgbox.com/7e/33/SjVOx70X_o.png" width="831"></h5> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>5创建日志属性文件</strong></span></strong></strong></span></h5> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">（1）在resources目录里创建log4j.properties文件，右击【resources】，选择【New】，单击【Resource Bundle】</span></span><img alt="" height="939" src="https://images2.imgbox.com/02/8e/1weoe46p_o.png" width="831"></p> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">（2）.在弹出的对话框中输入：log4j，按【OK】按钮，成功创建。</span></span></span><span style="background-color:#ffffff;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">（</span></span></span>我这里已经创建好了，你们自己按照步骤创建即可）</p> 
+<p style="text-align:left;"><img alt="" height="586" src="https://images2.imgbox.com/84/10/AZ4w5mnT_o.png" width="554"></p> 
+<h5 style="text-align:left;">（3）向log4j.properties文件添加如下内容：</h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.rootLogger=INFO, stdout, logfile</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.stdout=org.apache.log4j.ConsoleAppender</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.stdout.layout=org.apache.log4j.PatternLayout</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.stdout.layout.ConversionPattern=%d %p [%c] - %m%n</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.logfile=org.apache.log4j.FileAppender</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.logfile.File=target/topnscore.log</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.logfile.layout=org.apache.log4j.PatternLayout</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>log4j.appender.logfile.layout.ConversionPattern=%d %p [%c] - %m%n</strong></span></span></strong></strong></span><img alt="" height="453" src="https://images2.imgbox.com/90/d2/kxvflM3C_o.png" width="831"></h5> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>6创建前N成绩映射器类：TopNMapper</strong></span></strong></strong></span></h5> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">1.右击【net.army.mr】，选择【New】，单击【Java Class】</span></span></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>2</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>编写代码</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>：</strong></span></span></strong></strong></span></h5> 
+<p><img alt="" height="623" src="https://images2.imgbox.com/49/cb/6r11F3lp_o.png" width="831"></p> 
+<p><img alt="" height="312" src="https://images2.imgbox.com/5e/f3/VvxnirtJ_o.png" width="506"></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>package net.army.mr;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.IntWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.LongWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.NullWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.Text;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.mapreduce.Mapper;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import java.util.TreeMap;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>/**</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 作者：</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>申朝先生</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 日期：202</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>4.4.27</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 功能：前N映射器类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> */</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>public class TopNMapper extends Mapper&lt;LongWritable, Text, NullWritable, IntWritable&gt; {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    private TreeMap&lt;Integer, String&gt; repToRecordMap = new TreeMap&lt;Integer, String&gt;();</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    // &lt;0,10 3 8 7 6 5 1 2 9 4&gt;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    // &lt;xx,11 12 17 14 15 20&gt;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    </strong></span></span></strong></strong></span></h5> 
+<p>@Override<br> public void map(LongWritable key, Text value, Context context) {<!-- --><br>     String line = value.toString();<br>     String[] nums = line.split(" ");<br>     for (String num : nums) {<!-- --><br>         try {<!-- --><br>             if (!num.isEmpty()) {<!-- --><br>                 int numValue = Integer.parseInt(num.trim());<br>                 repToRecordMap.put(numValue, " ");<br>                 if (repToRecordMap.size() &gt; 5) {<!-- --><br>                     repToRecordMap.remove(repToRecordMap.firstKey());<br>                 }<br>             }<br>         } catch (NumberFormatException e) {<!-- --><br>             // 可以记录错误信息或者忽略这个值<br>             System.err.println("无法解析的数字: " + num);<br>         }<br>     }<br> }</p> 
+<p><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>   @Override</strong></span></span></strong></strong></span></p> 
+<p></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    protected void cleanup(Context context) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        for (Integer i : repToRecordMap.keySet()) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            try {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>                context.write(NullWritable.get(), new IntWritable(i));</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            } catch (Exception e) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>                e.printStackTrace();</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>}</strong></span></span></strong></strong></span></h5> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h4 style="text-align:justify;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>7.Reduce阶段实现</strong></span></strong></strong></span></h4> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">编写MapReduce程序运行主类TopNDriver，主要用于设置MapReduce工作任务的相关参数，对HDFS上/topn/input目录下的源文件求前N数据，并将结果输入到HDFS的/topn/output目录下。</span></span></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>（1）创建前N归并器类：TopNReducer</strong></span></strong></strong></span></h5> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">1.右击【net.army.mr】，选择【New】，单击【Java Class】</span></span></p> 
+<p style="text-align:left;"><img alt="" height="623" src="https://images2.imgbox.com/8b/36/AzZ3nPDz_o.png" width="831"></p> 
+<p style="text-align:left;"><img alt="" height="349" src="https://images2.imgbox.com/f0/4d/RfOsGEWC_o.png" width="548"></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>2</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>编写代码</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>：</strong></span></span></strong></strong></span></p> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>package net.army.mr;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.IntWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.NullWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.mapreduce.Reducer;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import java.io.IOException;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import java.util.Comparator;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import java.util.TreeMap;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>/**</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 作者：</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>申朝先生</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 日期：202</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>4.4.27</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 功能：前N归并器类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> */</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>public class TopNReducer extends Reducer&lt;NullWritable, IntWritable, NullWritable, IntWritable&gt; {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    private TreeMap&lt;Integer, String&gt; repToRecordMap = new TreeMap&lt;Integer, String&gt;(new Comparator&lt;Integer&gt;() {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        /**</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         * 谁大排后面</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         *</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         * @param a</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         * @param b</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         * @return 一个整数</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>         */</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        public int compare(Integer a, Integer b) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            return b - a;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    });</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    public void reduce(NullWritable key, Iterable&lt;IntWritable&gt; values, Context context)</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            throws IOException, InterruptedException {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        for (IntWritable value : values) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            repToRecordMap.put(value.get(), " ");</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            if (repToRecordMap.size() &gt; 5) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>                repToRecordMap.remove(repToRecordMap.firstKey());</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        for (Integer i : repToRecordMap.keySet()) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            context.write(NullWritable.get(), new IntWritable(i));</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>}</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"></h5> 
+<p></p> 
+<p></p> 
+<h4 style="text-align:justify;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>8.Driver程序主类实现</strong></span></strong></strong></span></h4> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><a name="t17"></a><strong><span style="color:#4f4f4f;"><strong>（1）创建前N驱动器类：TopNDriver</strong></span></strong></strong></span></h5> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><span style="color:#4d4d4d;">1.右击【net.army.mr】，选择【New】，单击【Java Class】</span></span><img alt="" height="623" src="https://images2.imgbox.com/a6/69/EdiuE9tD_o.png" width="831"></p> 
+<h5 style="text-align:left;"><img alt="" height="282" src="https://images2.imgbox.com/59/30/Ef3zlOhV_o.png" width="486"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>2</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>编写代码</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>：</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>package net.army.mr;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.conf.Configuration;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.fs.FSDataInputStream;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.fs.FileStatus;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.fs.FileSystem;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.fs.Path;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.IOUtils;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.IntWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.io.NullWritable;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.mapreduce.Job;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.mapreduce.lib.input.FileInputFormat;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import org.apache.hadoop.mapreduce.lib.output.FileOutputFormat;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>import java.net.URI;</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>/**</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 作者：</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>申朝先生</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 日期：202</strong></span></span></strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>4.4.27</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> * 功能：前N驱动类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong> */</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>public class TopNDriver {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    public static void main(String[] args) throws Exception {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 创建配置对象</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        Configuration conf = new Configuration();</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置数据节点主机名属性</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        conf.set("dfs.client.use.datanode.hostname", "true");</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 获取作业实例</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        Job job = Job.getInstance(conf);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置作业启动类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setJarByClass(TopNDriver.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置Mapper类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setMapperClass(TopNMapper.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置map任务输出键类型</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setMapOutputKeyClass(NullWritable.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置map任务输出值类型</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setMapOutputValueClass(IntWritable.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置Reducer类</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setReducerClass(TopNReducer.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置reduce任务输出键类型</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setOutputKeyClass(NullWritable.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 设置reduce任务输出值类型</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.setOutputValueClass(IntWritable.class);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 定义uri字符串</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        String uri = "hdfs://master:9000";</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 创建输入目录</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        Path inputPath = new Path(uri + "/topn/input");</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 创建输出目录</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        Path outputPath = new Path(uri + "/topn/output");</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 获取文件系统</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        FileSystem fs = FileSystem.get(new URI(uri), conf);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 删除输出目录</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        fs.delete(outputPath, true);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 给作业添加输入目录</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        FileInputFormat.addInputPath(job, inputPath);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 给作业设置输出目录</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        FileOutputFormat.setOutputPath(job, outputPath);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 等待作业完成</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        job.waitForCompletion(true);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        // 输出统计结果</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        System.out.println("======统计结果======");</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        FileStatus[] fileStatuses = fs.listStatus(outputPath);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        for (int i = 1; i &lt; fileStatuses.length; i++) {<!-- --></strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            // 输出结果文件路径</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            System.out.println(fileStatuses[i].getPath());</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            // 获取文件输入流</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            FSDataInputStream in = fs.open(fileStatuses[i].getPath());</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            // 将结果文件显示在控制台</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>            IOUtils.copyBytes(in, System.out, 4096, false);</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>        }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>    }</strong></span></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>}</strong></span></span></strong></strong></span></h5> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h4 style="text-align:justify;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>9</strong></span></span></strong><strong><span style="color:#4f4f4f;"><strong>运行前N驱动器类，查看结果</strong></span></strong></strong></span></h4> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><a name="t19"></a><strong><span style="color:#4f4f4f;"><strong>（1）运行TopNDriver类，查看结果</strong></span></strong></strong></span><img alt="" height="247" src="https://images2.imgbox.com/69/79/casFR5u4_o.png" width="439"></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="color:#4f4f4f;"><strong>（2）下载结果文件并查看</strong></span></strong></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>进入/export/topn目录，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">cd /export/topn/</span></span></strong></span></h5> 
+<h5 style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>下载文件，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">hdfs dfs -get /topn/output/part-r-00000</span></span></strong></span></h5> 
+<p style="text-align:left;"><span style="background-color:#ffffff;"><strong><strong><span style="background-color:#ffffff;"><span style="color:#4d4d4d;"><strong>查看结果文件，输入命令：</strong></span></span></strong><span style="background-color:#f9f2f4;"><span style="color:#c7254e;">cat part-r-00000</span></span></strong></span><img alt="" height="171" src="https://images2.imgbox.com/c1/db/TuU7YTCa_o.png" width="397"></p> 
+<p style="text-align:left;"></p> 
+<p style="text-align:left;">注意修改这两个地方的代码</p> 
+<p style="text-align:left;"><img alt="" height="976" src="https://images2.imgbox.com/7a/8b/bxeno7FV_o.jpg" width="1080"></p> 
+<p style="text-align:left;"><img alt="" height="717" src="https://images2.imgbox.com/13/33/H03HiQRy_o.jpg" width="1080"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/1b7d6083145377d0cb9d0993115b1246/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Vue3, PC端swagger适配以视频为背景，兼容视频点击播放和滑动切换</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/310889d727ef3555de7efce22a9ef997/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【SQL国际标准】ISO/IEC 9075:2023 系列SQL的国际标准详情</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

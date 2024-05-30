@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>最全的Oracle到高斯数据库的SQL语法迁移手册(建议收藏) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/64ca717427041d21d4877de0be073f31/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="最全的Oracle到高斯数据库的SQL语法迁移手册(建议收藏)">
+  <meta property="og:description" content="Copyright © 2022 PawSQL
+文章目录 概述虚拟表(dual)虚拟表dual 虚拟列虚拟列rownum虚拟列rowid 字符串函数nvl(col, value)nvl2(col, v1, v2)decode(arg1, arg2, arg3, arg4)substr(str, int, int)instr(str1, str2)replace(srcstr, oldsub[, newsub ])stragg(str,[str])listagg(str, [str]) 日期函数sysdate/systimestampto_date(str, fmt)trunc(arg1, [arg2])add_months(date, int)last_day(date) SQL语句HAVING子句顺序括号中的表名UNIQUE关键字MINUS关键字FROM关键字NOLOGGING关键字AS关键字FROM子查询的别名UPDATE语句里的字段名左（右）外连接CONNECT BY子句 操作符的强类型限制数值运算（&#43;,-,*,/,%）日期计算(&#43;,-)字符串拼接(||) 函数参数的强类型限制substr（arg1, arg2, arg3）sum(arg)avg(arg)round(arg) 条件判断中的强类型限制比较运算(=、&gt;、&lt;、&gt;=、&lt;=、&lt;&gt;)BETWEENIN LIST 默认参数to_char(unknown)to_number(str) 关于PawSQL联系我们 概述 异构数据库的迁移（譬如从Oracle迁移到openGauss）工作主要包括三个方面，
+数据库对象的迁移，包括库、模式、表、索引、视图、触发器、存储过程等等；数据内容的迁移，主要指的是数据表中数据嘚迁移；数据应用的迁移，主要指的是应用中SQL语句的迁移。 目前对于数据库对象以及数据内容的迁移有很多成熟的工具，而对于应用迁移的工具却很少能够见到。原因是因为DML语句比DDL复杂的多，不同的数据库语法差异也比较大。目前市场上的迁移工具大多使用正则表达式来解析SQL语句，而DML语句的复杂性导致此类工具的解析成功率较低，难以作为一个成熟地商业产品进行推广。
+PawSQL团队开发的DML语法转换工具Ora2ogSQL，通过PawSQL强大的SQLParser，能够解析几乎所有的Oracle语法，并将其转换为对应的openGauss语法，支持数据库应用的平滑迁移。
+本手册介绍了Oracle和openGauss的语法区别，以及转换映射关系，可以作为迁移人员的SQL迁移参考手册。
+本手册描述了PawSQL Ora2ogSQL内部的实现逻辑，PawSQL Ora2ogSQL能够帮助SQL迁移人员自动识别不兼容的语法，并完成语法转换。
+虚拟表(dual) 虚拟表dual Oracle获取一个常量需要通过一个dual，Opengauss不需要
+编号OracleOpengauss1select 2 from dualselect 2 虚拟列 虚拟列rownum 对于查询返回的每行数据，rownum虚拟列会返回一个数字，第一行的ROWNUM为1，第二行为2，以此类推。
+rownum在select列表中时重写为row_number() over ()rownum在where子句中时重写为limit… offset… 编号OracleOpengauss1select rownum from customer;select row_number() over () as rownum from customer2select tableoid from customer where rownum &lt; 10 and rownum &gt;= 2;select tableoid from customer limit 9 OFFSET 23select c_name from customer where rownum &lt; 10 and c_phone = ‘111’;select customer.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-25T20:45:31+08:00">
+    <meta property="article:modified_time" content="2023-12-25T20:45:31+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">最全的Oracle到高斯数据库的SQL语法迁移手册(建议收藏)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>Copyright © 2022 <a href="https://app.pawslq.com" rel="nofollow">PawSQL</a></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#_3" rel="nofollow">概述</a></li><li><a href="#dual_19" rel="nofollow">虚拟表(dual)</a></li><li><ul><li><a href="#dual_21" rel="nofollow">虚拟表dual</a></li></ul> 
+   </li><li><a href="#_32" rel="nofollow">虚拟列</a></li><li><ul><li><a href="#rownum_34" rel="nofollow">虚拟列rownum</a></li><li><a href="#rowid_48" rel="nofollow">虚拟列rowid</a></li></ul> 
+   </li><li><a href="#_59" rel="nofollow">字符串函数</a></li><li><ul><li><a href="#nvlcol_value_61" rel="nofollow">nvl(col, value)</a></li><li><a href="#nvl2col_v1_v2_72" rel="nofollow">nvl2(col, v1, v2)</a></li><li><a href="#decodearg1_arg2_arg3_arg4_83" rel="nofollow">decode(arg1, arg2, arg3, arg4)</a></li><li><a href="#substrstr_int_int_94" rel="nofollow">substr(str, int, int)</a></li><li><a href="#instrstr1_str2_103" rel="nofollow">instr(str1, str2)</a></li><li><a href="#replacesrcstr_oldsub_newsub__112" rel="nofollow">replace(srcstr, oldsub[, newsub ])</a></li><li><a href="#straggstrstr_121" rel="nofollow">stragg(str,[str])</a></li><li><a href="#listaggstr_str_130" rel="nofollow">listagg(str, [str])</a></li></ul> 
+   </li><li><a href="#_150" rel="nofollow">日期函数</a></li><li><ul><li><a href="#sysdatesystimestamp_152" rel="nofollow">sysdate/systimestamp</a></li><li><a href="#to_datestr_fmt_164" rel="nofollow">to_date(str, fmt)</a></li><li><a href="#truncarg1_arg2_173" rel="nofollow">trunc(arg1, [arg2])</a></li><li><a href="#add_monthsdate_int_188" rel="nofollow">add_months(date, int)</a></li><li><a href="#last_daydate_197" rel="nofollow">last_day(date)</a></li></ul> 
+   </li><li><a href="#SQL_208" rel="nofollow">SQL语句</a></li><li><ul><li><a href="#HAVING_210" rel="nofollow">HAVING子句顺序</a></li><li><a href="#_219" rel="nofollow">括号中的表名</a></li><li><a href="#UNIQUE_229" rel="nofollow">UNIQUE关键字</a></li><li><a href="#MINUS_238" rel="nofollow">MINUS关键字</a></li><li><a href="#FROM_247" rel="nofollow">FROM关键字</a></li><li><a href="#NOLOGGING_256" rel="nofollow">NOLOGGING关键字</a></li><li><a href="#AS_265" rel="nofollow">AS关键字</a></li><li><a href="#FROM_274" rel="nofollow">FROM子查询的别名</a></li><li><a href="#UPDATE_283" rel="nofollow">UPDATE语句里的字段名</a></li><li><a href="#_292" rel="nofollow">左（右）外连接</a></li><li><a href="#CONNECT_BY_301" rel="nofollow">CONNECT BY子句</a></li></ul> 
+   </li><li><a href="#_312" rel="nofollow">操作符的强类型限制</a></li><li><ul><li><a href="#_327" rel="nofollow">数值运算（+,-,*,/,%）</a></li><li><a href="#_338" rel="nofollow">日期计算(+,-)</a></li><li><a href="#_348" rel="nofollow">字符串拼接(||)</a></li></ul> 
+   </li><li><a href="#_357" rel="nofollow">函数参数的强类型限制</a></li><li><ul><li><a href="#substrarg1_arg2_arg3_361" rel="nofollow">substr（arg1, arg2, arg3）</a></li><li><a href="#sumarg_368" rel="nofollow">sum(arg)</a></li><li><a href="#avgarg_376" rel="nofollow">avg(arg)</a></li><li><a href="#roundarg_383" rel="nofollow">round(arg)</a></li></ul> 
+   </li><li><a href="#_392" rel="nofollow">条件判断中的强类型限制</a></li><li><ul><li><a href="#_396" rel="nofollow">比较运算(=、&gt;、&lt;、&gt;=、&lt;=、&lt;&gt;)</a></li><li><a href="#BETWEEN_406" rel="nofollow">BETWEEN</a></li><li><a href="#IN_LIST_415" rel="nofollow">IN LIST</a></li></ul> 
+   </li><li><a href="#_426" rel="nofollow">默认参数</a></li><li><ul><li><a href="#to_charunknown_430" rel="nofollow">to_char(unknown)</a></li><li><a href="#to_numberstr_437" rel="nofollow">to_number(str)</a></li></ul> 
+   </li><li><a href="#PawSQL_446" rel="nofollow">关于PawSQL</a></li><li><ul><li><a href="#_455" rel="nofollow">联系我们</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="_3"></a>概述</h3> 
+<p>异构数据库的迁移（譬如从Oracle迁移到openGauss）工作主要包括三个方面，</p> 
+<ul><li>数据库对象的迁移，包括库、模式、表、索引、视图、触发器、存储过程等等；</li><li>数据内容的迁移，主要指的是数据表中数据嘚迁移；</li><li>数据应用的迁移，主要指的是应用中SQL语句的迁移。</li></ul> 
+<p>目前对于数据库对象以及数据内容的迁移有很多成熟的工具，而对于应用迁移的工具却很少能够见到。原因是因为DML语句比DDL复杂的多，不同的数据库语法差异也比较大。目前市场上的迁移工具大多使用正则表达式来解析SQL语句，而DML语句的复杂性导致此类工具的解析成功率较低，难以作为一个成熟地商业产品进行推广。</p> 
+<p>PawSQL团队开发的DML语法转换工具Ora2ogSQL，通过PawSQL强大的SQLParser，能够解析几乎所有的Oracle语法，并将其转换为对应的openGauss语法，支持数据库应用的平滑迁移。</p> 
+<blockquote> 
+ <p>本手册介绍了Oracle和openGauss的语法区别，以及转换映射关系，可以作为迁移人员的SQL迁移参考手册。</p> 
+ <p>本手册描述了PawSQL Ora2ogSQL内部的实现逻辑，PawSQL Ora2ogSQL能够帮助SQL迁移人员自动识别不兼容的语法，并完成语法转换。</p> 
+</blockquote> 
+<h3><a id="dual_19"></a>虚拟表(dual)</h3> 
+<h4><a id="dual_21"></a>虚拟表dual</h4> 
+<p>Oracle获取一个常量需要通过一个dual，Opengauss不需要</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select 2 from dual</td><td>select 2</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h3><a id="_32"></a>虚拟列</h3> 
+<h4><a id="rownum_34"></a>虚拟列rownum</h4> 
+<p>对于查询返回的每行数据，rownum虚拟列会返回一个数字，第一行的ROWNUM为1，第二行为2，以此类推。</p> 
+<ul><li>rownum在select列表中时重写为row_number() over ()</li><li>rownum在where子句中时重写为limit… offset…</li></ul> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>rownum</strong> from customer;</td><td>select <strong>row_number() over () as rownum</strong> from customer</td></tr><tr><td>2</td><td>select tableoid from customer where <strong>rownum &lt; 10 and rownum &gt;= 2</strong>;</td><td>select tableoid from customer <strong>limit 9 OFFSET 2</strong></td></tr><tr><td>3</td><td>select c_name from customer where <strong>rownum &lt; 10</strong> and c_phone = ‘111’;</td><td>select customer.c_name from customer where customer.c_phone = ‘111’ <strong>limit 9</strong></td></tr><tr><td>4</td><td>select * from customer where <strong>rownum between 1 and 10</strong>;</td><td>select tableoid from customer <strong>limit 10 OFFSET 0</strong></td></tr></tbody></table> 
+<h4><a id="rowid_48"></a>虚拟列rowid</h4> 
+<p>Oracle中的rowid虚拟列返回特定行的具体地址，在Opengauss中重写为<code>tableoid || '#' || ctid</code></p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>rowid</strong>, c.* from customer c;</td><td>select tableoid || ‘#’ || ctid, c.* from customer as c</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h3><a id="_59"></a>字符串函数</h3> 
+<h4><a id="nvlcol_value_61"></a>nvl(col, value)</h4> 
+<p>Oracle中的nvl(col, value)用来设置默认值，col为空就设置为value；</p> 
+<p>在Opengauss中重写为coalesce</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>nvl(c_phone, 1)</strong> from customer;</td><td>select <strong>coalesce(customer.c_phone, ‘1’)</strong> from customer</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="nvl2col_v1_v2_72"></a>nvl2(col, v1, v2)</h4> 
+<p>nvl2对col的null值进行处理，如果col为null，则返回v1, 否则返回v2；</p> 
+<p>postgre中没有类似的函数，可以重写为case… when…</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>nvl2(c_phone, 1, 2)</strong> from customer;</td><td>select <strong>case when c_phone is null then 1 else 2 end</strong> from customer</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="decodearg1_arg2_arg3_arg4_83"></a>decode(arg1, arg2, arg3, arg4)</h4> 
+<p>Oracle中的decode(arg1, arg2, arg3, arg4)函数， 表示当 arg1 等于 arg2 时，取 arg3，否则取 arg4。</p> 
+<p>postgre中没有类似的函数，可以重写为case… when…</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>decode(c_phone,‘110’, 1 , 2)</strong> from customer;</td><td>select <strong>case when c_phone = ‘110’ then 1 else 2 end</strong> from customer</td></tr><tr><td>2</td><td>select <strong>decode(c_phone,null, 1 , 2)</strong> from customer;</td><td>select <strong>case when c_phone is null then 1 else 2 end</strong> from customer</td></tr></tbody></table> 
+<h4><a id="substrstr_int_int_94"></a>substr(str, int, int)</h4> 
+<p>Oracle中的substr用来取一个字符串的子串，Opengauss有同名的函数实现类似功能。不同的是Oracle中，第二、第三个参数可以为负数，代表从后面进行计数，Opengauss不允许其为负数，需对其进行转换。Oracle中是以0开始计数，Opengauss以1开始计数（需确认）。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select substr(c_phone, 1 , <strong>-2</strong> ) from customer;</td><td>select substr(c_phone, 1, <strong>length(c_phone) - 2)</strong> from customer</td></tr><tr><td>2</td><td>select substr(c_phone, <strong>-3</strong> , 1 ) from customer;</td><td>select substr(c_phone, <strong>length(c_phone) - 3</strong>, 1) from customer</td></tr></tbody></table> 
+<h4><a id="instrstr1_str2_103"></a>instr(str1, str2)</h4> 
+<p>Oracle中的instr用来取一个字符串的子串位置，当其只有两个参数时，表示子串的第一次出现的位置，和Opengauss中对应的函数为strpos。当其有多个参数时，无对应函数。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>instr(‘123’, ‘23’)</strong></td><td>select strpos(‘123’, ‘23’)</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="replacesrcstr_oldsub_newsub__112"></a>replace(srcstr, oldsub[, newsub ])</h4> 
+<p>在Oracle中，replace()函数用于替换字符串, <em>replace</em>(srcstr, oldsub[, newsub ] )，和Opengauss中的replace函数用法基本一致。只是需要注意在Oracle中无第三个参数时，代表删除此字符，在Opengauss可将第三个参数设置为’'。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>replace(‘123’,‘1’);</strong></td><td>select <strong>replace(‘123’,‘1’,‘’);</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="straggstrstr_121"></a>stragg(str,[str])</h4> 
+<p>Oracle里的stragg函数实现在分组内对列值的拼接，它和listagg类似，但是不可以指定拼接的顺序。在Opengauss中，可以使用string_agg函数来替换。其第二个参数可选，默认值为’'，在Opengauss需补充第二个参数。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>listagg</strong>(c_name,‘,’) as name from customer group by c_phone</td><td>select <strong>string_agg</strong>(c_name,‘,’) as name from customer group by c_phone</td></tr><tr><td>2</td><td>select <strong>listagg</strong>(c_name) as name from customer group by c_phone</td><td>select <strong>listagg</strong>(c_name,‘’) as name from customer group by c_phone</td></tr></tbody></table> 
+<h4><a id="listaggstr_str_130"></a>listagg(str, [str])</h4> 
+<p>Oracle里的listagg函数实现对列值的拼接，它可以在分组内以指定顺序对非分组列进行拼接。在Opengauss中，可以使用string_agg函数来实现，需注意语法方面也有区别. 另外，其第二个参数可选，默认值为’'，在Opengauss需补充第二个参数。</p> 
+<ul><li> <p>当没有group by子句时，可以使用over（partiton by… order by…）进行替换</p> </li><li> <p>当指定group by子句时，它的重写算法比较复杂</p> 
+  <ul><li>如果需要保持拼接的顺序，需要通过子查询来实现（见编号2）</li><li>如果不需要保持拼接顺序，可以把它转化为简单的聚集函数（编号3）</li></ul> </li></ul> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>listagg</strong>(c_name,‘,’) <strong>within</strong> <strong>group</strong>(<strong>order</strong> <strong>by</strong> c_name) <strong>over</strong> (<strong>partition</strong> <strong>by</strong> c_phone) as name from customer;</td><td>sselect <strong>string_agg</strong>(customer.c_name, ‘,’) <strong>over (partition by customer.c_phone order by c_custkey)</strong> as name from customer</td></tr><tr><td>2</td><td>select listagg(c_name,‘,’) within group(order by c_name) as name from customer group by c_phone;</td><td>select max(paw_dt.name) as name from (select <strong>string_agg(customer.c_name, ‘,’) over (partition by customer.c_phone order by c_name)</strong> as name,<br> customer.c_phone<br> from customer) as paw_dt<br> group by c_phone</td></tr><tr><td>3</td><td>select <strong>listagg</strong>(c_name,‘,’) <strong>within group(order by c_name)</strong> as name from customer group by c_phone</td><td>select <strong>string_agg</strong>(c_name,‘,’) as name from customer group by c_phone</td></tr></tbody></table> 
+<h3><a id="_150"></a>日期函数</h3> 
+<h4><a id="sysdatesystimestamp_152"></a>sysdate/systimestamp</h4> 
+<p>Oracle中的sysdate()/sysdate返回系统当前时间(日期+时分秒)，在Opengauss中对应now()或是current_timestamp（日期+时分秒+毫秒）。</p> 
+<p>Oracle中的systimestamp返回系统当前时间戳（日期+时分秒+毫秒），在Opengauss中对应now()或是current_timestamp。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>sysdate</strong></td><td>select <strong>current_timestamp</strong></td></tr><tr><td>2</td><td>select <strong>sysdate()</strong></td><td>select <strong>now()</strong></td></tr><tr><td>3</td><td>select <strong>systimestamp</strong></td><td>select <strong>current_timestamp</strong></td></tr></tbody></table> 
+<h4><a id="to_datestr_fmt_164"></a>to_date(str, fmt)</h4> 
+<p>Oracle中的to_date返回的是时间类型，而在Opengauss中to_date是日期类型，所以Oracle中的to_date在Opengauss中应该对应to_timestamp</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>to_date( endTime ,‘yyyy-mm-dd hh24:mi:ss’)</strong> from t</td><td>select <strong>to_timestamp( endTime ,‘yyyy-mm-dd hh24:mi:ss’)</strong> from t</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="truncarg1_arg2_173"></a>trunc(arg1, [arg2])</h4> 
+<p>在Oracle中trunc函数有两种用法</p> 
+<ul><li> <p>第一种是对数字进行截取, trunc(num,[int]); 是去掉数字num小数位以后的部分，并且不进行四舍五入。这种用法和在Opengauss的trunc用法一致，不需要转换</p> </li><li> <p>trunc函数的第二种用法是对日期进行提取，trunc(date,[fmt])。这种用法在Opengauss对应的函数是date_trunc(fmt, date)，需注意在Opengauss中fmt是第一个参数，且不可省略。</p> </li></ul> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>trunc( 111.23,2)</strong></td><td>select <strong>trunc( 111.23,2)</strong></td></tr><tr><td>2</td><td>select <strong>trunc(sysdate,‘year’)</strong></td><td>select <strong>date_trunc(‘year’, current_timestamp)</strong></td></tr><tr><td>3</td><td>select <strong>trunc(sysdate)</strong></td><td>select <strong>date_trunc(‘dd’, current_timestamp)</strong></td></tr></tbody></table> 
+<h4><a id="add_monthsdate_int_188"></a>add_months(date, int)</h4> 
+<p>Oracle中的add_months 函数主要是对日期函数进行操作，对日期按月增加。在Opengauss没有对应的函数，需将其转化为基于日期和interval的运算。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>add_months</strong>(sysdate, 2)</td><td>select current_timestamp + <strong>2 * interval ‘1 month’</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="last_daydate_197"></a>last_day(date)</h4> 
+<p>Oracle中的last_day返回指定日期所在月份的最后一天; 在Opengauss没有对应的函数，需将其转化为基于日期和interval的运算。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>add_months</strong>(sysdate, 2)</td><td>select <strong>cast</strong>(<strong>date_trunc(‘MONTH’</strong>, current_timestamp) <strong>+ interval ‘1 MONTH - 1 DAY’</strong> as date)</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h3><a id="SQL_208"></a>SQL语句</h3> 
+<h4><a id="HAVING_210"></a>HAVING子句顺序</h4> 
+<p>Oracle允许HAVING在GROUP BY子句之前或之后。在Opengauss中，HAVING子句必须出现在GROUP BY子句后面。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select c_name from customer <strong>having count(*) &gt; 2</strong> group by c_name</td><td>select c_name from customer group by c_name <strong>having count(*) &gt; 2</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="_219"></a>括号中的表名</h4> 
+<p>Oracle中单表引用允许使用括号括起来，Opengauss不允许。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>SELECT * FROM (CUSTOMER);</td><td>SELECT * FROM CUSTOMER;</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="UNIQUE_229"></a>UNIQUE关键字</h4> 
+<p>Oracle中允许使用UNIQUE进行去重，在Opengauss中迁移为DISTINCT关键字</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>unique</strong> c_phone from customer</td><td>select distinct customer.c_phone from customer</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="MINUS_238"></a>MINUS关键字</h4> 
+<p>Oracle中可以使用minus关键字来取两个结果集的差，在Opengauss中需迁移为except.</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select c_custkey from customer <strong>minus</strong> select o_custkey from orders</td><td>select c_custkey from customer <strong>except</strong> select o_custkey from orders</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="FROM_247"></a>FROM关键字</h4> 
+<p>Oracle的delete语句的FROM关键字可以省略，迁移至Opengauss需补充上。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>delete customer where 1=0;</td><td>delete <strong>from</strong> customer where 1 = 0</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="NOLOGGING_256"></a>NOLOGGING关键字</h4> 
+<p>Oracle在执行INSERT语句时，可以通过指定NOLOGGING关键字来减少日志记录，提升操作性能。Opengauss不支持此关键字。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>insert into customer <strong>nologging</strong> select * from customer_bk;</td><td>insert into customer select * from customer_bk;</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="AS_265"></a>AS关键字</h4> 
+<p>INSERT INTO 后面不需要添加as关键字，<code>insert into ... as select...</code> 修改为<code>insert into... select...</code></p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>insert into t <strong>as</strong> select c1 from t1</td><td>insert into t select c1 from t1</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="FROM_274"></a>FROM子查询的别名</h4> 
+<p>Oracle中在不引起歧义的情况下子查询可以不带别名，而在Opengauss中，所有的FROM子查询都必须带有别名</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select * from (select * from CUSTOMER)</td><td>select * from (select * from CUSTOMER) <strong>as foo</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="UPDATE_283"></a>UPDATE语句里的字段名</h4> 
+<p>在Opengauss中，Update的时候，更新列不允许添加表名前缀。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>update customer c set <strong>c.c_name</strong> = ‘xxx’ where c_custkey = 1;</td><td>update customer set <strong>c_name</strong> = ‘xxx’ where c_custkey = 1</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="_292"></a>左（右）外连接</h4> 
+<p>在Oracle中，外连接可以通过在条件上添加(+)来定义， 连接符（+）跟在哪个条件后面就是哪张表被左连。在Opengauss中，需将其重写为标准的外连接语法。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select * from customer, orders where <strong>c_custkey = o_custkey(+)</strong></td><td>select * from customer <strong>left outer join</strong> orders on <strong>c_custkey = o_custkey</strong></td></tr><tr><td>2</td><td>select * from customer, orders where <strong>c_custkey(+)</strong> = o_custkey and <strong>c_name(+)</strong> = o.o_clerk and o_custkey&gt;100</td><td>select * fromcustomer <strong>right outer join</strong> orders on (<strong>c_custkey = o_custkey and c_name = o_clerk</strong>) where o_custkey &gt; 100</td></tr></tbody></table> 
+<h4><a id="CONNECT_BY_301"></a>CONNECT BY子句</h4> 
+<p>Oracle中，CONNECT BY 用于存在上下级等层级关系的数据表进行递归查询。语法格式: <em>START WITH condition1 CONNECT BY [ NOCYCLE ] condition2</em>。在Opengauss通过Recursive Common Table Expression来实现此功能，主要是把START WITH… CONNECT BY Prior拆成两个部分，查询表一致，但条件不一致，用UNION ALL合并.</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select id from city_branch <strong>start with</strong> id=rolebranchid <strong>connect by prior</strong> id=parent_id;</td><td>with <strong>RECURSIVE MIG_CTE</strong> as (<br>select id, 1 as level from city_branch where id = rolebranchid <br> <strong>union all</strong> <br>select id, level + 1 from city_branch, MIG_CTE where MIG_CTE.id = parent_id)<br><strong>select * from MIG_CTE</strong></td></tr><tr><td>2</td><td>select t.branch_level, t.id from city_branch c where (c.branch_level = ‘1’ or t.branch_level = ‘2’) and (t.sign = ‘1’ or t.sign = ‘4’ or t.sign = ‘8’) and t.status = ‘1’ <strong>start with</strong> c.id = i_branch_id <strong>connect by</strong> c.id = <strong>prior</strong> c.parent_id order by c.branch_level desc</td><td>with <strong>RECURSIVE MIG_CTE</strong> as<br> (select t.branch_level, t.id, 1 as level from city_branch as cwhere ((((branch_level = ‘1’ or t.branch_level = ‘2’)and ((t.sign = ‘1’ or t.sign = ‘4’) or t.sign = ‘8’)) and t.status = ‘1’) and c.id = i_branch_id) <br><strong>union all</strong> <br>select t.branch_level, t.id, level + 1 from city_branch as c, MIG_CTE where ((((branch_level = ‘1’ or t.branch_level = ‘2’) and ((t.sign = ‘1’ or t.sign = ‘4’) or t.sign = ‘8’)) and t.status = ‘1’) and c.id = MIG_CTE.parent_id))<br><strong>select * from MIG_CTE order by MIG_CTE.branch_level desc</strong></td></tr></tbody></table> 
+<h3><a id="_312"></a>操作符的强类型限制</h3> 
+<p>Oracle中不同类型进行基于操作符的运算，会自动转化类型，譬如<code>select 1 + '1' from dual</code>。Opengauss是强类型，不同类型的运算会提示类型不匹配，执行<code>select 1 + '1'</code>会报错，需要进行显式的类型转换。</p> 
+<p>涉及的操作符类型包括：</p> 
+<table><thead><tr><th>操作符</th><th>操作符名称</th></tr></thead><tbody><tr><td>+</td><td>加法</td></tr><tr><td>-</td><td>减法</td></tr><tr><td>/</td><td>除法</td></tr><tr><td>%</td><td>取余</td></tr><tr><td>*</td><td>乘法</td></tr><tr><td>||</td><td>字符串拼接</td></tr></tbody></table> 
+<h4><a id="_327"></a>数值运算（+,-,*,/,%）</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select 1 + <strong>‘1’</strong></td><td>select 1 + <strong>1</strong></td></tr><tr><td>2</td><td>select 1 + <strong>charCol</strong> from tbl</td><td>select 1 + <strong>cast(charCol as numeric)</strong> from tbl</td></tr><tr><td>3</td><td>select <strong>‘1’</strong> - 1</td><td>select <strong>1</strong>- 1</td></tr><tr><td>4</td><td>select 1 * <strong>charCol</strong> from tbl</td><td>select 1 * **cast(charCol as numeric) ** from tbl</td></tr><tr><td>5</td><td>select 1 / <strong>charCol</strong> from tbl</td><td>select 1 /<strong>cast(charCol as numeric)</strong> from tbl</td></tr><tr><td>6</td><td>select <strong>charCol</strong> % 2 from tbl</td><td>select <strong>cast(charCol as numeric)</strong> % 2 from tbl</td></tr></tbody></table> 
+<h4><a id="_338"></a>日期计算(+,-)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select sysdate <strong>- 1</strong></td><td>select current_timestamp <strong>- interval ‘1’ DAY</strong></td></tr><tr><td>2</td><td>select 1 + sysdate()</td><td>select <strong>interval ‘1’ DAY</strong> + now()</td></tr><tr><td>3</td><td>select systimestamp <strong>+1</strong></td><td>select current_timestamp <strong>+ interval ‘1’ DAY</strong></td></tr><tr><td>4</td><td>select systimestamp <strong>- 1</strong></td><td>select current_timestamp <strong>- interval ‘1’ DAY</strong></td></tr></tbody></table> 
+<h4><a id="_348"></a>字符串拼接(||)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>1||1</strong></td><td>select <strong>‘1’||‘1’</strong></td></tr><tr><td>2</td><td>select 1 || c_custkey</td><td>select 1 || <strong>cast(c_custkey as text)</strong></td></tr></tbody></table> 
+<h3><a id="_357"></a>函数参数的强类型限制</h3> 
+<p>Oracle中在函数调用时，参数类型进行会自动转化类型，譬如 <code>select substr(123.12,0,2)</code>是合法的，且返回<code>123</code>。Opengauss是强类型， 执行<code>select substr(123.12,0,2)</code>会报错，需要进行显式的类型转换。</p> 
+<h4><a id="substrarg1_arg2_arg3_361"></a>substr（arg1, arg2, arg3）</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select substr(<strong>1234.1</strong>, 0, 4)</td><td>select substr(<strong>‘1234.1’</strong>, 1, 4+1)</td></tr><tr><td>2</td><td>select substr(‘1234.1’, 0, <strong>‘2’</strong>)</td><td>select substr(‘1234.1’, 0, <strong>2</strong>)</td></tr></tbody></table> 
+<h4><a id="sumarg_368"></a>sum(arg)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>sum(‘2’)</strong></td><td>select <strong>sum(2)</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="avgarg_376"></a>avg(arg)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>avg(‘2’)</strong></td><td>select <strong>avg(2)</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="roundarg_383"></a>round(arg)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>round(‘2’)</strong></td><td>select <strong>round(2)</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h3><a id="_392"></a>条件判断中的强类型限制</h3> 
+<p>Oracle中在进行条件判断时，左右表达式的类型进行会自动转化，譬如 <code>where c_phone = 110</code>是合法的。Opengauss是强类型， 执行<code>where c_phone = 110</code>会报错，需要进行显式的类型转换。</p> 
+<h4><a id="_396"></a>比较运算(=、&gt;、&lt;、&gt;=、&lt;=、&lt;&gt;)</h4> 
+<p>转换原则，优先转换常量类型；当两个都为数据列时，优先转换左边的。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select * from customer where <strong>c_phone = 110</strong></td><td>select * from customer where <strong>c_phone = ‘110’</strong></td></tr><tr><td>2</td><td>select * from customer where <strong>‘1’ = c_custkey</strong></td><td>select * from customer where <strong>1 = c_custkey</strong></td></tr><tr><td>3</td><td>select * from customer where <strong>c_phone = c_custkey</strong></td><td>select * from customer where <strong>cast(c_phone as int) = c_custkey</strong></td></tr></tbody></table> 
+<h4><a id="BETWEEN_406"></a>BETWEEN</h4> 
+<p>转换原则，转换 var0 between var1 and var2 中的 var1, var2。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select * from customer where c_custkey <strong>between ‘100’ and ‘200’;</strong></td><td>select * from customer where c_custkey <strong>between 100 and 200</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="IN_LIST_415"></a>IN LIST</h4> 
+<p>转换原则，转换List中的变量。</p> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select * from customer where <strong>c_phone in (110,120)</strong>;</td><td>select * from customer where <strong>c_phone in (‘110’, ‘120’)</strong></td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h3><a id="_426"></a>默认参数</h3> 
+<p>Oracle中有部分函数存在默认参数，而在Opengauss其参数是必填项。</p> 
+<h4><a id="to_charunknown_430"></a>to_char(unknown)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>to_char(c_custkey)</strong> from customer</td><td>select <strong>cast(c_custkey as text)</strong> from customer</td></tr><tr><td></td><td></td><td></td></tr></tbody></table> 
+<h4><a id="to_numberstr_437"></a>to_number(str)</h4> 
+<table><thead><tr><th>编号</th><th>Oracle</th><th>Opengauss</th></tr></thead><tbody><tr><td>1</td><td>select <strong>to_number(‘100’)</strong></td><td>select <strong>100</strong></td></tr><tr><td>2</td><td>select <strong>to_number(c_phone)</strong> from customer;</td><td>select <strong>cast(c_phone as numeric)</strong> from customer</td></tr></tbody></table> 
+<h3><a id="PawSQL_446"></a>关于PawSQL</h3> 
+<p>PawSQL专注数据库性能优化的自动化和智能化，支持MySQL，PostgreSQL，openGauss，Oracle等，提供的SQL优化产品包括</p> 
+<ul><li><a href="https://app.pawsql.com" rel="nofollow">PawSQL Cloud</a>，在线自动化SQL优化工具，支持SQL审查，智能查询重写、基于代价的索引推荐，适用于数据库管理员及数据应用开发人员，</li><li><a href="https://plugins.jetbrains.com/plugin/19660-pawsql-advisor" rel="nofollow">PawSQL Advisor</a>，IntelliJ 插件, 适用于数据应用开发人员，可以IDEA/DataGrip应用市场通过名称搜索“PawSQL Advisor”安装。</li><li>PawSQL Engine, 是PawSQL系列产品的后端优化引擎，可以独立安装部署，并通过http/json的接口提供SQL优化服务。PawSQL Engine以docker镜像的方式提供部署安装。</li><li>PawSQL Ora2pgSQL/PawsQL Ora2ogSQL，Oracle语法的SQL应用转换为PostgreSQL和openGauss语法的工具。</li></ul> 
+<h4><a id="_455"></a>联系我们</h4> 
+<p>邮件：<a href="/cdn-cgi/l/email-protection#7c0f190e0a151f195a5f4a48470c1d0b0f0d10521f1311" rel="nofollow">service@pawsql.com</a></p> 
+<p>Twitter: https://twitter.com/pawsql</p> 
+<p>扫描关注PawSQL公众号<img src="https://images2.imgbox.com/18/e5/FCsmZAgl_o.jpg" alt="PawSQL"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b2430cf8ff108e79909e64e7de18de0e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据结构 实验 家族族谱项目</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b0baca99bed965f4265db1f4eda3dbc7/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Stable Diffusion API入门：简明教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

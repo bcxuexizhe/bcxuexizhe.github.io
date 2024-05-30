@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AI大模型探索之路-训练篇23：ChatGLM3微调实战-基于P-Tuning V2技术的实践指南 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0cce18451f9c118345a0f59a464104ac/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="AI大模型探索之路-训练篇23：ChatGLM3微调实战-基于P-Tuning V2技术的实践指南">
+  <meta property="og:description" content="系列篇章💥 AI大模型探索之路-训练篇1：大语言模型微调基础认知
+AI大模型探索之路-训练篇2：大语言模型预训练基础认知
+AI大模型探索之路-训练篇3：大语言模型全景解读
+AI大模型探索之路-训练篇4：大语言模型训练数据集概览
+AI大模型探索之路-训练篇5：大语言模型预训练数据准备-词元化
+AI大模型探索之路-训练篇6：大语言模型预训练数据准备-预处理
+AI大模型探索之路-训练篇7：大语言模型Transformer库之HuggingFace介绍
+AI大模型探索之路-训练篇8：大语言模型Transformer库-预训练流程编码体验
+AI大模型探索之路-训练篇9：大语言模型Transformer库-Pipeline组件实践
+AI大模型探索之路-训练篇10：大语言模型Transformer库-Tokenizer组件实践
+AI大模型探索之路-训练篇11：大语言模型Transformer库-Model组件实践
+AI大模型探索之路-训练篇12：语言模型Transformer库-Datasets组件实践
+AI大模型探索之路-训练篇13：大语言模型Transformer库-Evaluate组件实践
+AI大模型探索之路-训练篇14：大语言模型Transformer库-Trainer组件实践
+AI大模型探索之路-训练篇15：大语言模型预训练之全量参数微调
+AI大模型探索之路-训练篇16：大语言模型预训练-微调技术之LoRA
+AI大模型探索之路-训练篇17：大语言模型预训练-微调技术之QLoRA
+AI大模型探索之路-训练篇18：大语言模型预训练-微调技术之Prompt Tuning
+AI大模型探索之路-训练篇19：大语言模型预训练-微调技术之Prefix Tuning
+AI大模型探索之路-训练篇20：大语言模型预训练-常见微调技术对比
+AI大模型探索之路-训练篇21：Llama2微调实战-LoRA技术微调步骤详解
+AI大模型探索之路-训练篇22： ChatGLM3微调实战-从原理到应用的LoRA技术全解
+目录 系列篇章💥前言一、服务器资源准备二、下载ChatGLM3工程1、下载工程2、安装相关依赖1）使用conda创建微调的虚拟环境2）安装ChatGLM3依赖3）安装微调依赖 三、下载ChatGLM3模型1、安装git-lfs2、执行：git lfs install3、下载模型（模型权重相关文件）4、检查权重文件 四、下载数据集1、数据集下载2、数据格式转化3、数据格式检查 五、微调脚本说明1、脚本说明（finetune_demo）2、配置说明 六、模型微调1、模型微调2、从保存点进行微调 七、推理验证1、修改模型地址2、开始模型推理 总结 前言 在人工智能的广阔领域里，大语言模型（LLMs）的微调技术扮演着至关重要的角色。它不仅为模型注入了适应特定任务的能力，而且还是通往专业领域的关键。本文旨在深入探讨基于P-Tuning V2技术的ChatGLM3微调流程，这是一种将因果语言模型与对话优化相结合的优秀实践，我们希望借此引领读者深入了解大模型微调的内涵。
+在上文中，我们详细介绍了基于LoRA技术微调ChatGLM3的操作过程。而本文将重点展示基于P-Tuning V2技术的微调过程。我们将采用GLM官方在github上提供的微调脚本进行高效微调，向大家展示一种更为简单便捷的微调方法。
+一、服务器资源准备 首先，服务器资源准备是微调工作的基础。根据官方提供的显存占用说明，我们需配置相应数量的显卡资源。P-TuningV2微调所需的显存相对较少，仅需1张显卡即可展开工作。
+以下是官方提供的显存的占用情况说明：
+1)SFT 全量微调: 4张显卡平均分配，每张显卡占用 48346MiB 显存。
+2)P-TuningV2 微调: 1张显卡，占用 18426MiB 显存。
+3)LORA 微调: 1张显卡，占用 14082MiB 显存。
+请注意，该结果仅供参考，对于不同的参数，显存占用可能会有所不同。请结合你的硬件情况进行调整。
+二、下载ChatGLM3工程 接下来，克隆ChatGLM3工程并安装相关依赖，这一系列动作将构建起我们微调工作的基本环境。
+1、下载工程 从github地址中下在ChatGLM3工程，工程中包含了很多测试的demo样例，包括微调样例
+git clone https://github.com/THUDM/ChatGLM3.git 2、安装相关依赖 1）使用conda创建微调的虚拟环境 #创建虚拟环境 conda create -n ChatGLM3-6b-finetunning python=3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-15T19:20:43+08:00">
+    <meta property="article:modified_time" content="2024-05-15T19:20:43+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">AI大模型探索之路-训练篇23：ChatGLM3微调实战-基于P-Tuning V2技术的实践指南</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="_2"></a>系列篇章💥</h2> 
+<p><a href="https://xundaomalu.blog.csdn.net/article/details/138107946" rel="nofollow">AI大模型探索之路-训练篇1：大语言模型微调基础认知</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138143923" rel="nofollow">AI大模型探索之路-训练篇2：大语言模型预训练基础认知</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138161057" rel="nofollow">AI大模型探索之路-训练篇3：大语言模型全景解读</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138205204" rel="nofollow">AI大模型探索之路-训练篇4：大语言模型训练数据集概览</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138225299" rel="nofollow">AI大模型探索之路-训练篇5：大语言模型预训练数据准备-词元化</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138267915" rel="nofollow">AI大模型探索之路-训练篇6：大语言模型预训练数据准备-预处理</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138294519" rel="nofollow">AI大模型探索之路-训练篇7：大语言模型Transformer库之HuggingFace介绍</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138348834" rel="nofollow">AI大模型探索之路-训练篇8：大语言模型Transformer库-预训练流程编码体验</a><br> <a href="https://blog.csdn.net/xiaobing259/article/details/138373677">AI大模型探索之路-训练篇9：大语言模型Transformer库-Pipeline组件实践</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138391592" rel="nofollow">AI大模型探索之路-训练篇10：大语言模型Transformer库-Tokenizer组件实践</a><br> <a href="https://blog.csdn.net/xiaobing259/article/details/138424867">AI大模型探索之路-训练篇11：大语言模型Transformer库-Model组件实践</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138426216" rel="nofollow">AI大模型探索之路-训练篇12：语言模型Transformer库-Datasets组件实践</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138448172" rel="nofollow">AI大模型探索之路-训练篇13：大语言模型Transformer库-Evaluate组件实践</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138448511" rel="nofollow">AI大模型探索之路-训练篇14：大语言模型Transformer库-Trainer组件实践</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138472105" rel="nofollow">AI大模型探索之路-训练篇15：大语言模型预训练之全量参数微调</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138518728" rel="nofollow">AI大模型探索之路-训练篇16：大语言模型预训练-微调技术之LoRA</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138555530" rel="nofollow">AI大模型探索之路-训练篇17：大语言模型预训练-微调技术之QLoRA</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138595171" rel="nofollow">AI大模型探索之路-训练篇18：大语言模型预训练-微调技术之Prompt Tuning</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138631718" rel="nofollow">AI大模型探索之路-训练篇19：大语言模型预训练-微调技术之Prefix Tuning</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138604711" rel="nofollow">AI大模型探索之路-训练篇20：大语言模型预训练-常见微调技术对比</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138763708" rel="nofollow">AI大模型探索之路-训练篇21：Llama2微调实战-LoRA技术微调步骤详解</a><br> <a href="https://xundaomalu.blog.csdn.net/article/details/138792983" rel="nofollow">AI大模型探索之路-训练篇22： ChatGLM3微调实战-从原理到应用的LoRA技术全解</a></p> 
+<hr> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#_2" rel="nofollow">系列篇章💥</a></li><li><a href="#_31" rel="nofollow">前言</a></li><li><a href="#_35" rel="nofollow">一、服务器资源准备</a></li><li><a href="#ChatGLM3_42" rel="nofollow">二、下载ChatGLM3工程</a></li><li><ul><li><a href="#1_44" rel="nofollow">1、下载工程</a></li><li><a href="#2_53" rel="nofollow">2、安装相关依赖</a></li><li><ul><li><a href="#1conda_54" rel="nofollow">1）使用conda创建微调的虚拟环境</a></li><li><a href="#2ChatGLM3_68" rel="nofollow">2）安装ChatGLM3依赖</a></li><li><a href="#3_76" rel="nofollow">3）安装微调依赖</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#ChatGLM3_85" rel="nofollow">三、下载ChatGLM3模型</a></li><li><ul><li><a href="#1gitlfs_92" rel="nofollow">1、安装git-lfs</a></li><li><a href="#2git_lfs_install_105" rel="nofollow">2、执行：git lfs install</a></li><li><a href="#3_108" rel="nofollow">3、下载模型（模型权重相关文件）</a></li><li><a href="#4_113" rel="nofollow">4、检查权重文件</a></li></ul> 
+  </li><li><a href="#_117" rel="nofollow">四、下载数据集</a></li><li><ul><li><a href="#1_119" rel="nofollow">1、数据集下载</a></li><li><a href="#2_128" rel="nofollow">2、数据格式转化</a></li><li><a href="#3_181" rel="nofollow">3、数据格式检查</a></li></ul> 
+  </li><li><a href="#_185" rel="nofollow">五、微调脚本说明</a></li><li><ul><li><a href="#1finetune_demo_187" rel="nofollow">1、脚本说明（finetune_demo）</a></li><li><a href="#2_194" rel="nofollow">2、配置说明</a></li></ul> 
+  </li><li><a href="#_231" rel="nofollow">六、模型微调</a></li><li><ul><li><a href="#1_233" rel="nofollow">1、模型微调</a></li><li><a href="#2_245" rel="nofollow">2、从保存点进行微调</a></li></ul> 
+  </li><li><a href="#_256" rel="nofollow">七、推理验证</a></li><li><ul><li><a href="#1_259" rel="nofollow">1、修改模型地址</a></li><li><a href="#2_312" rel="nofollow">2、开始模型推理</a></li></ul> 
+  </li><li><a href="#_321" rel="nofollow">总结</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="_31"></a>前言</h2> 
+<p>在人工智能的广阔领域里，大语言模型（LLMs）的微调技术扮演着至关重要的角色。它不仅为模型注入了适应特定任务的能力，而且还是通往专业领域的关键。本文旨在深入探讨基于P-Tuning V2技术的ChatGLM3微调流程，这是一种将因果语言模型与对话优化相结合的优秀实践，我们希望借此引领读者深入了解大模型微调的内涵。</p> 
+<p>在上文中，我们详细介绍了基于LoRA技术微调ChatGLM3的操作过程。而本文将重点展示基于P-Tuning V2技术的微调过程。我们将采用GLM官方在github上提供的微调脚本进行高效微调，向大家展示一种更为简单便捷的微调方法。</p> 
+<h2><a id="_35"></a>一、服务器资源准备</h2> 
+<p>首先，服务器资源准备是微调工作的基础。根据官方提供的显存占用说明，我们需配置相应数量的显卡资源。P-TuningV2微调所需的显存相对较少，仅需1张显卡即可展开工作。<br> 以下是官方提供的显存的占用情况说明：<br> 1)SFT 全量微调: 4张显卡平均分配，每张显卡占用 48346MiB 显存。<br> 2)P-TuningV2 微调: 1张显卡，占用 18426MiB 显存。<br> 3)LORA 微调: 1张显卡，占用 14082MiB 显存。<br> <code>请注意，该结果仅供参考，对于不同的参数，显存占用可能会有所不同。请结合你的硬件情况进行调整。</code></p> 
+<h2><a id="ChatGLM3_42"></a>二、下载ChatGLM3工程</h2> 
+<p>接下来，克隆ChatGLM3工程并安装相关依赖，这一系列动作将构建起我们微调工作的基本环境。</p> 
+<h3><a id="1_44"></a>1、下载工程</h3> 
+<p>从github地址中下在ChatGLM3工程，工程中包含了很多测试的demo样例，包括微调样例</p> 
+<pre><code class="prism language-python">git clone https<span class="token punctuation">:</span><span class="token operator">//</span>github<span class="token punctuation">.</span>com<span class="token operator">/</span>THUDM<span class="token operator">/</span>ChatGLM3<span class="token punctuation">.</span>git
+</code></pre> 
+<p><img src="https://images2.imgbox.com/4b/60/HVkVIUR6_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_53"></a>2、安装相关依赖</h3> 
+<h4><a id="1conda_54"></a>1）使用conda创建微调的虚拟环境</h4> 
+<pre><code class="prism language-bash"><span class="token comment">#创建虚拟环境</span>
+conda create <span class="token parameter variable">-n</span> ChatGLM3-6b-finetunning <span class="token assign-left variable">python</span><span class="token operator">=</span><span class="token number">3.10</span>
+<span class="token comment">#激活虚拟环境</span>
+conda activate ChatGLM3-6b-finetunning        
+<span class="token comment">#激活成功如下</span>
+<span class="token punctuation">(</span>ChatGLM3-6b-finetunning<span class="token punctuation">)</span> root@autodl-container-90ee468393-1c276b30:~<span class="token comment">#                                                                               </span>
+<span class="token comment">#退出当前虚拟环境                                                                                                                                                                                                                                                                                          </span>
+conda deactivate    
+</code></pre> 
+<h4><a id="2ChatGLM3_68"></a>2）安装ChatGLM3依赖</h4> 
+<p>ChatGLM3的finetune_demo目录下的requirements.txt都行需要执行</p> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> ChatGLM3
+pip <span class="token function">install</span> <span class="token parameter variable">-r</span> requirements.txt
+</code></pre> 
+<h4><a id="3_76"></a>3）安装微调依赖</h4> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> finetune_demo
+pip <span class="token function">install</span> <span class="token parameter variable">-r</span> requirements.txt
+</code></pre> 
+<p>执行如下：<br> <img src="https://images2.imgbox.com/3f/86/X66uIKBP_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="ChatGLM3_85"></a>三、下载ChatGLM3模型</h2> 
+<p>本次微调主要基于ChatGLM3-6B对话模型进行微调（也是我们常规的大部分应用场景）<br> <strong>ChatGLM3-6B和ChatGLM-6B-Base 说明：</strong><br> ChatGLM3-6B：这是一个对话调优的大语言模型，在ChatGLM-6B-Base的基础上进行了对话训练调优；它针对对话场景进行了特定的优化，使得其在处理对话式问答、指令跟随等需要与用户进行互动的场景时表现更加出色。这种优化可能包括使用对话数据集进行微调，从而更好地理解并回应用户的需求。<br> ChatGLM-6B-Base：是基础的大语言模型，它是构建其他特定应用模型的基础版本。作为一个基础模型，它提供了广泛的语言理解和生成能力，但没有针对特定场景如对话进行特别的优化。这意味着它在通用的语言任务上表现良好，但在对话场景下可能不如专门对话调优过的模型。</p> 
+<p><code>下载ChatGLM3-6B对话模型的相关权重文件</code></p> 
+<h3><a id="1gitlfs_92"></a>1、安装git-lfs</h3> 
+<p>需要先安装Git LFS ，Ubuntu系统操作命令：</p> 
+<pre><code class="prism language-bash"><span class="token function">curl</span> <span class="token parameter variable">-s</span> https://packagecloud.io/install/repositories/github/git-lfs/script.deb.sh <span class="token operator">|</span> <span class="token function">sudo</span> <span class="token function">bash</span>
+<span class="token function">sudo</span> <span class="token function">apt-get</span> <span class="token function">install</span> git-lfs
+</code></pre> 
+<p>执行如下：<br> <img src="https://images2.imgbox.com/67/09/SpcA3yJY_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>Centos命令参考： curl -s https://packagecloud.io/install/repositories/github/git-lfs/script.rpm.sh | sudo bash<br> sudo yum install git-lfs</p> 
+</blockquote> 
+<h3><a id="2git_lfs_install_105"></a>2、执行：git lfs install</h3> 
+<p><img src="https://images2.imgbox.com/0b/9d/f3PRP9b8_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="3_108"></a>3、下载模型（模型权重相关文件）</h3> 
+<p>在autodl-tmp下新建model用于放模型文件<br> git clone https://www.modelscope.cn/ZhipuAI/chatglm3-6b.git<br> <img src="https://images2.imgbox.com/f3/3b/p1w0su2K_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="4_113"></a>4、检查权重文件</h3> 
+<p>对比modelscope上的文件列表和文件的大小，检查是否下载完整</p> 
+<p><img src="https://images2.imgbox.com/ac/4f/Kmtvhjf7_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_117"></a>四、下载数据集</h2> 
+<p>数据准备阶段，我们除了下载了专为对话场景优化的ChatGLM3-6B模型及其权重文件，并对数据集进行下载和格式转换。这一过程确保了我们拥有充足的训练样本和适配的数据结构，为接下来的微调奠定了坚实基础。</p> 
+<h3><a id="1_119"></a>1、数据集下载</h3> 
+<p>数据集地址：https://cloud.tsinghua.edu.cn/f/b3f119a008264b1cabd1/?dl=1<br> 这是官方准备的数据集；下载处理好的 AdvertiseGen 数据集，将解压后的 AdvertiseGen 目录放到本目录的 /data/ 下, 例如：/root/ChatGLM3/finetune_demo/data/AdvertiseGen<br> 数据格式如下：<br> <img src="https://images2.imgbox.com/52/13/ww2IQlz3_o.png" alt="在这里插入图片描述"></p> 
+<p>我们需要进行数据格式转化，转为目标数据格式：<br> <img src="https://images2.imgbox.com/4c/b2/n7wAunfQ_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_128"></a>2、数据格式转化</h3> 
+<p>执行如下python脚本，对数据格式进行处理</p> 
+<pre><code class="prism language-bash">python translate_fomat.py
+</code></pre> 
+<p>translate_fomat.py 放在/root/ChatGLM3/finetune_demo目录下</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> json
+<span class="token keyword">from</span> typing <span class="token keyword">import</span> Union
+<span class="token keyword">from</span> pathlib <span class="token keyword">import</span> Path
+
+
+<span class="token keyword">def</span> <span class="token function">_resolve_path</span><span class="token punctuation">(</span>path<span class="token punctuation">:</span> Union<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Path<span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> Path<span class="token punctuation">:</span>
+    <span class="token keyword">return</span> Path<span class="token punctuation">(</span>path<span class="token punctuation">)</span><span class="token punctuation">.</span>expanduser<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>resolve<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">_mkdir</span><span class="token punctuation">(</span>dir_name<span class="token punctuation">:</span> Union<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Path<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    dir_name <span class="token operator">=</span> _resolve_path<span class="token punctuation">(</span>dir_name<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token keyword">not</span> dir_name<span class="token punctuation">.</span>is_dir<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        dir_name<span class="token punctuation">.</span>mkdir<span class="token punctuation">(</span>parents<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">,</span> exist_ok<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">convert_adgen</span><span class="token punctuation">(</span>data_dir<span class="token punctuation">:</span> Union<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Path<span class="token punctuation">]</span><span class="token punctuation">,</span> save_dir<span class="token punctuation">:</span> Union<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Path<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">_convert</span><span class="token punctuation">(</span>in_file<span class="token punctuation">:</span> Path<span class="token punctuation">,</span> out_file<span class="token punctuation">:</span> Path<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        _mkdir<span class="token punctuation">(</span>out_file<span class="token punctuation">.</span>parent<span class="token punctuation">)</span>
+        <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>in_file<span class="token punctuation">,</span> encoding<span class="token operator">=</span><span class="token string">'utf-8'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> fin<span class="token punctuation">:</span>
+            <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>out_file<span class="token punctuation">,</span> <span class="token string">'wt'</span><span class="token punctuation">,</span> encoding<span class="token operator">=</span><span class="token string">'utf-8'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> fout<span class="token punctuation">:</span>
+                <span class="token keyword">for</span> line <span class="token keyword">in</span> fin<span class="token punctuation">:</span>
+                    dct <span class="token operator">=</span> json<span class="token punctuation">.</span>loads<span class="token punctuation">(</span>line<span class="token punctuation">)</span>
+                    sample <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token string">'conversations'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span><span class="token punctuation">{<!-- --></span><span class="token string">'role'</span><span class="token punctuation">:</span> <span class="token string">'user'</span><span class="token punctuation">,</span> <span class="token string">'content'</span><span class="token punctuation">:</span> dct<span class="token punctuation">[</span><span class="token string">'content'</span><span class="token punctuation">]</span><span class="token punctuation">}</span><span class="token punctuation">,</span>
+                                                <span class="token punctuation">{<!-- --></span><span class="token string">'role'</span><span class="token punctuation">:</span> <span class="token string">'assistant'</span><span class="token punctuation">,</span> <span class="token string">'content'</span><span class="token punctuation">:</span> dct<span class="token punctuation">[</span><span class="token string">'summary'</span><span class="token punctuation">]</span><span class="token punctuation">}</span><span class="token punctuation">]</span><span class="token punctuation">}</span>
+                    fout<span class="token punctuation">.</span>write<span class="token punctuation">(</span>json<span class="token punctuation">.</span>dumps<span class="token punctuation">(</span>sample<span class="token punctuation">,</span> ensure_ascii<span class="token operator">=</span><span class="token boolean">False</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">'\n'</span><span class="token punctuation">)</span>
+
+    data_dir <span class="token operator">=</span> _resolve_path<span class="token punctuation">(</span>data_dir<span class="token punctuation">)</span>
+    save_dir <span class="token operator">=</span> _resolve_path<span class="token punctuation">(</span>save_dir<span class="token punctuation">)</span>
+
+    train_file <span class="token operator">=</span> data_dir <span class="token operator">/</span> <span class="token string">'train.json'</span>
+    <span class="token keyword">if</span> train_file<span class="token punctuation">.</span>is_file<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        out_file <span class="token operator">=</span> save_dir <span class="token operator">/</span> train_file<span class="token punctuation">.</span>relative_to<span class="token punctuation">(</span>data_dir<span class="token punctuation">)</span>
+        _convert<span class="token punctuation">(</span>train_file<span class="token punctuation">,</span> out_file<span class="token punctuation">)</span>
+
+    dev_file <span class="token operator">=</span> data_dir <span class="token operator">/</span> <span class="token string">'dev.json'</span>
+    <span class="token keyword">if</span> dev_file<span class="token punctuation">.</span>is_file<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        out_file <span class="token operator">=</span> save_dir <span class="token operator">/</span> dev_file<span class="token punctuation">.</span>relative_to<span class="token punctuation">(</span>data_dir<span class="token punctuation">)</span>
+        _convert<span class="token punctuation">(</span>dev_file<span class="token punctuation">,</span> out_file<span class="token punctuation">)</span>
+
+
+convert_adgen<span class="token punctuation">(</span><span class="token string">'data/AdvertiseGen'</span><span class="token punctuation">,</span> <span class="token string">'data/AdvertiseGen_fix'</span><span class="token punctuation">)</span>
+</code></pre> 
+<h3><a id="3_181"></a>3、数据格式检查</h3> 
+<p>格式转化脚本执行完，在/root/ChatGLM3/finetune_demo/data下会新增AdvertiseGen_fix文件夹，包含转换后的文件，格式如下：<br> <img src="https://images2.imgbox.com/8b/cb/ID2sBIuG_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_185"></a>五、微调脚本说明</h2> 
+<p>讲章节主要解了各配置文件的作用，包括数据配置、模型参数、优化器设置及训练监控等。这些配置细节对于理解微调流程和调整训练策略至关重要。通过修改配置文件，我们可以根据需要调整模型的训练行为，实现精确匹配项目需求的目标。</p> 
+<h3><a id="1finetune_demo_187"></a>1、脚本说明（finetune_demo）</h3> 
+<table><thead><tr><th>configs</th><th>配置目录（包含多种微调的配置，支持LoRA、P-Tuning V2等微调）</th></tr></thead><tbody><tr><td>finetune_hf.py</td><td>微调接口文件</td></tr><tr><td>inference_hf.py</td><td>推理接口文件</td></tr></tbody></table> 
+<h3><a id="2_194"></a>2、配置说明</h3> 
+<p>微调配置文件位于 config 目录下，包括以下文件：<br> ds_zereo_2 / ds_zereo_3.json: deepspeed 配置文件。<br> lora.yaml / ptuning.yaml / sft.yaml: 模型不同方式的配置文件，包括模型参数、优化器参数、训练参数等。 部分重要参数解释如下：<br> 1）data_config 部分<br> train_file: 训练数据集的文件路径。<br> val_file: 验证数据集的文件路径。<br> test_file: 测试数据集的文件路径。<br> num_proc: 在加载数据时使用的进程数量。<br> 2）max_input_length: 输入序列的最大长度。<br> 3）max_output_length: 输出序列的最大长度。<br> 4）training_args 部分<br> output_dir: 用于保存模型和其他输出的目录。<br> max_steps: 训练的最大步数。<br> per_device_train_batch_size: 每个设备（如 GPU）的训练批次大小。<br> dataloader_num_workers: 加载数据时使用的工作线程数量。<br> remove_unused_columns: 是否移除数据中未使用的列。<br> save_strategy: 模型保存策略（例如，每隔多少步保存一次）。<br> save_steps: 每隔多少步保存一次模型。<br> log_level: 日志级别（如 info）。<br> logging_strategy: 日志记录策略。<br> logging_steps: 每隔多少步记录一次日志。<br> per_device_eval_batch_size: 每个设备的评估批次大小。<br> evaluation_strategy: 评估策略（例如，每隔多少步进行一次评估）。<br> eval_steps: 每隔多少步进行一次评估。<br> predict_with_generate: 是否使用生成模式进行预测。<br> 5）generation_config 部分<br> max_new_tokens: 生成的最大新 token 数量。<br> 6）peft_config 部分<br> peft_type: 使用的参数有效调整类型（如 LORA）。<br> task_type: 任务类型，这里是因果语言模型（CAUSAL_LM）。<br> 7）Lora 参数：<br> r: LoRA 的秩。<br> lora_alpha: LoRA 的缩放因子。<br> lora_dropout: 在 LoRA 层使用的 dropout 概率<br> 8）P-TuningV2 参数：<br> num_virtual_tokens: 虚拟 token 的数量。</p> 
+<h2><a id="_231"></a>六、模型微调</h2> 
+<p>进入模型微调阶段，我们采用了命令行接口执行微调脚本，选择了P-Tuning V2作为微调策略，并指定了必要的参数如数据路径、模型地址和配置文件。此外，还展示了如何从中断点继续微调，这对于节省计算资源和时间成本具有显著意义。</p> 
+<h3><a id="1_233"></a>1、模型微调</h3> 
+<p>进入 finetune_demo目录<br> 使用命令行进行高效微调,在configs下有多种微调的配置，我们使用 p-tuning v2进行微调；主要修改本地的/chatglm3-6b模型地址</p> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> finetune_demo
+python finetune_hf.py  data/AdvertiseGen_fix  /root/autodl-tmp/model/chatglm3-6b  configs/ptuning_v2.yaml
+</code></pre> 
+<p>执行如下：<br> <img src="https://images2.imgbox.com/51/50/kLu2TSRf_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_245"></a>2、从保存点进行微调</h3> 
+<p>如果按照上述方式进行训练，每次微调都会从头开始，如果你想从训练一半的模型开始微调，你可以加入第四个参数，这个参数有两种传入方式:<br> yes, 自动从最后一个保存的 Checkpoint开始训练<br> XX, 断点号数字 例 600 则从序号600 Checkpoint开始训练<br> 例如，这就是一个从最后一个保存点继续微调的示例代码</p> 
+<pre><code class="prism language-bash"><span class="token builtin class-name">cd</span> finetune_demo
+python finetune_hf.py  data/AdvertiseGen_fix  /root/autodl-tmp/model/chatglm3-6b  configs/ptuning_v2.yaml <span class="token function">yes</span>
+</code></pre> 
+<h2><a id="_256"></a>七、推理验证</h2> 
+<p>最后，在推理验证环节，我们利用微调后的模型进行了实际推理，以检验微调效果。通过指定合适的prompt，可以引导模型生成符合预期的输出，进一步验证了微调模型在特定任务上的适用性。<br> <code>使用微调的数据集进行推理（在 inference_hf.py 文件中有封装推理验证的接口）</code></p> 
+<h3><a id="1_259"></a>1、修改模型地址</h3> 
+<p>在完成微调任务之后，我们可以查看到 output 文件夹下多了很多个checkpoint-*的文件夹，这些文件夹代表了训练的轮数。 我们选择最后一轮的微调权重，并使用inference进行导入。<br> <font color="red">说明</font>：对于 LORA 和 P-TuningV2 官方没有合并训练后的模型，而是在adapter_config.json 中记录了微调型的路径；因此需要先修改基础模型的地址，直接修改dapter_config.json中的基础模型地址（在adapter_config.json 中记录了微调型的路径，如果原始模型位置发生更改，要修改adapter_config.json中base_model_name_or_path的路径）。<br> <font color="red"><strong>注意、注意、注意</strong></font>: <strong>如果没有adapter_config.json 不用修改了</strong></p> 
+<p>inference_hf.py</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> typing <span class="token keyword">import</span> Union<span class="token punctuation">,</span> Path<span class="token punctuation">,</span> Tuple  <span class="token comment"># 导入所需的类型注解</span>
+
+<span class="token comment"># 定义一个函数，它接受模型目录的路径和是否信任远程代码的标志，</span>
+<span class="token comment"># 并返回一个包含模型和分词器的元组。</span>
+<span class="token keyword">def</span> <span class="token function">load_model_and_tokenizer</span><span class="token punctuation">(</span>
+        model_dir<span class="token punctuation">:</span> Union<span class="token punctuation">[</span><span class="token builtin">str</span><span class="token punctuation">,</span> Path<span class="token punctuation">]</span><span class="token punctuation">,</span>  <span class="token comment"># 模型目录的路径，可以是字符串或Path对象。</span>
+        trust_remote_code<span class="token punctuation">:</span> <span class="token builtin">bool</span> <span class="token operator">=</span> <span class="token boolean">True</span>  <span class="token comment"># 是否信任远程代码的布尔值，默认为True。</span>
+<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token builtin">tuple</span><span class="token punctuation">[</span>ModelType<span class="token punctuation">,</span> TokenizerType<span class="token punctuation">]</span><span class="token punctuation">:</span>  <span class="token comment"># 返回值是一个元组，包含模型(ModelType)和分词器(TokenizerType)。</span>
+    <span class="token comment"># 使用内部函数_resolve_path解析model_dir参数，确保它是一个完整的文件系统路径。</span>
+    model_dir <span class="token operator">=</span> _resolve_path<span class="token punctuation">(</span>model_dir<span class="token punctuation">)</span>
+
+    <span class="token comment"># 检查model_dir路径下是否存在名为adapter_config.json的文件。</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>model_dir <span class="token operator">/</span> <span class="token string">'adapter_config.json'</span><span class="token punctuation">)</span><span class="token punctuation">.</span>exists<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+        <span class="token comment"># 如果存在adapter_config.json，加载适配器模型。</span>
+        model <span class="token operator">=</span> AutoPeftModelForCausalLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>
+            model_dir<span class="token punctuation">,</span>  <span class="token comment"># 模型目录路径。</span>
+            trust_remote_code<span class="token operator">=</span>trust_remote_code<span class="token punctuation">,</span>  <span class="token comment"># 是否信任远程代码。</span>
+            device_map<span class="token operator">=</span><span class="token string">'auto'</span>  <span class="token comment"># 设备映射设置为'auto'，自动决定如何将模型分配到设备上。</span>
+        <span class="token punctuation">)</span>
+        <span class="token comment"># 从模型的适配器配置中获取分词器目录。</span>
+        tokenizer_dir <span class="token operator">=</span> model<span class="token punctuation">.</span>peft_config<span class="token punctuation">[</span><span class="token string">'default'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>base_model_name_or_path
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token comment"># 如果不存在adapter_config.json，加载标准的预训练模型。</span>
+        model <span class="token operator">=</span> AutoModelForCausalLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>
+            model_dir<span class="token punctuation">,</span>  <span class="token comment"># 模型目录路径。</span>
+            trust_remote_code<span class="token operator">=</span>trust_remote_code<span class="token punctuation">,</span>  <span class="token comment"># 是否信任远程代码。</span>
+            device_map<span class="token operator">=</span><span class="token string">'auto'</span>  <span class="token comment"># 设备映射设置为'auto'。</span>
+        <span class="token punctuation">)</span>
+        <span class="token comment"># 使用模型目录作为分词器目录。</span>
+        tokenizer_dir <span class="token operator">=</span> model_dir
+
+    <span class="token comment"># 加载与模型对应的分词器。</span>
+    tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>
+        tokenizer_dir<span class="token punctuation">,</span>  <span class="token comment"># 分词器目录。</span>
+        trust_remote_code<span class="token operator">=</span>trust_remote_code  <span class="token comment"># 是否信任远程代码。</span>
+    <span class="token punctuation">)</span>
+
+    <span class="token comment"># 返回一个包含模型和分词器的元组。</span>
+    <span class="token keyword">return</span> model<span class="token punctuation">,</span> tokenizer
+</code></pre> 
+<p>检查训练输出</p> 
+<p><img src="https://images2.imgbox.com/c6/fa/ATBXVDvD_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_312"></a>2、开始模型推理</h3> 
+<pre><code class="prism language-bash">python inference_hf.py output/checkpoint-3000/ <span class="token parameter variable">--prompt</span> <span class="token string">"鱼尾裙"</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/63/b2/uyizuzup_o.png" alt="在这里插入图片描述"></p> 
+<p>根据内容可以看到，回答基本正确，响应结果都是来源于原数据集中的内容。</p> 
+<h2><a id="_321"></a>总结</h2> 
+<p>通过本文的深度解析，我们希望读者能够洞察到大语言模型微调过程中的每一个关键步骤，从而更加自信地应对各种自然语言处理挑战。P-Tuning V2技术以其独特的优势，为ChatGLM3的对话能力提升提供了强大助力，标志着我们在人工智能对话系统领域又向前迈进了一大步。未来，随着技术的不断进步和创新，我们期待着更多突破性的成果，以推动人工智能与人类交流的界限不断拓宽。</p> 
+<p><img src="https://images2.imgbox.com/96/64/SRmT7PQi_o.png" alt="在这里插入图片描述"></p> 
+<p>🎯🔖更多专栏系列文章：<a href="https://blog.csdn.net/xiaobing259/category_12628007.html?spm=1001.2014.3001.5482"><strong>AIGC-AI大模型探索之路</strong></a></p> 
+<blockquote> 
+ <p>如果文章内容对您有所触动，别忘了<font color="red"><strong>点赞、⭐关注，收藏</strong></font>！加入我，让我们携手同行AI的探索之旅，一起开启智能时代的大门！</p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f0efa465621956dea74ac432b3199882/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【C&#43;&#43;】：模板初阶和STL简介</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/2b89f1a911d2ab1683d8793742096bd3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java的类和对象（一）—— 初始类和对象，this关键字，构造方法</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

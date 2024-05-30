@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SpringBoot3整合Elasticsearch8.x之全面保姆级教程 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/237ec1b82380761aa05497d19cd98bce/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="SpringBoot3整合Elasticsearch8.x之全面保姆级教程">
+  <meta property="og:description" content="整合ES 环境准备 安装配置ES：https://blog.csdn.net/qq_50864152/article/details/136724528安装配置Kibana：https://blog.csdn.net/qq_50864152/article/details/136727707新建项目：新建名为web的SpringBoot3项目 elasticsearch-java 公共配置 介绍：一个开源的高扩展的分布式全文检索引擎，可以近乎实时的存储 和检索数据依赖：web模块引入elasticsearch-java依赖---但其版本必须与你下载的ES的版本一致 &lt;!-- 若不存在Spring Data ES的某个版本支持你下的ES版本,则使用 --&gt; &lt;!-- ES 官方提供的在JAVA环境使用的依赖 --&gt; &lt;dependency&gt; &lt;groupId&gt;co.elastic.clients&lt;/groupId&gt; &lt;artifactId&gt;elasticsearch-java&lt;/artifactId&gt; &lt;version&gt;8.11.1&lt;/version&gt; &lt;/dependency&gt; &lt;!-- 和第一个依赖是一起的,为了解决springboot项目的兼容性问题 --&gt; &lt;dependency&gt; &lt;groupId&gt;com.fasterxml.jackson.core&lt;/groupId&gt; &lt;artifactId&gt;jackson-databind&lt;/artifactId&gt; &lt;/dependency&gt; 配置：web模块dev目录application-dal添加 使用open＋@Value(&#34;${elasticsearch.open}&#34;)的方式不能放到Nacos配置中心
+# elasticsearch配置 elasticsearch: # 自定义属性---设置是否开启ES,false表不开窍ES open: true # es集群名称,如果下载es设置了集群名称,则使用配置的集群名称 clusterName: es hosts: 127.0.0.1:9200 # es 请求方式 scheme: http # es 连接超时时间 connectTimeOut: 1000 # es socket 连接超时时间 socketTimeOut: 30000 # es 请求超时时间 connectionRequestTimeOut: 500 # es 最大连接数 maxConnectNum: 100 # es 每个路由的最大连接数 maxConnectNumPerRoute: 100 配置：web模块config包下新建ElasticSearchConfig类 package cn.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-15T13:28:44+08:00">
+    <meta property="article:modified_time" content="2024-03-15T13:28:44+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">SpringBoot3整合Elasticsearch8.x之全面保姆级教程</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="ES_0"></a>整合ES</h2> 
+<h3><a id="_2"></a>环境准备</h3> 
+<ol><li>安装配置<code>ES</code>：<code>https://blog.csdn.net/qq_50864152/article/details/136724528</code></li><li>安装配置<code>Kibana</code>：<code>https://blog.csdn.net/qq_50864152/article/details/136727707</code></li><li>新建项目：新建名为<code>web</code>的<code>SpringBoot3</code>项目</li></ol> 
+<h3><a id="elasticsearchjava_8"></a><code>elasticsearch-java</code></h3> 
+<h4><a id="_10"></a>公共配置</h4> 
+<ol><li>介绍：一个开源的高扩展的分布式全文检索引擎，可以近乎实时的存储 和检索数据</li><li>依赖：<code>web</code>模块引入<code>elasticsearch-java</code>依赖<code>---</code>但其版本必须与你下载的<code>ES</code>的版本一致</li></ol> 
+<pre><code class="prism language-xml"><span class="token comment">&lt;!-- 若不存在Spring Data ES的某个版本支持你下的ES版本,则使用  --&gt;</span>
+<span class="token comment">&lt;!-- ES 官方提供的在JAVA环境使用的依赖 --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>co.elastic.clients<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>elasticsearch-java<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">&gt;</span></span>8.11.1<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+
+<span class="token comment">&lt;!-- 和第一个依赖是一起的,为了解决springboot项目的兼容性问题  --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>com.fasterxml.jackson.core<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>jackson-databind<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<ol start="3"><li>配置：<code>web</code>模块<code>dev</code>目录<code>application-dal</code>添加</li></ol> 
+<blockquote> 
+ <p>使用<code>open＋@Value("${elasticsearch.open}")</code>的方式不能放到<code>Nacos</code>配置中心</p> 
+</blockquote> 
+<pre><code class="prism language-yaml"><span class="token comment"># elasticsearch配置</span>
+<span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+  <span class="token comment"># 自定义属性---设置是否开启ES,false表不开窍ES</span>
+  <span class="token key atrule">open</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token comment"># es集群名称,如果下载es设置了集群名称,则使用配置的集群名称</span>
+  <span class="token key atrule">clusterName</span><span class="token punctuation">:</span> es
+  <span class="token key atrule">hosts</span><span class="token punctuation">:</span> 127.0.0.1<span class="token punctuation">:</span><span class="token number">9200</span>
+  <span class="token comment"># es 请求方式</span>
+  <span class="token key atrule">scheme</span><span class="token punctuation">:</span> http
+  <span class="token comment"># es 连接超时时间</span>
+  <span class="token key atrule">connectTimeOut</span><span class="token punctuation">:</span> <span class="token number">1000</span>
+  <span class="token comment"># es socket 连接超时时间</span>
+  <span class="token key atrule">socketTimeOut</span><span class="token punctuation">:</span> <span class="token number">30000</span>
+  <span class="token comment"># es 请求超时时间</span>
+  <span class="token key atrule">connectionRequestTimeOut</span><span class="token punctuation">:</span> <span class="token number">500</span>
+  <span class="token comment"># es 最大连接数</span>
+  <span class="token key atrule">maxConnectNum</span><span class="token punctuation">:</span> <span class="token number">100</span>
+  <span class="token comment"># es 每个路由的最大连接数</span>
+  <span class="token key atrule">maxConnectNumPerRoute</span><span class="token punctuation">:</span> <span class="token number">100</span>
+</code></pre> 
+<ol start="4"><li>配置：<code>web</code>模块<code>config</code>包下新建<code>ElasticSearchConfig</code>类</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span>config</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">co<span class="token punctuation">.</span>elastic<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchClient</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">co<span class="token punctuation">.</span>elastic<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>json<span class="token punctuation">.</span>jackson<span class="token punctuation">.</span></span><span class="token class-name">JacksonJsonpMapper</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">co<span class="token punctuation">.</span>elastic<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>transport<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchTransport</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">co<span class="token punctuation">.</span>elastic<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>transport<span class="token punctuation">.</span>rest_client<span class="token punctuation">.</span></span><span class="token class-name">RestClientTransport</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">lombok<span class="token punctuation">.</span></span><span class="token class-name">Data</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">lombok<span class="token punctuation">.</span>extern<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">Slf4j</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>http<span class="token punctuation">.</span></span><span class="token class-name">HttpHost</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>http<span class="token punctuation">.</span>auth<span class="token punctuation">.</span></span><span class="token class-name">AuthScope</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>http<span class="token punctuation">.</span>auth<span class="token punctuation">.</span></span><span class="token class-name">UsernamePasswordCredentials</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>http<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">CredentialsProvider</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>http<span class="token punctuation">.</span>impl<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">BasicCredentialsProvider</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">RestClient</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">RestClientBuilder</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>context<span class="token punctuation">.</span>properties<span class="token punctuation">.</span></span><span class="token class-name">ConfigurationProperties</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Bean</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Configuration</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@Slf4j</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token annotation punctuation">@ConfigurationProperties</span><span class="token punctuation">(</span>prefix <span class="token operator">=</span> <span class="token string">"elasticsearch"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ElasticSearchConfig</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token comment">// 是否开启ES</span>
+    <span class="token keyword">private</span> <span class="token class-name">Boolean</span> <span class="token keyword">open</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// es 集群host ip 地址</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> hosts<span class="token punctuation">;</span>
+
+    <span class="token comment">// es用户名</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> userName<span class="token punctuation">;</span>
+
+    <span class="token comment">// es密码</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> password<span class="token punctuation">;</span>
+
+    <span class="token comment">// es 请求方式</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> scheme<span class="token punctuation">;</span>
+
+    <span class="token comment">// es集群名称</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> clusterName<span class="token punctuation">;</span>
+
+    <span class="token comment">// es 连接超时时间</span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> connectTimeOut<span class="token punctuation">;</span>
+
+    <span class="token comment">// es socket 连接超时时间</span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> socketTimeOut<span class="token punctuation">;</span>
+
+    <span class="token comment">// es 请求超时时间</span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> connectionRequestTimeOut<span class="token punctuation">;</span>
+
+    <span class="token comment">// es 最大连接数</span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> maxConnectNum<span class="token punctuation">;</span>
+
+    <span class="token comment">// es 每个路由的最大连接数</span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> maxConnectNumPerRoute<span class="token punctuation">;</span>
+
+    <span class="token comment">// es api key</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> apiKey<span class="token punctuation">;</span>
+
+
+    <span class="token keyword">public</span> <span class="token class-name">RestClientBuilder</span> <span class="token function">creatBaseConfBuilder</span><span class="token punctuation">(</span><span class="token class-name">String</span> scheme<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+
+
+        <span class="token comment">// 1. 单节点ES Host获取</span>
+        <span class="token class-name">String</span> host <span class="token operator">=</span> hosts<span class="token punctuation">.</span><span class="token function">split</span><span class="token punctuation">(</span><span class="token string">":"</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> port <span class="token operator">=</span> hosts<span class="token punctuation">.</span><span class="token function">split</span><span class="token punctuation">(</span><span class="token string">":"</span><span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token comment">// The value of the schemes attribute used by noSafeRestClient() is http</span>
+        <span class="token comment">// but The value of the schemes attribute used by safeRestClient() is https</span>
+        <span class="token class-name">HttpHost</span> httpHost <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpHost</span><span class="token punctuation">(</span>host<span class="token punctuation">,</span> <span class="token class-name">Integer</span><span class="token punctuation">.</span><span class="token function">parseInt</span><span class="token punctuation">(</span>port<span class="token punctuation">)</span><span class="token punctuation">,</span>scheme<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 2. 创建构建器对象</span>
+        <span class="token comment">//RestClientBuilder: ES客户端库的构建器接口,用于构建RestClient实例;允许你配置与Elasticsearch集群的连接,设置请求超时,设置身份验证,配置代理等</span>
+        <span class="token class-name">RestClientBuilder</span> builder <span class="token operator">=</span> <span class="token class-name">RestClient</span><span class="token punctuation">.</span><span class="token function">builder</span><span class="token punctuation">(</span>httpHost<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 连接延时配置</span>
+        builder<span class="token punctuation">.</span><span class="token function">setRequestConfigCallback</span><span class="token punctuation">(</span>requestConfigBuilder <span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            requestConfigBuilder<span class="token punctuation">.</span><span class="token function">setConnectTimeout</span><span class="token punctuation">(</span>connectTimeOut<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            requestConfigBuilder<span class="token punctuation">.</span><span class="token function">setSocketTimeout</span><span class="token punctuation">(</span>socketTimeOut<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            requestConfigBuilder<span class="token punctuation">.</span><span class="token function">setConnectionRequestTimeout</span><span class="token punctuation">(</span>connectionRequestTimeOut<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> requestConfigBuilder<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 3. HttpClient 连接数配置</span>
+        builder<span class="token punctuation">.</span><span class="token function">setHttpClientConfigCallback</span><span class="token punctuation">(</span>httpClientBuilder <span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            httpClientBuilder<span class="token punctuation">.</span><span class="token function">setMaxConnTotal</span><span class="token punctuation">(</span>maxConnectNum<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            httpClientBuilder<span class="token punctuation">.</span><span class="token function">setMaxConnPerRoute</span><span class="token punctuation">(</span>maxConnectNumPerRoute<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> httpClientBuilder<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">return</span> builder<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="5"><li>测试：<code>web</code>模块<code>test</code>目录下新建<code>ElasticSearchTest</code>类</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Slf4j</span>
+<span class="token annotation punctuation">@SpringBootTest</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ElasticSearchTest</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Value</span><span class="token punctuation">(</span><span class="token string">"${elasticsearch.open}"</span><span class="token punctuation">)</span>
+    <span class="token comment">// 是否开启ES,默认开启</span>
+    <span class="token class-name">String</span> <span class="token keyword">open</span> <span class="token operator">=</span> <span class="token string">"true"</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="ES_164"></a>直接连接<code>ES</code></h4> 
+<ol><li>设置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>属性设置为<code>false</code></li></ol> 
+<blockquote> 
+ <p><code>xpack.security.enabled</code>：<br> ● 默认<code>true</code>：必须使用账号连接<code>ES</code><br> ● 若为<code>false</code>：必须使用<code>http://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会失败<code>+</code>不需要使用账号连接，但必须使用<code>HTTP</code>连接</p> 
+</blockquote> 
+<ol start="3"><li>添加：<code>ElasticSearchConfig</code>类添加下列方法</li></ol> 
+<pre><code class="prism language-java"><span class="token comment">/**
+* @function: 创建使用http连接来直接连接ES服务器的客户端
+* 如果@Bean没有指定bean的名称,那么这个bean的名称就是方法名
+*/</span>
+<span class="token annotation punctuation">@Bean</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"directConnectionESClient"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token class-name">ElasticsearchClient</span> <span class="token function">directConnectionESClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+
+    <span class="token class-name">RestClientBuilder</span> builder <span class="token operator">=</span> <span class="token function">creatBaseConfBuilder</span><span class="token punctuation">(</span><span class="token punctuation">(</span>scheme <span class="token operator">==</span> <span class="token string">"http"</span><span class="token punctuation">)</span><span class="token operator">?</span><span class="token string">"http"</span><span class="token operator">:</span><span class="token string">"http"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    
+    <span class="token comment">//Create the transport with a Jackson mapper</span>
+    <span class="token class-name">ElasticsearchTransport</span> transport <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RestClientTransport</span><span class="token punctuation">(</span>builder<span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">JacksonJsonpMapper</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//And create the API client</span>
+    <span class="token class-name">ElasticsearchClient</span> esClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ElasticsearchClient</span><span class="token punctuation">(</span>transport<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> esClient<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<ol start="3"><li>添加：<code>ElasticSearchTest</code>类中添加下列代码<code>---</code>索引名必须小写</li><li>运行：设置跳过测试<code>---&gt;</code>手动运行/不跳过<code>---&gt;</code>直接<code>install</code>，但不运行测试</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"directConnectionESClient"</span><span class="token punctuation">)</span>
+<span class="token class-name">ElasticsearchClient</span> directConnectionESClient<span class="token punctuation">;</span>
+
+
+<span class="token annotation punctuation">@Test</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">directConnectionTest</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{<!-- --></span>
+
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">open</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token string">"true"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">//创建索引</span>
+    <span class="token class-name">CreateIndexResponse</span> response <span class="token operator">=</span> directConnectionESClient<span class="token punctuation">.</span><span class="token function">indices</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>c <span class="token operator">-&gt;</span> c<span class="token punctuation">.</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token string">"direct_connection_index"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span><span class="token punctuation">{<!-- --></span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"es is closed"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="ES_212"></a>账号密码连接<code>ES</code></h4> 
+<ol><li>设置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>属性使用默认值<code>+</code> <code>xpack.security.http.ssl.enabled</code>设置为<code>false</code></li></ol> 
+<blockquote> 
+ <p>注意：若<code>xpack.security.enabled</code>属性为<code>false</code>，则<code>xpack.security.http.ssl.enabled</code>属性不生效，即相当于设置为<code>false</code>；所有以<code>xpack</code>开头的属性都不会生效</p> 
+</blockquote> 
+<blockquote> 
+ <p><code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.http.ssl.enabled</code>：<br> ● 默认<code>true</code>：必须使用<code>https://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会成功<code>+</code>需要使用账号连接<code>+</code>必须使用<code>HTTPS</code>连接<br> ● 若为<code>false</code>：必须使用<code>http://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会失败+需要使用账号连接，但必须使用HTTP连接</p> 
+</blockquote> 
+<ol start="2"><li>配置：<code>dev</code>目录<code>application-dal</code>中添加下列配置</li></ol> 
+<pre><code class="prism language-yaml"><span class="token comment"># elasticsearch配置</span>
+<span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+  <span class="token key atrule">userName</span><span class="token punctuation">:</span>  <span class="token comment">#自己的账号名</span>
+  <span class="token key atrule">password</span><span class="token punctuation">:</span>  <span class="token comment">#自己的密码</span>
+</code></pre> 
+<ol start="3"><li>添加：<code>ElasticSearchTest</code>类中添加下列代码<code>---</code>索引名必须小写<code>+</code>不能有空格</li><li>运行：设置跳过测试<code>---&gt;</code>手动运行/不跳过<code>---&gt;</code>直接<code>install</code>，但不运行测试</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"accountConnectionESClient"</span><span class="token punctuation">)</span>
+<span class="token class-name">ElasticsearchClient</span> accountConnectionESClient<span class="token punctuation">;</span>
+
+
+<span class="token annotation punctuation">@Test</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">accountConnectionTest</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{<!-- --></span>
+
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">open</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token string">"true"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">//创建索引</span>
+    <span class="token class-name">CreateIndexResponse</span> response <span class="token operator">=</span> accountConnectionESClient<span class="token punctuation">.</span><span class="token function">indices</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>c <span class="token operator">-&gt;</span> c<span class="token punctuation">.</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token string">"account_connection_index"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span><span class="token punctuation">{<!-- --></span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"es is closed"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="ES_248"></a>证书账号连接<code>ES</code></h4> 
+<ol><li>设置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>和<code>xpack.security.http.ssl.enabled</code>配置项使用默认值</li></ol> 
+<blockquote> 
+ <p>设置为<code>true</code>后，<code>ES</code>就走<code>https</code>，若<code>scheme</code>为<code>http</code>，则报<code>Unrecognized</code> SSL <code>message</code>错误</p> 
+</blockquote> 
+<ol start="2"><li>配置：将<code>dev</code>目录<code>application-dal</code>中<code>elasticsearch.scheme</code>配置项改成<code>https</code></li><li>证书添加：终端输入<code>keytool -importcert -alias es_https_ca -keystore "D:\computelTool\Java\JDK\JDK21\lib\security\cacerts" -file "D:\computelTool\database\elasticsearch8111\config\certs\http_ca.crt"</code></li></ol> 
+<blockquote> 
+ <p><code>keytool -delete -alias es_https_ca -keystore "D:\computelTool\Java\JDK\JDK21\lib\security\cacerts"</code> <code>---</code>与上面的命令相反</p> 
+</blockquote> 
+<ol start="4"><li>拷贝：将<code>ESconfig</code>目录下<code>certs</code>目录下的<code>http_ca.crt</code>文件拷贝到<code>web</code>模块<code>resource</code>目录</li><li>添加：<code>ElasticSearchConfig</code>类添加下列方法</li></ol> 
+<pre><code class="prism language-java"><span class="token comment">/**
+* @function: 创建用于安全连接(证书 + 账号)ES服务器的客户端
+* 如果@Bean没有指定bean的名称,那么这个bean的名称就是方法名
+*/</span>
+<span class="token annotation punctuation">@Bean</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"accountAndCertificateConnectionESClient"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token class-name">ElasticsearchClient</span> <span class="token function">accountAndCertificateConnectionESClient</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+
+    <span class="token class-name">RestClientBuilder</span> builder <span class="token operator">=</span> <span class="token function">creatBaseConfBuilder</span><span class="token punctuation">(</span> <span class="token punctuation">(</span>scheme <span class="token operator">==</span> <span class="token string">"https"</span><span class="token punctuation">)</span><span class="token operator">?</span><span class="token string">"https"</span><span class="token operator">:</span><span class="token string">"https"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 1.账号密码的配置</span>
+    <span class="token comment">//CredentialsProvider: 用于提供 HTTP 身份验证凭据的接口; 允许你配置用户名和密码,以便在与服务器建立连接时进行身份验证</span>
+    <span class="token class-name">CredentialsProvider</span> credentialsProvider <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">BasicCredentialsProvider</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    credentialsProvider<span class="token punctuation">.</span><span class="token function">setCredentials</span><span class="token punctuation">(</span><span class="token class-name">AuthScope</span><span class="token punctuation">.</span><span class="token constant">ANY</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">UsernamePasswordCredentials</span><span class="token punctuation">(</span>userName<span class="token punctuation">,</span> password<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 2.设置自签证书,并且还包含了账号密码</span>
+    builder<span class="token punctuation">.</span><span class="token function">setHttpClientConfigCallback</span><span class="token punctuation">(</span>httpAsyncClientBuilder <span class="token operator">-&gt;</span> httpAsyncClientBuilder
+                                        <span class="token punctuation">.</span><span class="token function">setSSLContext</span><span class="token punctuation">(</span><span class="token function">buildSSLContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                                        <span class="token punctuation">.</span><span class="token function">setSSLHostnameVerifier</span><span class="token punctuation">(</span><span class="token class-name">NoopHostnameVerifier</span><span class="token punctuation">.</span><span class="token constant">INSTANCE</span><span class="token punctuation">)</span>
+                                        <span class="token punctuation">.</span><span class="token function">setDefaultCredentialsProvider</span><span class="token punctuation">(</span>credentialsProvider<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">RestClientTransport</span> transport <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RestClientTransport</span><span class="token punctuation">(</span>builder<span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">JacksonJsonpMapper</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//And create the API client</span>
+    <span class="token class-name">ElasticsearchClient</span> esClient <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ElasticsearchClient</span><span class="token punctuation">(</span>transport<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">return</span> esClient<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">SSLContext</span> <span class="token function">buildSSLContext</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token comment">// 读取http_ca.crt证书</span>
+    <span class="token class-name">ClassPathResource</span> resource <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ClassPathResource</span><span class="token punctuation">(</span><span class="token string">"http_ca.crt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">SSLContext</span> sslContext <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 证书工厂</span>
+        <span class="token class-name">CertificateFactory</span> factory <span class="token operator">=</span> <span class="token class-name">CertificateFactory</span><span class="token punctuation">.</span><span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token string">"X.509"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">Certificate</span> trustedCa<span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">(</span><span class="token class-name">InputStream</span> is <span class="token operator">=</span> resource<span class="token punctuation">.</span><span class="token function">getInputStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            trustedCa <span class="token operator">=</span> factory<span class="token punctuation">.</span><span class="token function">generateCertificate</span><span class="token punctuation">(</span>is<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// 密钥库</span>
+        <span class="token class-name">KeyStore</span> trustStore <span class="token operator">=</span> <span class="token class-name">KeyStore</span><span class="token punctuation">.</span><span class="token function">getInstance</span><span class="token punctuation">(</span><span class="token string">"pkcs12"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        trustStore<span class="token punctuation">.</span><span class="token function">load</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">,</span> <span class="token string">"liuxiansheng"</span><span class="token punctuation">.</span><span class="token function">toCharArray</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        trustStore<span class="token punctuation">.</span><span class="token function">setCertificateEntry</span><span class="token punctuation">(</span><span class="token string">"ca"</span><span class="token punctuation">,</span> trustedCa<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">SSLContextBuilder</span> sslContextBuilder <span class="token operator">=</span> <span class="token class-name">SSLContexts</span><span class="token punctuation">.</span><span class="token function">custom</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                 <span class="token punctuation">.</span><span class="token function">loadTrustMaterial</span><span class="token punctuation">(</span>trustStore<span class="token punctuation">,</span> <span class="token keyword">null</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        sslContext <span class="token operator">=</span> sslContextBuilder<span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">CertificateException</span> <span class="token operator">|</span> <span class="token class-name">IOException</span> <span class="token operator">|</span> <span class="token class-name">KeyStoreException</span> <span class="token operator">|</span> <span class="token class-name">NoSuchAlgorithmException</span> <span class="token operator">|</span>
+                 <span class="token class-name">KeyManagementException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"ES连接认证失败"</span><span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> sslContext<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<ol start="7"><li>测试：<code>ElasticSearchTest</code>类添加</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Resource</span><span class="token punctuation">(</span>name <span class="token operator">=</span> <span class="token string">"accountAndCertificateConnectionESClient"</span><span class="token punctuation">)</span>
+<span class="token class-name">ElasticsearchClient</span> accountAndCertificateConnectionESClient<span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@Test</span>
+<span class="token keyword">public</span> <span class="token keyword">void</span>  <span class="token function">accountAndCertificateConnectionTest</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{<!-- --></span>
+
+<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">open</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token string">"true"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">//创建索引</span>
+    <span class="token class-name">CreateIndexResponse</span> response <span class="token operator">=</span>  accountAndCertificateConnectionESClient<span class="token punctuation">.</span><span class="token function">indices</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span>c <span class="token operator">-&gt;</span> c<span class="token punctuation">.</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token string">"account_and_certificate_connection_index"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>response<span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">else</span><span class="token punctuation">{<!-- --></span>
+    log<span class="token punctuation">.</span><span class="token function">info</span><span class="token punctuation">(</span><span class="token string">"es is closed"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="Spring_Data_ES_335"></a><code>Spring Data ES</code></h3> 
+<h4><a id="_337"></a>公共配置</h4> 
+<ol><li>依赖：<code>web</code>模块引入该依赖<code>---</code>但其版本必须与你下载的<code>ES</code>的版本一致</li></ol> 
+<blockquote> 
+ <p>版本：点击<code>https://spring.io/projects/spring-data-elasticsearch#learn</code>，点击<code>GA</code>版本的<code>Reference Doc</code>，点击<code>version</code>查看<code>Spring Data ES</code>与<code>ES</code>版本的支持关系</p> 
+</blockquote> 
+<blockquote> 
+ <p>参考：<code>https://www.yuque.com/itwanger/vn4p17/wslq2t/https://blog.csdn.net/qq_40885085/article/details/105023026</code></p> 
+</blockquote> 
+<pre><code class="prism language-xml"><span class="token comment">&lt;!-- 若存在Spring Data ES的某个版本支持你下的ES版本,则使用  --&gt;</span>
+<span class="token comment">&lt;!-- Spring官方在ES官方提供的JAVA环境使用的依赖的基础上做了封装 --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-boot-starter-data-elasticsearch<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+
+<span class="token comment">&lt;!-- ESTestEntity用到 --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>jakarta.servlet<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>jakarta.servlet-api<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">&gt;</span></span>6.0.0<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">&gt;</span></span>
+	<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>scope</span><span class="token punctuation">&gt;</span></span>provided<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>scope</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+
+<span class="token comment">&lt;!-- ESTestEntity用到 --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.projectlombok<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>lombok<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>scope</span><span class="token punctuation">&gt;</span></span>provided<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>scope</span><span class="token punctuation">&gt;</span></span>
+  <span class="token comment">&lt;!--provided：指定该依赖项在编译时是必需的，才会生效, 但在运行时不需要,也不会生效--&gt;</span>
+  <span class="token comment">&lt;!--这样 Lombok 会在编译期静悄悄地将带 Lombok 注解的源码文件正确编译为完整的 class 文件 --&gt;</span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<ol start="2"><li>新建：<code>we</code>b模块<code>TestEntity</code>目录新建<code>ESTestEntity</code></li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Data</span>
+<span class="token annotation punctuation">@EqualsAndHashCode</span><span class="token punctuation">(</span>callSuper <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Document</span><span class="token punctuation">(</span>indexName <span class="token operator">=</span> <span class="token string">"test"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ESTestEntity</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">long</span> serialVersionUID <span class="token operator">=</span> <span class="token number">1L</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Id</span>
+    <span class="token keyword">private</span> <span class="token class-name">Long</span> id<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Field</span><span class="token punctuation">(</span>type <span class="token operator">=</span> <span class="token class-name">FieldType<span class="token punctuation">.</span>Text</span><span class="token punctuation">,</span> analyzer <span class="token operator">=</span> <span class="token string">"ik_max_word"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> content<span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token class-name">String</span> title<span class="token punctuation">;</span>
+
+    <span class="token keyword">private</span> <span class="token class-name">String</span> excerpt<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="3"><li>新建：<code>web</code>模块<code>TestRepository</code>包下新建<code>ESTestRepository</code> 接口</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestEntity</span><span class="token punctuation">.</span><span class="token class-name">ESTestEntity</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>domain<span class="token punctuation">.</span></span><span class="token class-name">Page</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>domain<span class="token punctuation">.</span></span><span class="token class-name">Pageable</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>repository<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchRepository</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">ESTestRepository</span> <span class="token keyword">extends</span> <span class="token class-name">ElasticsearchRepository</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ESTestEntity</span><span class="token punctuation">,</span> <span class="token class-name">Long</span><span class="token punctuation">&gt;</span></span> <span class="token punctuation">{<!-- --></span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="ES_402"></a>直接连接<code>ES</code></h4> 
+<ol><li>配置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>属性设置为<code>false</code></li></ol> 
+<blockquote> 
+ <p><code>xpack.security.enabled</code>：<br> ● 默认<code>true</code>：必须使用账号连接<code>ES</code><br> ● 若为<code>false</code>：必须使用<code>http://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会失败<code>+</code>不需要使用账号连接，但必须使用<code>HTTP</code>连接</p> 
+</blockquote> 
+<ol start="2"><li>配置：<code>web</code>模块<code>dev</code>目录<code>application-dal</code>添加</li></ol> 
+<pre><code class="prism language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+    <span class="token key atrule">uris</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span><span class="token number">9200</span>
+</code></pre> 
+<ol start="3"><li>新建：<code>web</code>模块<code>test</code>目录新建<code>ElasticsearchTemplateTest</code></li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestEntity</span><span class="token punctuation">.</span><span class="token class-name">ESTestEntity</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestRepository</span><span class="token punctuation">.</span><span class="token class-name">ESTestRepository</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>junit<span class="token punctuation">.</span>jupiter<span class="token punctuation">.</span>api<span class="token punctuation">.</span></span><span class="token class-name">Test</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>beans<span class="token punctuation">.</span>factory<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Autowired</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>test<span class="token punctuation">.</span>context<span class="token punctuation">.</span></span><span class="token class-name">SpringBootTest</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>client<span class="token punctuation">.</span>elc<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchTemplate</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootTest</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ElasticsearchTemplateTest</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ESTestRepository</span> esTestRepository<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ElasticsearchTemplate</span> elasticsearchTemplate<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">save</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">1L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>elasticsearchTemplate<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">insert</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">2L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>esTestRepository<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="4"><li>访问：点击<code>http://localhost:9200/test/_search</code> <code>---</code>查询索引库<code>test</code><br> <img src="https://images2.imgbox.com/33/55/XfUdbKyM_o.png" alt="请添加图片描述"></li></ol> 
+<h4><a id="HTTPES_458"></a><code>HTTP</code>连接<code>ES</code></h4> 
+<ol><li>配置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>属性使用默认值<code>+</code> <code>xpack.security.http.ssl.enabled</code>设置为<code>false</code></li></ol> 
+<blockquote> 
+ <p><code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.http.ssl.enabled</code>：<br> ● 默认<code>true</code>：必须使用<code>https://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会成功<code>+</code>需要使用账号连接<code>+</code>必须使用<code>HTTPS</code>连接<br> ● 若为<code>false</code>：必须使用<code>http://localhost:9200/</code>访问<code>ES</code>服务<code>+</code>启动<code>Kibana</code>服务会失败<code>+</code>需要使用账号连接，但必须使用<code>HTTP</code>连接</p> 
+</blockquote> 
+<ol start="2"><li>配置：<code>web</code>模块<code>dev</code>目录<code>application-dal</code>添加</li></ol> 
+<pre><code class="prism language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+    <span class="token key atrule">uris</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span><span class="token number">9200</span>
+    <span class="token key atrule">username</span><span class="token punctuation">:</span>  <span class="token comment"># 账号用户名</span>
+    <span class="token key atrule">password</span><span class="token punctuation">:</span>  <span class="token comment">#账号密码</span>
+</code></pre> 
+<ol start="3"><li>修改：<code>web</code>模块<code>test</code>目录下<code>ElasticsearchTemplateTest</code>修改成这样，其他参见直接连接</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestEntity</span><span class="token punctuation">.</span><span class="token class-name">ESTestEntity</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestRepository</span><span class="token punctuation">.</span><span class="token class-name">ESTestRepository</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>junit<span class="token punctuation">.</span>jupiter<span class="token punctuation">.</span>api<span class="token punctuation">.</span></span><span class="token class-name">Test</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>beans<span class="token punctuation">.</span>factory<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Autowired</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>test<span class="token punctuation">.</span>context<span class="token punctuation">.</span></span><span class="token class-name">SpringBootTest</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>client<span class="token punctuation">.</span>elc<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchTemplate</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootTest</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ElasticsearchTemplateTest</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ESTestRepository</span> esTestRepository<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ElasticsearchTemplate</span> elasticsearchTemplate<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">save</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">1L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>elasticsearchTemplate<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">insert</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">2L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>esTestRepository<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="4"><li>访问：点击<code>http://localhost:9200/test/_search</code> <code>---</code>查询索引库<code>test</code></li></ol> 
+<h4><a id="HTTPSES__516"></a><code>HTTPS</code>连接<code>ES </code></h4> 
+<ol><li>配置：<code>ES</code> <code>Elasticsearch.yml</code>的<code>xpack.security.enabled</code>和<code>xpack.security.http.ssl.enabled</code>属性使用默认值</li><li>配置：<code>web</code>模块<code>dev</code>目录<code>application-dal</code>添加</li></ol> 
+<pre><code class="prism language-yaml"><span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">elasticsearch</span><span class="token punctuation">:</span>
+    <span class="token key atrule">uris</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> https<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span><span class="token number">9200</span>
+    <span class="token key atrule">username</span><span class="token punctuation">:</span>  <span class="token comment"># 账号用户名</span>
+    <span class="token key atrule">password</span><span class="token punctuation">:</span>  <span class="token comment">#账号密码</span>
+</code></pre> 
+<ol start="3"><li>修改：<code>web</code>模块<code>test</code>目录下<code>ElasticsearchTemplateTest</code>修改成这样，其他参见直接连接</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestEntity</span><span class="token punctuation">.</span><span class="token class-name">ESTestEntity</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">cn<span class="token punctuation">.</span>bytewisehub<span class="token punctuation">.</span>pai<span class="token punctuation">.</span>web<span class="token punctuation">.</span></span><span class="token class-name">TestRepository</span><span class="token punctuation">.</span><span class="token class-name">ESTestRepository</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>junit<span class="token punctuation">.</span>jupiter<span class="token punctuation">.</span>api<span class="token punctuation">.</span></span><span class="token class-name">Test</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>beans<span class="token punctuation">.</span>factory<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Autowired</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>test<span class="token punctuation">.</span>context<span class="token punctuation">.</span></span><span class="token class-name">SpringBootTest</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>data<span class="token punctuation">.</span>elasticsearch<span class="token punctuation">.</span>client<span class="token punctuation">.</span>elc<span class="token punctuation">.</span></span><span class="token class-name">ElasticsearchTemplate</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootTest</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ElasticsearchTemplateTest</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ESTestRepository</span> esTestRepository<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">ElasticsearchTemplate</span> elasticsearchTemplate<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">save</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">1L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>elasticsearchTemplate<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">void</span> <span class="token function">insert</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ESTestEntity</span> esTestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ESTestEntity</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setId</span><span class="token punctuation">(</span><span class="token number">2L</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setContent</span><span class="token punctuation">(</span><span class="token string">"不安全连接"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setTitle</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        esTestEntity<span class="token punctuation">.</span><span class="token function">setExcerpt</span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>esTestRepository<span class="token punctuation">.</span><span class="token function">save</span><span class="token punctuation">(</span>esTestEntity<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="4"><li>访问：点击<code>http://localhost:9200/test/_search</code> <code>---</code>查询索引库<code>test</code></li></ol>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/baa45449b280269756def8733a88231f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Element-UI在webstorm的安装使用</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9d5fe8b502ecbfd4d248ee3c7231894a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">python：消息推送 - 飞书机器人推送 - 富文本格式</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

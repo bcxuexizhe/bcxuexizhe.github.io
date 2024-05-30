@@ -1,0 +1,628 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Rabbitmq详解】 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/306d5e2d6ee9477257522bcedac78813/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Rabbitmq详解】">
+  <meta property="og:description" content="文章目录 消息中间件一、何为消息中间件二、消息队列协议 消息队列持久化三、持久化 消息的分发策略-高可用高可靠四、消息分发策略五、消息分发策略的机制对比六、消息队列高可用 Rabbitmq安装七、安装Rabbitmq Rabbitmq Web界面管理授权八、启动web页面访问功能九、授权账号设置密码 Rabbitmq角色分类十、Rabbitmq角色分类 Rabbitmq组件和架构十一、AMQP十二、Rabbitmq的核心组成部分 Rabbitmq工作模式十三、Rabbitmqmq不同模式 消息中间件 一、何为消息中间件 1.概述 1.消息中间件利用可靠些传递机制进行系统和系统之间的通讯.
+2.通过提供消息队列传递和消息队列排队机制,它可以在分布式系统架构上扩展进程之间的通讯.
+2.消息中间件的应用场景 1.跨系统数据传递
+2.数据的并发和异步处理
+3.大数据分析与传递
+5.分布式事务
+例如:
+在进行数据迁移和高并发请求的时候,此时有个10W的并发请求下单,这个时候我们就可以采用消息队列缓存中间件,先把订单数据放到消息队列中,让这批数据稳健、可靠的入库和执行。
+3.常见的消息中间件 ActiveMQRabbitmqkafkaRocketmq 消息中间件的本质和设计就是一种用来接收数据、数据请求、存储数据、发送数据的过程的技术服务。
+MQ消息队列:负责数据的传接收、存储和传递，所以性能要过于普通服务和技术。
+二、消息队列协议 1.网络协议三要素 1.语法:语法是用户数据与控制信息的数据与格式以及数据出现的顺序
+2.语义:语义是解释控制信息每个部分的意义,它规定了需要发出扫描控制信息以及完成的动作和做出什么样的响应.
+3.时序:时序是对事件发生的顺序的详细说明.
+①.语法:http规定了请求报文和响应报文的格式
+②.语义:客户端主动发起了请求称之为请求
+③.时序:一个请求对应一个响应
+2.为什么消息中间件不采用http作为传输协议? 1.应为http协议的自身机制(报文头和响应报文)是比较复杂的,其中还包含了cookies和数据加密解密,状态码,响应码等,对于一个消息传递存储分法功能的协议是不需要这么复杂的功能这么多反而会拖垮性能,反之要追求高性能、简介、快速。
+2.一般情况下http面对的都是短连接，在实际应用中容易中断，造成数据丢失，这样就不利于消息中间件的业务场景，因为消息中间件是一个长期获取消息的过程，出现问题和故障需要保证数据持久化，目的就是为了能更好的对数据进行存储、转发保证数据的高可用和稳健运行。
+3.消息中间件采用的最常见的协议 OpenWireAMQPAMQPMQTTKafkaOpenMessage AMQP:
+AMQP:全称(Advanced Message Queuing Protocol)是消息队列协议,由摩根大通集团联合其它公司共同设计,是一个提供消息服务的应用层标准高级消息队列协议,是应用层协议的一个开放标准,为面向消息的中间件设计.基于该协议的客户端与消息中间件可传递消息,并不受客户端/中间件不同产品.不同的开发语言等条件的限制,Erlang语言开发,Erlang语言是基于C语言设计的语言,因此该协议性能也是十分的强悍.Erlang实现有Rabbitmq等.
+AMQP协议支持Rabbitmq、Activemq
+特征:
+①.分布式事务支持
+②.消息的持久化支持
+③.高性能和高可靠的消息处理优势.
+MQTT协议:
+MQTT协议:(Message Queueing Telemetry Transport)消息队列是IBM开放的一个即时通讯协议,物联网架构中的重要组成部分.
+特点:
+1、轻量
+2、结构简单
+3、传输快，不支持事务
+4.没有持久化设计
+应用场景：
+1、适用于计算能力有限
+2、网络不稳定的场景
+支持者：
+Rabbitmq、Activemq
+OpenMessage协议:
+最近几年由阿里、雅虎、滴滴、Stremalio等公司共同参与发布的一款消息中间件、流处理等领域的应用开发标准。
+特点：
+①、结构简单
+②、解析速度快">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-04-04T15:55:40+08:00">
+    <meta property="article:modified_time" content="2023-04-04T15:55:40+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Rabbitmq详解】</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_1" rel="nofollow">消息中间件</a></li><li><ul><li><ul><li><a href="#_5" rel="nofollow">一、何为消息中间件</a></li><li><a href="#_36" rel="nofollow">二、消息队列协议</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_126" rel="nofollow">消息队列持久化</a></li><li><ul><li><ul><li><a href="#_130" rel="nofollow">三、持久化</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_147" rel="nofollow">消息的分发策略-高可用高可靠</a></li><li><ul><li><ul><li><a href="#_151" rel="nofollow">四、消息分发策略</a></li><li><a href="#_167" rel="nofollow">五、消息分发策略的机制对比</a></li><li><a href="#_179" rel="nofollow">六、消息队列高可用</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Rabbitmq_226" rel="nofollow">Rabbitmq安装</a></li><li><a href="#_228" rel="nofollow"></a></li><li><ul><li><ul><li><a href="#Rabbitmq_230" rel="nofollow">七、安装Rabbitmq</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Rabbitmq_Web_330" rel="nofollow">Rabbitmq Web界面管理授权</a></li><li><ul><li><ul><li><a href="#web_334" rel="nofollow">八、启动web页面访问功能</a></li><li><a href="#_363" rel="nofollow">九、授权账号设置密码</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Rabbitmq_405" rel="nofollow">Rabbitmq角色分类</a></li><li><a href="#_407" rel="nofollow"></a></li><li><ul><li><ul><li><a href="#Rabbitmq_409" rel="nofollow">十、Rabbitmq角色分类</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Rabbitmq_458" rel="nofollow">Rabbitmq组件和架构</a></li><li><a href="#_460" rel="nofollow"></a></li><li><ul><li><ul><li><a href="#AMQP_462" rel="nofollow">十一、AMQP</a></li><li><a href="#Rabbitmq_474" rel="nofollow">十二、Rabbitmq的核心组成部分</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#Rabbitmq_570" rel="nofollow">Rabbitmq工作模式</a></li><li><a href="#_572" rel="nofollow"></a></li><li><ul><li><ul><li><a href="#Rabbitmqmq_574" rel="nofollow">十三、Rabbitmqmq不同模式</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_1"></a>消息中间件</h2> 
+<hr> 
+<h4><a id="_5"></a>一、何为消息中间件</h4> 
+<ul><li><strong>1.概述</strong></li></ul> 
+<blockquote> 
+ <p>1.消息中间件利用可靠些传递机制进行系统和系统之间的通讯.</p> 
+ <p>2.通过提供消息队列传递和消息队列排队机制,它可以在分布式系统架构上扩展进程之间的通讯.</p> 
+</blockquote> 
+<ul><li><strong>2.消息中间件的应用场景</strong></li></ul> 
+<blockquote> 
+ <p>1.跨系统数据传递</p> 
+ <p>2.数据的并发和异步处理</p> 
+ <p>3.大数据分析与传递</p> 
+ <p>5.分布式事务</p> 
+ <p>例如:</p> 
+ <blockquote> 
+  <p>在进行数据迁移和高并发请求的时候,此时有个10W的并发请求下单,这个时候我们就可以采用消息队列缓存中间件,先把订单数据放到消息队列中,让这批数据稳健、可靠的入库和执行。</p> 
+ </blockquote> 
+</blockquote> 
+<ul><li><strong>3.常见的消息中间件</strong></li></ul> 
+<table><thead><tr><th>ActiveMQ</th><th>Rabbitmq</th><th>kafka</th><th>Rocketmq</th></tr></thead></table> 
+<blockquote> 
+ <p>消息中间件的本质和设计就是一种用来接收数据、数据请求、存储数据、发送数据的过程的技术服务。</p> 
+ <p>MQ消息队列:负责数据的传接收、存储和传递，所以性能要过于普通服务和技术。</p> 
+</blockquote> 
+<h4><a id="_36"></a>二、消息队列协议</h4> 
+<ul><li><strong>1.网络协议三要素</strong></li></ul> 
+<p>1.语法:语法是用户数据与控制信息的数据与格式以及数据出现的顺序</p> 
+<p>2.语义:语义是解释控制信息每个部分的意义,它规定了需要发出扫描控制信息以及完成的动作和做出什么样的响应.</p> 
+<p>3.时序:时序是对事件发生的顺序的详细说明.</p> 
+<blockquote> 
+ <p>①.语法:http规定了请求报文和响应报文的格式</p> 
+ <p>②.语义:客户端主动发起了请求称之为请求</p> 
+ <p>③.时序:一个请求对应一个响应</p> 
+</blockquote> 
+<ul><li><strong>2.为什么消息中间件不采用http作为传输协议?</strong></li></ul> 
+<blockquote> 
+ <p>1.应为http协议的自身机制(报文头和响应报文)是比较复杂的,其中还包含了cookies和数据加密解密,状态码,响应码等,对于一个消息传递存储分法功能的协议是不需要这么复杂的功能这么多反而会拖垮性能,反之要追求高性能、简介、快速。</p> 
+ <p>2.一般情况下http面对的都是短连接，在实际应用中容易中断，造成数据丢失，这样就不利于消息中间件的业务场景，因为消息中间件是一个长期获取消息的过程，出现问题和故障需要保证数据持久化，目的就是为了能更好的对数据进行存储、转发保证数据的高可用和稳健运行。</p> 
+</blockquote> 
+<ul><li><strong>3.消息中间件采用的最常见的协议</strong></li></ul> 
+<table><thead><tr><th>OpenWire</th><th>AMQP</th><th>AMQP</th><th>MQTT</th><th>Kafka</th><th>OpenMessage</th></tr></thead></table> 
+<blockquote> 
+ <p><strong>AMQP:</strong></p> 
+ <p>AMQP:全称(Advanced Message Queuing Protocol)是消息队列协议,由摩根大通集团联合其它公司共同设计,是一个提供消息服务的应用层标准高级消息队列协议,是应用层协议的一个开放标准,为面向消息的中间件设计.基于该协议的客户端与消息中间件可传递消息,并不受客户端/中间件不同产品.不同的开发语言等条件的限制,Erlang语言开发,Erlang语言是基于C语言设计的语言,因此该协议性能也是十分的强悍.Erlang实现有Rabbitmq等.</p> 
+ <p>AMQP协议支持Rabbitmq、Activemq</p> 
+ <p><strong>特征:</strong></p> 
+ <blockquote> 
+  <p>①.分布式事务支持</p> 
+  <p>②.消息的持久化支持</p> 
+  <p>③.高性能和高可靠的消息处理优势.</p> 
+ </blockquote> 
+</blockquote> 
+<hr> 
+<blockquote> 
+ <p><strong>MQTT协议:</strong></p> 
+ <p>MQTT协议:(Message Queueing Telemetry Transport)消息队列是IBM开放的一个即时通讯协议,物联网架构中的重要组成部分.</p> 
+ <p>特点:</p> 
+ <blockquote> 
+  <p>1、轻量<br> 2、结构简单<br> 3、传输快，不支持事务<br> 4.没有持久化设计</p> 
+ </blockquote> 
+ <p>应用场景：</p> 
+ <blockquote> 
+  <p>1、适用于计算能力有限<br> 2、网络不稳定的场景</p> 
+ </blockquote> 
+ <p>支持者：</p> 
+ <p>Rabbitmq、Activemq</p> 
+</blockquote> 
+<blockquote> 
+ <p><strong>OpenMessage协议:</strong></p> 
+ <p>最近几年由阿里、雅虎、滴滴、Stremalio等公司共同参与发布的一款消息中间件、流处理等领域的应用开发标准。</p> 
+ <p>特点：</p> 
+ <blockquote> 
+  <p>①、结构简单</p> 
+  <p>②、解析速度快</p> 
+  <p>③、支持事务和持久化设计</p> 
+ </blockquote> 
+</blockquote> 
+<hr> 
+<blockquote> 
+ <p><strong>Kafka协议:</strong></p> 
+ <p>kafka协议是基于TCP/IP的二进制协议,消息内部是通过长度来分割,由一些基本数据类型组成.</p> 
+ <p>特点:</p> 
+ <blockquote> 
+  <p>①.结构简单</p> 
+  <p>②.解析速度快</p> 
+  <p>③.无事务支持</p> 
+  <p>④.有持久化的设计</p> 
+ </blockquote> 
+</blockquote> 
+<h2><a id="_126"></a>消息队列持久化</h2> 
+<hr> 
+<h4><a id="_130"></a>三、持久化</h4> 
+<ul><li><strong>1.概述</strong></li></ul> 
+<blockquote> 
+ <p>持久化就是将数据存储进入磁盘,而不是存在内存中随服务器重启断开而消失,使数据能够永久保存。</p> 
+</blockquote> 
+<ul><li><strong>2.常见的持久化方式</strong></li></ul> 
+<table><thead><tr><th></th><th>Activemq</th><th>Rabbitmq</th><th>Kafka</th><th>Rocketmq</th></tr></thead><tbody><tr><td>文件存储</td><td>支持</td><td>支持</td><td>支持</td><td>支持</td></tr><tr><td>数据库存储</td><td>支持</td><td>—</td><td>—</td><td>—</td></tr></tbody></table> 
+<hr> 
+<h2><a id="_147"></a>消息的分发策略-高可用高可靠</h2> 
+<hr> 
+<h4><a id="_151"></a>四、消息分发策略</h4> 
+<p><strong>1.MQ消息队列有如下几个角色：</strong></p> 
+<blockquote> 
+ <p>①.生产者</p> 
+ <p>②.存储消息</p> 
+ <p>③.消费者</p> 
+</blockquote> 
+<p><strong>2.生产者生成消息消费者是如何获取消息的呢?</strong></p> 
+<blockquote> 
+ <p>获取消息一般分为两种方式,分别是推(push)、拉(pull),我们平常使用的git就有这个推拉机制,我们发送http请求就是一种典型的拉取数据库数据返回的过程.而消息队列MQ是一种推送过程,而这些机制会适用到很多业务场景也有很多对应推机制策略.</p> 
+</blockquote> 
+<blockquote> 
+ <p>在发送消息的过程中可能会出现异常,或者网络的抖动,故障等等因为造成消息的无法消费,比如用户在下订单,消费MQ接受,订单系统出现故障,导致用户支付失败,那么这个时候就需要消息中间件必须支持消息重试机制策略,也就是当出现问题和故障的情况下,消息不丢失还可以进行重发.</p> 
+</blockquote> 
+<h4><a id="_167"></a>五、消息分发策略的机制对比</h4> 
+<table><thead><tr><th align="center"></th><th align="center">ActiveMQ</th><th align="center">RabbitMQ</th><th align="center">Kafka</th><th align="center">RocketMQ</th></tr></thead><tbody><tr><td align="center">发布订阅</td><td align="center">支持</td><td align="center">支持</td><td align="center">支持</td><td align="center">支持</td></tr><tr><td align="center">轮询分发</td><td align="center">支持</td><td align="center">支持</td><td align="center">支持</td><td align="center">—</td></tr><tr><td align="center">公平分发</td><td align="center">—</td><td align="center">支持</td><td align="center">支持</td><td align="center">—</td></tr><tr><td align="center">重发</td><td align="center">支持</td><td align="center">支持</td><td align="center">—</td><td align="center">支持</td></tr><tr><td align="center">消息拉取</td><td align="center">—</td><td align="center">支持</td><td align="center">支持</td><td align="center">支持</td></tr></tbody></table> 
+<blockquote> 
+ <p>轮询分发和公平分发的区别,轮询分发它侧重于公平性,不管服务器的算力资源的优劣,分发的数据始终都是平均分配,公平分发则讲究"能者多劳",对于算力资源更优处理数据更快的服务器采取分配更多.反之,对算力资源数据处理较为劣的服务器采取分配更少的数据.</p> 
+</blockquote> 
+<h4><a id="_179"></a>六、消息队列高可用</h4> 
+<ul><li><strong>1.概述</strong></li></ul> 
+<blockquote> 
+ <p>①.所谓的高可用,是指在产品在规定的条件和规定的时刻或者时间内处于可执行规定功能状态的能力.</p> 
+ <p>②.当业务量增加是,请求也过大,一台消息中间件服务器的会触及硬件(CPU、内存、磁盘)的极限，一台消息服务区你已经无法满足业务需求，所以消息中间件必须支持集群部署，来达到高可用的目的。</p> 
+</blockquote> 
+<ul><li><strong>2.主从数据库的部署模式</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/5e/90/3o0M3AD8_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>生产者将消费发送到Master节点,所有的都连接这个消息队列共享这块数据区域,Master节点负责写入,一旦Master挂掉,Slave节点继续服务,从而形成高可用.</p> 
+</blockquote> 
+<ul><li><strong>3.Master-Slaver主从同步部署方式</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/e2/66/WBBTsksX_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>这种模式写入消息同样在Master主节点上,但是主节点会同步数据到Slaver节点形成副本,和zookeeper或者Redis主从节点机制很相同.这样可以达到负载均衡的效果,如果消费者有多个这样就可以去不同的节点就行消费,以为消息的拷贝和同步会暂用很大的带宽和网络资源.在后续的Rabbitmq中会有使用.</p> 
+</blockquote> 
+<ul><li><strong>4.多住集群转发部署模式</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/4c/f8/Q0wSQYVt_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>①.如果插入的数据是broker-1中,元数据信息会存储数据的相关描述和记录存放的位置(队列).</p> 
+ <p>②.它会对描述的信息也就是元数据进行同步,如果消费者在broker-2中进行消费,发现自己几点没有对应的消息,可以从对应的元数据中去查询,然后返回对应的消息信息.</p> 
+ <p>场景:</p> 
+ <blockquote> 
+  <p>比如买或者和或者演唱会门票,第一个黄牛有顾客说要买演唱会门票,自己这里没有但是它回去联系其它的黄牛询问,如果有就返回.</p> 
+ </blockquote> 
+</blockquote> 
+<ul><li><strong>5.总结三句话</strong></li></ul> 
+<p>1.要买进行数据共享</p> 
+<p>2.要么消息同步</p> 
+<p>3.要么元数据共享</p> 
+<ul><li><strong>5.高可靠</strong></li></ul> 
+<blockquote> 
+ <p>所谓高可靠是指系统可以无故障地持续运行,比如一个系统突然崩溃,报错,异常等等并不影响线上业务的正常运行,出错的几率极低,就称之为:高可靠</p> 
+</blockquote> 
+<h2><a id="Rabbitmq_226"></a>Rabbitmq安装</h2> 
+<h2><a id="_228"></a></h2> 
+<h4><a id="Rabbitmq_230"></a>七、安装Rabbitmq</h4> 
+<ul><li><strong>1.安装rabbitmq和Erlang语言环境</strong></li><li>https://github.com/rabbitmq/rabbitmq-server/releases/download/v3.10.6/rabbitmq-server-3.10.6-1.suse.noarch.rpm</li><li>wget https://packages.erlang-solutions.com/erlang-solutions-2.0-1.noarch.rpm</li></ul> 
+<blockquote> 
+ <p>①.安装Erlang环境</p> 
+ <p>②.验证安装erlang环境是否成功</p> 
+ <p>③.安装socat</p> 
+ <p>④.安装rabbitmq</p> 
+</blockquote> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rpm -Uvh erlang-solutions-2.0-1.noarch.rpm</span>
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># yum install erlang -y</span>
+
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># erl -v</span>
+Erlang/OTP <span class="token number">24</span> <span class="token punctuation">[</span>erts-12.3.2.1<span class="token punctuation">]</span> <span class="token punctuation">[</span>source<span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token number">64</span>-bit<span class="token punctuation">]</span> <span class="token punctuation">[</span>smp:4:4<span class="token punctuation">]</span> <span class="token punctuation">[</span>ds:4:4:10<span class="token punctuation">]</span> <span class="token punctuation">[</span>async-threads:1<span class="token punctuation">]</span>
+
+Eshell V12.3.2.1  <span class="token punctuation">(</span>abort with ^G<span class="token punctuation">)</span>
+<span class="token operator"><span class="token file-descriptor important">1</span>&gt;</span> 
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># yum install socat -y</span>
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rpm -Uvh rabbitmq-server-3.10.6-1.suse.noarch.rpm </span>
+warning: rabbitmq-server-3.10.6-1.suse.noarch.rpm: Header V4 RSA/SHA512 Signature, key ID 6026dfca: NOKEY
+Preparing<span class="token punctuation">..</span>.                          <span class="token comment">################################# [100%]</span>
+Updating / installing<span class="token punctuation">..</span>.
+   <span class="token number">1</span>:rabbitmq-server-3.10.6-1.suse    <span class="token comment">################################# [100%]</span>
+
+</code></pre> 
+<blockquote> 
+ <p>①.启动rabbitmq</p> 
+ <p>②.查看状态,设置rabbitmq开机自启动</p> 
+</blockquote> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># systemctl start rabbitmq-server.service</span>
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># systemctl enable rabbitmq-server.service </span>
+Created symlink from /etc/systemd/system/multi-user.target.wants/rabbitmq-server.service to /usr/lib/systemd/system/rabbitmq-server.service.
+
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># systemctl status rabbitmq-server.service </span>
+● rabbitmq-server.service - RabbitMQ broker
+   Loaded: loaded <span class="token punctuation">(</span>assets/usr/lib/systemd/system/rabbitmq-server.service<span class="token punctuation">;</span> disabled<span class="token punctuation">;</span> vendor preset: disabled<span class="token punctuation">)</span>
+   Active: active <span class="token punctuation">(</span>running<span class="token punctuation">)</span> since Sun <span class="token number">2022</span>-07-31 <span class="token number">23</span>:18:35 CST<span class="token punctuation">;</span> 3s ago
+ Main PID: <span class="token number">2426</span> <span class="token punctuation">(</span>beam.smp<span class="token punctuation">)</span>
+   CGroup: /system.slice/rabbitmq-server.service
+           ├─2426 /usr/lib64/erlang/erts-12.3.2.1/bin/beam.smp -W w -MBas ageffcbf -MHas ageffcbf -MBlmbcs <span class="token number">512</span> -MHlmbcs <span class="token number">512</span> -MMmcs <span class="token punctuation">..</span>.
+           ├─2441 erl_child_setup <span class="token number">32768</span>
+           ├─2470 /usr/lib64/erlang/erts-12.3.2.1/bin/epmd -daemon
+           ├─2500 inet_gethost <span class="token number">4</span>
+           └─2501 inet_gethost <span class="token number">4</span>
+
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Doc guides:  https://rabbitmq.com/documentation.html
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Support:     https://rabbitmq.com/contact.html
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Tutorials:   https://rabbitmq.com/getstarted.html
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Monitoring:  https://rabbitmq.com/monitoring.html
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Logs: /var/log/rabbitmq/rabbit@zabbix-server.log
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: /var/log/rabbitmq/rabbit@zabbix-server_upgrade.log
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: <span class="token operator">&lt;</span>stdout<span class="token operator">&gt;</span>
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:31 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Config file<span class="token punctuation">(</span>s<span class="token punctuation">)</span>: <span class="token punctuation">(</span>none<span class="token punctuation">)</span>
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:35 zabbix-server rabbitmq-server<span class="token punctuation">[</span><span class="token number">2426</span><span class="token punctuation">]</span>: Starting broker<span class="token punctuation">..</span>. completed with <span class="token number">0</span> plugins.
+Jul <span class="token number">31</span> <span class="token number">23</span>:18:35 zabbix-server systemd<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span>: Started RabbitMQ broker.
+
+</code></pre> 
+<ul><li><strong>2.docker安装rabbitmq</strong></li></ul> 
+<pre><code class="prism language-powershell"><span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># docker run -di --name myrabbit -e RABBITMQ_DEFAULT_USER=admin -e RABBITMQ_DEFAULT_PASS=admin -p 15672:15672 -p 5672:5672 -p 25672:25672 -p 61613:61613 -p 1883:1883 rabbitmq:management</span>
+
+<span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># docker ps -a</span>
+CONTAINER ID   IMAGE                 COMMAND                  CREATED          STATUS    PORTS     NAMES
+3e9954136db4   rabbitmq:management   <span class="token string">"docker-entrypoint.s…"</span>   22 seconds ago   Created             myrabbit
+
+<span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># docker images</span>
+REPOSITORY   TAG          IMAGE ID       CREATED        SIZE
+rabbitmq     management   6c3c2a225947   7 months ago   253MB
+
+
+<span class="token comment">#由于之前手动安装的rabbitmq和docker安装的rabbitmq存在着端口冲突</span>
+<span class="token comment">#我们需要手动关停rabbitmq,启动docker rabbitmq</span>
+
+<span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># systemctl stop rabbitmq-server.service </span>
+<span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># docker start 3e9954136db4</span>
+3e9954136db4
+
+<span class="token namespace">[root@zabbix-server ~]</span><span class="token comment"># docker ps -a</span>
+CONTAINER ID   IMAGE                 COMMAND                  CREATED         STATUS         PORTS                                                                                                                                                                                                                                                                               NAMES
+3e9954136db4   rabbitmq:management   <span class="token string">"docker-entrypoint.s…"</span>   2 minutes ago   Up 4 seconds   4369/tcp<span class="token punctuation">,</span> 0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:1883-&gt;1883/tcp<span class="token punctuation">,</span> :::1883-&gt;1883/tcp<span class="token punctuation">,</span> 5671/tcp<span class="token punctuation">,</span> 0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:5672-&gt;5672/tcp<span class="token punctuation">,</span> :::5672-&gt;5672/tcp<span class="token punctuation">,</span> 15671/tcp<span class="token punctuation">,</span> 0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:15672-&gt;15672/tcp<span class="token punctuation">,</span> :::15672-&gt;15672/tcp<span class="token punctuation">,</span> 0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:61613-&gt;61613/tcp<span class="token punctuation">,</span> :::61613-&gt;61613/tcp<span class="token punctuation">,</span> 15691-15692/tcp<span class="token punctuation">,</span> 0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0<span class="token punctuation">.</span>0:25673-&gt;25672/tcp<span class="token punctuation">,</span> :::25673-&gt;25672/tcp   myrabbit
+
+
+</code></pre> 
+<blockquote> 
+ <p>做完上述操作后,浏览器访问rabbitmq,账号密码:“admin”,登录成功则表示安装成功.</p> 
+</blockquote> 
+<hr> 
+<h2><a id="Rabbitmq_Web_330"></a>Rabbitmq Web界面管理授权</h2> 
+<hr> 
+<h4><a id="web_334"></a>八、启动web页面访问功能</h4> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rabbitmq-plugins enable rabbitmq_management</span>
+Enabling plugins on <span class="token function">node</span> rabbit@zabbix-server:
+rabbitmq_management
+The following plugins have been configured:
+  rabbitmq_management
+  rabbitmq_management_agent
+  rabbitmq_web_dispatch
+Applying plugin configuration to rabbit@zabbix-server<span class="token punctuation">..</span>.
+The following plugins have been enabled:
+  rabbitmq_management
+  rabbitmq_management_agent
+  rabbitmq_web_dispatch
+
+started <span class="token number">3</span> plugins.
+
+</code></pre> 
+<blockquote> 
+ <p>浏览器输入:启动rabbitmq的主机ip地址:15672</p> 
+ <p>①.rabbitmq默认访问账户密码:“guest”、“guest”</p> 
+ <p>②.由于这个账号仅限于localhost本地访问,所以我们要授权账号访问</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/8b/10/K2SdYxaK_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_363"></a>九、授权账号设置密码</h4> 
+<blockquote> 
+ <p>1.创建一个账户admin和密码</p> 
+</blockquote> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rabbitmqctl add_user admin admin</span>
+
+</code></pre> 
+<blockquote> 
+ <p>2.为设置用户分配操作权限</p> 
+ <p>在rabbitmq中用户级别分为如下几个</p> 
+ <p>①.administrator:可以登录控制台,查看所有的信息,可以对rabbitmq进行管理</p> 
+ <p>②.monitoring:监控者,登录控制台,指定策略</p> 
+ <p>③.policymaker:策略制定者,登录控制台,指定策略</p> 
+ <p>④.managment:普通管理员,登录控制台</p> 
+</blockquote> 
+<pre><code class="prism language-shell"><span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rabbitmqctl set_user_tags admin administrator</span>
+Setting tags <span class="token keyword">for</span> user <span class="token string">"admin"</span> to <span class="token punctuation">[</span>administrator<span class="token punctuation">]</span> <span class="token punctuation">..</span>.
+
+<span class="token comment">#设置admin用户具有访问根目录的所有权限</span>
+<span class="token punctuation">[</span>root@zabbix-server ~<span class="token punctuation">]</span><span class="token comment"># rabbitmqctl set_permissions -p / admin ".*" ".*" ".*"</span>
+Setting permissions <span class="token keyword">for</span> user <span class="token string">"admin"</span> <span class="token keyword">in</span> vhost <span class="token string">"/"</span> <span class="token punctuation">..</span>.
+
+
+</code></pre> 
+<pre><code class="prism language-shell">rabbitmqctl add_user 账号 密码
+rabbitmqctl set_user_tags 账号 administrator 将账号赋予administrator账号类型
+rabbitmqctl change_password Username Newpassword 修改密码
+rabbitmqctl delete_user Username 删除用户
+rabbitmqctl list_users 查看用户清单
+rabbitmqctl.bat set_permissions -p / 用户名 <span class="token string">".*"</span> <span class="token string">".*"</span> <span class="token string">".*"</span> 为用户设置administrator角色
+rabbitmqctl.bat set_permissions -p / root <span class="token string">".*"</span> <span class="token string">".*"</span> <span class="token string">".*"</span>
+</code></pre> 
+<h2><a id="Rabbitmq_405"></a>Rabbitmq角色分类</h2> 
+<h2><a id="_407"></a></h2> 
+<h4><a id="Rabbitmq_409"></a>十、Rabbitmq角色分类</h4> 
+<blockquote> 
+ <p>1.<strong>none:</strong></p> 
+ <blockquote> 
+  <p>不能访问management plugin,无法登录Rabbitmq web管理界面.</p> 
+ </blockquote> 
+ <p>2.<strong>management:</strong></p> 
+ <blockquote> 
+  <p>①.可以列出自己通过AMQP登录的虚拟机</p> 
+  <p>②.查看自己的虚拟机节点,virtual hosts和却学生,exchange和bindings信息</p> 
+  <p>③.查看和关闭自己的channel和connections</p> 
+  <p>④.查看有关自己的虚拟机节点和virtual hosts统计信息包括其它用户在这个节点virtual hosts中的活动信息,有点类似于个人中心,只能查看到和自己相关的信息.</p> 
+ </blockquote> 
+ <p>3.<strong>Policymaker:</strong></p> 
+ <blockquote> 
+  <p>①.包含management所有权限</p> 
+  <p>②.查看和创建、删除自己的virtual hosts所属的policies和parameters信息。</p> 
+ </blockquote> 
+ <p>4.<strong>Monitoring：</strong></p> 
+ <blockquote> 
+  <p>①.包含management所有权限</p> 
+  <p>②.罗列出所有的virtual hosts,包括不能登录virtual hosts.</p> 
+  <p>③.查看其它用户connection和channels信息</p> 
+  <p>④.查看节点级别的数据如clustering和memory使用情况</p> 
+  <p>⑤.查看所有的virtual hosts的全局统计信息</p> 
+ </blockquote> 
+ <p>5.<strong>Administrator:</strong></p> 
+ <blockquote> 
+  <p>①.最高权限</p> 
+  <p>②.可以创建和删除virtual hosts</p> 
+  <p>③.可以查看,创建和删除users</p> 
+  <p>④.查看创建permissions</p> 
+  <p>⑤.关闭所有用户的connection</p> 
+ </blockquote> 
+</blockquote> 
+<hr> 
+<h2><a id="Rabbitmq_458"></a>Rabbitmq组件和架构</h2> 
+<h2><a id="_460"></a></h2> 
+<h4><a id="AMQP_462"></a>十一、AMQP</h4> 
+<ul><li><strong>1.什么是AMQP</strong></li></ul> 
+<blockquote> 
+ <p>AMQP全称:Advanced Message Queuing Protocol(高级消息队列协议),是应用层协议的一个开发标准,为面向消息的中间件设计的一款协议.</p> 
+</blockquote> 
+<ul><li><strong>2.Rabbitmq数据流转的过程</strong></li></ul> 
+<blockquote> 
+ <p>①.数据生产者和broker节点之间首先验证密码成功后建立数据传输连接,一般一次连接连接会产生多个通道(channel).</p> 
+ <p>②.成立通道后开始发送数据消费,在数据消费前有个应答过程,一般情况下是手工应答 ,代码队ack进行确认,这一过程又被称之可靠消费.</p> 
+</blockquote> 
+<h4><a id="Rabbitmq_474"></a>十二、Rabbitmq的核心组成部分</h4> 
+<blockquote> 
+ <p><strong>AMQP简介</strong>:</p> 
+ <blockquote> 
+  <p><strong>Rabbitmq</strong>中的交换机、交换机类型、队列、绑定、路由键等都遵循<code>AMQP</code>协议中相对应的概念,<strong>AMQP</strong>是应用层的协议,包括三层</p> 
+  <blockquote> 
+   <ul><li><code>Module Layer</code>:位于协议的最高层,主要定义了一些供客户端调用的命令,客户端可以利用这些命令实现自己的业务逻辑.例如客户端可以使用<code>Queue.Declare</code>命令声明一个队列或者使用<code>Basic.Consume</code>订阅一个队列中的消息</li><li><code>Session Layer</code>:位于中间层,主要负责将客户端的命令发送给服务器,再将服务器的应答返回给客户端,为客户端与服务器之间的通信提供可靠性同步机制和错误处理</li><li><code>Transport Layer</code>:位于最底层,主要传输二进制数据流,提供帧处理、信道复用、错误检测和数据表示</li></ul> 
+  </blockquote> 
+ </blockquote> 
+</blockquote> 
+<ul><li><strong>1.核心概念</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/98/a9/kyIFbrXs_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>**Server:**又称Broker,接收客户端的连接,实现AMQP实体服务,安装rabbitmq-server.</p> 
+ <p>**Connection:**连接,应用程序与Broker的网络连接TCP/IP三次、四次握手.</p> 
+ <p>**Channel:**网络通道,几乎所有的操作都在channel中进行,channel是进行消息读写的通道,客户端可以建立对各Channel,每个channel代表一个回话任务.</p> 
+ <p>**Message:**消息,服务与应用程序之间传送的数据,由Properties可是对消息进行修饰,比如消息的优先级,延迟等高级特性,Body则就是消息体的具体内容.</p> 
+ <p>**Bindings:**exchange和queue之间的虚连接,binding中可以保护多个routing key.</p> 
+ <p>**Routing Key:**是一个路由规则,虚拟机可以用它来确定如何路由一个特定的消息.</p> 
+ <p>**Queue:**队列:成为Message Queue消息队列,保存消息并将它们发给消费者.</p> 
+</blockquote> 
+<ul><li><strong>2.Rabbitmq的整体架构</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/58/f3/ZHqYszff_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>数据生产者将数据投递给rabbitmq的服务节点,通过rabbitmq交换机投递给队列,如果要进行数据过滤则添加Routingkey,对投递目标进行匹配.</p> 
+</blockquote> 
+<ul><li><strong>3.Rabbitmq的运行流程</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/2f/95/jpeDEvi8_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>为什么AMQP协议需要采用通道来代替连接请求？</li></ul> 
+<blockquote> 
+ <p>如果使用三次握手四次挥手则会产生延时,延时会产生性能的损耗,所以 <strong>AMQP</strong>协议所有的操作都在 <strong>Channel</strong> 中进行, <strong>Channel</strong> 是进行消息读写的通道,客户端可以建立对各的 <strong>Channel</strong>,每个 <strong>Channel</strong> 代表一个回话任务</p> 
+</blockquote> 
+<ul><li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled> 创建虚拟节点(Virtual Host)</li></ul> 
+<p><img src="https://images2.imgbox.com/35/53/iiwgy6bO_o.png" alt="在这里插入图片描述"></p> 
+<ul><li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled> 进入创建的虚拟节点</li></ul> 
+<p><img src="https://images2.imgbox.com/00/14/PQccW3S4_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-markdown"># Rabbitmq工作模式:
+&gt; rabbitmq采用通道和不同的队列建立连接,通过broker上的virtual host的交换机投递给Queue,每个virtual host都有一个默认的交换机,最后由queue(队列)经过channel到达consumer(消费者)
+</code></pre> 
+<blockquote> 
+ <p><strong>Rabbitmq</strong> 队列模式</p> 
+</blockquote> 
+<p>简单模式（Simple）</p> 
+<ul><li class="task-list-item"> <p><input type="checkbox" class="task-list-item-checkbox" disabled> 工作模式（Work）：</p> </li><li> <p>web操作查看视频</p> </li><li> <p>类型</p> </li><li> <p>分发机制</p> </li><li class="task-list-item"> <p><input type="checkbox" class="task-list-item-checkbox" disabled> 发布订阅模式：</p> </li><li> <p>web操作查看视频</p> </li><li> <p>类型：fanout</p> </li><li> <p>特点：Fanout一发布与订阅模式，是一种广播机制，它是没有路由key的模式</p> </li><li class="task-list-item"> <p><input type="checkbox" class="task-list-item-checkbox" disabled> 路由模式</p> </li><li> <p>Web操作查看视频</p> </li><li> <p>类型：direct</p> </li><li> <p>特点：有routing-key的匹配模式</p> </li><li class="task-list-item"> <p><input type="checkbox" class="task-list-item-checkbox" disabled> 主题Topic模式</p> </li><li> <p>web操作查看视频</p> </li><li> <p>类型：topic</p> </li><li> <p>特点：模糊的routing-key的匹配模式</p> </li><li class="task-list-item"> <p><input type="checkbox" class="task-list-item-checkbox" disabled> 参数模式</p> </li><li> <p>web操作查看视频</p> </li><li> <p>类型：headers</p> </li><li> <p>热点：参数匹配模式</p> </li></ul> 
+<hr> 
+<h2><a id="Rabbitmq_570"></a>Rabbitmq工作模式</h2> 
+<h2><a id="_572"></a></h2> 
+<h4><a id="Rabbitmqmq_574"></a>十三、Rabbitmqmq不同模式</h4> 
+<p><strong>（1）、简单队列模式</strong></p> 
+<p><img src="https://images2.imgbox.com/8e/7c/fbilSeAU_o.png" alt="在这里插入图片描述"></p> 
+<p>使用图形化界面输出“Hello，World”</p> 
+<ol><li>新建一个queue（队列）</li></ol> 
+<p><img src="https://images2.imgbox.com/cd/ae/BRy1zJvM_o.png" alt="在这里插入图片描述"></p> 
+<p>02.使用默认Exchanges（交换机）发送一条消息</p> 
+<p><img src="https://images2.imgbox.com/38/60/3uAinO9m_o.png" alt="在这里插入图片描述"></p> 
+<ul><li> <p>键入“Hello，World！”，点击<code>Publish Message</code></p> <p>看到<code>Message published</code>则表示发送成功</p> </li></ul> 
+<p><img src="https://images2.imgbox.com/1e/61/vEJtqcEB_o.png" alt="在这里插入图片描述"></p> 
+<ul><li class="task-list-item"><input type="checkbox" class="task-list-item-checkbox" disabled> 验证</li></ul> 
+<p><img src="https://images2.imgbox.com/e4/fa/8tbOQjKE_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/0d/f2/4rEV6HOb_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><strong>Tips</strong>:</p> 
+ <blockquote> 
+  <p>在使用<strong>Rabbitmq</strong>的时候,**Queue(队列)**的消费模式选择<code>Nack message requeue true</code>模式,不要选择<code>Ack</code>模式,如果选择了<code>Ack</code>那么在进行数据投递的时候会导致数据在传递的时候完成一次消费,无法让接收的队列接收,从而导致数据丢失.</p> 
+ </blockquote> 
+</blockquote> 
+<p><strong>（2）、发布与订阅模式</strong></p> 
+<ul><li>创建一个类型为fanout模式的exchange</li></ul> 
+<p><img src="https://images2.imgbox.com/e1/77/bD2Ev63x_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>创建三个<code>Queues</code></li></ul> 
+<p><img src="https://images2.imgbox.com/75/36/yMI3GNyj_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>在exchange上绑定相应的<code>queue</code></li></ul> 
+<p><img src="https://images2.imgbox.com/11/32/epDtyl1f_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/a1/19/DtRqz6kA_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>在fanout-exchang上发送一条消息</li></ul> 
+<p><img src="https://images2.imgbox.com/47/6b/5aIdTVER_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>验证:在queue上查看发布的消息</li></ul> 
+<blockquote> 
+ <p>在发布与订阅模式里,只要是所有绑定了对应的交换机的queue都能收到对应交换机发过来的消息</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/30/22/H0m9VZ0w_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>（3）、路由模式</strong></p> 
+<blockquote> 
+ <p><strong>路由模式</strong>:</p> 
+ <blockquote> 
+  <p>在一个交换机里绑定了多个queue,交换机通过指定RouteKey来决定这个消息具体投递到哪个queue,通过这个Routekey可以决定哪些queue收到这些消息.</p> 
+  <p>有点类似于一个过滤 的条件</p> 
+ </blockquote> 
+</blockquote> 
+<ul><li>创建<code>Direct</code>模式的Exchange</li></ul> 
+<p><img src="https://images2.imgbox.com/08/51/s0UQnAgC_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>绑定关系</li></ul> 
+<p><img src="https://images2.imgbox.com/15/fc/uZt8n9lR_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>发送消息</li></ul> 
+<p><img src="https://images2.imgbox.com/8f/79/K1YWKd8N_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>验证:看到Email的queue1收到了消息,但是其它的queue没有</li></ul> 
+<p><img src="https://images2.imgbox.com/08/94/gafps8Z8_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>（4）、主题模式（Topic）</strong></p> 
+<ul><li>创建一个Topic类型的exchange</li></ul> 
+<p><img src="https://images2.imgbox.com/be/20/ejnJ2nPP_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>绑定相应的Queue</li></ul> 
+<p><img src="https://images2.imgbox.com/1d/a6/RiK0pe1u_o.png" alt="在这里插入图片描述"></p> 
+<p><strong><font color="skyblue">查看Queue(队列)</font></strong></p> 
+<ul><li><code>#</code>表示匹配多少个层级,对<code>RoutingKey</code>com进行多少级的层级匹配,在队列匹配中可有可无</li><li><code>*</code>表示匹配层级一级,表示对这个队列匹配必须要有一个<code>#</code>层级对它进行匹配</li></ul> 
+<p><img src="https://images2.imgbox.com/ff/50/Cz0w8tCG_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/e5/ec/xcz5qHQe_o.png" alt="在这里插入图片描述"></p> 
+<p><strong><font color="pink">匹配两个队列(com、order)：</font></strong></p> 
+<p><img src="https://images2.imgbox.com/ef/02/t38IiD68_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/3780c65128db05df2c3ef4aaab964cb2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">一文速学-XGBoost模型算法原理以及实现&#43;Python项目实战</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/254de62f15bb57cfd3a477ad4efd3429/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">MATLAB R2022b 安装教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

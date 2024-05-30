@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【梳理】k8s使用Operator搭建Flink集群（高可用可选） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/260547e14cfbd548e82f28744a07120a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【梳理】k8s使用Operator搭建Flink集群（高可用可选）">
+  <meta property="og:description" content="文章目录 1. 架构图2. helm 安装operator3. 集群知识k8s上的两种模式：Native和Standalone两种CR 4. 运行集群实例Demo1：Application 集群Demo2：Session集群优劣 5. 高可用部署问题1：High availability should be enabled when starting standby JobManagers问题2：The base directory of the JobResultStore isn&#39;t accessible 6. 补充 1. 架构图 参考：部署验证demo
+2. helm 安装operator 安装cert-manager依赖
+Jetstack/cert-manager 是 Kubernetes 生态系统中的一款开源项目，它提供了一种自动化的方式来管理 TLS 证书的生命周期
+kubectl create -f https://github.com/jetstack/cert-manager/releases/download/v1.8.2/cert-manager.yaml # helm 安装 , 包含 deploy*1 、cm*1、crd*2 以及 rbac sa webhook kubectl create -f https://github.com/jetstack/cert-manager/releases/download/v1.8.2/cert-manager.yaml helm repo add flink-operator-repo https://downloads.apache.org/flink/flink-kubernetes-operator-1.7.0/ helm install flink-kubernetes-operator flink-operator-repo/flink-kubernetes-operator 3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-11T13:31:05+08:00">
+    <meta property="article:modified_time" content="2024-05-11T13:31:05+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【梳理】k8s使用Operator搭建Flink集群（高可用可选）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#1__2" rel="nofollow">1. 架构图</a></li><li><a href="#2_helm_operator_9" rel="nofollow">2. helm 安装operator</a></li><li><a href="#3__23" rel="nofollow">3. 集群知识</a></li><li><ul><li><a href="#k8sNativeStandalone_24" rel="nofollow">k8s上的两种模式：Native和Standalone</a></li><li><a href="#CR_38" rel="nofollow">两种CR</a></li></ul> 
+  </li><li><a href="#4__44" rel="nofollow">4. 运行集群实例</a></li><li><ul><li><a href="#Demo1Application__45" rel="nofollow">Demo1：Application 集群</a></li><li><a href="#Demo2Session_76" rel="nofollow">Demo2：Session集群</a></li><li><a href="#_122" rel="nofollow">优劣</a></li></ul> 
+  </li><li><a href="#5__127" rel="nofollow">5. 高可用部署</a></li><li><ul><li><a href="#1High_availability_should_be_enabled_when_starting_standby_JobManagers_134" rel="nofollow">问题1：High availability should be enabled when starting standby JobManagers</a></li><li><a href="#2The_base_directory_of_the_JobResultStore_isnt_accessible_160" rel="nofollow">问题2：The base directory of the JobResultStore isn't accessible</a></li></ul> 
+  </li><li><a href="#6__171" rel="nofollow">6. 补充</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="1__2"></a>1. 架构图</h2> 
+<p><img src="https://images2.imgbox.com/2a/fa/AzUP0oqB_o.png" alt="请添加图片描述"></p> 
+<p>参考：<a href="https://nightlies.apache.org/flink/flink-kubernetes-operator-docs-main/docs/try-flink-kubernetes-operator/quick-start/" rel="nofollow">部署验证demo</a></p> 
+<h2><a id="2_helm_operator_9"></a>2. helm 安装operator</h2> 
+<p><strong>安装cert-manager依赖</strong><br> Jetstack/cert-manager 是 Kubernetes 生态系统中的一款开源项目，它提供了一种自动化的方式来管理 TLS 证书的生命周期</p> 
+<pre><code class="prism language-shell">kubectl create <span class="token parameter variable">-f</span> https://github.com/jetstack/cert-manager/releases/download/v1.8.2/cert-manager.yaml
+</code></pre> 
+<pre><code class="prism language-shell"><span class="token comment"># helm 安装 , 包含 deploy*1 、cm*1、crd*2 以及 rbac sa webhook</span>
+kubectl create <span class="token parameter variable">-f</span> https://github.com/jetstack/cert-manager/releases/download/v1.8.2/cert-manager.yaml
+helm repo <span class="token function">add</span> flink-operator-repo https://downloads.apache.org/flink/flink-kubernetes-operator-1.7.0/
+helm <span class="token function">install</span> flink-kubernetes-operator flink-operator-repo/flink-kubernetes-operator
+</code></pre> 
+<h2><a id="3__23"></a>3. 集群知识</h2> 
+<h3><a id="k8sNativeStandalone_24"></a>k8s上的两种模式：Native和Standalone</h3> 
+<p>Flink Kubernetes Operator 支持：原生部署native（默认）和独立部署standalone</p> 
+<p>可以使用部署规范中的 mode 字段设置部署模式。</p> 
+<pre><code class="prism language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkDeployment
+<span class="token punctuation">...</span>
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token punctuation">...</span>
+  <span class="token key atrule">mode</span><span class="token punctuation">:</span> standalone
+</code></pre> 
+<h3><a id="CR_38"></a>两种CR</h3> 
+<p><strong>FlinkDeployment</strong> CR 定义了 Flink 应用程序和会话集群部署。</p> 
+<p><strong>FlinkSessionJob</strong> CR 定义了 Session 集群上的会话任务（Job）</p> 
+<p>Flink Kubernetes Operator 支持两种主要类型的部署：Application集群 和 Session集群 ，k8s上不支持Job集群。</p> 
+<h2><a id="4__44"></a>4. 运行集群实例</h2> 
+<h3><a id="Demo1Application__45"></a>Demo1：Application 集群</h3> 
+<p>一次性任务，只有一个Job，执行器和逻辑代码打包成一个jar，直接运行，运行即结束。</p> 
+<pre><code class="prism language-yaml"><span class="token comment"># 此crd创建后，operator会创建：</span>
+<span class="token comment"># 1个deploy（即jobmanager,镜像为flink:1.17）</span>
+<span class="token comment"># 1个pod（即taskManager,镜像也是flink:1.17,任务jar包在镜像中）</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkDeployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>example
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">image</span><span class="token punctuation">:</span> flink<span class="token punctuation">:</span><span class="token number">1.17</span>
+  <span class="token key atrule">flinkVersion</span><span class="token punctuation">:</span> v1_17
+  <span class="token key atrule">flinkConfiguration</span><span class="token punctuation">:</span>
+    <span class="token key atrule">taskmanager.numberOfTaskSlots</span><span class="token punctuation">:</span> <span class="token string">"2"</span>
+  <span class="token key atrule">serviceAccount</span><span class="token punctuation">:</span> flink
+  <span class="token key atrule">jobManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">resource</span><span class="token punctuation">:</span>
+      <span class="token key atrule">memory</span><span class="token punctuation">:</span> <span class="token string">"2048m"</span>
+      <span class="token key atrule">cpu</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">taskManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">resource</span><span class="token punctuation">:</span>
+      <span class="token key atrule">memory</span><span class="token punctuation">:</span> <span class="token string">"2048m"</span>
+      <span class="token key atrule">cpu</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">job</span><span class="token punctuation">:</span>
+    <span class="token key atrule">jarURI</span><span class="token punctuation">:</span> local<span class="token punctuation">:</span>///opt/flink/examples/streaming/StateMachineExample.jar
+    <span class="token key atrule">parallelism</span><span class="token punctuation">:</span> <span class="token number">2</span>
+    <span class="token key atrule">upgradeMode</span><span class="token punctuation">:</span> stateless
+</code></pre> 
+<p>注：k8s不支持Job集群，可以看做是 Flink Application 集群”客户端运行“的替代方案。集群管理器为每个提交的作业启动一个集群。</p> 
+<h3><a id="Demo2Session_76"></a>Demo2：Session集群</h3> 
+<p>多租户，多个job，每个sessionjob代表一个job，有提交jar包的功能。<br> Session使用与Application 集群类似的规范，唯一的区别是 job 未定义。</p> 
+<pre><code class="prism language-yaml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkDeployment
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>session<span class="token punctuation">-</span>deployment<span class="token punctuation">-</span>example
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">image</span><span class="token punctuation">:</span> flink<span class="token punctuation">:</span><span class="token number">1.17</span>
+  <span class="token key atrule">flinkVersion</span><span class="token punctuation">:</span> v1_17
+  <span class="token key atrule">jobManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">resource</span><span class="token punctuation">:</span>
+      <span class="token key atrule">memory</span><span class="token punctuation">:</span> <span class="token string">"2048m"</span>
+      <span class="token key atrule">cpu</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">taskManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">resource</span><span class="token punctuation">:</span>
+      <span class="token key atrule">memory</span><span class="token punctuation">:</span> <span class="token string">"2048m"</span>
+      <span class="token key atrule">cpu</span><span class="token punctuation">:</span> <span class="token number">1</span>
+  <span class="token key atrule">serviceAccount</span><span class="token punctuation">:</span> flink
+<span class="token punctuation">---</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkSessionJob
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>session<span class="token punctuation">-</span>job<span class="token punctuation">-</span>example
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">deploymentName</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>session<span class="token punctuation">-</span>deployment<span class="token punctuation">-</span>example
+  <span class="token key atrule">job</span><span class="token punctuation">:</span>
+    <span class="token key atrule">jarURI</span><span class="token punctuation">:</span> https<span class="token punctuation">:</span>//repo1.maven.org/maven2/org/apache/flink/flink<span class="token punctuation">-</span>examples<span class="token punctuation">-</span>streaming_2.12/1.16.1/flink<span class="token punctuation">-</span>examples<span class="token punctuation">-</span>streaming_2.12<span class="token punctuation">-</span>1.16.1<span class="token punctuation">-</span>TopSpeedWindowing.jar
+    <span class="token key atrule">parallelism</span><span class="token punctuation">:</span> <span class="token number">4</span>
+    <span class="token key atrule">upgradeMode</span><span class="token punctuation">:</span> stateless
+
+<span class="token punctuation">---</span>
+<span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkSessionJob
+<span class="token key atrule">metadata</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>session<span class="token punctuation">-</span>job<span class="token punctuation">-</span>example2
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">deploymentName</span><span class="token punctuation">:</span> basic<span class="token punctuation">-</span>session<span class="token punctuation">-</span>deployment<span class="token punctuation">-</span>example
+  <span class="token key atrule">job</span><span class="token punctuation">:</span>
+    <span class="token key atrule">jarURI</span><span class="token punctuation">:</span> https<span class="token punctuation">:</span>//repo1.maven.org/maven2/org/apache/flink/flink<span class="token punctuation">-</span>examples<span class="token punctuation">-</span>streaming_2.12/1.16.1/flink<span class="token punctuation">-</span>examples<span class="token punctuation">-</span>streaming_2.12<span class="token punctuation">-</span>1.16.1.jar
+    <span class="token key atrule">parallelism</span><span class="token punctuation">:</span> <span class="token number">2</span>
+    <span class="token key atrule">upgradeMode</span><span class="token punctuation">:</span> stateless
+    <span class="token key atrule">entryClass</span><span class="token punctuation">:</span> org.apache.flink.streaming.examples.statemachine.StateMachineExample
+</code></pre> 
+<p>注：为了方便访问，可以再创建ingress。svc端口默认为8081，指向svc-rest即可。</p> 
+<h3><a id="_122"></a>优劣</h3> 
+<ul><li>Session集群，是常规的共享方式。</li><li>Application集群，提供了更好的隔离，生命周期与程序逻辑有关。</li><li>Job集群，适合长期运行、要求高稳定性的大型作业。（启动慢）</li></ul> 
+<h2><a id="5__127"></a>5. 高可用部署</h2> 
+<p>Flink 提供了两种高可用服务实现：</p> 
+<ul><li>ZooKeeper：每个 Flink 集群部署都可以使用 ZooKeeper HA 服务。它们需要一个运行的 ZooKeeper 复制组（quorum）。</li><li>Kubernetes：Kubernetes HA 服务只能运行在 Kubernetes 上。<br> 注：Flink 持久化元数据和 job 组件，直到作业执行成功、被取消或最终失败，再删除。</li></ul> 
+<p>我在实践时，遇到两个问题：</p> 
+<h3><a id="1High_availability_should_be_enabled_when_starting_standby_JobManagers_134"></a>问题1：High availability should be enabled when starting standby JobManagers</h3> 
+<p>直接增加jobManager的副本数提示上述错误，要先做选举配置，我选择的是k8s实现，下面仅列出修改部分，注意<code>flinkConfiguration</code>和<code>podTemplate</code>两部分：</p> 
+<pre><code class="prism language-yml"><span class="token key atrule">apiVersion</span><span class="token punctuation">:</span> flink.apache.org/v1beta1
+<span class="token key atrule">kind</span><span class="token punctuation">:</span> FlinkDeployment
+<span class="token key atrule">spec</span><span class="token punctuation">:</span>
+  <span class="token key atrule">flinkConfiguration</span><span class="token punctuation">:</span>
+    <span class="token key atrule">high-availability</span><span class="token punctuation">:</span> org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    <span class="token key atrule">high-availability.storageDir</span><span class="token punctuation">:</span> file<span class="token punctuation">:</span>///flink<span class="token punctuation">-</span>data/ha
+    <span class="token key atrule">web.upload.dir</span><span class="token punctuation">:</span> /flink<span class="token punctuation">-</span>data  <span class="token comment">#会自动创建flink-web-upload目录保存上传的jar包</span>
+  <span class="token key atrule">jobManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">2</span>
+  <span class="token key atrule">taskManager</span><span class="token punctuation">:</span>
+    <span class="token key atrule">replicas</span><span class="token punctuation">:</span> <span class="token number">2</span>
+  <span class="token key atrule">podTemplate</span><span class="token punctuation">:</span>
+    <span class="token key atrule">spec</span><span class="token punctuation">:</span>
+      <span class="token key atrule">containers</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> flink<span class="token punctuation">-</span>main<span class="token punctuation">-</span>container
+          <span class="token key atrule">volumeMounts</span><span class="token punctuation">:</span>
+            <span class="token punctuation">-</span> <span class="token key atrule">mountPath</span><span class="token punctuation">:</span> /flink<span class="token punctuation">-</span>data
+              <span class="token key atrule">name</span><span class="token punctuation">:</span> flink<span class="token punctuation">-</span>volume
+      <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> flink<span class="token punctuation">-</span>volume
+          <span class="token key atrule">persistentVolumeClaim</span><span class="token punctuation">:</span>
+            <span class="token key atrule">claimName</span><span class="token punctuation">:</span> flink<span class="token punctuation">-</span>ha
+</code></pre> 
+<h3><a id="2The_base_directory_of_the_JobResultStore_isnt_accessible_160"></a>问题2：The base directory of the JobResultStore isn’t accessible</h3> 
+<p>如果没有正确挂载存储卷提示上述错误。<br> 官方demo配置的卷是宿主机的路径，如下：</p> 
+<pre><code class="prism language-yml">      <span class="token key atrule">volumes</span><span class="token punctuation">:</span>
+        <span class="token punctuation">-</span> <span class="token key atrule">name</span><span class="token punctuation">:</span> flink<span class="token punctuation">-</span>volume
+          <span class="token key atrule">hostPath</span><span class="token punctuation">:</span>
+            <span class="token key atrule">path</span><span class="token punctuation">:</span> /tmp/flink  <span class="token comment"># 如果宿主机上没有这个路径会报错</span>
+            <span class="token key atrule">type</span><span class="token punctuation">:</span> Director
+</code></pre> 
+<h2><a id="6__171"></a>6. 补充</h2> 
+<ol><li>拉取国外镜像比较困难，可以使用<a href="https://dockerproxy.com/" rel="nofollow">https://dockerproxy.com/</a></li><li>搭建多租户PaaS平台，可以使用Session方式，新任务可以通过CR进行管理，也可以由页面添加jar包。</li><li>本文内容来源于Flink官网，进行翻译、简化、整理，供大家参考~</li></ol>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/6ca406fe4a54bce1315d36502a8bc7e4/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【redis】Redis五种常用数据类型和内部编码,以及对String字符串类型的总结</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9aa387dad5922b857678f2ec71e2fd42/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">SpringBootWeb 篇-深入了解请求响应（服务端接收不同类型的请求参数的方式）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

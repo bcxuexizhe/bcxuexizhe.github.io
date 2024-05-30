@@ -1,0 +1,1428 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>JVM（Java虚拟机）-史上最全、最详细JVM笔记 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3d1196203d68fcf4871020e11d86e107/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="JVM（Java虚拟机）-史上最全、最详细JVM笔记">
+  <meta property="og:description" content="目录 一、JVM概述
+1、1为什么要学习JVM
+1、2虚拟机
+1、3JVM作用
+1、4JVM整体组成部分 二、JVM结构--类加载器
+2、1类加载子系统
+2、2类加载过程
+2、2、1加载
+2、2、2链接
+2、2、3初始化
+2、3类加载器分类
+2.3.1 引导类加载器(启动类加载器 BootStrap ClassLoader)
+2.3.2 扩展类加载器(Extension ClassLoader)
+2.3.3 应用程序类加载器(系统类加载器 Application ClassLoader)
+2.4 双亲委派机制
+2.5 如何打破双亲委派机制
+三、JVM运行时数据区
+3、1运行时数据区组成概述
+3.1.1 程序计数器（Program Counter Register）
+3.1.2Java 虚拟机栈（Java Virtual Machine Stacks）
+3.1.3 本地方法栈（Native Method Stack）
+3.1.4Java 堆（Java Heap）
+3.1.5 方法区（Methed Area）
+3.2.程序计数器（Program Counter Register）
+3.3.Java 虚拟机栈（Java Virtual Machine Stacks）
+3.4.本地方法栈(Native Method Stack)
+3.5.Java 堆内存
+3.5.1Java堆内存概述
+3.5.2堆内存区域划分
+3.5.3 为什么分区(代)？
+3.5.4 对象创建内存分配过程
+3.5.5 新生区与老年区配置比例">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-03-29T17:19:39+08:00">
+    <meta property="article:modified_time" content="2023-03-29T17:19:39+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">JVM（Java虚拟机）-史上最全、最详细JVM笔记</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 id="%E7%9B%AE%E5%BD%95">目录</h2> 
+<p id="%E4%B8%80%E3%80%81JVM%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81JVM%E6%A6%82%E8%BF%B0" rel="nofollow">一、JVM概述</a></p> 
+<p id="1%E3%80%811%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%AD%A6%E4%B9%A0JVM-toc" style="margin-left:80px;"><a href="#1%E3%80%811%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%AD%A6%E4%B9%A0JVM" rel="nofollow">1、1为什么要学习JVM</a></p> 
+<p id="1%E3%80%812%E8%99%9A%E6%8B%9F%E6%9C%BA-toc" style="margin-left:80px;"><a href="#1%E3%80%812%E8%99%9A%E6%8B%9F%E6%9C%BA" rel="nofollow">1、2虚拟机</a></p> 
+<p id="1%E3%80%813JVM%E4%BD%9C%E7%94%A8-toc" style="margin-left:80px;"><a href="#1%E3%80%813JVM%E4%BD%9C%E7%94%A8" rel="nofollow">1、3JVM作用</a></p> 
+<p id="1%E3%80%814JVM%E6%95%B4%E4%BD%93%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86%C2%A0-toc" style="margin-left:80px;"><a href="#1%E3%80%814JVM%E6%95%B4%E4%BD%93%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86%C2%A0" rel="nofollow">1、4JVM整体组成部分 </a></p> 
+<p id="%E4%BA%8C%E3%80%81JVM%E7%BB%93%E6%9E%84--%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81JVM%E7%BB%93%E6%9E%84--%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8" rel="nofollow">二、JVM结构--类加载器</a></p> 
+<p id="2%E3%80%811%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%AD%90%E7%B3%BB%E7%BB%9F-toc" style="margin-left:40px;"><a href="#2%E3%80%811%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%AD%90%E7%B3%BB%E7%BB%9F" rel="nofollow">2、1类加载子系统</a></p> 
+<p id="2%E3%80%812%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B-toc" style="margin-left:40px;"><a href="#2%E3%80%812%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B" rel="nofollow">2、2类加载过程</a></p> 
+<p id="2%E3%80%812%E3%80%811%E5%8A%A0%E8%BD%BD-toc" style="margin-left:80px;"><a href="#2%E3%80%812%E3%80%811%E5%8A%A0%E8%BD%BD" rel="nofollow">2、2、1加载</a></p> 
+<p id="2%E3%80%812%E3%80%812%E9%93%BE%E6%8E%A5-toc" style="margin-left:80px;"><a href="#2%E3%80%812%E3%80%812%E9%93%BE%E6%8E%A5" rel="nofollow">2、2、2链接</a></p> 
+<p id="2%E3%80%812%E3%80%813%E5%88%9D%E5%A7%8B%E5%8C%96-toc" style="margin-left:80px;"><a href="#2%E3%80%812%E3%80%813%E5%88%9D%E5%A7%8B%E5%8C%96" rel="nofollow">2、2、3初始化</a></p> 
+<p id="2%E3%80%813%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E5%88%86%E7%B1%BB-toc" style="margin-left:40px;"><a href="#2%E3%80%813%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E5%88%86%E7%B1%BB" rel="nofollow">2、3类加载器分类</a></p> 
+<p id="2.3.1%20%E5%BC%95%E5%AF%BC%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(%E5%90%AF%E5%8A%A8%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20BootStrap%20ClassLoader)-toc" style="margin-left:80px;"><a href="#2.3.1%20%E5%BC%95%E5%AF%BC%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%28%E5%90%AF%E5%8A%A8%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20BootStrap%20ClassLoader%29" rel="nofollow">2.3.1 引导类加载器(启动类加载器 BootStrap ClassLoader)</a></p> 
+<p id="2.3.2%20%E6%89%A9%E5%B1%95%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(Extension%20ClassLoader)-toc" style="margin-left:80px;"><a href="#2.3.2%20%E6%89%A9%E5%B1%95%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%28Extension%20ClassLoader%29" rel="nofollow">2.3.2 扩展类加载器(Extension ClassLoader)</a></p> 
+<p id="2.3.3%20%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(%E7%B3%BB%E7%BB%9F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20Application%20ClassLoader)-toc" style="margin-left:80px;"><a href="#2.3.3%20%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%28%E7%B3%BB%E7%BB%9F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20Application%20ClassLoader%29" rel="nofollow">2.3.3 应用程序类加载器(系统类加载器 Application ClassLoader)</a></p> 
+<p id="2.4%20%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6-toc" style="margin-left:40px;"><a href="#2.4%20%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6" rel="nofollow">2.4 双亲委派机制</a></p> 
+<p id="2.5%20%E5%A6%82%E4%BD%95%E6%89%93%E7%A0%B4%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6-toc" style="margin-left:40px;"><a href="#2.5%20%E5%A6%82%E4%BD%95%E6%89%93%E7%A0%B4%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6" rel="nofollow">2.5 如何打破双亲委派机制</a></p> 
+<p id="%E4%B8%89%E3%80%81JVM%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81JVM%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA" rel="nofollow">三、JVM运行时数据区</a></p> 
+<p id="3%E3%80%811%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E7%BB%84%E6%88%90%E6%A6%82%E8%BF%B0-toc" style="margin-left:40px;"><a href="#3%E3%80%811%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E7%BB%84%E6%88%90%E6%A6%82%E8%BF%B0" rel="nofollow">3、1运行时数据区组成概述</a></p> 
+<p id="3.1.1%20%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89-toc" style="margin-left:80px;"><a href="#3.1.1%20%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89" rel="nofollow">3.1.1 程序计数器（Program Counter Register）</a></p> 
+<p id="3.1.2Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89-toc" style="margin-left:80px;"><a href="#3.1.2Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89" rel="nofollow">3.1.2Java 虚拟机栈（Java Virtual Machine Stacks）</a></p> 
+<p id="3.1.3%20%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88%EF%BC%88Native%20Method%20Stack%EF%BC%89-toc" style="margin-left:80px;"><a href="#3.1.3%20%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88%EF%BC%88Native%20Method%20Stack%EF%BC%89" rel="nofollow">3.1.3 本地方法栈（Native Method Stack）</a></p> 
+<p id="3.1.4Java%20%E5%A0%86%EF%BC%88Java%20Heap%EF%BC%89-toc" style="margin-left:80px;"><a href="#3.1.4Java%20%E5%A0%86%EF%BC%88Java%20Heap%EF%BC%89" rel="nofollow">3.1.4Java 堆（Java Heap）</a></p> 
+<p id="3.1.5%20%E6%96%B9%E6%B3%95%E5%8C%BA%EF%BC%88Methed%20Area%EF%BC%89-toc" style="margin-left:80px;"><a href="#3.1.5%20%E6%96%B9%E6%B3%95%E5%8C%BA%EF%BC%88Methed%20Area%EF%BC%89" rel="nofollow">3.1.5 方法区（Methed Area）</a></p> 
+<p id="3.2.%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89-toc" style="margin-left:40px;"><a href="#3.2.%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89" rel="nofollow">3.2.程序计数器（Program Counter Register）</a></p> 
+<p id="3.3.Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89-toc" style="margin-left:40px;"><a href="#3.3.Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89" rel="nofollow">3.3.Java 虚拟机栈（Java Virtual Machine Stacks）</a></p> 
+<p id="3.4.%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88(Native%20Method%20Stack)-toc" style="margin-left:40px;"><a href="#3.4.%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88%28Native%20Method%20Stack%29" rel="nofollow">3.4.本地方法栈(Native Method Stack)</a></p> 
+<p id="3.5.Java%20%E5%A0%86%E5%86%85%E5%AD%98-toc" style="margin-left:40px;"><a href="#3.5.Java%20%E5%A0%86%E5%86%85%E5%AD%98" rel="nofollow">3.5.Java 堆内存</a></p> 
+<p id="3.5.1Java%E5%A0%86%E5%86%85%E5%AD%98%E6%A6%82%E8%BF%B0-toc" style="margin-left:80px;"><a href="#3.5.1Java%E5%A0%86%E5%86%85%E5%AD%98%E6%A6%82%E8%BF%B0" rel="nofollow">3.5.1Java堆内存概述</a></p> 
+<p id="3.5.2%E5%A0%86%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E5%88%92%E5%88%86-toc" style="margin-left:80px;"><a href="#3.5.2%E5%A0%86%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E5%88%92%E5%88%86" rel="nofollow">3.5.2堆内存区域划分</a></p> 
+<p id="3.5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%88%86%E5%8C%BA(%E4%BB%A3)%EF%BC%9F-toc" style="margin-left:80px;"><a href="#3.5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%88%86%E5%8C%BA%28%E4%BB%A3%29%EF%BC%9F" rel="nofollow">3.5.3 为什么分区(代)？</a></p> 
+<p id="3.5.4%20%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E8%BF%87%E7%A8%8B-toc" style="margin-left:80px;"><a href="#3.5.4%20%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E8%BF%87%E7%A8%8B" rel="nofollow">3.5.4 对象创建内存分配过程</a></p> 
+<p id="3.5.5%20%E6%96%B0%E7%94%9F%E5%8C%BA%E4%B8%8E%E8%80%81%E5%B9%B4%E5%8C%BA%E9%85%8D%E7%BD%AE%E6%AF%94%E4%BE%8B-toc" style="margin-left:80px;"><a href="#3.5.5%20%E6%96%B0%E7%94%9F%E5%8C%BA%E4%B8%8E%E8%80%81%E5%B9%B4%E5%8C%BA%E9%85%8D%E7%BD%AE%E6%AF%94%E4%BE%8B" rel="nofollow">3.5.5 新生区与老年区配置比例</a></p> 
+<p id="%C2%A03.5.6%20%E5%88%86%E4%BB%A3%E6%94%B6%E9%9B%86%E6%80%9D%E6%83%B3%20Minor%20GC%E3%80%81Major%20GC%E3%80%81Full%20GC-toc" style="margin-left:80px;"><a href="#%C2%A03.5.6%20%E5%88%86%E4%BB%A3%E6%94%B6%E9%9B%86%E6%80%9D%E6%83%B3%20Minor%20GC%E3%80%81Major%20GC%E3%80%81Full%20GC" rel="nofollow"> 3.5.6 分代收集思想 Minor GC、Major GC、Full GC</a></p> 
+<p id="3.5.7%20%E5%A0%86%E7%A9%BA%E9%97%B4%E7%9A%84%E5%8F%82%E6%95%B0%E8%AE%BE%E7%BD%AE-toc" style="margin-left:80px;"><a href="#3.5.7%20%E5%A0%86%E7%A9%BA%E9%97%B4%E7%9A%84%E5%8F%82%E6%95%B0%E8%AE%BE%E7%BD%AE" rel="nofollow">3.5.7 堆空间的参数设置</a></p> 
+<p id="3.5.8%20%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B8%B8%E9%87%8F%E6%B1%A0-toc" style="margin-left:80px;"><a href="#3.5.8%20%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B8%B8%E9%87%8F%E6%B1%A0" rel="nofollow">3.5.8 字符串常量池</a></p> 
+<p id="3.6%E6%96%B9%E6%B3%95%E5%8C%BA-toc" style="margin-left:40px;"><a href="#3.6%E6%96%B9%E6%B3%95%E5%8C%BA" rel="nofollow">3.6方法区</a></p> 
+<p id="3.6.1%20%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%90%86%E8%A7%A3-toc" style="margin-left:80px;"><a href="#3.6.1%20%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%90%86%E8%A7%A3" rel="nofollow">3.6.1 方法区的基本理解</a></p> 
+<p id="3.6.2%20%E6%96%B9%E6%B3%95%E5%8C%BA%E5%A4%A7%E5%B0%8F%E8%AE%BE%E7%BD%AE-toc" style="margin-left:80px;"><a href="#3.6.2%20%E6%96%B9%E6%B3%95%E5%8C%BA%E5%A4%A7%E5%B0%8F%E8%AE%BE%E7%BD%AE" rel="nofollow">3.6.2 方法区大小设置</a></p> 
+<p id="3.6.3%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84-toc" style="margin-left:80px;"><a href="#3.6.3%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84" rel="nofollow">3.6.3 方法区的内部结构</a></p> 
+<p id="3.6.4%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6-toc" style="margin-left:80px;"><a href="#3.6.4%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6" rel="nofollow">3.6.4 方法区的垃圾回收</a></p> 
+<p id="%E5%9B%9B%E3%80%81%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%8E%A5%E5%8F%A3-toc" style="margin-left:0px;"><a href="#%E5%9B%9B%E3%80%81%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%8E%A5%E5%8F%A3" rel="nofollow">四、本地方法接口</a></p> 
+<p id="%C2%A04.1%20%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95-toc" style="margin-left:80px;"><a href="#%C2%A04.1%20%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95" rel="nofollow"> 4.1 什么是本地方法</a></p> 
+<p id="4.2%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BD%BF%E7%94%A8%20Native%20Method-toc" style="margin-left:80px;"><a href="#4.2%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BD%BF%E7%94%A8%20Native%20Method" rel="nofollow">4.2 为什么要使用 Native Method</a></p> 
+<p id="%E4%BA%94%E3%80%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E-toc" style="margin-left:0px;"><a href="#%E4%BA%94%E3%80%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E" rel="nofollow">五、执行引擎</a></p> 
+<p id="5.1%20%E6%A6%82%E8%BF%B0-toc" style="margin-left:80px;"><a href="#5.1%20%E6%A6%82%E8%BF%B0" rel="nofollow">5.1 概述</a></p> 
+<p id="5.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E8%A7%A3%E9%87%8A%E5%99%A8%EF%BC%9F%E4%BB%80%E4%B9%88%E6%98%AF%20JIT%20%E7%BC%96%E8%AF%91%E5%99%A8%EF%BC%9F-toc" style="margin-left:80px;"><a href="#5.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E8%A7%A3%E9%87%8A%E5%99%A8%EF%BC%9F%E4%BB%80%E4%B9%88%E6%98%AF%20JIT%20%E7%BC%96%E8%AF%91%E5%99%A8%EF%BC%9F" rel="nofollow">5.2 什么是解释器？什么是 JIT 编译器？</a></p> 
+<p id="5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%20Java%20%E6%98%AF%E5%8D%8A%E7%BC%96%E8%AF%91%E5%8D%8A%E8%A7%A3%E9%87%8A%E5%9E%8B%E8%AF%AD%E8%A8%80%EF%BC%9F-toc" style="margin-left:80px;"><a href="#5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%20Java%20%E6%98%AF%E5%8D%8A%E7%BC%96%E8%AF%91%E5%8D%8A%E8%A7%A3%E9%87%8A%E5%9E%8B%E8%AF%AD%E8%A8%80%EF%BC%9F" rel="nofollow">5.3 为什么 Java 是半编译半解释型语言？</a></p> 
+<p id="%E5%85%AD%E3%80%81%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6-toc" style="margin-left:0px;"><a href="#%E5%85%AD%E3%80%81%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6" rel="nofollow">六、垃圾回收</a></p> 
+<p id="6.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%A6%82%E8%BF%B0-toc" style="margin-left:40px;"><a href="#6.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%A6%82%E8%BF%B0" rel="nofollow">6.1 垃圾回收概述</a></p> 
+<p id="6.1.1%20%E6%A6%82%E8%BF%B0-toc" style="margin-left:80px;"><a href="#6.1.1%20%E6%A6%82%E8%BF%B0" rel="nofollow">6.1.1 概述</a></p> 
+<p id="6.1.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E5%9E%83%E5%9C%BE%EF%BC%9F-toc" style="margin-left:80px;"><a href="#6.1.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E5%9E%83%E5%9C%BE%EF%BC%9F" rel="nofollow">6.1.2 什么是垃圾？</a></p> 
+<p id="6.1.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%20GC%EF%BC%9F-toc" style="margin-left:80px;"><a href="#6.1.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%20GC%EF%BC%9F" rel="nofollow">6.1.3 为什么需要 GC？</a></p> 
+<p id="6.1.4%20%E6%97%A9%E6%9C%9F%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6-toc" style="margin-left:80px;"><a href="#6.1.4%20%E6%97%A9%E6%9C%9F%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6" rel="nofollow">6.1.4 早期垃圾回收</a></p> 
+<p id="6.1.5Java%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6-toc" style="margin-left:80px;"><a href="#6.1.5Java%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6" rel="nofollow">6.1.5Java 垃圾回收机制</a></p> 
+<p id="6.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E7%AE%97%E6%B3%95-toc" style="margin-left:40px;"><a href="#6.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E7%AE%97%E6%B3%95" rel="nofollow">6.2 垃圾回收相关算法</a></p> 
+<p id="6.2.1%20%E5%9E%83%E5%9C%BE%E6%A0%87%E8%AE%B0%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95-toc" style="margin-left:80px;"><a href="#6.2.1%20%E5%9E%83%E5%9C%BE%E6%A0%87%E8%AE%B0%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95" rel="nofollow">6.2.1 垃圾标记阶段算法</a></p> 
+<p id="6.2.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95-toc" style="margin-left:80px;"><a href="#6.2.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95" rel="nofollow">6.2.2 垃圾回收阶段算法</a></p> 
+<p id="6.3%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5-toc" style="margin-left:40px;"><a href="#6.3%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5" rel="nofollow">6.3 垃圾回收相关概念</a></p> 
+<p id="6.3.1System.gc()%20%E7%9A%84%E7%90%86%E8%A7%A3-toc" style="margin-left:80px;"><a href="#6.3.1System.gc%28%29%20%E7%9A%84%E7%90%86%E8%A7%A3" rel="nofollow">6.3.1System.gc() 的理解</a></p> 
+<p id="6.3.2%20%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F-toc" style="margin-left:80px;"><a href="#6.3.2%20%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F" rel="nofollow">6.3.2 内存溢出与内存泄漏</a></p> 
+<p id="6.3.3Stop%20the%20World-toc" style="margin-left:80px;"><a href="#6.3.3Stop%20the%20World" rel="nofollow">6.3.3Stop the World</a></p> 
+<p id="6.4%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8-toc" style="margin-left:40px;"><a href="#6.4%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8" rel="nofollow">6.4 垃圾回收器</a></p> 
+<p id="6.4.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E6%A6%82%E8%BF%B0-toc" style="margin-left:80px;"><a href="#6.4.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E6%A6%82%E8%BF%B0" rel="nofollow">6.4.1 垃圾回收器概述</a></p> 
+<p id="6.4.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%88%86%E7%B1%BB-toc" style="margin-left:80px;"><a href="#6.4.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%88%86%E7%B1%BB" rel="nofollow">6.4.2 垃圾回收器分类</a></p> 
+<p id="6.4.3GC%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87-toc" style="margin-left:80px;"><a href="#6.4.3GC%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87" rel="nofollow">6.4.3GC 性能指标</a></p> 
+<p id="6.4.4HotSpot%20%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8-toc" style="margin-left:80px;"><a href="#6.4.4HotSpot%20%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8" rel="nofollow">6.4.4HotSpot 垃圾收集器</a></p> 
+<p id="6.%204.5CMS%20%E5%9B%9E%E6%94%B6%E5%99%A8-toc" style="margin-left:80px;"><a href="#6.%204.5CMS%20%E5%9B%9E%E6%94%B6%E5%99%A8" rel="nofollow">6. 4.5CMS 回收器</a></p> 
+<p id="6.4.6G1(Garbage%20First)%E5%9B%9E%E6%94%B6%E5%99%A8-toc" style="margin-left:80px;"><a href="#6.4.6G1%28Garbage%20First%29%E5%9B%9E%E6%94%B6%E5%99%A8" rel="nofollow">6.4.6G1(Garbage First)回收器</a></p> 
+<p id="6.4.7%20%E6%9F%A5%E7%9C%8B%20JVM%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E8%AE%BE%E7%BD%AE%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8-toc" style="margin-left:80px;"><a href="#6.4.7%20%E6%9F%A5%E7%9C%8B%20JVM%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E8%AE%BE%E7%BD%AE%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8" rel="nofollow">6.4.7 查看 JVM 垃圾回收器设置垃圾回收器</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<hr> 
+<h2 id="%E4%B8%80%E3%80%81JVM%E6%A6%82%E8%BF%B0">一、JVM概述</h2> 
+<h4 id="1%E3%80%811%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E5%AD%A6%E4%B9%A0JVM">1、1为什么要学习JVM</h4> 
+<p>中高程序员必备技能：</p> 
+<blockquote> 
+ <p>项目管理、性能调优</p> 
+</blockquote> 
+<h4 id="1%E3%80%812%E8%99%9A%E6%8B%9F%E6%9C%BA">1、2虚拟机</h4> 
+<ul><li>虚拟机（Virtual Machine），虚拟计算机。他是一款软件，用来执行一系列虚拟计算机指令。大体上，虚拟机可以分为系统虚拟机和程序虚拟机。</li><li>VMware属于系统虚拟机，完全对物理计算机的仿真，提供一个可运行完整操作系统的平台。程序虚拟机的典型代表是java虚拟机，专门为执行某个计算机程序而设计。<br> 在java虚拟机中执行的指令称为java字节码指令。</li><li>Java虚拟机是一种执行java字节码文件的虚拟机，它拥有独立的运行机制。</li><li>Java技术的核心就是Java虚拟机，因为所有的java程序都要在java虚拟机内部运行。</li></ul> 
+<h4 id="1%E3%80%813JVM%E4%BD%9C%E7%94%A8">1、3JVM作用</h4> 
+<p><span style="color:#0d0016;">       Java虚拟机负责装载字节码到其内部，解释/编译为对应平台上的机器码指令执行，每一条java指令，java虚拟机中都有详细定义，如怎么取操作数，怎么处理操作数，处理结果放在哪。</span></p> 
+<hr> 
+<p>特点：</p> 
+<ol><li>一次编译到处运行；</li><li>自动内存管理；</li><li>自动垃圾回收功能；</li></ol> 
+<blockquote> 
+ <p>       现在的JVM不仅可以执行java字节码文件，还可以执行其他语言编译后的字节码文件，是一个跨语言平台。</p> 
+</blockquote> 
+<p><img alt="" height="227" src="https://images2.imgbox.com/51/0f/S6OCpK38_o.png" width="711"></p> 
+<h4></h4> 
+<h4 id="1%E3%80%814JVM%E6%95%B4%E4%BD%93%E7%BB%84%E6%88%90%E9%83%A8%E5%88%86%C2%A0">1、4JVM整体组成部分 </h4> 
+<ol><li>类加载器（ClassLoader）</li><li>运行时数据区（Runtime Data Area）</li><li>执行引擎（Execution Engine）</li><li>本地库接口（Native Interface）</li></ol> 
+<p class="img-center"><img alt="" height="305" src="https://images2.imgbox.com/67/f9/4SvRQuKl_o.png" width="468"></p> 
+<p class="img-center"><img alt="" height="428" src="https://images2.imgbox.com/c3/07/zmsof0lK_o.png" width="614"></p> 
+<blockquote> 
+ <p>        <span style="color:#000000;">程序在执行之前先要把 java 代码转换成字节码（class 文件），jvm 首先需要把字节码通过一定的方式 <strong>类加载器（ClassLoader） </strong></span><span style="color:#000000;">把文件加载到内存中的<strong>运行时数据区（Runtime Data Area） </strong></span><span style="color:#000000;">，而字节码文件是 jvm 的一套指</span><span style="color:#000000;">令集规范，并不能直接交个底层操作系统去执行，因此需要特定的命令解析器 <strong>执行引擎（Execution Engine） </strong></span><span style="color:#000000;">将字节码翻译成底层系统指令再交由CPU 去执行，而这个过程中需要调用其他语言的接口 <strong>本地库接口（Native </strong></span></p> 
+ <div> 
+  <span style="color:#000000;"><strong>Interface） </strong></span> 
+  <span style="color:#000000;">来实现整个程序的功能，这就是这 4 个主要组成部分的职责与功能。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       而我们通常所说的 JVM 组成指的是</span> 
+  <span style="color:#000000;"><strong>运行时数据区（Runtime Data </strong></span> 
+  <span style="color:#000000;"><strong>Area）</strong></span> 
+  <span style="color:#000000;">，因为通常需要程序员调试分析的区域就是“运行时数据区”，或者更具体的来说就是“运行时数据区”里面的 Heap（堆）模块。</span> 
+ </div> 
+</blockquote> 
+<p></p> 
+<h2 id="%E4%BA%8C%E3%80%81JVM%E7%BB%93%E6%9E%84--%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8">二、JVM结构--类加载器</h2> 
+<h3 id="2%E3%80%811%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%AD%90%E7%B3%BB%E7%BB%9F">2、1类加载子系统</h3> 
+<p><img alt="" height="329" src="https://images2.imgbox.com/ae/8a/wAzym5Yn_o.png" width="899"></p> 
+<p>        类加载子系统负责从文件系统或者网络中加载class文件。classLoader只负责class文件的加载，至于它是否可以裕兴，则由Execution Engine决定。</p> 
+<p>       加载的类信息存放于一块称为方法区的内存空间。</p> 
+<p class="img-center"><img alt="" height="342" src="https://images2.imgbox.com/5a/23/C60r7SIA_o.png" width="502"></p> 
+<p>        <span style="color:#494949;">class file 存在于硬盘上,可以理解为设计师画在纸上的模板,而最终这个模板在执行的时候是要加载 JVM 当中来,根据这个模板实例化出 n 个实例.<br>         class file 加载到 JVM 中,被称为 DNA 元数据模板. 此过程就要有一个运输工具(类加载器 Class Loader),扮演一个快递员的角色</span></p> 
+<h3 id="2%E3%80%812%E7%B1%BB%E5%8A%A0%E8%BD%BD%E8%BF%87%E7%A8%8B">2、2类加载过程</h3> 
+<p><img alt="" height="244" src="https://images2.imgbox.com/67/c6/vEVCQzmW_o.png" width="907"></p> 
+<p></p> 
+<h4 id="2%E3%80%812%E3%80%811%E5%8A%A0%E8%BD%BD">2、2、1加载</h4> 
+<ol><li> 通过类名（地址）获取此类的二进制字节流。</li><li>将这个字节流所代表的静态存储结构转换为方法区（元空间）的运行时结构。</li><li>在内存中生成一个代表这个类的java.lang.class对象，作为这个类的各种数据的访问入口。</li></ol> 
+<h4 id="2%E3%80%812%E3%80%812%E9%93%BE%E6%8E%A5">2、2、2链接</h4> 
+<ol><li>验证：检验被加载的类是否有正确的内部结构，并和其他类协调一致；<br>            <span style="color:#000000;"><strong>验证文件格式是否一致</strong></span><span style="color:#000000;">: class 文件在文件开头有特定的文件标识(字节码文件都以 </span><span style="color:#ff0000;"><strong>CA FE BA BE 标识开头</strong></span><span style="color:#000000;">);主,次版本号是否在当前 java 虚拟机接收范围内. </span><br>            <span style="color:#000000;"><strong>元数据验证:</strong></span><span style="color:#000000;">对字节码描述的信息进行语义分析,以保证其描述的信息符合java 语言规范的要求,例如这个类是否有父类;是否继承浏览不允许被继承的类(final 修饰的类)..... </span></li><li><span style="color:#000000;">准备：准备阶段则负责为类的</span><span style="color:#000000;"><strong>静态属性</strong></span><span style="color:#000000;">分配内存，并设置</span><span style="color:#000000;"><strong>默认初始值</strong></span><span style="color:#000000;">；<br>            </span><span style="color:#000000;"><strong>不包含用 final 修饰的 static 常量,在编译时进行初始化.<br>            </strong>例如: public static int value = 123；value 在准备阶段后的初始值是 0,而不是 123. </span></li><li><span style="color:#000000;">解析：将类的二进制数据中的符号引用替换成直接引用（符号引用是 Class 文件的逻辑符号，直接引用指向的方法区中某一个地址）</span></li></ol> 
+<h4 id="2%E3%80%812%E3%80%813%E5%88%9D%E5%A7%8B%E5%8C%96">2、2、3初始化</h4> 
+<div> 
+ <span style="color:#000000;">       初始化，为类的静态变量赋予正确的初始值，JVM 负责对类进行初始化，主要对类变量进行初始化。初始化阶段就是执行底层类构造器方法&lt;clinit&gt;()的过程。此方法不需要定义，是 javac 编译器自动收集类中的所有类变量的赋值动作和静态代码块中的语句合并而来的。</span> 
+</div> 
+<div></div> 
+<div> 
+ <strong><span style="color:#000000;">类什么时候初始化：</span></strong> 
+</div> 
+<div></div> 
+<div> 
+ <span style="color:#000000;">       JVM规定：每个类或者接口被首次主动使用时才对其进行初始化。</span> 
+</div> 
+<ul><li><span style="color:#000000;">通过 new 关键字创建对象 </span></li><li><span style="color:#000000;">访问类的静态变量,包括读取和更新 </span></li><li><span style="color:#000000;">访问类的静态方法 </span></li><li><span style="color:#000000;">对某个类进行反射操作 </span></li><li><span style="color:#000000;">初始化子类会导致父类的的初始化 </span></li><li><span style="color:#000000;">执行该类的 main 函数</span></li></ul> 
+<p>除了以上几种主动使用，以下情况被动使用，不会加载类：</p> 
+<ol><li><span style="color:#000000;">引用该类的静态常量,注意是常量,不会导致初始化,但是也有意外,这里的常量是指已经指定字面量的常量,对于那些需要一些计算才能得出结果的常量就会导致类加载,比如: </span><br><span style="color:#000000;">public final static int NUMBER = 5 ; //不会导致类初始化,被动使用 </span><br><span style="color:#000000;">public final static int RANDOM = new Random().nextInt() ; //会导致类加载 </span></li><li><span style="color:#000000;">构造某个类的数组时不会导致该类的初始化,比如: </span><br><span style="color:#000000;">Student[] students = new Student[10] ;</span></li></ol> 
+<p><strong>类的初始化顺序</strong></p> 
+<p>对static修饰的变量或语句块进行赋值<br><span style="color:#000000;">       如果同时包含多个静态变量和静态代码块，则按照自上而下的顺序依次执行。<br>        如果初始化一个类的时候，其父类尚未初始化，则优先初始化其父类。<br>     <strong>   顺序是：父类 static –&gt; 子类 static</strong></span></p> 
+<pre><code class="language-java">public class ClassInit{
+    static{
+        num = 20;
+    }
+    static int num = 10;
+    public static void main (String[] args) {
+        //num从准备到初始化值变化过程 num=0 -&gt; num=20 -&gt; num=10
+        System.out.println(num);//10
+    }
+}
+
+
+public class ClassInit{
+    static int num = 10;
+    static{
+        num = 20;
+    }
+    public static void main (String[] args) {
+        //num从准备到初始化值变化过程 num=0 -&gt; num=10 -&gt; num=20
+        System.out.println(num);//20
+    }
+}
+
+
+</code></pre> 
+<h3 id="2%E3%80%813%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%E5%88%86%E7%B1%BB">2、3类加载器分类</h3> 
+<p>       站在JVM的角度看，类加载器可以分为两种：</p> 
+<ul><li><span style="color:#000000;">引导类加载器(启动类加载器 Bootstrap ClassLoader). </span></li><li><span style="color:#000000;">其他所有类加载器,这些类加载器由 java 语言实现,独立存在于虚拟机外部,并 且全部继承自抽象类 java.lang.ClassLoader. </span></li></ul> 
+<div> 
+ <span style="color:#000000;">       站在 java 开发人员的角度来看,类加载器就应当划分得更细致一些.自 JDK1.2 以来 java 一直保持者三层类加载器</span> 
+</div> 
+<div></div> 
+<div> 
+ <p class="img-center"><img alt="" height="268" src="https://images2.imgbox.com/b7/d9/Ibd91ZbA_o.png" width="532"></p> 
+</div> 
+<p></p> 
+<h4 id="2.3.1%20%E5%BC%95%E5%AF%BC%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(%E5%90%AF%E5%8A%A8%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20BootStrap%20ClassLoader)"><span style="color:#000000;"><strong>2.3.1 引导类加载器(启动类加载器 BootStrap ClassLoader) </strong></span></h4> 
+<div> 
+ <span style="color:#000000;">       这个类加载器使用 C/C++语言实现,嵌套在 JVM 内部.它用来加载 java 核心类库.并不继承于 java.lang.ClassLoader 没有父加载器. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       负责加载扩展类加载器和应用类加载器,并为他们指定父类加载器. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       出于安全考虑,引用类加载器只加载存放在&lt;JAVA_HOME&gt;\lib 目录,或者被-Xbootclasspath 参数锁指定的路径中存储放的类.</span> 
+</div> 
+<div></div> 
+<div> 
+ <h4 id="2.3.2%20%E6%89%A9%E5%B1%95%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(Extension%20ClassLoader)"><span style="color:#000000;"><strong>2.3.2 扩展类加载器(Extension ClassLoader) </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       Java 语言编写的,由 sun.misc.Launcher$ExtClassLoader 实现. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       派生于 ClassLoader 类. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       从 java.ext.dirs 系统属性所指定的目录中加载类库,或从 JDK 系统安装目录的jre/lib/ext 子目录(扩展目录)下加载类库.如果用户创建的 jar 放在此目录下,也会自动由扩展类加载器加载</span> 
+ </div> 
+</div> 
+<div></div> 
+<div> 
+ <h4 id="2.3.3%20%E5%BA%94%E7%94%A8%E7%A8%8B%E5%BA%8F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8(%E7%B3%BB%E7%BB%9F%E7%B1%BB%E5%8A%A0%E8%BD%BD%E5%99%A8%20Application%20ClassLoader)"><span style="color:#000000;"><strong>2.3.3 应用程序类加载器(系统类加载器 Application ClassLoader) </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       Java 语言编写的,由 sun.misc.Launcher$AppClassLoader 实现. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       派生于 ClassLoader 类. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       加载我们自己定义的类,用于加载用户类路径(classpath)上所有的类. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       该类加载器是程序中默认的类加载器. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       ClassLoader 类 ， 它 是 一 个 抽 象 类 ， 其 后 所 有 的 类 加 载 器 都 继 承 自 ClassLoader（不包括启动类加载器）</span> 
+ </div> 
+</div> 
+<div></div> 
+<div> 
+ <h3 id="2.4%20%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6"><span style="color:#000000;"><strong>2.4 双亲委派机制 </strong></span></h3> 
+ <div> 
+  <span style="color:#000000;">       Java 虚拟机对 class 文件采用的是按需加载的方式,也就是说当需要该类时才会将它的 class 文件加载到内存中生成 class 对象.而且加载某个类的 class 文件时,Java 虚拟机采用的是双亲委派模式,即把请求交由父类处理,它是一种任务委派模式</span> 
+ </div> 
+</div> 
+<div></div> 
+<div> 
+ <p class="img-center"><img alt="" height="323" src="https://images2.imgbox.com/d6/46/HMc7R8Ln_o.png" width="558"></p> 
+</div> 
+<p> <span style="color:#000000;">工作原理: </span></p> 
+<ol><li><span style="color:#000000;">如果一个类加载器收到了类加载请求,它并不会自己先去加载,而是把这个请 </span><span style="color:#000000;">求委托给父类的加载器去执行. </span></li><li><span style="color:#000000;">如果父类加载器还存在其父类加载器,则进一步向上委托,依次递归,请求最终 </span><span style="color:#000000;">将到达顶层的启动类加载器. </span></li><li><span style="color:#000000;">如果父类加载器可以完成类的加载任务,就成功返回,倘若父类加载器无法完 </span><span style="color:#000000;">成加载任务,子加载器才会尝试自己去加载,这就是双亲委派机制. </span></li><li><span style="color:#000000;">如果均加载失败，就会抛出 ClassNotFoundException 异常。</span><img alt="" height="205" src="https://images2.imgbox.com/ec/f5/HLr8e0Xy_o.png" width="579"></li></ol> 
+<p><strong> 双亲委派优点：</strong></p> 
+<ol><li><span style="color:#000000;">安全，可避免用户自己编写的类替换 Java 的核心类，如 java.lang.String. </span></li><li><span style="color:#000000;">避免类重复加载,当父亲已经加载了该类时，就没有必要子 ClassLoader 再加载一次</span></li></ol> 
+<h3 id="2.5%20%E5%A6%82%E4%BD%95%E6%89%93%E7%A0%B4%E5%8F%8C%E4%BA%B2%E5%A7%94%E6%B4%BE%E6%9C%BA%E5%88%B6"><span style="color:#000000;"><strong>2.5 如何打破双亲委派机制</strong></span></h3> 
+<div> 
+ <span style="color:#000000;">       Java 虚拟机的类加载器本身可以满足加载的要求，但是也允许开发者自定义类加载器。 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       在 ClassLoader 类中涉及类加载的方法有两个,loadClass(String name), findClass(String name),这两个方法并没有被 final 修饰,也就表示其他子类可以重写. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       重写 loadClass 方法(是实现双亲委派逻辑的地方,修改他会破坏双亲委派机制, 不推荐) </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">重写 findClass 方法 (推荐) </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       我们可以通过自定义类加载重写方法打破双亲委派机制, 再例如 tomcat 等都有自己定义的类加载器. </span> 
+</div> 
+<p></p> 
+<p></p> 
+<h2 id="%E4%B8%89%E3%80%81JVM%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA">三、JVM运行时数据区</h2> 
+<h3 id="3%E3%80%811%E8%BF%90%E8%A1%8C%E6%97%B6%E6%95%B0%E6%8D%AE%E5%8C%BA%E7%BB%84%E6%88%90%E6%A6%82%E8%BF%B0">3、1运行时数据区组成概述</h3> 
+<div> 
+ <span style="color:#000000;">JVM 的运行时数据区，不同虚拟机实现可能略微有所不同，但都会遵从 Java 虚拟机规范，</span> 
+</div> 
+<div> 
+ <span style="color:#000000;">Java 8 虚拟机规范规定，Java 虚拟机所管理的内存将会包括以下几个运行时数据区域：</span> 
+</div> 
+<div></div> 
+<div> 
+ <h4 id="3.1.1%20%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89"><span style="color:#000000;"><strong>3.1.1 程序计数器（Program Counter Register） </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       程序计数器（Program Counter Register）是一块较小的内存空间，它可以看作是当前线程所执行的字节码的行号指示器。 </span> 
+ </div> 
+ <div></div> 
+ <h4 id="3.1.2Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89"><span style="color:#000000;"><strong>3.1.2Java 虚拟机栈（Java Virtual Machine Stacks） </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       描述的是 Java 方法执行的内存模型，每个方法在执行的同时都会创建一个线帧（Stack Frame）用于存储局部变量表、操作数栈、动态链接、方法出口等信息，每个方法从调用直至执行完成的过程，都对应着一个线帧在虚拟机栈中入栈到出栈的过程。 </span> 
+ </div> 
+ <div></div> 
+ <h4 id="3.1.3%20%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88%EF%BC%88Native%20Method%20Stack%EF%BC%89"><span style="color:#000000;"><strong>3.1.3 本地方法栈（Native Method Stack） </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       与虚拟机栈的作用是一样的，只不过虚拟机栈是服务 Java 方法的，而本地方法栈是为虚拟机调用 Native 方法服务的。 </span> 
+ </div> 
+ <div></div> 
+ <h4 id="3.1.4Java%20%E5%A0%86%EF%BC%88Java%20Heap%EF%BC%89"><span style="color:#000000;"><strong>3.1.4Java 堆（Java Heap） </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">      是 Java 虚拟机中内存最大的一块，是被所有线程共享的，在虚拟机启动时候创 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">建，Java 堆唯一的目的就是存放对象实例，几乎所有的对象实例都在这里分配 内存. </span> 
+ </div> 
+ <div></div> 
+ <h4 id="3.1.5%20%E6%96%B9%E6%B3%95%E5%8C%BA%EF%BC%88Methed%20Area%EF%BC%89"><span style="color:#000000;"><strong>3.1.5 方法区（Methed Area） </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">       用于存储已被虚拟机加载的类信息、常量、静态变量、即时编译后的代码等数据。方法区是很重要的系统资源,是硬盘和 CPU 的中间桥梁,承载着操作系统和应用程序的实时运行. </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       JVM 内存布局规定了 Java 在运行过程中内存申请,分配,管理的策略,保证了 JVM的高效稳定运行.不同的 JVM 对于内存的划分方式和管理机制存在着部分差异, 以最为流行的 HotSpot 虚拟机为例：</span> 
+ </div> 
+ <div> 
+  <p class="img-center"><img alt="" height="399" src="https://images2.imgbox.com/cb/4e/wa5TtOel_o.png" width="479"></p> 
+ </div> 
+ <p></p> 
+ <div> 
+  <span style="color:#000000;">       Java 虚拟机定义了程序运行期间会使用到的运行数据区,其中有一些会随着虚拟机启动而创建,随着虚拟机退出而销毁.另外一些则是与线程一一对应的. 这些与线程对应的区域会随着线程开始和结束而创建销毁. </span> 
+ </div> 
+ <div></div> 
+ <blockquote> 
+  <div> 
+   <span style="color:#000000;"><strong>       如图:</strong></span> 
+   <span style="color:#000000;">红色的为多个线程共享,灰色的为单个线程私有的,即</span> 
+   <span style="color:#000000;"><strong>线程间共享:堆,方法区. </strong></span> 
+   <span style="color:#000000;"><strong>线程私有:程序计数器,栈,本地方法栈.</strong></span> 
+  </div> 
+ </blockquote> 
+ <div> 
+  <p class="img-center"><img alt="" height="227" src="https://images2.imgbox.com/ab/66/ZQc133JB_o.png" width="581"></p> 
+  <p></p> 
+  <h3 id="3.2.%E7%A8%8B%E5%BA%8F%E8%AE%A1%E6%95%B0%E5%99%A8%EF%BC%88Program%20Counter%20Register%EF%BC%89"><span style="color:#000000;"><strong>3.2.程序计数器（Program Counter Register）</strong></span></h3> 
+  <div> 
+   <span style="color:#000000;">JVM 中的程序计数寄存器(Program Counter Register)这里翻译为程序计数器更容易理解. </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">程序计数器用来存储下一条指令的地址,也即将要执行的指令代码.由执行引擎读取下一条指令. </span> 
+  </div> 
+  <div></div> 
+ </div> 
+ <p class="img-center"><img alt="" height="454" src="https://images2.imgbox.com/88/09/eYsUURMP_o.png" width="630"></p> 
+ <blockquote> 
+  <ul><li><span style="color:#000000;">它是一块很小的内存空间,几乎可以忽略不计,也是运行速度最快的存储区域. </span></li><li><span style="color:#000000;">在 JVM 规范中,每个线程都有它自己的程序计数器,是线程私有的,生命周期与线程生命周期保持一致. </span></li><li><span style="color:#000000;">程序计数器会存储当前线程正在执行的 Java 方法的 JVM 指令地址. </span></li><li><span style="color:#000000;">它是程序控制流的指示器,分支,循环,跳转,异常处理,线程恢复等基础功能都需要依赖这个计数器来完成.</span></li><li><span style="color:#000000;">它是唯一一个在java虚拟机规范中没有规定任何OutOfMemoryError情况的区域</span></li></ul> 
+ </blockquote> 
+ <div> 
+  <p class="img-center"><img alt="" height="286" src="https://images2.imgbox.com/03/1c/cLETs40i_o.png" width="473"></p> 
+ </div> 
+ <p class="img-center"><img alt="" height="260" src="https://images2.imgbox.com/9a/3e/EdowavGC_o.png" width="382"></p> 
+ <p></p> 
+</div> 
+<h3 id="3.3.Java%20%E8%99%9A%E6%8B%9F%E6%9C%BA%E6%A0%88%EF%BC%88Java%20Virtual%20Machine%20Stacks%EF%BC%89"><span style="color:#000000;"><strong>3.3.Java 虚拟机栈（Java Virtual Machine Stacks）</strong></span></h3> 
+<div> 
+ <span style="color:#000000;"><strong>栈的基本概念 </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;">      栈是运行时的单位,即栈解决程序的运行问题,即程序如何执行,或者说如何处</span> 
+ <span style="color:#000000;">理数据. Java 虚拟机栈(Java Virtual Machine Stack),早期也叫 Java 栈.每个线程在创建时都会创建一个虚拟机栈,其内部保存一个个栈帧,对应着一次方法的调用.Java 虚拟机栈是线程私有的.主管 Java 程序的运行,它保存方法的局部变量(8种基本数据类型,对象的引用地址),部分结果,并参与方法的调用和返回.</span> 
+</div> 
+<p class="img-center"><img alt="" height="322" src="https://images2.imgbox.com/5a/4e/lRUES5Zg_o.png" width="582"></p> 
+<p></p> 
+<div> 
+ <span style="color:#000000;"><strong>栈的特点 </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;">栈是一种快速有效的分配存储方式,访问速度仅次于程序计数器. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">JVM 直接对 java 栈的操作只有两个:调用方法</span> 
+ <span style="color:#000000;"><strong>入栈</strong></span> 
+ <span style="color:#000000;">.执行结束后</span> 
+ <span style="color:#000000;"><strong>出栈</strong></span> 
+ <span style="color:#000000;">. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">对于栈来说不存在垃圾回收问题.</span> 
+</div> 
+<p class="img-center"><img alt="" height="346" src="https://images2.imgbox.com/57/52/BozirN4h_o.png" width="214"></p> 
+<blockquote> 
+ <p><span style="color:#000000;">栈中会出现异常,当线程请求的栈深度大于虚拟机所允许的深度时 , 会出现StackOverflowError.</span></p> 
+</blockquote> 
+<div> 
+ <span style="color:#000000;"><strong>栈的运行原理 </strong></span> 
+</div> 
+<ul><li><span style="color:#000000;">JVM 直接对 java 栈的操作只有两个,就是对栈帧的入栈和出栈,遵循</span><span style="color:#000000;"><strong>先进后出/</strong></span><span style="color:#000000;"><strong>后进先出</strong></span><span style="color:#000000;">的原则. </span></li><li><span style="color:#000000;">在一条活动的线程中,一个时间点上,只会有一个活动栈.即只有当前在执行的方法的栈帧(栈顶)是有效地,这个栈帧被称为当前栈(Current Frame),与当前栈帧对应的方法称为当前方法(CurrentMethod),定义这个方法的类称为当前类(Current Class). </span></li><li><span style="color:#000000;">执行引擎运行的所有字节码指令只针对当前栈帧进行操作. </span></li><li><span style="color:#000000;">如果在该方法中调用了其他方法,对应的新的栈帧就会被创建出来,放在栈的顶端,成为新的当前栈帧.</span></li></ul> 
+<p class="img-center"><img alt="" height="267" src="https://images2.imgbox.com/4a/95/TsX8u3Rb_o.png" width="556"></p> 
+<p> <span style="color:#000000;">       不同线程中所包含的栈帧(方法)是不允许存在相互引用的,即不可能在一个栈中引用另一个线程的栈帧(方法).<br>        如果当前方法调用了其他方法,方法返回之际,当前栈帧会传回此方法的执行结果给前一个栈帧,接着虚拟机会丢弃当前栈帧,使得前一个栈帧重新成为当前栈帧.<br>        Java 方法有两种返回的方式,一种是正常的函数返回,使用 return 指令,另一种是抛出异常.不管哪种方式,都会导致栈帧被弹出. </span></p> 
+<p></p> 
+<div> 
+ <span style="color:#000000;"><strong>栈帧的内部结构 </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;">每个栈帧中存储着: </span> 
+</div> 
+<ul><li><span style="color:#ff0000;"><strong>局部变量表(Local Variables) </strong></span><br><span style="color:#000000;">       局部变量表是一组变量值存储空间，用于存放方法参数和方法内部定义的局部变量。对于基本数据类型的变量，则直接存储它的值，对于引用类型的变量，则存的是指向对象的引用。 </span></li><li><span style="color:#ff0000;"><strong>操作数栈(Operand Stack)(或表达式栈) </strong></span><br><span style="color:#000000;">       栈最典型的一个应用就是用来对表达式求值。在一个线程执行方法的过程</span><span style="color:#000000;">中，实际上就是不断执行语句的过程，而归根到底就是进行计算的过程。因此可以这么说，程序中的所有计算过程都是在借助于操作数栈来完成的。 </span></li><li><span style="color:#000000;"><strong>动态链接(Dynamic Linking) (或指向运行时常量池的方法引用) </strong></span><br><span style="color:#000000;">       因为在方法执行的过程中有可能需要用到类中的常量，所以必须要有一个引用指向运行时常量。 </span></li><li><span style="color:#000000;"><strong>方法返回地址(Retuen Address)(或方法正常退出或者异常退出的定义) </strong></span><br><span style="color:#000000;">       当一个方法执行完毕之后，要返回之前调用它的地方，因此在栈帧中必须保存一个方法返回地址。</span></li></ul> 
+<p class="img-center"><img alt="" height="216" src="https://images2.imgbox.com/b7/57/m46mKond_o.png" width="616"></p> 
+<p></p> 
+<h3 id="3.4.%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%A0%88(Native%20Method%20Stack)"><span style="color:#000000;"><strong>3.4.本地方法栈(Native Method Stack)</strong></span></h3> 
+<ul><li><span style="color:#000000;">Java 虚拟机栈管理 java 方法的调用,而本地方法栈用于管理本地方法的调用. </span></li><li><span style="color:#000000;">本地方法栈也是线程私有的. </span></li><li><span style="color:#000000;">允许被实现成固定或者是可动态扩展的内存大小.内存溢出方面也是相同的. </span></li><li><span style="color:#000000;">如果线程请求分配的栈容量超过本地方法栈允许的最大容量抛出 StackOverflowError.</span><span style="color:#000000;">本地方法是用 C 语言写的. </span></li><li><span style="color:#000000;">它的具体做法是在 Native Method Stack 中登记 native 方法,在 Execution Engine 执行时加载本地方法库. </span></li></ul> 
+<p></p> 
+<h3 id="3.5.Java%20%E5%A0%86%E5%86%85%E5%AD%98"><span style="color:#000000;"><strong>3.5.Java 堆内存</strong></span></h3> 
+<h4 id="3.5.1Java%E5%A0%86%E5%86%85%E5%AD%98%E6%A6%82%E8%BF%B0"><span style="color:#000000;"><strong>3.5.1Java堆内存概述</strong></span></h4> 
+<p class="img-center"><img alt="" height="301" src="https://images2.imgbox.com/08/4c/4FEd92A5_o.png" width="569"></p> 
+<p></p> 
+<ul><li><span style="color:#000000;">一个 JVM 实例只存在一个堆内存,堆也是 Java 内存管理的核心区域. </span></li><li><span style="color:#000000;">Java 堆区在 JVM 启动时的时候即被创建,其空间大小也就确定了,是 JVM 管理</span><span style="color:#000000;">的最大一块内存空间. </span></li><li><span style="color:#000000;">堆内存的大小是可以调节. </span><br><span style="color:#000000;">       例如: -Xms:10m(堆起始大小) -Xmx:30m(堆最大内存大小) </span><br><span style="color:#000000;">       一般情况可以将起始值和最大值设置为一致,这样会减少垃圾回收之后堆内存重</span><span style="color:#000000;">新分配大小的次数,提高效率. </span></li><li><span style="color:#000000;">《</span><span style="color:#000000;">Java 虚拟机规范》规定,堆可以处于物理上不连续的内存空间中,但逻辑上它</span><span style="color:#000000;">应该被视为连续的. </span></li><li><span style="color:#000000;">所有的线程共享 Java 堆,在这里还可以划分线程私有的缓冲区. </span></li><li><span style="color:#000000;">《</span><span style="color:#000000;">Java 虚拟机规范》中对 Java 堆的描述是:所有的对象实例都应当在运行时分</span><span style="color:#000000;">配在堆上. </span></li><li><span style="color:#000000;">在方法结束后,堆中的对象不会马上被移除,仅仅在垃圾收集的时候才会被移除. </span></li><li><span style="color:#000000;">堆是 GC(Garbage Collection,垃圾收集器)执行垃圾回收的重点区域.</span></li></ul> 
+<p></p> 
+<h4 id="3.5.2%E5%A0%86%E5%86%85%E5%AD%98%E5%8C%BA%E5%9F%9F%E5%88%92%E5%88%86">3.5.2堆内存区域划分</h4> 
+<div> 
+ <span style="color:#000000;">Java8 及之后堆内存分为</span> 
+ <span style="color:#000000;"><strong>:新生区(新生代)+老年区(老年代) </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;"><strong>新生区分为 Eden(伊甸园)区和 Survivor(幸存者)区</strong></span> 
+</div> 
+<div></div> 
+<div> 
+ <img alt="" height="482" src="https://images2.imgbox.com/27/71/TPWQ9Mtn_o.png" width="933"> 
+</div> 
+<h4></h4> 
+<h4 id="3.5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E5%88%86%E5%8C%BA(%E4%BB%A3)%EF%BC%9F"><span style="color:#000000;"><strong>3.5.3 为什么分区(代)？</strong></span></h4> 
+<blockquote> 
+ <div> 
+  <span style="color:#000000;">       将对象根据存活概率进行分类，对存活时间长的对象，放到固定区，从而减少扫描垃圾时间及 GC 频率。</span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       针对分类进行不同的垃圾回收算法，对算法扬长避短。</span> 
+ </div> 
+</blockquote> 
+<p class="img-center"><img alt="" height="431" src="https://images2.imgbox.com/6c/d2/JjEjVCp2_o.png" width="521"></p> 
+<h4 id="3.5.4%20%E5%AF%B9%E8%B1%A1%E5%88%9B%E5%BB%BA%E5%86%85%E5%AD%98%E5%88%86%E9%85%8D%E8%BF%87%E7%A8%8B"><span style="color:#000000;"><strong>3.5.4 对象创建内存分配过程</strong></span></h4> 
+<div> 
+ <span style="color:#000000;">       为新对象分配内存是一件非常严谨和复杂的任务,JVM 的设计者们不仅需要考虑内存如何分配,在哪分配等问题,并且由于内存分配算法与内存回收算法密切相关,所以还需要考虑 GC 执行完内存回收后是否会在内存空间中产生内存碎片.</span> 
+</div> 
+<div></div> 
+<div></div> 
+<ol><li><span style="color:#000000;">new 的新对象先放到伊甸园区,此区大小有限制. </span></li><li><span style="color:#000000;">当伊甸园的空间填满时,程序又需要创建对象时,JVM 的垃圾回收器将对伊甸园区进</span><span style="color:#000000;">行垃圾回收(Minor GC),将伊甸园区中的不再被引用的对象进行销毁.再加载新的对象放</span><span style="color:#000000;">到伊甸园区. </span></li><li><span style="color:#000000;">然后将伊甸园区中的剩余对象移动到幸存者 0 区. </span></li><li><span style="color:#000000;">如果再次出发垃圾回收,此时上次幸存下来存放到幸存者 0 区的对象,如果没有回收,</span><span style="color:#000000;">就会被放到幸存者 1 区,每次会保证有一个幸存者区是空的. </span></li><li><span style="color:#000000;">如果再次经历垃圾回收,此时会重新放回幸存者 0 区,接着再去幸存者 1 区. </span></li><li><span style="color:#000000;">什么时候去养老区呢?默认是 15 次,也可以设置参数,最大值为 15 </span><br>        <span style="color:#000000;">-XX:MaxTenuringThreshold=&lt;N&gt; </span><br><span style="color:#000000;">       在对象头中，它是由 4 位数据来对 GC 年龄进行保存的，所以最大值为 1111，</span><span style="color:#000000;">即为15。所以在对象的 GC 年龄达到 15 时，就会从新生代转到老年代。 </span></li><li><span style="color:#000000;">在老年区,相对悠闲,当养老区内存不足时,再次触发 Major GC,进行养老区的内存清</span><span style="color:#000000;">理. </span></li><li><span style="color:#000000;">若养老区执行了 Major GC 之后发现依然无法进行对象保存,就会产生 OOM 异常. </span><span style="color:#000000;">Java.lang.OutOfMemoryError:Java heap space</span></li></ol> 
+<p>例如：</p> 
+<pre><code class="language-java">public static void main(String[] args) {
+    List&lt;Integer&gt; list = new ArrayList();
+    while(true){
+        list.add(new Random().nextInt());
+    }
+}</code></pre> 
+<p class="img-center"><img alt="" height="388" src="https://images2.imgbox.com/91/5d/YvBZCv18_o.png" width="690"></p> 
+<div></div> 
+<h4 id="3.5.5%20%E6%96%B0%E7%94%9F%E5%8C%BA%E4%B8%8E%E8%80%81%E5%B9%B4%E5%8C%BA%E9%85%8D%E7%BD%AE%E6%AF%94%E4%BE%8B"><span style="color:#000000;"><strong>3.5.5 新生区与老年区配置比例</strong></span></h4> 
+<div> 
+ <span style="color:#000000;">配置新生代与老年代在堆结构的占比（一般不会调） </span> 
+</div> 
+<ol><li><span style="color:#000000;">默认**-XX:NewRatio**=2，表示新生代占 1，老年代占 2，新生代占整</span><span style="color:#000000;">个堆的 1/3 </span></li><li><span style="color:#000000;">可以修改**-XX:NewRatio**=4，表示新生代占 1，老年代占 4，新生代</span><span style="color:#000000;">占整个堆的 1/5 </span></li><li><span style="color:#000000;">当发现在整个项目中，生命周期长的对象偏多，那么就可以通过调整老年</span><span style="color:#000000;">代的大小，来进行调优 </span><img alt="" height="171" src="https://images2.imgbox.com/2a/e5/6r41CzEC_o.png" width="817"></li><li><span style="color:#000000;">在 HotSpot 中，</span><span style="color:#000000;">Eden 空间和另外两个 survivor 空间缺省所占的比例是 8 : 1 :</span><span style="color:#000000;">1，当然开发人员可以通过选项**-XX:SurvivorRatio**调整这个空间比例。比</span><span style="color:#000000;">如-XX:SurvivorRatio=8，</span><span style="color:#000000;">新生区</span><span style="color:#000000;">的对象默认生命周期超过 15 ，就会去养老区养老</span></li></ol> 
+<p></p> 
+<h4 id="%C2%A03.5.6%20%E5%88%86%E4%BB%A3%E6%94%B6%E9%9B%86%E6%80%9D%E6%83%B3%20Minor%20GC%E3%80%81Major%20GC%E3%80%81Full%20GC"> <span style="color:#000000;"><strong>3.5.6 分代收集思想 Minor GC、Major GC、Full GC</strong></span></h4> 
+<div> 
+ <span style="color:#000000;">       JVM 在进行 GC 时,并非每次都新生区和老年区一起回收的,大部分时候回收的都是指新生区.针</span> 
+</div> 
+<div> 
+ <span style="color:#000000;">对 HotSpot VM 的实现,它里面的 GC 按照回收区域又分为两大类型:一种是部分收集,一种是整堆收集. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       部分收集:不是完整收集整个 java 堆的垃圾收集.其中又分为: </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">               新生区收集(Minor GC/Yong GC):只是新生区(Eden,S0,S1)的垃圾收集. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">               老年区收集(Major GC / Old GC):只是老年区的垃圾收集. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       整堆收集(Full GC):收集整个 java 堆和方法区的垃圾收集. </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">               整堆收集出现的情况: </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">                          System.gc();时 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">                          老年区空间不足 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">                          方法区空间不足 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">                          开发期间尽量避免整堆收集</span> 
+</div> 
+<p></p> 
+<h4 id="3.5.7%20%E5%A0%86%E7%A9%BA%E9%97%B4%E7%9A%84%E5%8F%82%E6%95%B0%E8%AE%BE%E7%BD%AE"><span style="color:#000000;"><strong>3.5.7 堆空间的参数设置</strong></span></h4> 
+<div> 
+ <span style="color:#000000;"><a class="link-info" href="https://docs.oracle.com/javase/8/docs/technotes/tools/unix/java.html" rel="nofollow" title="官网地址">官网地址</a></span> 
+</div> 
+<div></div> 
+<div> 
+ <table border="1" cellpadding="1" cellspacing="1" style="width:500px;"><tbody><tr><td> 
+     <div> 
+      <span style="color:#000000;">-XX:+PrintFlagsInitial</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">查看所有参数的默认初始值</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-XX:+PrintFlagsFinal</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">查看所有参数的最终值(修改后的值)</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-Xms</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">初始堆空间内存(默认为物理内存的 1/64)</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-Xmx</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">最大堆空间内存(默认为物理内存的 1/4)</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-Xmn</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">设置新生代的大小(初始值及最大值)</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-XX:NewRatio</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">配置新生代与老年代在堆结构的占比</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-XX:SurvivorRatio</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">设置新生代中 Eden 和 S0/S1 空间比例</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">-XX:MaxTenuringTreshold</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">设置新生代垃圾的最大年龄</span> 
+     </div> </td></tr><tr><td> 
+     <div> 
+      <span style="color:#000000;">XX:+PrintGCDetails</span> 
+     </div> </td><td> 
+     <div> 
+      <span style="color:#000000;">输出详细的 GC 处理日志</span> 
+     </div> </td></tr></tbody></table> 
+ <p></p> 
+ <h4 id="3.5.8%20%E5%AD%97%E7%AC%A6%E4%B8%B2%E5%B8%B8%E9%87%8F%E6%B1%A0"><span style="color:#000000;"><strong>3.5.8 字符串常量池</strong></span></h4> 
+</div> 
+<div> 
+ <span style="color:#000000;"><strong>字符串常量池为什么要调整位置？ </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       JDK7 及以后的版本中将字符串常量池放到了堆空间中。因为方法区的回收效率很低，在 Full GC 的时候才会执行永久代的垃圾回收，而 Full GC 是老年代的空间不足、方法区不足时才会触发。 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       这就导致字符串常量池回收效率不高，而我们开发中会有大量的字符串被创建，</span>回收效率低，导致永久代内存不足。放到堆里，能及时回收内存。 
+</div> 
+<div> 
+ <pre><code class="language-java">public static void main(String[] args) {
+    String temp = "world";
+    for (int i = 0; i &lt; Integer.MAX_VALUE; i++) {
+        String str = temp + temp;
+        temp = str;
+        str.intern();//将字符串存储到字符串常量池中
+    }
+}</code></pre> 
+ <p></p> 
+</div> 
+<h3 id="3.6%E6%96%B9%E6%B3%95%E5%8C%BA"><span style="color:#000000;"><strong>3.6方法区</strong></span></h3> 
+<h4 id="3.6.1%20%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%90%86%E8%A7%A3"><span style="color:#000000;"><strong>3.6.1 方法区的基本理解</strong></span></h4> 
+<p><span style="color:#000000;">       方法区，是一个被线程共享的内存区域。其中主要存储加载的类字节码、class/method/field 等元数据、static final 常量、static 变量、即时编译器编译后的代码等数据。另外，方法区包含了一个特殊的区域“运行时常量池”。 </span></p> 
+<div> 
+ <span style="color:#000000;">       Java 虚拟机规范中明确说明:”尽管所有的方法区在逻辑上是属于堆的一部分,但对HotSpotJVM 而言,方法区还有一个别名叫做 Non-Heap(非堆),目的就是要和堆分开. </span> 
+</div> 
+<div></div> 
+<div> 
+ <span style="color:#000000;"><strong>所以,方法区看做是一块独立于 java 堆的内存空间.</strong></span> 
+</div> 
+<div> 
+ <img alt="" height="336" src="https://images2.imgbox.com/04/9d/0C1I9sgi_o.png" width="909"> 
+</div> 
+<p>  <span style="color:#000000;">     方法区在 JVM 启动时被创建,并且它的实际的物理内存空间中和 Java 堆区一样都可以是不连续的.<br>        方法区的大小,跟堆空间一样,可以选择固定大小或者可扩展.<br>        方法区的大小决定了系统可以保存多少个类,如果系统定义了太多的类,导致方法区溢出, 虚拟机同样会抛出内存溢出的错误<br>        关闭 JVM 就会释放这个区域的内存. </span></p> 
+<div> 
+ <span style="color:#000000;"><strong>方法区,栈,堆的交互关系</strong></span> 
+</div> 
+<div></div> 
+<div> 
+ <p class="img-center"><img alt="" height="284" src="https://images2.imgbox.com/0f/df/Bn0oEk1s_o.png" width="587"></p> 
+</div> 
+<p> </p> 
+<h4 id="3.6.2%20%E6%96%B9%E6%B3%95%E5%8C%BA%E5%A4%A7%E5%B0%8F%E8%AE%BE%E7%BD%AE"><span style="color:#000000;"><strong>3.6.2 方法区大小设置</strong></span></h4> 
+<p><span style="color:#000000;">Java 方法区的大小不必是固定的,JVM 可以根据应用的需要动态调整. </span></p> 
+<ol><li><span style="color:#000000;">元数据区大小可以使用参数-XX:MetaspaceSize 和 </span><span style="color:#000000;">-XX:MaxMataspaceSize 指定,替代上述原有的两个参数. </span></li><li><span style="color:#000000;">默认值依赖于平台,windows 下,-XXMetaspaceSize 是 21MB, </span></li><li><span style="color:#000000;">-XX:MaxMetaspaceSize 的值是-1,级没有限制. </span></li><li><span style="color:#000000;">这个-XX:MetaspaceSize 初始值是 21M 也称为高水位线 一旦触及就</span><span style="color:#000000;">会触发 Full GC. </span></li><li><span style="color:#000000;">因此为了减少 FullGC 那么这个-XX:MetaspaceSize 可以设置一个较高</span><span style="color:#000000;">的值</span></li></ol> 
+<p></p> 
+<h4 id="3.6.3%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%86%85%E9%83%A8%E7%BB%93%E6%9E%84"><span style="color:#000000;"><strong>3.6.3 方法区的内部结构</strong></span></h4> 
+<p class="img-center"><img alt="" height="322" src="https://images2.imgbox.com/81/c8/hl4frH4N_o.png" width="595"></p> 
+<div> 
+ <span style="color:#000000;">       方法区它用于存储已被虚拟机加载的类型信息、常量、静态变量、即时编译器编译后的代码缓存,运行常量池等。 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       运行常量池就是一张表，虚拟机指令根据这张表，找到要执行的类名、方法名、参数类型、字面量（常量）等信息,存放编译期间生成的各种字面量（常量）和符号引用。 </span> 
+</div> 
+<div></div> 
+<div></div> 
+<div> 
+ <span style="color:#000000;"><strong>通过反编译字节码文件查看. </strong></span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       反编译字节码文件，并输出值文本文件中，便于查看。参数 -p 确保能查看private 权限类型的字段或方法</span> 
+</div> 
+<blockquote> 
+ <p style="text-align:center;"> <span style="color:#0000ff;"><strong>javap -v -p Demo.class &gt; test.txt</strong></span></p> 
+</blockquote> 
+<p class="img-center"><img alt="" height="304" src="https://images2.imgbox.com/1d/e8/qRDN2x01_o.png" width="480"></p> 
+<p> </p> 
+<p></p> 
+<h4 id="3.6.4%C2%A0%E6%96%B9%E6%B3%95%E5%8C%BA%E7%9A%84%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6"><span style="color:#000000;"><strong>3.6.4 方法区的垃圾回收</strong></span></h4> 
+<ol><li><span style="color:#000000;">有些人认为方法区（如 Hotspot 虚拟机中的元空间或者永久代）是没有垃圾</span><span style="color:#000000;">收集行为的，其实不然。《</span><span style="color:#000000;">Java 虚拟机规范》对方法区的约束是非常宽松的，</span><span style="color:#000000;">提到过可以不要求虚拟机在方法区中实现垃圾收集。 </span></li><li><span style="color:#000000;">一般来说这个区域的回收效果比较难令人满意，尤其是类型的卸载，条件相</span><span style="color:#000000;">当苛刻。但是这部分区域的回收有时又确实是必要的。 </span></li></ol> 
+<blockquote> 
+ <p><span style="color:#0d0016;">方法区的垃圾收集主要回收两部分内容：运行时常量池中废弃的常量和不再使用的类型。 </span></p> 
+</blockquote> 
+<div> 
+ <span style="color:#000000;"><strong>下面也称作类卸载 </strong></span> 
+</div> 
+<div></div> 
+<div> 
+ <span style="color:#000000;">       判定一个常量是否“废弃”还是相对简单，而要判定一个类型是否属于“不再被使用的类”的条件就比较苛刻了。需要同时满足下面三个条件： </span> 
+</div> 
+<ol><li><span style="color:#000000;">该类所有的实例都已经被回收，也就是 Java 堆中不存在该类及其任何派生子</span><span style="color:#000000;">类的实例。 </span></li><li><span style="color:#000000;">加载该类的类加载器已经被回收，这个条件除非是经过精心设计的可替换类加</span><span style="color:#000000;">载器的场景，如 OSGi、JSP 的重加载等，否则通常是很难达成的。 </span></li><li><span style="color:#000000;">该类对应</span><span style="color:#000000;"><strong>的 java.lang.Class 对象没有在任何地方被引用，无法在任何地方通</strong></span><span style="color:#000000;"><strong>过反射访问该类的方法</strong></span><span style="color:#000000;">。</span></li></ol> 
+<p></p> 
+<p></p> 
+<h2 id="%E5%9B%9B%E3%80%81%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95%E6%8E%A5%E5%8F%A3">四、本地方法接口</h2> 
+<p class="img-center"><img alt="" height="514" src="https://images2.imgbox.com/bc/fe/cWAfiVdV_o.png" width="626"></p> 
+<h4 id="%C2%A04.1%20%E4%BB%80%E4%B9%88%E6%98%AF%E6%9C%AC%E5%9C%B0%E6%96%B9%E6%B3%95"> <span style="color:#000000;"><strong>4.1 什么是本地方法</strong></span></h4> 
+<div> 
+ <span style="color:#000000;">       简单来讲，</span> 
+ <span style="color:#000000;"><strong>一个 Native Method 就是一个 java 调用非 java 代码的接口</strong></span> 
+ <span style="color:#000000;">，一个Native Method 是这样一个 java 方法：该方法的底层实现由非 Java 语言实现，比如 C。这个特征并非 java 特有，很多其他的编程语言都有这一机制在定义一个 native method 时，并不提供实现体（有些像定义一个 Java interface），因为其实现体是由非 java 语言在外面实现的。 </span> 
+</div> 
+<div> 
+ <span style="color:#000000;">       关键字 native 可以与其他所有的 java 标识符连用，但是 abstract 除外。</span> 
+</div> 
+<div></div> 
+<h4 id="4.2%20%E4%B8%BA%E4%BB%80%E4%B9%88%E8%A6%81%E4%BD%BF%E7%94%A8%20Native%20Method"><span style="color:#000000;"><strong>4.2 为什么要使用 Native Method </strong></span></h4> 
+<div> 
+ <span style="color:#000000;">      Java 使用起来非常方便，然而有些层次的任务用 java 实现起来不容易，或者我们对程序的效率很在意时，问题就来了。 </span> 
+</div> 
+<ol><li><span style="color:#000000;">与 java 环境外交互。</span><br>        <span style="color:#000000;">有时 java 应用需要与 java 外面的环境交互，这是本地方法存在的主要原因。 你可以想想 java 需要与一些底层系统，如某些硬件交换信息时的情况。本地方法正式这样的一种交流机制：它为我们提供了一个非常简洁的接口，而且我们无需去了解 java 应用之外的繁琐细节。 </span></li><li><span style="color:#000000;">Sun 的解释器是用 C 实现的，这使得它能像一些普通的 C 一样与外部交互。</span><br>        <span style="color:#000000;">jre大部分是用 java 实现的，它也通过一些本地方法与外界交互。例如：类 java.lang.Thread 的 setPriority()方法是用 Java 实现的，但是它实现调用的是该类里的本地方法 setPriority0（）。</span></li></ol> 
+<p></p> 
+<hr> 
+<h2 id="%E4%BA%94%E3%80%81%E6%89%A7%E8%A1%8C%E5%BC%95%E6%93%8E">五、执行引擎</h2> 
+<h4 id="5.1%20%E6%A6%82%E8%BF%B0"><span style="color:#000000;"><strong>5.1 概述</strong></span></h4> 
+<ol><li><span style="color:#000000;">执行引擎是 Java 虚拟机核心的组成部分之一。 </span></li><li><span style="color:#000000;">JVM 的主要任务是负责装载字节码到其内部，但字节码并不能够直接运行在操作系统之上，因为字节码指令并非等价于本地机器指令，它内部包含的仅仅只是一些能够被 JVM 所识别的字节码指令、符号表，以及其他辅助信息。 </span></li><li><span style="color:#000000;">那么，如果想要让一个 Java 程序运行起来，执行引擎（Execution Engine）</span><span style="color:#000000;">的任务就是将字节码指令</span><span style="color:#000000;"><strong>解释/编译</strong></span><span style="color:#000000;">为对应平台上的本地机器指令才可以。简单来说，JVM 中的执行引擎充当了将高级语言翻译为机器语言的译者。 </span></li></ol> 
+<div> 
+ <span style="color:#000000;"><strong>注意区分概念: </strong></span> 
+</div> 
+<ol><li><span style="color:#000000;">前端编译：从 Java 程序员-字节码文件的这个过程叫前端编译. </span></li><li><span style="color:#000000;">执行引擎这里有两种行为：一种是解释执行，一种是编译执行（这里的是后端</span><span style="color:#000000;">编译）。</span></li></ol> 
+<p></p> 
+<h4 id="5.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E8%A7%A3%E9%87%8A%E5%99%A8%EF%BC%9F%E4%BB%80%E4%B9%88%E6%98%AF%20JIT%20%E7%BC%96%E8%AF%91%E5%99%A8%EF%BC%9F"><span style="color:#000000;"><strong>5.2 什么是解释器？什么是 JIT 编译器？ </strong></span></h4> 
+<div> 
+ <span style="color:#000000;"><strong>解释器：</strong></span> 
+ <span style="color:#000000;">当 Java 虚拟机启动时会根据预定义的规范对字节码采用逐行解释的方式执行，将每条字</span> 
+</div> 
+<div> 
+ <span style="color:#000000;">节码文件中的内容“翻译”为对应平台的本地机器指令执行。 </span> 
+</div> 
+<div></div> 
+<div> 
+ <span style="color:#000000;"><strong>JIT（Just In Time Compiler）编译器：</strong></span> 
+ <span style="color:#000000;">就是虚拟机将源代码一次性直接编译成和本地机器平台相关的机器语言，但并不是马上执行。</span> 
+</div> 
+<p></p> 
+<p></p> 
+<h4 id="5.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%20Java%20%E6%98%AF%E5%8D%8A%E7%BC%96%E8%AF%91%E5%8D%8A%E8%A7%A3%E9%87%8A%E5%9E%8B%E8%AF%AD%E8%A8%80%EF%BC%9F"><span style="color:#000000;"><strong>5.3 为什么 Java 是半编译半解释型语言？</strong></span></h4> 
+<div> 
+ <div> 
+  <span style="color:#000000;">       起初将 Java 语言定位为“解释执行”还是比较准确的。再后来，Java 也发展出可以直接生成本地代码的编译器。现在 JVM 在执行 Java 代码的时候，通常都会将解释执行与编译执行二者结合起来进行。 </span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>原因: </strong></span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       JVM 设计者们的初衷仅仅只是单纯地为了满足 Java 程序实现跨平台特性，因此避免采用静态编译的方式由高级语言直接生成本地机器指令，从而诞生了实现解释器在运行时采用逐行解释字节码执行程序的想法。</span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;">       解释器真正意义上所承担的角色就是一个运行时“翻译者”，将字节码文件中的内容“翻译”为对应平台的本地机器指令执行,执行效率低。 </span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;">       JIT 编译器将字节码翻译成本地代码后，就可以做一个缓存操作，存储在方法区的 JIT 代码缓存中（执行效率更高了）。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       是否需要启动 JIT 编译器将字节码直接编译为对应平台的本地机器指令，则需要根据代码被调用执行的频率而定。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       JIT 编译器在运行时会针对那些频繁被调用的“热点代码”做出深度优化，将其直接编译为对应平台的本地机器指令，以此提升 Java 程序的执行性能。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       一个被多次调用的方法，或者是一-个方法体内部循环次数较多的循环体都可以被称之为“热点代码”。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       目前 HotSpot VM 所采用的热点探测方式是基于计数器的热点探测。 </span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>JIT 编译器执行效率高为什么还需要解释器？ </strong></span> 
+ </div> 
+ <ol><li><span style="color:#000000;">当程序启动后，解释器可以马上发挥作用，响应速度快，省去编译的时间，立</span><span style="color:#000000;">即执行。 </span></li><li><span style="color:#000000;">编译器要想发挥作用，把代码编译成本地代码，需要一定的执行时间，但编译</span><span style="color:#000000;">为本地代码后，执行效率高。就需要采用解释器与即时编译器并存的架构来换取</span><span style="color:#000000;">一个平衡点。</span></li></ol> 
+</div> 
+<div></div> 
+<div></div> 
+<div> 
+ <hr> 
+ <h2 id="%E5%85%AD%E3%80%81%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6">六、垃圾回收</h2> 
+ <h3 id="6.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%A6%82%E8%BF%B0"><span style="color:#000000;"><strong>6.1 垃圾回收概述</strong></span></h3> 
+ <h4 id="6.1.1%20%E6%A6%82%E8%BF%B0"><span style="color:#000000;"><strong>6.1.1 概述</strong></span></h4> 
+ <ol><li><span style="color:#000000;">Java 和 C++语言的区别，就在于垃圾收集技术和内存动态分配上，C++语言没有垃圾收集技术，需要程序员手动的收集。 </span></li><li><span style="color:#000000;">垃圾收集，不是 Java 语言的伴生产物。早在 1960 年，第一门开始使用内存动态分配和垃圾收集技术的 Lisp 语言诞生。 </span></li><li><span style="color:#000000;">关于垃圾收集有三个经典问题： </span><br><span style="color:#000000;">       哪些内存需要回收？ </span><br><span style="color:#000000;">       什么时候回收？ </span><br><span style="color:#000000;">       如何回收？ </span></li><li><span style="color:#000000;">垃圾收集机制是 Java 的招牌能力，极大地提高了开发效率。如今，垃圾收集几乎成为现代语言的标配，即使经过如此长时间的发展，Java 的垃圾收集机制仍然在不断的演进中，不同大小的设备、不同特征的应用场景，对垃圾收集提出了新的挑战。</span></li></ol> 
+ <h4></h4> 
+ <h4 id="6.1.2%20%E4%BB%80%E4%B9%88%E6%98%AF%E5%9E%83%E5%9C%BE%EF%BC%9F"><span style="color:#000000;"><strong>6.1.2 什么是垃圾？</strong></span></h4> 
+ <ul><li><span style="color:#000000;">垃圾是指在</span><span style="color:#000000;"><strong>运行程序中没有任何引用指向的对象</strong></span><span style="color:#000000;">，这个对象就是需要被回收的垃圾。 </span></li><li><span style="color:#000000;">如果不及时对内存中的垃圾进行清理，那么，这些垃圾对象所占的内存空间会一直保留到应用程序结束，被保留的空间无法被其他对象使用。甚至可能<strong>导致内存</strong></span><span style="color:#000000;"><strong>溢出</strong></span><span style="color:#000000;">。</span></li></ul> 
+ <div></div> 
+ <h4 id="6.1.3%20%E4%B8%BA%E4%BB%80%E4%B9%88%E9%9C%80%E8%A6%81%20GC%EF%BC%9F"><span style="color:#000000;"><strong>6.1.3 为什么需要 GC？ </strong></span></h4> 
+ <div> 
+  <span style="color:#000000;"><strong>想要学习 GC，首先需要理解为什么需要 GC？ </strong></span> 
+ </div> 
+ <ol><li><span style="color:#000000;">对于高级语言来说，一个基本认知是如果不进行垃圾回收，<strong>内存迟早都会</strong></span><span style="color:#000000;"><strong>被消耗完</strong></span><span style="color:#000000;">，因为不断地分配内存空间而不进行回收，就好像不停地生产生活垃圾而从来不打扫一样。 </span></li><li><span style="color:#000000;">除了释放没用的对象，垃圾回收也可以清除内存里的记录碎片。碎片整理将所占用的堆内存移到堆的一端，<strong>以便 JVM 将整理出的内存分配给新的对象。</strong></span></li></ol> 
+ <p></p> 
+ <h4 id="6.1.4%20%E6%97%A9%E6%9C%9F%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6"><span style="color:#000000;"><strong>6.1.4 早期垃圾回收</strong></span></h4> 
+ <div> 
+  <span style="color:#000000;">        在早期的 C/C++时代，垃圾回收基本上是手工进行的。开发人员可以使用 new关键字进行内存申请，并使用 delete 关键字进行内存释放。比如以下代码：</span> 
+ </div> 
+ <pre><code class="language-cpp">MibBridge *pBridge= new cmBaseGroupBridge（）；
+//如果注册失败，使用 Delete 释放该对象所占内存区域
+if（pBridge-&gt;Register（kDestroy）！=NO ERROR）
+delete pBridge；</code></pre> 
+ <div> 
+  <span style="color:#000000;">       这种方式可以灵活控制内存释放的时间，但是会给开发人员带来频繁申请和释放内存的管理负担。倘若有一处内存区间由于程序员编码的问题忘记被回收，那么就会产生<strong>内存泄漏</strong></span> 
+  <span style="color:#000000;">，垃圾对象永远无法被清除，随着系统运行时间的不断增长，垃圾对象所耗内存可能持续上升，直到出现内存溢出并造成应用程序崩溃。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       有了垃圾回收机制后，上述代码极有可能变成这样</span> 
+ </div> 
+ <div> 
+  <pre><code class="language-cpp">MibBridge *pBridge=new cmBaseGroupBridge();
+pBridge-&gt;Register(kDestroy);</code></pre> 
+  <div> 
+   <span style="color:#000000;">       现在，除了 Java 以外，C#、Python、Ruby 等语言都使用了自动垃圾回收的思</span> 
+   <span style="color:#000000;">想，也是未来发展趋势，可以说这种自动化的内存分配和来及回收方式已经成为了现代开发语言必备的标准。</span> 
+  </div> 
+ </div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <h4 id="6.1.5Java%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E6%9C%BA%E5%88%B6"><span style="color:#000000;"><strong>6.1.5Java 垃圾回收机制</strong></span></h4> 
+ <div> 
+  <div> 
+   <span style="color:#000000;"><strong>6.1.5.1 自动内存管理 </strong></span> 
+  </div> 
+  <div></div> 
+  <div> 
+   <span style="color:#000000;">自动内存管理的优点 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">        自动内存管理，无需开发人员手动参与内存的分配与回收，这样</span> 
+   <span style="color:#000000;"><strong>降低内存泄漏</strong></span> 
+   <span style="color:#494949;"><strong>和</strong></span> 
+   <span style="color:#000000;"><strong>内存溢出的风险. </strong></span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">        自动内存管理机制，将程序员从繁重的内存管理中释放出来，可以</span> 
+   <span style="color:#000000;"><strong>更专心地专注</strong></span> 
+   <span style="color:#000000;"><strong>于业务开发. </strong></span> 
+  </div> 
+  <div></div> 
+  <div></div> 
+  <div> 
+   <span style="color:#000000;"><strong>6.1.5.2 关于自动内存管理的担忧 </strong></span> 
+  </div> 
+  <div></div> 
+  <div> 
+   <span style="color:#000000;">     1.对于 Java 开发人员而言，自动内存管理就像是一个黑匣子，如果过度依赖于“自动”，那么这将会是一场灾难，最严重的就<strong>会弱化 Java 开发人员在程序出</strong></span> 
+   <span style="color:#000000;"><strong>现内存溢出时定位问题和解决问题的能力。 </strong></span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">     2.此时，了解 JVM 的自动内存分配和内存回收原理就显得非常重要，只有在真正了解 JVM 是如何管理内存后，我们才能够在遇见 OutofMemoryError 时，快速地根据错误异常日志定位问题和解决问题。 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">     3.当需要排查各种内存溢出、内存泄漏问题时，当垃圾收集成为系统达到更高并发量的瓶颈时，我们就必须对这些“自动化”的技术<strong>实施必要的监控和调节</strong></span> 
+   <span style="color:#000000;">。</span> 
+  </div> 
+ </div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <div> 
+   <span style="color:#000000;"><strong>6.1.5.3 应该关心哪些区域的回收？ </strong></span> 
+  </div> 
+  <div></div> 
+  <div> 
+   <p class="img-center"><img alt="" height="263" src="https://images2.imgbox.com/39/bf/scRHoHMS_o.png" width="461"></p> 
+  </div> 
+  <p> </p> 
+  <div> 
+   <span style="color:#000000;">        垃圾收集器可以对年轻代回收，也可以对老年代回收，甚至是全栈和方法区的回收，其中，</span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">Java 堆是垃圾收集器的工作重点 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">        从次数上讲： </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">                频繁收集 Young 区 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">                较少收集 Old 区 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">                基本不收集元空间(方法区)</span> 
+  </div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div> 
+   <h3 id="6.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E7%AE%97%E6%B3%95"><span style="color:#000000;"><strong>6.2 垃圾回收相关算法</strong></span></h3> 
+   <h4 id="6.2.1%20%E5%9E%83%E5%9C%BE%E6%A0%87%E8%AE%B0%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95"><span style="color:#000000;"><strong>6.2.1 垃圾标记阶段算法</strong></span></h4> 
+  </div> 
+  <div> 
+   <div> 
+    <span style="color:#000000;"><strong>6.2.1.1 标记阶段的目的 </strong></span> 
+   </div> 
+   <div></div> 
+   <div> 
+    <span style="color:#000000;"><strong>垃圾标记阶段：主要是为了判断对象是否是垃圾对象 </strong></span> 
+   </div> 
+   <ol><li><span style="color:#000000;">在堆里存放着几乎所有的 Java 对象实例，在 GC 执行垃圾回收之前，首先</span><span style="color:#000000;"><strong>需</strong></span><span style="color:#000000;"><strong>要区分出内存中哪些是有用对象，哪些是垃圾对象</strong></span><span style="color:#000000;">。只有被标记为己经是</span><span style="color:#000000;"><strong>垃圾对</strong></span><span style="color:#000000;"><strong>象</strong></span><span style="color:#000000;">，GC 才会在执行垃圾回收时，释放掉其所占用的内存空间，因此这个过程我们可以称为<strong>垃圾标记阶段</strong></span><span style="color:#000000;">。 </span></li><li><span style="color:#000000;">那么在 JVM 中究竟是如何标记一个</span><span style="color:#000000;"><strong>垃圾对象</strong></span><span style="color:#000000;">呢？简单来说，当一个对象已经不再被任何引用指向时，就可以宣判为<strong>垃圾对象</strong></span><span style="color:#000000;">。 </span></li><li><span style="color:#000000;">判断对象是否为垃圾对象一般有两种方式：</span><span style="color:#000000;"><strong>引用计数算法和可达性分析算法</strong></span><span style="color:#000000;">。 </span></li></ol> 
+   <div></div> 
+   <div></div> 
+   <div> 
+    <span style="color:#000000;"><strong>6.2.1.2 引用计数算法 </strong></span> 
+   </div> 
+   <div></div> 
+   <ol><li><span style="color:#000000;">引用计数算法（Reference Counting）比较简单，对每个对象保存一个整型的<strong>引用计数器属性。用于记录对象被引用的情况。 </strong></span></li><li><span style="color:#000000;">对于一个对象 A，只要有任何一个引用指向了对象 A，则对象 A 的引用计数器就加 1；当引用失效时，引用计数器就减 1。只要对象 A 的引用计数器的值为 0，即表示对象 A 不可能再被使用，可进行回收。 </span></li><li><span style="color:#000000;">优点：实现简单，垃圾对象便于辨识；判定效率高，回收没有延迟性。 </span></li><li><span style="color:#000000;">缺点： </span><br><span style="color:#000000;">1.它需要单独的字段存储计数器，这样的做法</span><span style="color:#000000;"><strong>增加了存储空间的开销。 </strong></span><br><span style="color:#000000;">2.每次赋值都需要更新计数器，伴随着加法和减法操作，这</span><span style="color:#000000;"><strong>增加了时间开销。 </strong></span><br><span style="color:#000000;">3.引用计数器有一个严重的问题，即</span><span style="color:#000000;"><strong>无法处理循环引用</strong></span><span style="color:#000000;">的情况。这是一条致命</span><span style="color:#000000;">缺陷，导致在.Java 的</span><span style="color:#000000;"><strong>垃圾回收器中没有使用这类算法</strong></span><span style="color:#000000;">。</span></li></ol> 
+  </div> 
+  <div> 
+   <img alt="" height="296" src="https://images2.imgbox.com/9a/de/sgMRiU1M_o.png" width="668"> 
+  </div> 
+  <p> </p> 
+ </div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>6.2.1.3 可达性分析算法 </strong></span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>可达性分析算法：也可以称为根搜索算法、追踪性垃圾收集 </strong></span> 
+ </div> 
+ <ol><li><span style="color:#000000;">相对于引用计数算法而言，可达性分析算法不仅同样具备实现简单和执行高效等特点，更重要的是该算法可以有效地<strong>解决在引用计数算法中循环引用的问题</strong></span><span style="color:#000000;">，防止内存泄漏的发生。 </span></li><li><span style="color:#000000;">相较于引用计数算法，这里的可达性分析就是 Java、C#选择的。这种类型的垃圾收集通常也叫作追踪性垃圾收集（Tracing Garbage Collection） </span></li></ol> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>可达性分析实现思路</strong></span> 
+  <br>   
+ </div> 
+ <div> 
+  <span style="color:#000000;">所谓"GCRoots”根就是一组必须活跃的引用 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">其基本思路如下： </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       1.可达性分析算法是以根（GCRoots）为起始点，按照从上至下的方式搜索被根对象所连接的目标对象是否可达。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       2.使用可达性分析算法后，内存中的存活对象都会被根直接或间接连接着，搜索所走过的路径称为引用链（Reference Chain）</span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       3.如果目标对象没有任何引用链相连，则是不可达的，就意味着该对象己经死亡，可以标记为垃圾对象。</span> 
+ </div> 
+ <p></p> 
+ <p class="img-center"><img alt="" height="271" src="https://images2.imgbox.com/e4/8e/DDQ15MDG_o.png" width="418"></p> 
+ <p> </p> 
+ <div> 
+  <span style="color:#000000;"><strong>GC Roots 可以是哪些元素？ </strong></span> 
+ </div> 
+ <ol><li><span style="color:#000000;">虚拟机栈中引用的对象 </span><br><span style="color:#000000;">比如：各个线程被调用的方法中使用到的参数、局部变量等。 </span></li><li><span style="color:#000000;">方法区中类静态属性引用的对象<br> 比如：</span><span style="color:#000000;">Java 类的引用类型静态变量 </span></li><li><span style="color:#000000;">所有被同步锁 synchronized 持有的对象 </span></li><li><span style="color:#000000;">Java 虚拟机内部的引用。 </span><br><span style="color:#000000;">基 本 数 据 类 型 对 应 的 Class 对 象 ， 一 些 常 驻 的 异 常 对 象 （ 如 ： </span><span style="color:#000000;">NullPointerException、OutofMemoryError），系统类加载器。</span></li></ol> 
+ <p></p> 
+ <p></p> 
+ <div> 
+  <span style="color:#000000;"><strong>6.2.1.4 对象的 finalization 机制 </strong></span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>finalize() 方法机制：</strong></span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;"><strong>       </strong></span> 
+  <span style="color:#000000;">对象销毁前的回调方法：<strong>finalize()； </strong></span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;">       Java 语言提供了对象终止（finalization）机制来允许开发人员提供对象被销毁之前的自定义处理逻辑。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       当垃圾回收器发现没有引用指向一个对象，即：垃圾回收此对象之前，总会先调用这个对象的 finalize()方法,一个对象的 finalize()方法只被调用一次。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">        finalize() 方法允许在子类中被重写，用于在对象被回收时进行资源释放。通常在这个方法中进行一些资源释放和清理的工作，比如关闭文件、套接字和数据库连接等。 </span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <strong><span style="color:#000000;">Object 类中 finalize() 源码 </span></strong> 
+ </div> 
+ <div> 
+  <pre><code class="language-cpp">protected void finalize() throws Throwable { }</code></pre> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">永远不要主动调用某个对象的 finalize()方法，应该交给垃圾回收机制调用。理由包括下面三点： </span> 
+ </div> 
+ <ol><li><span style="color:#000000;">在 finalize()时可能会导致对象复活。 </span></li><li><span style="color:#000000;">finalize()方法的执行时间是没有保障的，它完全由 GC 线程决定，极端情况下，</span><span style="color:#000000;">若不发生 GC，则 finalize()方法将没有执行机会。 </span></li><li><span style="color:#000000;">一个糟糕的 finalize()会严重影响 GC 的性能。比如 finalize 是个死循环。 </span></li></ol> 
+ <p></p> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>6.2.1.5 生存还是死亡？ </strong></span></p> 
+ <div> 
+  <span style="color:#000000;"><strong>由于 finalize()方法的存在，虚拟机中的对象一般处于三种可能的状态。</strong></span> 
+  <br>   
+ </div> 
+ <div> 
+  <span style="color:#000000;">         如果从所有的根节点都无法访问到某个对象，说明对象己经不再使用了。一般来说，此对象需要被回收。但事实上，也并非是“非死不可”的，这时候它们暂时处于“缓刑”阶段。一个无法触及的对象有可能在某一个条件下“复活”自己，如果这样，那么对它立即进行回收就是不合理的。</span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">      </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">为此，定义虚拟机中的对象可能的<strong>三种状态</strong></span> 
+  <span style="color:#000000;">。如下： </span> 
+ </div> 
+ <ul><li><span style="color:#000000;"><strong>可触及的：</strong></span><span style="color:#000000;">从根节点开始，可以到达这个对象。 </span></li><li><span style="color:#000000;"><strong>可复活的：</strong></span><span style="color:#000000;">对象的所有引用都被释放，但是对象有可能在 finalize()中复活。 </span></li><li><span style="color:#000000;"><strong>不可触及的：</strong></span><span style="color:#000000;">对象的 finalize()被调用，并且没有复活，那么就会进入不可触及状态。 </span></li></ul> 
+ <div> 
+  <span style="color:#000000;">       以上 3 种状态中，是由于 finalize()方法的存在，进行的区分。只有在对象不可触及时才可以被回收。 </span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>具体过程 </strong></span> 
+ </div> 
+ <div> 
+  <br> 
+  <span style="color:#000000;">判定一个对象 objA 是否可回收，至少要经历两次标记过程： </span> 
+ </div> 
+ <ol><li><span style="color:#000000;">如果对象 objA 到 GC Roots 没有引用链，则进行第一次标记。 </span></li><li><span style="color:#000000;">进行筛选，判断此对象是否有必要执行 finalize()方法：</span></li></ol> 
+ <ul><li><span style="color:#000000;">如果对象 objA 没有重写 finalize()方法，或者 finalize()方法已经被虚拟机调用过，则虚拟机视为“没有必要执行”，objA 被判定为不可触及的。 </span></li><li><span style="color:#000000;">如果对象 objA 重写了 finalize()方法，且还未执行过，那么 objA 会被插入到队列中，由一个虚拟机自动创建的、低优先级的 Finalizer 线程触发其finalize()方法执行。 </span></li><li><span style="color:#000000;">finalize()方法是对象逃脱死亡的最后机会，稍后 GC 会对队列中的对象进行第二次标记。如果 objA 在 finalize()方法中与引用链上的任何一个对象建立了联系，那么在第二次标记时，objA 会被移出“即将回收”集合。之后，对象会再次出现没有引用存在的情况。在这个情况下，finalize()方法不会被再次调用，对象会直接变成不可触及的状态。 </span></li></ul> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;"><strong>代码演示 finalize() 方法可复活对象 </strong></span> 
+ </div> 
+ <div></div> 
+ <div> 
+  <span style="color:#000000;">第一次自救成功，但由于 finalize() 方法只会执行一次，所以第二次自救失败。</span> 
+ </div> 
+ <p></p> 
+ <p></p> 
+ <p></p> 
+ <h4 id="6.2.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E9%98%B6%E6%AE%B5%E7%AE%97%E6%B3%95"><span style="color:#000000;"><strong>6.2.2 垃圾回收阶段算法</strong></span></h4> 
+ <p><span style="color:#000000;">        当成功区分出内存中存活对象和死亡对象后，GC 接下来的任务就是执行垃圾回收，释放掉无用对象所占用的内存空间，以便有足够的可用内存空间为新对象分配内存。目前在 JVM 中比较常见的三种垃圾收集算法是: </span></p> 
+ <ul><li><span style="color:#000000;"><strong>标记-复制算法（Copying） </strong></span></li><li><span style="color:#000000;"><strong>标记-清除算法（Mark-Sweep） </strong></span></li><li><span style="color:#000000;"><strong>标记-压缩算法（Mark-Compact）</strong></span></li></ul> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>6.2.2.1 标记-复制算法</strong></span></p> 
+ <p><span style="color:#000000;">        它将可用内存按容量划分为大小相等的两块，每次只使用其中的一块。在垃 圾回收时将正在使用的内存中的存活对象复制到未被使用的内存块中，之后清除 正在使用的内存块中的所有对象，交换两个内存的角色，最后完成垃圾回收。</span></p> 
+ <p class="img-center"><img alt="" height="327" src="https://images2.imgbox.com/fe/4d/AAGBKb7K_o.png" width="584"></p> 
+ <p> </p> 
+ <p><span style="color:#000000;"><strong>复制算法的优缺点 </strong></span></p> 
+ <p><span style="color:#000000;"><strong>优点 </strong></span></p> 
+ <ul><li><span style="color:#000000;">没有标记和清除过程，实现简单，运行高效</span></li><li><span style="color:#000000;">复制过去以后保证空间的连续性，不会出现“碎片”问题。 </span></li></ul> 
+ <div> 
+  <div> 
+   <span style="color:#000000;"><strong>缺点 </strong></span> 
+  </div> 
+  <ul><li><span style="color:#000000;">此算法的缺点也是很明显的，就是需要两倍的内存空间。 </span></li><li><span style="color:#000000;">对于 G1 这种分拆成为大量 region 的 GC，复制而不是移动，意味着 GC 需要维护 region 之间对象引用关系，不管是内存占用或者时间开销也不小.</span></li></ul> 
+  <p></p> 
+  <p><span style="color:#000000;"><strong>复制算法的应用场景 </strong></span></p> 
+  <ol><li><span style="color:#000000;">如果系统中的垃圾对象很多，复制算法需要复制的存活对象数量并不会太大，效率较高 </span></li></ol> 
+ </div> 
+ <ol><li><span style="color:#000000;">老年代大量的对象存活，那么复制的对象将会有很多，效率会很低 </span></li><li><span style="color:#000000;">在新生代，对常规应用的垃圾回收，一次通常可以回收 70% - 99% 的内存空间。</span><span style="color:#000000;">回收性价比很高。所以现在的商业虚拟机都是用这种收集算法回收新生代。 </span></li></ol> 
+ <p class="img-center"><img alt="" height="207" src="https://images2.imgbox.com/d0/8d/fdRszqiM_o.png" width="461"></p> 
+ <p> </p> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>6.2.2.2 标记-清除算法</strong></span></p> 
+ <p><br><span style="color:#000000;"><strong>执行过程 </strong><br> 当堆中的有效内存空间被耗尽的时候，然后进行这项工作.<br>        </span><span style="color:#000000;"><strong>清除：</strong></span><span style="color:#000000;">这里所谓的清除并不是真的置空，而是把需要清除的对象地址保存在空闲的地址列表里。下次有新对象需要加载时，判断垃圾的位置空间是否够，如果够，就存放（也就是覆盖原有的地址）</span></p> 
+ <p class="img-center"><img alt="" height="381" src="https://images2.imgbox.com/88/b9/lxHDts6F_o.png" width="530"></p> 
+ <p> </p> 
+ <p></p> 
+ <p><span style="color:#000000;">标记-清除算法的优点：<br>        非常基础和常见的垃圾收集算法容易理解</span></p> 
+ <p><span style="color:#000000;">标记-清除算法的缺点：<br>        标记清除算法的效率不算高<br>        这种方式清理出来的空闲内存是不连续的，产生内碎片。</span></p> 
+ <p></p> 
+ <p><br>  </p> 
+ <p><span style="color:#000000;"><strong>6.2.2.3 标记-压缩算法</strong></span></p> 
+ <p><span style="color:#000000;"><strong>背景</strong></span></p> 
+ <p><span style="color:#000000;">       复制算法的高效性是建立在存活对象少、垃圾对象多的前提下的。这种情况在新生代经常发生，但是在老年代，更常见的情况是大部分对象都是存活对象。 如果依然使用复制算法，由于存活对象较多，复制的成本也将很高。因此，基于老年代垃圾回收的特性，需要使用其他的算法。</span></p> 
+ <p><span style="color:#000000;">       标记-清除算法的确可以应用在老年代中，但是该算法不仅执行效率低下，而且在执行完内存回收后还会产生内存碎片，所以 JVM 的设计者需要在此基础之上进行改进</span><br>  </p> 
+ <p><span style="color:#000000;"><strong>标记压缩算法执行过程 </strong></span></p> 
+ <p><span style="color:#000000;">第一阶段和标记清除算法一样，从根节点开始标记所有被引用对象<br> 第二阶段将所有的存活对象压缩到内存的一端，按顺序排放。之后，清理边界外所有的空间。</span></p> 
+ <div></div> 
+ <div> 
+  <p class="img-center"><img alt="" height="348" src="https://images2.imgbox.com/59/ce/wGCdTXFo_o.png" width="538"></p> 
+  <p></p> 
+  <p><span style="color:#000000;"><strong>标记-压缩算法与标记-清除算法的比较 </strong></span></p> 
+  <p><span style="color:#000000;">       标记-压缩算法的最终效果等同于标记-清除算法执行完成后，再进行一次内存碎片整理，因此，也可以把它称为标记-清除-压缩（Mark-Sweep-Compact）算法。 </span></p> 
+  <p><span style="color:#000000;">       二者的本质差异在于标记-清除算法是一种非移动式的回收算法（空闲列表记录位置），标记-压缩是移动式的。是否移动回收后的存活对象是一项优缺点并存的风险决策。 </span></p> 
+  <p><span style="color:#000000;">       可以看到，标记的存活对象将会被整理，按照内存地址依次排列，而未被标记的内存会被清理掉。如此一来，当我们需要给新对象分配内存时JVM 只需要持有一个内存的起始地址即可，这比维护一个空闲列表显然少了许多开销。</span></p> 
+ </div> 
+ <p> </p> 
+ <p><span style="color:#000000;"><strong>标记-压缩算法的优缺点 </strong></span></p> 
+ <p><span style="color:#000000;"><strong>优点 </strong></span></p> 
+ <ol><li><span style="color:#000000;">消除了标记-清除算法当中，内存区域分散的缺点，我们需要给新对象分配内存时，JVM 只需要持有一个内存的起始地址即可。 </span></li><li><span style="color:#000000;">消除了复制算法当中，内存减半的高额代价。 </span></li></ol> 
+ <div> 
+  <span style="color:#000000;"><strong>缺点 </strong></span> 
+ </div> 
+ <ol><li><span style="color:#000000;">从效率上来说，标记-压缩算法要低于复制算法。 </span></li><li><span style="color:#000000;">移动对象的同时，如果对象被其他对象引用，则还需要调整引用的地址 </span></li><li><span style="color:#000000;">移动过程中，需要全程暂停用户应用程序。即：STW</span></li></ol> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>6.2.2.4 垃圾回收算法小结 </strong></span></p> 
+ <p><span style="color:#000000;">        效率上来说，复制算法是当之无愧的老大，但是却浪费了太多内存。而为了尽量兼顾上面提到的三个指标，标记-压缩算法相对来说更平滑一些，但是效率上不尽如人意，它比复制算法多了一个标记的阶段，比标记-清除多了一个整理内存的阶段。</span></p> 
+ <table border="1" cellpadding="1" cellspacing="1" style="width:500px;"><tbody><tr><td style="text-align:center;"></td><td style="text-align:center;">标记清除</td><td style="text-align:center;">标记整理</td><td style="text-align:center;">复制</td></tr><tr><td style="text-align:center;">速率</td><td style="text-align:center;">中等</td><td style="text-align:center;">最慢</td><td style="text-align:center;">最快</td></tr><tr><td style="text-align:center;">空间开销</td><td style="text-align:center;">少（会堆积碎片）</td><td style="text-align:center;">少（无堆积碎片）</td><td style="text-align:center;">通常需要活动对象的两倍空间（无堆积碎片）</td></tr><tr><td style="text-align:center;">移动对象</td><td style="text-align:center;">否</td><td style="text-align:center;">是</td><td style="text-align:center;">是</td></tr></tbody></table> 
+ <p></p> 
+ <p></p> 
+ <p><strong style="color:#000000;">6.2.2.5 分代收集</strong></p> 
+ <p><span style="color:#000000;"><strong>为什么要使用分代收集 </strong></span></p> 
+ <p><span style="color:#000000;">       前面所有这些算法中，并没有一种算法可以完全替代其他算法，它们都具有自己独特的优势和特点。分代收集应运而生。 </span></p> 
+ <p><span style="color:#000000;">       分代收集，是基于这样一个事实：不同的对象的生命周期是不一样的。因此，不同生命周期的对象可以采取不同的收集方式，以便提高回收效率。一般是把 Java堆分为新生代和老年代，这样就可以根据各个年代的特点使用不同的回收算法，以提高垃圾回收的效率。 </span></p> 
+ <p><span style="color:#000000;">       在 Java 程序运行的过程中，会产生大量的对象，其中有些对象是与业务信息相关: 比如 Http 请求中的 Session 对象、线程、Socket 连接，这类对象跟业务直接挂钩，因此生命周期比较长。         但是还有一些对象，主要是程序运行过程中生成的临时变量，这些对象生命周期会比较短，比如：String 对象，由于其不变类的特性，系统会产生大量的这些对象，有些对象甚至只用一次即可回收。 </span></p> 
+ <p><span style="color:#000000;">       目前几乎所有的 GC 都采用分代手机算法执行垃圾回收的在 HotSpot 中，基于分代的概念，GC 所使用的内存回收算法必须结合年轻代和老年代各自的特点。 </span></p> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>年轻代（Young Gen） </strong></span></p> 
+ <p><span style="color:#000000;"><strong>年轻代特点：区域相对老年代较小，对象生命周期短、存活率低，回收频繁。 </strong></span></p> 
+ <p><span style="color:#000000;">       这种情况复制算法的回收整理，速度是最快的。复制算法的效率只和当前存活对象大小有关，因此很适用于年轻代的回收。而复制算法内存利用率不高的问题，通过 hotspot 中的两个 survivor 的设计得到缓解。 </span></p> 
+ <p><span style="color:#000000;"><strong>老年代（Tenured Gen） </strong></span></p> 
+ <p><span style="color:#000000;"><strong>老年代特点：区域较大，对象生命周期长、存活率高，回收不及年轻代频繁。 </strong></span></p> 
+ <p><span style="color:#000000;">       这种情况存在大量存活率高的对象，复制算法明显变得不合适。一般是由标记- 清除或者是标记-清除与标记-压缩的混合实现。 </span></p> 
+ <div> 
+  <ol><li><span style="color:#000000;">Mark 阶段的开销与存活对象的数量成正比。 </span></li><li><span style="color:#000000;">Sweep 阶段的开销与所管理区域的大小成正相关。 </span></li><li><span style="color:#000000;">Compact 阶段的开销与存活对象的数据成正比。 </span></li></ol> 
+  <p><span style="color:#333333;"><strong>分代的思想被现有的虚拟机广泛使用。几乎所有的垃圾回收器都区分新生代和老</strong><strong>年代。</strong></span></p> 
+ </div> 
+ <p></p> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <h3 id="6.3%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E7%9B%B8%E5%85%B3%E6%A6%82%E5%BF%B5"><span style="color:#000000;"><strong>6.3 垃圾回收相关概念</strong></span></h3> 
+  <h4 id="6.3.1System.gc()%20%E7%9A%84%E7%90%86%E8%A7%A3"><span style="color:#000000;"><strong>6.3.1System.gc() 的理解</strong></span></h4> 
+  <p><span style="color:#000000;">       在默认情况下，通过 System.gc()者 Runtime.getRuntime().gc() 的调用，会显式触发 Full GC，同时对老年代和新生代进行回收，尝试释放被丢弃对象占用的内存。<br>        然而 System.gc()调用附带一个免责声明，无法保证对垃圾收集器的调用(不能确保立即生效)。<br>        JVM 实现者可以通过 System.gc() 调用来决定 JVM 的 GC 行为。而一般情况下，垃圾回收应该是自动进行的，无须手动触发，否则就太过于麻烦了。在一些特殊情况下，我们可以在运行之间调用 System.gc()。</span></p> 
+  <p></p> 
+  <h4 id="6.3.2%20%E5%86%85%E5%AD%98%E6%BA%A2%E5%87%BA%E4%B8%8E%E5%86%85%E5%AD%98%E6%B3%84%E6%BC%8F"><span style="color:#000000;"><strong>6.3.2 内存溢出与内存泄漏</strong></span></h4> 
+  <p><span style="color:#333333;"><strong>内存溢出</strong></span></p> 
+  <p><span style="color:#000000;">       内存溢出相对于内存泄漏来说，尽管更容易被理解，但是同样的，内存溢出也是引发程序崩溃的罪魁祸首之一。<br>        由于 GC 一直在发展，所有一般情况下，除非应用程序占用的内存增长速度非常快，造成垃圾回收已经跟不上内存消耗的速度，否则不太容易出现 OOM 的情况。<br>        大多数情况下，GC 会进行各种年龄段的垃圾回收，实在不行了就放大招，来一次独占式的 Full GC 操作，这时候会回收大量的内存，供应用程序继续使用。<br>        Javadoc 中对 OutofMemoryError 的解释是，没有空闲内存，并且垃圾收集器也无法提供更多内存。</span></p> 
+  <p></p> 
+  <p><span style="color:#000000;"><strong>内存泄漏 </strong></span></p> 
+  <p><span style="color:#000000;">       内存泄漏也称作“存储渗漏”。严格来说，只有<strong>对象不会再被程序用到了，但</strong></span><span style="color:#000000;"><strong>是 GC 又不能回收他们的情况</strong></span><span style="color:#000000;">，才叫内存泄漏。<br>        但实际情况很多时候一些不太好的实践（或疏忽）会导致对象的生命周期变得很长甚至导致 OOM，也可以叫做宽泛意义上的“内存泄漏”。<br>        尽管内存泄漏并不会立刻引起程序崩溃，但是一旦发生内存泄漏，程序中的可用内存就会被逐步蚕食，直至耗尽所有内存，最终出现 OutofMemory 异常，导致程序崩溃。注意，这里的存储空间并不是指物理内存，而是指虚拟内存大小，这个虚拟内存大小取决于磁盘交换区设定的大小。</span></p> 
+  <p><span style="color:#000000;">       注意，这里的存储空间并不是指物理内存，而是指虚拟内存大小，这个虚拟内存大小取决于磁盘交换区设定的大小。</span></p> 
+  <p></p> 
+  <p><span style="color:#000000;"><strong>常见例子 </strong></span></p> 
+  <p><span style="color:#000000;"><strong>单例模式 </strong></span></p> 
+  <p><span style="color:#000000;">       单例的生命周期和应用程序是一样长的，所以在单例程序中，如果持有对外部对象的引用的话，那么这个外部对象是不能被回收的，则会导致内存泄漏的产生。 </span></p> 
+  <p><span style="color:#000000;"><strong>一些提供 close()的资源未关闭导致内存泄漏 </strong><br>        数据库连接 dataSourse.getConnection()，网络连接 socket 和 io 连接必须手动 close，否则是不能被回收的。</span></p> 
+  <p></p> 
+  <p></p> 
+  <h4 id="6.3.3Stop%20the%20World"><span style="color:#000000;"><strong>6.3.3Stop the World </strong></span></h4> 
+  <p><span style="color:#000000;"><strong>       Stop-the-World</strong>，简称 STW，指的是 GC 事件发生过程中，会产生应用程序的停顿。停顿产生时整个应用程序线程都会被暂停，没有任何响应，有点像卡死的感觉，这个停顿称为 STW。 </span></p> 
+  <p><span style="color:#000000;">可达性分析算法中枚举根节点（GC Roots）会导致所有 Java 执行线程停顿，为什么需要停顿所有 Java 执行线程呢？ </span></p> 
+ </div> 
+ <div> 
+  <ol><li><span style="color:#000000;">分析工作必须在一个能确保一致性的快照中进行 </span></li><li><span style="color:#000000;">一致性指整个分析期间整个执行系统看起来像被冻结在某个时间点上 </span></li><li><span style="color:#000000;">如果出现分析过程中对象引用关系还在不断变化，则分析结果的准确性无法保</span><span style="color:#000000;">证,会出现漏标,错标问题 </span></li><li><span style="color:#000000;">被 STW 中断的应用程序线程会在完成 GC 之后恢复，频繁中断会让用户感觉</span><span style="color:#000000;">像是网速不快造成电影卡带一样，所以我们需要减少 STW 的发生。 </span></li><li><span style="color:#000000;">越优秀，回收效率越来越高，尽可能地缩短了暂停时间。</span></li></ol> 
+  <p><span style="color:#333333;">       STW 是 JVM 在后台自动发起和自动完成的。在用户不可见的情况下，把用户正常的工作线程全部停掉。</span></p> 
+ </div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <h3 id="6.4%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8"><span style="color:#000000;"><strong>6.4 垃圾回收器 </strong></span></h3> 
+  <h4 id="6.4.1%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E6%A6%82%E8%BF%B0"><span style="color:#000000;"><strong>6.4.1 垃圾回收器概述</strong></span></h4> 
+  <p><span style="color:#000000;">       如果说垃圾收集算法是内存回收的方法论,那么收集器就是内存回收的实践者.<br>        垃圾收集器没有在 java 虚拟机规范中进行过多的规定，可以由不同的厂商、不同版本的 JVM 来实现。<br>        由于 JDK 的版本处于高速迭代过程中，因此 Java 发展至今已经衍生了众多的垃圾回收器。从不同角度分析垃圾收集器，可以将 GC 分为不同的类型。<br>        实际使用时,可以根据实际的使用场景选择不同的垃圾回收器,这也是 JVM 调优的重要部</span></p> 
+  <p></p> 
+  <p></p> 
+  <h4 id="6.4.2%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E5%88%86%E7%B1%BB"><span style="color:#000000;"><strong>6.4.2 垃圾回收器分类 </strong></span></h4> 
+  <p><span style="color:#000000;"><strong>按线程数可以分为</strong></span><span style="color:#0000ff;"><strong>单线程(串行)</strong></span><span style="color:#000000;"><strong>垃圾回收器和</strong></span><span style="color:#0000ff;"><strong>多线程(并行)</strong></span><span style="color:#000000;"><strong>垃圾回收器</strong></span></p> 
+  <p><span style="color:#000000;"><strong>单线程垃圾回收器(Serial) </strong></span></p> 
+  <p><span style="color:#000000;">只有一个线程进行垃圾回收,使用于小型简单的使用场景,垃圾回收时,其他用户线程会暂停.</span></p> 
+ </div> 
+ <div> 
+  <img alt="" height="467" src="https://images2.imgbox.com/84/6a/xU094tL8_o.png" width="1182"> 
+ </div> 
+ <p> </p> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <strong>多线程垃圾回收器(Parallel)</strong> 
+ </div> 
+ <div> 
+  <div></div> 
+  <div> 
+   <span style="color:#000000;">       多线程垃圾回收器内部提供多个线程进行垃圾回收,在多 cpu 情况下大大提升垃 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">圾回收效率,但同样也是会暂停其他用户线程.</span> 
+  </div> 
+  <div></div> 
+ </div> 
+ <div> 
+  <p class="img-center"><img alt="" height="280" src="https://images2.imgbox.com/63/c4/UPLscyUS_o.png" width="579"></p> 
+ </div> 
+ <p> <span style="color:#000000;"><strong>按照工作模式分，可以分为</strong></span><span style="color:#0000ff;"><strong>独占式</strong></span><span style="color:#000000;"><strong>和</strong></span><span style="color:#0000ff;"><strong>并发式</strong></span><span style="color:#000000;"><strong>垃圾回收器。</strong></span></p> 
+ <p class="img-center"><img alt="" height="201" src="https://images2.imgbox.com/e2/fa/Z18aF9Fu_o.png" width="466"></p> 
+ <p></p> 
+ <p><span style="color:#000000;"><strong>按工作的内存区间分，又可分为</strong></span><span style="color:#0000ff;"><strong>年轻代垃圾回收器</strong></span><span style="color:#000000;"><strong>和</strong></span><span style="color:#0000ff;"><strong>老年代垃圾回收器。</strong></span> </p> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <h4 id="6.4.3GC%20%E6%80%A7%E8%83%BD%E6%8C%87%E6%A0%87"><span style="color:#000000;"><strong>6.4.3GC 性能指标</strong></span></h4> 
+ </div> 
+ <div> 
+  <div> 
+   <span style="color:#000000;"><strong>吞吐量：运行用户代码的时间占总运行时间的比例</strong></span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">（总运行时间：程序的运行时间+</span> 
+   <span style="color:#000000;">内存回收的时间） </span> 
+  </div> 
+  <ul><li><span style="color:#000000;">垃圾收集开销：垃圾收集所用时间与总运行时间的比例。 </span></li></ul> 
+  <div> 
+   <span style="color:#000000;"><strong>暂停时间：执行垃圾收集时，程序的工作线程被暂停的时间。 </strong></span> 
+  </div> 
+  <ul><li><span style="color:#000000;">内存占用：</span><span style="color:#000000;">Java </span><span style="color:#000000;">堆区所占的内存大小。 </span></li><li><span style="color:#000000;">快速：一个对象从诞生到被回收所经历的时间。</span></li></ul> 
+ </div> 
+ <div> 
+  <p class="img-center"><img alt="" height="300" src="https://images2.imgbox.com/dc/d0/VYyGzzdy_o.png" width="476"></p> 
+ </div> 
+ <p> </p> 
+ <div> 
+  <h4 id="6.4.4HotSpot%20%E5%9E%83%E5%9C%BE%E6%94%B6%E9%9B%86%E5%99%A8"><span style="color:#000000;"><strong>6.4.4HotSpot 垃圾收集器</strong></span></h4> 
+ </div> 
+ <div></div> 
+ <div> 
+  <blockquote> 
+   <div> 
+    <span style="color:#000000;">        图中展示了 7 种作用于不同分代的收集器，如果两个收集器之间存在连线，则说明它们可以搭配使用。虚拟机所处的区域则表示它是属于新生代还是老年代收集器。</span> 
+   </div> 
+  </blockquote> 
+ </div> 
+ <div> 
+  <img alt="" height="446" src="https://images2.imgbox.com/b9/67/Ququ3Vat_o.png" width="1087"> 
+ </div> 
+ <p> </p> 
+ <div></div> 
+ <div> 
+  <h4 id="6.%204.5CMS%20%E5%9B%9E%E6%94%B6%E5%99%A8"><span style="color:#000000;"><strong>6. 4.5CMS </strong></span><span style="color:#000000;"><strong>回收器</strong></span></h4> 
+  <p><span style="color:#000000;"><strong>CMS </strong></span><span style="color:#000000;"><strong>概述 </strong></span></p> 
+  <p><span style="color:#000000;"><strong>CMS</strong>(Concurrent Mark Sweep，并发标记清除)收集器是以获取最短回收停顿时间为目标的收集器（</span><span style="color:#0000ff;">追求低停顿</span><span style="color:#000000;">），它在垃圾收集时使得用户线程和 GC 线程并发执行，因此在垃圾收集过程中用户也不会感到明显的卡顿。 </span></p> 
+  <p><span style="color:#000000;"><strong>垃圾回收过程 </strong></span></p> 
+  <p><span style="color:#000000;">初始标记：<br>        Stop The World，仅使用一条初始标记线程对所有与 GC Roots 直接关联的对象进行标记。 </span></p> 
+  <p><span style="color:#000000;">并发标记：<br>        垃圾回收线程，与用户线程并发执行。此过程进行可达性分析，标记出所有废弃对象。 </span></p> 
+  <p><span style="color:#000000;">重新标记：<br>        Stop The World，使用多条标记线程并发执行，将刚才并发标记过程中新出现的废弃对象标记出来。</span></p> 
+  <p><span style="color:#000000;">并发清除：<br>        只使用一条 GC 线程，与用户线程并发执行，清除刚才标记的对象。 这个过程非常耗时。</span></p> 
+  <p><span style="color:#000000;">       并发标记与并发清除过程耗时最长，且可以与用户线程一起工作，因此，总体上 说，CMS 收集器的内存回收过程是与用户线程一起并发执行的。</span></p> 
+ </div> 
+ <div> 
+  <p class="img-center"><img alt="" height="248" src="https://images2.imgbox.com/de/aa/peFZvL0c_o.png" width="599"></p> 
+  <p></p> 
+  <p><span style="color:#000000;"><strong>CMS 的优点： </strong><br>         可以作到并发收集 </span></p> 
+  <p><span style="color:#000000;"><strong>CMS 的弊端： </strong></span></p> 
+  <ol><li><span style="color:#000000;">CMS 是基于标记-清除算法来实现的,会产生内存碎片。 </span></li><li><span style="color:#000000;">CMS 在并发阶段，它虽然不会导致用户线程停顿，但是会因为占用了一部分线程而导致应用程序变慢，总吞吐量会降低。 </span></li><li><span style="color:#000000;">CMS 收集器无法处理浮动垃圾（floating garbage）。</span></li></ol> 
+  <p></p> 
+ </div> 
+ <p> <span style="color:#000000;"><strong>三色标记算法</strong></span></p> 
+ <p><span style="color:#000000;">       为了提高 JVM 垃圾回收的性能，从 CMS 垃圾收集器开始，引入了并发标记的概念。引入并发标记的过程就会带来一个问题，在业务执行的过程中，会对现有的引用关系链出现改变。 </span></p> 
+ <div> 
+  <span style="color:#000000;">三色标记法将对象的颜色分为了黑、灰、白，三种颜色。</span> 
+ </div> 
+ <div> 
+  <ul><li><span style="color:#000000;"><strong>黑色</strong></span><span style="color:#000000;">:该对象已经被标记过了，且该对象下的属性也全部都被标记过了,例如GCRoots 对象。 </span></li><li><span style="color:#000000;"><strong>灰色</strong></span><span style="color:#000000;">:对象已经被垃圾收集器扫描过了，但是对象中还存在没有扫描的引用(GC需要从此对象中去寻找垃圾); </span></li><li><span style="color:#000000;"><strong>白色</strong></span><span style="color:#000000;">:表示对象没有被垃圾收集器访问过，即表示不可达.</span></li></ul> 
+  <p></p> 
+  <p><span style="color:#333333;"><strong>三色标记的过程:</strong></span></p> 
+  <p><span style="color:#000000;">为了解决并发的问题，引入中间状态(灰色)，当一个对象被标记的时候，会有下面几个过程： </span></p> 
+ </div> 
+ <div> 
+  <ol><li><span style="color:#000000;">刚开始，确定为 GC Roots 的对象为黑色。 </span></li><li><span style="color:#000000;">将 GC Roots 直接关联的对象置为灰色。 </span></li><li><span style="color:#000000;">遍历灰色对象的所有引用，灰色对象本身置为黑色，其引用置为灰色。 </span></li><li><span style="color:#000000;">重复步骤 3，直到没有灰色对象为止。 </span></li><li><span style="color:#000000;"> 结束时，黑色对象存活，白色对象回收。</span></li></ol> 
+  <p><span style="color:#000000;">       这个过程正确执行的前提是没有其他线程改变对象间的引用关系，然而，并发标记的过程中，用户线程仍在运行，因此就会产生漏标和错标的情况。 </span></p> 
+  <p><span style="color:#000000;"><strong>漏标</strong> </span></p> 
+  <p><span style="color:#000000;">假设 GC 已经在遍历对象 B 了，而此时用户线程执行了 A.B=null 的操作，切断了 A 到 B 的引用</span></p> 
+ </div> 
+ <div> 
+  <p class="img-center"><img alt="" height="216" src="https://images2.imgbox.com/28/02/Rm4DEcEE_o.png" width="428"></p> 
+  <div> 
+   <span style="color:#000000;">本来执行了 A.B=null 之后，B、D、E 都可以被回收了，但是由于 B 已经变为灰色，它仍会被当做存活对象，继续遍历下去。最终的结果就是本轮 GC 不会回收 B、D、E，留到下次 GC 时回收，也算是浮动垃圾的一部分。 </span> 
+  </div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div> 
+   <strong><span style="color:#000000;">错标 </span></strong> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">假设 GC 线程已经遍历到 B 了，此时用户线程执行了以下操作： </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">       B.D=null;//B 到 D 的引用被切断 </span> 
+  </div> 
+  <div> 
+   <span style="color:#000000;">       A.xx=D;//A 到 D 的引用被建立</span> 
+  </div> 
+ </div> 
+ <p class="img-center"><img alt="" height="219" src="https://images2.imgbox.com/9a/4f/9aadHEQ7_o.png" width="478"></p> 
+ <p> </p> 
+ <div> 
+  <span style="color:#000000;">       B 到 D 的引用被切断，且 A 到 D 的引用被建立。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       此时 GC 线程继续工作，由于 B 不再引用 D 了，尽管 A 又引用了 D，但是因为 A 已经标记为黑色，GC 不会再遍历 A 了，所以 D 会被标记为白色，最后被当做垃圾回收。 </span> 
+ </div> 
+ <div> 
+  <span style="color:#000000;">       可以看到错标的结果比漏表严重的多，浮动垃圾可以下次 GC 清理，而把不该回收的对象回收掉，将会造成程序运行错误。</span> 
+ </div> 
+ <div></div> 
+ <div></div> 
+ <div> 
+  <div> 
+   <span style="color:#0d0016;"><strong>解决错标的问题 </strong></span> 
+  </div> 
+  <div></div> 
+  <div> 
+   <span style="color:#000000;">错标只有在满足下面两种情况下才会发生：</span> 
+  </div> 
+  <div></div> 
+  <div> 
+   <img alt="" height="292" src="https://images2.imgbox.com/23/03/yIjXZRyd_o.png" width="1057"> 
+  </div> 
+  <p> <span style="color:#000000;">只要打破任一条件，就可以解决错标的问题。</span></p> 
+  <p><span style="color:#000000;"><strong>原始快照和增量更新 </strong></span></p> 
+  <p><span style="color:#000000;"><strong>原始快照</strong></span><span style="color:#000000;">打破的是第一个条件：当灰色对象指向白色对象的引用被断开时，就将这条引用关系记录下来。当扫描结束后，再以这些灰色对象为根，重新扫描一次。 </span></p> 
+  <p><span style="color:#000000;"><strong>增量更新</strong></span><span style="color:#000000;">打破的是第二个条件：当黑色指向白色的引用被建立时，就将这个新的引用关系记录下来，等扫描结束后，再以这些记录中的黑色对象为根，重新扫描一次。相当于黑色对象一旦建立了指向白色对象的引用，就会变为灰色对象。 </span></p> 
+  <p><span style="color:#000000;"><strong>总结 </strong></span></p> 
+  <p><span style="color:#000000;">       CMS 为了让 GC 线程和用户线程一起工作，回收的算法和过程比以前旧的收集器要复杂很多。究其原因，就是因为 GC 标记对象的同时，用户线程还在修改对象的引用关系。因此 CMS 引入了三色算法，将对象标记为黑、灰、白三种颜色的对象，将用户线程修改的引用关系记录下来，以便在「重新标记」阶段可以修正对象的引用。</span></p> 
+  <p><span style="color:#000000;">       虽然 CMS 从来没有被 JDK 当做默认的垃圾收集器，存在很多的缺点，但是它开启了「GC 并发收集」的先河，为后面的收集器提供了思路。</span></p> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div></div> 
+  <div> 
+   <h4 id="6.4.6G1(Garbage%20First)%E5%9B%9E%E6%94%B6%E5%99%A8"><span style="color:#000000;"><strong>6.4.6G1(Garbage First)</strong></span><span style="color:#000000;"><strong>回收器</strong></span></h4> 
+   <p><span style="color:#000000;"><strong>既然我们已经有了前面几个强大的 GC，为什么还要发布 Garbage First（G1）</strong></span><span style="color:#000000;"><strong>GC？ </strong></span></p> 
+   <p><span style="color:#000000;">         原因就在于应用程序所应对的业务越来越庞大、复杂，用户越来越多，没有GC 就不能保证应用程序正常进行，而经常造成 STW 的 GC 又跟不上实际的需求，所以才会不断地尝试对 GC 进行优化。G1（Garbage-First）垃圾回收器是在 Java7 update 4 之后引入的一个新的垃圾回收器，是当今收集器技术发展的最前沿成果之一. </span></p> 
+   <p><span style="color:#000000;">       与此同时，为了适应现在不断扩大的内存和不断增加的处理器数量，进一步降低暂停时间（pause time），同时兼顾良好的吞吐量。 </span></p> 
+   <p><span style="color:#000000;">       官方给 G1 设定的目标是在延迟可控的情况下获得尽可能高的吞吐量，所以才担当起“全功能收集器”的重任与期望。</span></p> 
+   <p><span style="color:#000000;">G1 是一款面向服务端应用的垃圾收集器。</span></p> 
+   <p></p> 
+   <p><span style="color:#000000;"><strong>为什么名字叫做 Garbage First（G1）呢？</strong></span></p> 
+   <p><img alt="" height="342" src="https://images2.imgbox.com/b1/8b/9mGsbWgu_o.png" width="1059"></p> 
+   <p>       <span style="color:#000000;">因为 G1 是一个并行回收器，它把堆内存分割为很多不相关的区域（Region）（物理上不连续的逻辑上连续的）。使用不同的 Region 来表示 Eden、幸存者0 区，幸存者 1 区，老年代等。 </span></p> 
+   <p><span style="color:#000000;">       G1 GC 有计划地避免在整个 Java 堆中进行全区域的垃圾收集。G1 跟踪各个 Region 里面的垃圾堆积的价值大小（回收所获得的空间大小以及回收所需时间的经验值），在后台维护一个优先列表，每次根据允许的收集时间，优先回收价值最大的 Region. </span></p> 
+   <p><span style="color:#000000;">       由于这种方式的侧重点在于回收垃圾最大量的区间（Region），所以我们给 G1 一个名字：垃圾优先（Garbage First）。 </span></p> 
+   <p><span style="color:#000000;">       G1（Garbage-First）是一款面向服务端应用的垃圾收集器，主要针对配备多核 CPU 及大容量内存的机器，以极高概率满足 GC 停顿时间的同时，还兼具高吞吐量的性能特征。 </span></p> 
+   <p><span style="color:#000000;">        如下图所示，G1 收集器收集器收集过程有初始标记、并发标记、最终标记、筛选回收，和 CMS 收集器前几步的收集过程很相似：</span></p> 
+   <p><img alt="" height="344" src="https://images2.imgbox.com/57/87/mvZfgKrM_o.png" width="954"></p> 
+   <p></p> 
+   <ol><li><span style="color:#000000;">初始标记：标记出 GC Roots 直接关联的对象，这个阶段速度较快，需要停止用户线程，单线程执行。 </span></li><li><span style="color:#000000;">并发标记：从 GC Root 开始对堆中的对象进行可达新分析，找出存活对象，这个阶段耗时较长，但可以和用户线程并发执行。 </span></li><li><span style="color:#000000;">最终标记：修正在并发标记阶段引用户程序执行而产生变动的标记记录。 </span></li><li><span style="color:#000000;">筛选回收：筛选回收阶段会对各个 Region 的回收价值和成本进行排序，根据用户所期望的 GC 停顿时间来指定回收计划（用最少的时间来回收包含垃圾最多的区域.这就是 Garbage First 的由来——第一时间清理垃圾最多的区块），这里为了提高回收效率，并没有采用和用户线程并发执行的方式，而是停顿用户线程。</span></li></ol> 
+   <blockquote> 
+    <div> 
+     <span style="color:#000000;">适用场景：要求尽可能可控 GC 停顿时间；内存占用较大的应用。</span> 
+    </div> 
+   </blockquote> 
+   <p></p> 
+   <p></p> 
+   <p></p> 
+   <p></p> 
+   <h4 id="6.4.7%20%E6%9F%A5%E7%9C%8B%20JVM%20%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8%E8%AE%BE%E7%BD%AE%E5%9E%83%E5%9C%BE%E5%9B%9E%E6%94%B6%E5%99%A8"><span style="color:#000000;"><strong>6.4.7 查看 JVM 垃圾回收器设置垃圾回收器</strong></span></h4> 
+   <p><span style="color:#000000;"><strong>打印默认垃圾回收器 </strong></span></p> 
+   <pre><code class="language-javascript">-XX:+PrintCommandLineFlags -version</code></pre> 
+   <p><span style="color:#000000;">JDK 8 默认的垃圾回收器<br> 年轻代使用 Parallel Scavenge GC<br> 老年代使用 Parallel Old GC </span></p> 
+   <p><span style="color:#000000;"><strong>打印垃圾回收详细信息</strong></span></p> 
+   <pre><code class="language-javascript">-XX:+PrintGCDetails -version</code></pre> 
+   <p><span style="color:#000000;"><strong>设置默认垃圾回收器 </strong></span></p> 
+   <p><span style="color:#000000;">Serial 回收器</span></p> 
+   <pre><code class="language-javascript">-XX:+UseSerialGC 年轻代使用 Serial GC， 老年代使用 Serial Old GC</code></pre> 
+   <p><span style="color:#000000;">ParNew 回收器</span></p> 
+   <pre><code class="language-javascript">-XX:+UseParNewGC 年轻代使用 ParNew GC,不影响老年代。</code></pre> 
+   <p><span style="color:#000000;">CMS 回收器</span></p> 
+   <pre><code class="language-javascript">-XX:+UseConcMarkSweepGC 老年代使用 CMS GC。</code></pre> 
+   <p><span style="color:#000000;"># G1 回收器 </span></p> 
+   <pre><code class="language-javascript">-XX:+UseG1GC 手动指定使用 G1 收集器执行内存回收任务。
+-XX:G1HeapRegionSize 设置每个 Region 的大小。</code></pre> 
+   <p></p> 
+  </div> 
+ </div> 
+ <div></div> 
+ <div></div> 
+</div>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fe2376ca7bc9fde5e3346035e88da870/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">文心一言 vs GPT-4 —— 全面横向比较</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/f61429498f89fdee69e23adacad8a091/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">大模型训练——PEFT与LORA介绍</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

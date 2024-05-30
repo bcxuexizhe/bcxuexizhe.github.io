@@ -1,0 +1,338 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Python爬虫】Python3.8分布式爬虫scrapy-redis的搭建与运行（较为全面） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/51cfdf4b6bd4d9f7a7d359828587a322/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Python爬虫】Python3.8分布式爬虫scrapy-redis的搭建与运行（较为全面）">
+  <meta property="og:description" content="目录
+一、scrapy-redis概念
+（一）、何为scrapy-redis框架?
+（二）、分布式原理
+（三）、分布式爬虫实现的流程
+二、分布式爬虫搭建
+（一）、Windows（master节点）上要做的事情
+1.安装python
+2.下载相应的python包
+3.创建你的爬虫项目
+4.配置你项目中的settings文件
+5. Windows上redis的配置（重要）
+（二）、Linux（slave节点）要做的事情
+1.配置网络
+2.关闭防火墙
+3.配置域名映射
+4.配置ssh免密
+5.安装python3所需要的环境
+6.针对现在Urllib3放弃对 OpenSSL&lt;1.1.1 的支持
+7.下载Python安装包解压
+8.编译及安装python：
+9.配置环境变量
+10.验证pip
+11.升级pip，安装scrapy,scrapy-redis
+12.运行爬虫项目
+一、scrapy-redis概念 （一）、何为scrapy-redis框架? 一个三方的基于redis的分布式爬虫框架，配合scrapy使用，让爬虫具有了分布式爬取的功能。
+（二）、分布式原理 这样的意思是：
+scrapy-redis实现分布式，其实从原理上来说很简单，这里为描述方便，我们把自己的核心服务器称为master，而把用于跑爬虫程序的机器称为slave。
+我们知道，采用scrapy框架抓取网页，我们需要首先给定它一些start_urls，爬虫首先访问start_urls里面的url，再根据我们的具体逻辑，对里面的元素、或者是其他的二级、三级页面进行抓取。而要实现分布式，我们只需要在这个starts_urls里面做文章就行了
+我们在master上搭建一个redis数据库`（注意这个数据库只用作url的存储)，并对每一个需要爬取的网站类型，都开辟一个单独的列表字段。通过设置slave上scrapy-redis获取url的地址为master地址。这样的结果就是，尽管有多个slave，然而大家获取url的地方只有一个，那就是服务器master上的redis数据库。
+并且，由于scrapy-redis自身的队列机制，slave获取的链接不会相互冲突。这样各个slave在完成抓取任务之后，再把获取的结果汇总到服务器上。
+好处：
+程序移植性强，只要处理好路径问题，把slave上的程序移植到另一台机器上运行，基本上就是复制粘贴的事情
+（三）、分布式爬虫实现的流程 使用三台机器，一台是win11（windows），两台是centos，分别在两台机器上部署scrapy来进行分布式抓取一个网站。
+windows的ip地址为实际IP，用来作为redis的master端，centos的机器作为slave。
+master的爬虫运行时会把提取到的url封装成request放到redis中的数据。库：“dmoz:requests”，并且从该数据库中提取request后下载网页，再把网页的内容存放到redis的另一个数据库中“dmoz:items”。
+slave从master的redis中取出待抓取的request，下载完网页之后就把网页的内容发送回master的redis。
+重复上面的3和4，直到master的redis中的“dmoz:requests”数据库为空，再把master的redis中的“dmoz:items”数据库写入到想要存储的数据库中。
+master里的reids还有一个数据“dmoz:dupefilter”是用来存储抓取过的url的指纹（使用哈希函数将url运算后的结果），是防止重复抓取的。
+使scrapy的工作流程变成这样：
+好了，原理了解了，实现是关键！！！ 二、分布式爬虫搭建 （一）、Windows（master节点）上要做的事情 1.安装python 官网:https://www.python.org/downloads/
+下载安装完成后，务必配置环境变量
+2.下载相应的python包 pip install lxml
+pip install scrapy
+pip install scrapy-redis
+3.创建你的爬虫项目 scrapy startproject 项目名
+scrapy genspider 爬虫名 域名">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-14T12:17:53+08:00">
+    <meta property="article:modified_time" content="2023-11-14T12:17:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Python爬虫】Python3.8分布式爬虫scrapy-redis的搭建与运行（较为全面）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%E4%B8%80%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%A6%82%E5%BF%B5-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%A6%82%E5%BF%B5" rel="nofollow">一、scrapy-redis概念</a></p> 
+<p id="%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81%E4%BD%95%E4%B8%BAscrapy-redis%E6%A1%86%E6%9E%B6%3F-toc" style="margin-left:40px;"><a href="#%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81%E4%BD%95%E4%B8%BAscrapy-redis%E6%A1%86%E6%9E%B6%3F" rel="nofollow">（一）、何为scrapy-redis框架?</a></p> 
+<p id="%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E7%90%86-toc" style="margin-left:40px;"><a href="#%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E7%90%86" rel="nofollow">（二）、分布式原理</a></p> 
+<p id="%C2%A0%EF%BC%88%E4%B8%89%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E5%AE%9E%E7%8E%B0%E7%9A%84%E6%B5%81%E7%A8%8B-toc" style="margin-left:40px;"><a href="#%C2%A0%EF%BC%88%E4%B8%89%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E5%AE%9E%E7%8E%B0%E7%9A%84%E6%B5%81%E7%A8%8B" rel="nofollow"> （三）、分布式爬虫实现的流程</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%90%AD%E5%BB%BA-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%90%AD%E5%BB%BA" rel="nofollow">二、分布式爬虫搭建</a></p> 
+<p id="%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81Windows%EF%BC%88master%E8%8A%82%E7%82%B9%EF%BC%89%E4%B8%8A%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85-toc" style="margin-left:40px;"><a href="#%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81Windows%EF%BC%88master%E8%8A%82%E7%82%B9%EF%BC%89%E4%B8%8A%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85" rel="nofollow">（一）、Windows（master节点）上要做的事情</a></p> 
+<p id="1.%E5%AE%89%E8%A3%85python-toc" style="margin-left:80px;"><a href="#1.%E5%AE%89%E8%A3%85python" rel="nofollow">1.安装python</a></p> 
+<p id="2.%E4%B8%8B%E8%BD%BD%E7%9B%B8%E5%BA%94%E7%9A%84python%E5%8C%85-toc" style="margin-left:80px;"><a href="#2.%E4%B8%8B%E8%BD%BD%E7%9B%B8%E5%BA%94%E7%9A%84python%E5%8C%85" rel="nofollow">2.下载相应的python包</a></p> 
+<p id="%C2%A03.%E5%88%9B%E5%BB%BA%E4%BD%A0%E7%9A%84%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE-toc" style="margin-left:80px;"><a href="#%C2%A03.%E5%88%9B%E5%BB%BA%E4%BD%A0%E7%9A%84%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE" rel="nofollow"> 3.创建你的爬虫项目</a></p> 
+<p id="%C2%A04.%E9%85%8D%E7%BD%AE%E4%BD%A0%E9%A1%B9%E7%9B%AE%E4%B8%AD%E7%9A%84settings%E6%96%87%E4%BB%B6-toc" style="margin-left:80px;"><a href="#%C2%A04.%E9%85%8D%E7%BD%AE%E4%BD%A0%E9%A1%B9%E7%9B%AE%E4%B8%AD%E7%9A%84settings%E6%96%87%E4%BB%B6" rel="nofollow"> 4.配置你项目中的settings文件</a></p> 
+<p id="5.%20Windows%E4%B8%8Aredis%E7%9A%84%E9%85%8D%E7%BD%AE%EF%BC%88%E9%87%8D%E8%A6%81%EF%BC%89-toc" style="margin-left:80px;"><a href="#5.%20Windows%E4%B8%8Aredis%E7%9A%84%E9%85%8D%E7%BD%AE%EF%BC%88%E9%87%8D%E8%A6%81%EF%BC%89" rel="nofollow">5. Windows上redis的配置（重要）</a></p> 
+<p id="%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81Linux%EF%BC%88slave%E8%8A%82%E7%82%B9%EF%BC%89%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85-toc" style="margin-left:40px;"><a href="#%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81Linux%EF%BC%88slave%E8%8A%82%E7%82%B9%EF%BC%89%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85" rel="nofollow">（二）、Linux（slave节点）要做的事情</a></p> 
+<p id="1.%E9%85%8D%E7%BD%AE%E7%BD%91%E7%BB%9C-toc" style="margin-left:80px;"><a href="#1.%E9%85%8D%E7%BD%AE%E7%BD%91%E7%BB%9C" rel="nofollow">1.配置网络</a></p> 
+<p id="2.%E5%85%B3%E9%97%AD%E9%98%B2%E7%81%AB%E5%A2%99-toc" style="margin-left:80px;"><a href="#2.%E5%85%B3%E9%97%AD%E9%98%B2%E7%81%AB%E5%A2%99" rel="nofollow">2.关闭防火墙</a></p> 
+<p id="3.%E9%85%8D%E7%BD%AE%E5%9F%9F%E5%90%8D%E6%98%A0%E5%B0%84-toc" style="margin-left:80px;"><a href="#3.%E9%85%8D%E7%BD%AE%E5%9F%9F%E5%90%8D%E6%98%A0%E5%B0%84" rel="nofollow">3.配置域名映射</a></p> 
+<p id="4.%E9%85%8D%E7%BD%AEssh%E5%85%8D%E5%AF%86-toc" style="margin-left:80px;"><a href="#4.%E9%85%8D%E7%BD%AEssh%E5%85%8D%E5%AF%86" rel="nofollow">4.配置ssh免密</a></p> 
+<p id="5.%E5%AE%89%E8%A3%85python3%E6%89%80%E9%9C%80%E8%A6%81%E7%9A%84%E7%8E%AF%E5%A2%83-toc" style="margin-left:80px;"><a href="#5.%E5%AE%89%E8%A3%85python3%E6%89%80%E9%9C%80%E8%A6%81%E7%9A%84%E7%8E%AF%E5%A2%83" rel="nofollow">5.安装python3所需要的环境</a></p> 
+<p id="6.%E9%92%88%E5%AF%B9%E7%8E%B0%E5%9C%A8Urllib3%E6%94%BE%E5%BC%83%E5%AF%B9%20OpenSSL%3C1.1.1%20%E7%9A%84%E6%94%AF%E6%8C%81-toc" style="margin-left:80px;"><a href="#6.%E9%92%88%E5%AF%B9%E7%8E%B0%E5%9C%A8Urllib3%E6%94%BE%E5%BC%83%E5%AF%B9%20OpenSSL%3C1.1.1%20%E7%9A%84%E6%94%AF%E6%8C%81" rel="nofollow">6.针对现在Urllib3放弃对 OpenSSL&lt;1.1.1 的支持</a></p> 
+<p id="7.%E4%B8%8B%E8%BD%BDPython%E5%AE%89%E8%A3%85%E5%8C%85%E8%A7%A3%E5%8E%8B-toc" style="margin-left:80px;"><a href="#7.%E4%B8%8B%E8%BD%BDPython%E5%AE%89%E8%A3%85%E5%8C%85%E8%A7%A3%E5%8E%8B" rel="nofollow">7.下载Python安装包解压</a></p> 
+<p id="8.%E7%BC%96%E8%AF%91%E5%8F%8A%E5%AE%89%E8%A3%85python%EF%BC%9A-toc" style="margin-left:80px;"><a href="#8.%E7%BC%96%E8%AF%91%E5%8F%8A%E5%AE%89%E8%A3%85python%EF%BC%9A" rel="nofollow">8.编译及安装python：</a></p> 
+<p id="%C2%A09.%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F-toc" style="margin-left:80px;"><a href="#%C2%A09.%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F" rel="nofollow"> 9.配置环境变量</a></p> 
+<p id="10.%E9%AA%8C%E8%AF%81pip-toc" style="margin-left:80px;"><a href="#10.%E9%AA%8C%E8%AF%81pip" rel="nofollow">10.验证pip</a></p> 
+<p id="%C2%A011.%E5%8D%87%E7%BA%A7pip%EF%BC%8C%E5%AE%89%E8%A3%85scrapy%2Cscrapy-redis-toc" style="margin-left:80px;"><a href="#%C2%A011.%E5%8D%87%E7%BA%A7pip%EF%BC%8C%E5%AE%89%E8%A3%85scrapy%2Cscrapy-redis" rel="nofollow"> 11.升级pip，安装scrapy,scrapy-redis</a></p> 
+<p id="12.%E8%BF%90%E8%A1%8C%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE-toc" style="margin-left:80px;"><a href="#12.%E8%BF%90%E8%A1%8C%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE" rel="nofollow">12.运行爬虫项目</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%A6%82%E5%BF%B5">一、scrapy-redis概念</h2> 
+<h3 id="%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81%E4%BD%95%E4%B8%BAscrapy-redis%E6%A1%86%E6%9E%B6%3F">（一）、何为scrapy-redis框架?</h3> 
+<blockquote> 
+ <p>一个三方的基于redis的分布式爬虫框架，配合scrapy使用，让爬虫具有了分布式爬取的功能。</p> 
+</blockquote> 
+<h3 id="%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E5%8E%9F%E7%90%86">（二）、分布式原理</h3> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/27/bc/ENftZzFQ_o.png"></p> 
+<p>这样的意思是：</p> 
+<blockquote> 
+ <p>scrapy-redis实现分布式，其实从原理上来说很简单，这里为描述方便，我们把自己的<strong>核心服务器</strong>称为<strong>master</strong>，而把用于<strong>跑爬虫程序</strong>的机器称为<strong>slave。</strong></p> 
+ <p>我们知道，采用scrapy框架抓取网页，我们需要首先给定它一些start_urls，爬虫首先访问start_urls里面的url，再根据我们的具体逻辑，对里面的元素、或者是其他的二级、三级页面进行抓取。而要实现分布式，我们只需要在这个starts_urls里面做文章就行了</p> 
+ <p>我们在<strong>master</strong>上搭建一个<strong>redis数据库</strong>`（注意这个数据库只用作url的存储)，并对每一个需要爬取的网站类型，都开辟一个单独的列表字段。通过设置slave上scrapy-redis获取url的地址为master地址。这样的结果就是，<strong>尽管有多个slave，然而大家获取url的地方只有一个，那就是服务器master上的redis数据库。</strong></p> 
+ <p>并且，由于scrapy-redis<strong>自身的队列机制</strong>，slave获取的链接不会相互冲突。这样各个slave在完成抓取任务之后，再把获取的结果汇总到服务器上。</p> 
+</blockquote> 
+<p> 好处：</p> 
+<blockquote> 
+ <p>程序移植性强，只要处理好路径问题，把slave上的程序移植到另一台机器上运行，基本上就是复制粘贴的事情</p> 
+</blockquote> 
+<h3 id="%C2%A0%EF%BC%88%E4%B8%89%EF%BC%89%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E5%AE%9E%E7%8E%B0%E7%9A%84%E6%B5%81%E7%A8%8B"> （三）、分布式爬虫实现的流程</h3> 
+<blockquote> 
+ <ol><li> <p>使用三台机器，一台是win11（windows），两台是centos，分别在两台机器上部署scrapy来进行分布式抓取一个网站。</p> </li><li> <p>windows的ip地址为<code>实际IP</code>，用来作为redis的master端，centos的机器作为slave。</p> </li><li> <p>master的爬虫运行时会把提取到的url封装成request放到redis中的数据。库：“dmoz:requests”，并且从该数据库中提取request后下载网页，再把网页的内容存放到redis的另一个数据库中“dmoz:items”。</p> </li><li> <p>slave从master的redis中取出待抓取的request，下载完网页之后就把网页的内容发送回master的redis。</p> </li><li> <p>重复上面的3和4，直到master的redis中的“dmoz:requests”数据库为空，再把master的redis中的“dmoz:items”数据库写入到想要存储的数据库中。</p> </li><li> <p>master里的reids还有一个数据“dmoz:dupefilter”是用来存储抓取过的url的指纹（使用哈希函数将url运算后的结果），是防止重复抓取的。</p> </li></ol> 
+</blockquote> 
+<p>使scrapy的工作流程变成这样：</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/cb/bf/wrOZ8KEf_o.png"></p> 
+<p><strong><span style="color:#fe2c24;">好了，原理了解了，实现是关键！！！ </span></strong></p> 
+<h2 id="%E4%BA%8C%E3%80%81%E5%88%86%E5%B8%83%E5%BC%8F%E7%88%AC%E8%99%AB%E6%90%AD%E5%BB%BA">二、分布式爬虫搭建</h2> 
+<h3 id="%EF%BC%88%E4%B8%80%EF%BC%89%E3%80%81Windows%EF%BC%88master%E8%8A%82%E7%82%B9%EF%BC%89%E4%B8%8A%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85">（一）、Windows（master节点）上要做的事情</h3> 
+<h4 id="1.%E5%AE%89%E8%A3%85python">1.安装python</h4> 
+<p>官网:<a href="https://www.python.org/downloads/" rel="nofollow" title="https://www.python.org/downloads/">https://www.python.org/downloads/</a></p> 
+<p>下载安装完成后，务必配置环境变量</p> 
+<h4 id="2.%E4%B8%8B%E8%BD%BD%E7%9B%B8%E5%BA%94%E7%9A%84python%E5%8C%85">2.下载相应的python包</h4> 
+<blockquote> 
+ <p>pip install lxml</p> 
+ <p>pip install scrapy</p> 
+ <p>pip install scrapy-redis</p> 
+</blockquote> 
+<h4 id="%C2%A03.%E5%88%9B%E5%BB%BA%E4%BD%A0%E7%9A%84%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE"> 3.创建你的爬虫项目</h4> 
+<blockquote> 
+ <p>scrapy startproject 项目名</p> 
+ <p>scrapy genspider 爬虫名 域名</p> 
+</blockquote> 
+<h4 id="%C2%A04.%E9%85%8D%E7%BD%AE%E4%BD%A0%E9%A1%B9%E7%9B%AE%E4%B8%AD%E7%9A%84settings%E6%96%87%E4%BB%B6"> 4.配置你项目中的settings文件</h4> 
+<p>github地址：<a href="https://github.com/darkrho/scrapy-redis" title="https://github.com/darkrho/scrapy-redis">https://github.com/darkrho/scrapy-redis</a></p> 
+<p>在settings文件中输入以下代码</p> 
+<p>这是实现分布式的关键：</p> 
+<pre><code class="language-python">DUPEFILTER_CLASS = "scrapy_redis.dupefilter.RFPDupeFilter"
+SCHEDULER = "scrapy_redis.scheduler.Scheduler"
+SCHEDULER_PERSIST = True</code></pre> 
+<p> 另外还有一些次要但也是重要的：</p> 
+<blockquote> 
+ <p> ROBOTSTXT_OBEY = False # robots协议</p> 
+ <p>USER_AGENT = '' # 可以写死一个User-Agent，亦可动态实现</p> 
+</blockquote> 
+<p> 对redis的配置，同样是settings文件中</p> 
+<pre><code class="language-python">ITEM_PIPELINES = {
+    'scrapy_redis.pipelines.RedisPipeline': 400,
+}
+
+REDIS_HOST = ''  # windows机器的IP
+REDIS_PORT = 6379  # Redis端口号</code></pre> 
+<p><span style="color:#fe2c24;"><strong>爬虫文件需要自行定义，这里我就不多说了。</strong></span></p> 
+<h4 id="5.%20Windows%E4%B8%8Aredis%E7%9A%84%E9%85%8D%E7%BD%AE%EF%BC%88%E9%87%8D%E8%A6%81%EF%BC%89">5. Windows上redis的配置（重要）</h4> 
+<p>①安装redis和图形化工具</p> 
+<p>安装包：https://wwql.lanzout.com/b052o0lmf，密码:3rsj</p> 
+<p>链接中包含redis压缩包和redis图形化工具</p> 
+<p>②修改redis.windows.conf和redis.windows.service.conf两个配置文件以达成使虚拟机的ip亦可访问本地redis数据库。具体可访问以下链接：</p> 
+<p><a href="https://blog.csdn.net/weixin_63133658/article/details/134377804" title="【Python爬虫】解决Redis无法使用ip访问（127.0.0.1可以访问）的情况-CSDN博客">【Python爬虫】解决Redis无法使用ip访问（127.0.0.1可以访问）的情况-CSDN博客</a></p> 
+<p>③ 在redis.windows.conf这个配置文件中，修改以下</p> 
+<p><strong>stop-writes-on-bgsave-error no （默认值为yes）</strong><br> 即当bgsave快照操作出错时停止写数据到磁盘，这样后面写错做均会失败，为了不影响后续写操作，故需将该项值改为no</p> 
+<p></p> 
+<p><span style="color:#fe2c24;"><strong>至此，Windows端(master节点)配置完毕！</strong></span></p> 
+<p></p> 
+<h3 id="%EF%BC%88%E4%BA%8C%EF%BC%89%E3%80%81Linux%EF%BC%88slave%E8%8A%82%E7%82%B9%EF%BC%89%E8%A6%81%E5%81%9A%E7%9A%84%E4%BA%8B%E6%83%85">（二）、Linux（slave节点）要做的事情</h3> 
+<p><span style="color:#fe2c24;">注：这里采用的使CentOS7作为镜像源。</span></p> 
+<h4 id="1.%E9%85%8D%E7%BD%AE%E7%BD%91%E7%BB%9C">1.配置网络</h4> 
+<blockquote> 
+ <p>vi /etc/sysconfig/network-scripts/ifcfg-ens33  # 配置ip，网关，dns等等。</p> 
+ <p>service network restart  # 重启网络服务</p> 
+</blockquote> 
+<h4 id="2.%E5%85%B3%E9%97%AD%E9%98%B2%E7%81%AB%E5%A2%99">2.关闭防火墙</h4> 
+<blockquote> 
+ <p>systemctl disable firewalld  # 永久关闭</p> 
+</blockquote> 
+<h4 id="3.%E9%85%8D%E7%BD%AE%E5%9F%9F%E5%90%8D%E6%98%A0%E5%B0%84">3.配置域名映射</h4> 
+<blockquote> 
+ <p>vi /etc/hosts  # 新增slave节点（两台）的映射，格式为 ip 主机名</p> 
+</blockquote> 
+<h4 id="4.%E9%85%8D%E7%BD%AEssh%E5%85%8D%E5%AF%86">4.配置ssh免密</h4> 
+<blockquote> 
+ <p>cd ~</p> 
+ <p>ssh-keygen -t rsa  # 一路确定</p> 
+ <p>cd ~/.ssh</p> 
+ <p>cp id_rsa.pub authorized_keys</p> 
+ <p>chomd 600 authorized_keys</p> 
+</blockquote> 
+<p>配置完成后 ssh localhost,ssh 主机名,ssh 0.0.0.0输入yes之后不需要密码即可。</p> 
+<h4 id="5.%E5%AE%89%E8%A3%85python3%E6%89%80%E9%9C%80%E8%A6%81%E7%9A%84%E7%8E%AF%E5%A2%83">5.安装python3所需要的环境</h4> 
+<blockquote> 
+ <p># 安装编译相关工具</p> 
+ <p>yum -y groupinstall "Development tools"<br> yum -y install zlib-devel bzip2-devel openssl-devel ncurses-devel sqlite-devel readline-devel tk-devel gdbm-devel db4-devel libpcap-devel xz-devel<br> yum install libffi-devel -y</p> 
+</blockquote> 
+<h4 id="6.%E9%92%88%E5%AF%B9%E7%8E%B0%E5%9C%A8Urllib3%E6%94%BE%E5%BC%83%E5%AF%B9%20OpenSSL%3C1.1.1%20%E7%9A%84%E6%94%AF%E6%8C%81">6.针对现在Urllib3放弃<span style="color:#1f2328;"><span style="background-color:#ffffff;">对 OpenSSL&lt;1.1.1 的支持</span></span></h4> 
+<p>GitHub地址：<a href="https://github.com/urllib3/urllib3/issues/2168" title="Drop support for OpenSSL&lt;1.1.1 · Issue #2168 · urllib3/urllib3 · GitHub">Drop support for OpenSSL&lt;1.1.1 · Issue #2168 · urllib3/urllib3 · GitHub</a></p> 
+<p>参考：<a href="https://blog.csdn.net/weixin_63133658/article/details/134380096" title="【Python爬虫】ImportError: urllib3 v2.0 only supports OpenSSL 1.1.1+, currently the ‘ssl‘ module is comp-CSDN博客">【Python爬虫】ImportError: urllib3 v2.0 only supports OpenSSL 1.1.1+, currently the ‘ssl‘ module is comp-CSDN博客</a></p> 
+<p><strong>编译安装openSSL1.1.1n</strong></p> 
+<blockquote> 
+ <p># 若没有wegt ,使用yum install -y wget<br> wget https://www.openssl.org/source/openssl-1.1.1n.tar.gz --no-check-certificate</p> 
+ <p>tar zxf openssl-1.1.1n.tar.gz -C 指定目录</p> 
+ <p>cd openssl-1.1.1n/</p> 
+ <p>./config --prefix=/usr/local/openssl 设置安装目录 可以自定义 但是要记住，后面会用到</p> 
+ <p>make -j &amp;&amp; make install 编译并安装</p> 
+ <p>/usr/local/openssl/lib 路径添加到系统动态库查找路径中，在 etc 目录下的 profile文件最后面添加下面这一行</p> 
+</blockquote> 
+<pre><code class="language-python">export LD_LIBRARY_PATH=/usr/local/openssl/lib:$LD_LIBRARY_PATH</code></pre> 
+<p>source /etc/profile     # 使其生效</p> 
+<h4 id="7.%E4%B8%8B%E8%BD%BDPython%E5%AE%89%E8%A3%85%E5%8C%85%E8%A7%A3%E5%8E%8B">7.<code>下载Python安装包解压</code></h4> 
+<p>①官网：</p> 
+<p><a href="https://www.python.org/downloads/release/python-382/" rel="nofollow" title="Python Release Python 3.8.2 | Python.org">Python Release Python 3.8.2 | Python.org</a></p> 
+<p>下载如图所示，点击下载</p> 
+<p><img alt="" src="https://images2.imgbox.com/22/bc/GFdEYpHN_o.jpg"></p> 
+<p>将该压缩包拖拽或者发送到虚拟机中</p> 
+<blockquote> 
+ <p>cd 指定目录</p> 
+ <p>tar -zxvf Python-3.8.2.tgz -C 指定目录</p> 
+</blockquote> 
+<p>② </p> 
+<blockquote> 
+ <p>wget https://www.python.org/ftp/python/3.8.2/Python-3.8.2.tgz</p> 
+</blockquote> 
+<h4 id="8.%E7%BC%96%E8%AF%91%E5%8F%8A%E5%AE%89%E8%A3%85python%EF%BC%9A">8.编译及安装python：</h4> 
+<blockquote> 
+ <p>mkdir /usr/local/python3  # 创建编译安装目录</p> 
+ <p>cd python安装目录</p> 
+ <p>./configure --prefix=/usr/local/python3 --with-openssl=/usr/local/openssl --with-ssl-default-suites=openssl --with-system-ffi</p> 
+ <p></p> 
+ <p>make -j &amp;&amp; make install</p> 
+</blockquote> 
+<h4 id="%C2%A09.%E9%85%8D%E7%BD%AE%E7%8E%AF%E5%A2%83%E5%8F%98%E9%87%8F"> 9.配置环境变量</h4> 
+<blockquote> 
+ <p>vi /etc/profile</p> 
+ <p>export PATH=$PATH:/usr/local/python3/bin/ # 配置环境变量</p> 
+ <p>source /etc/profile        # 使其生效</p> 
+</blockquote> 
+<h4 id="10.%E9%AA%8C%E8%AF%81pip">10.验证pip</h4> 
+<blockquote> 
+ <p>pip3 -V</p> 
+</blockquote> 
+<h4 id="%C2%A011.%E5%8D%87%E7%BA%A7pip%EF%BC%8C%E5%AE%89%E8%A3%85scrapy%2Cscrapy-redis"> 11.升级pip，安装scrapy,scrapy-redis</h4> 
+<blockquote> 
+ <p>pip3 install --upgrade pip -i https://pypi.douban.com/simple/<br> pip3 install scrapy -i https://pypi.douban.com/simple/</p> 
+ <p>pip3 install scrapy-redis -i https://pypi.douban.com/simple/</p> 
+</blockquote> 
+<h4 id="12.%E8%BF%90%E8%A1%8C%E7%88%AC%E8%99%AB%E9%A1%B9%E7%9B%AE">12.运行爬虫项目</h4> 
+<blockquote> 
+ <p>scrapy crawl 爬虫名</p> 
+</blockquote> 
+<p><span style="color:#fe2c24;"><strong>至此，运行完成！！！</strong></span></p> 
+<p></p> 
+<p><strong>如果有不对的地方，或者有很好的见解，欢迎在评论区指出和发表，谢谢！</strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/ee4c0fba2ee48f3525e014dbfbc0db58/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据同步工具调研选型：SeaTunnel 与 DataX 、Sqoop、Flume、Flink CDC 对比</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ab032721aa4b7af091100d71cffc32be/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">stable diffusion comfyui的api使用教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

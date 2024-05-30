@@ -1,0 +1,390 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL-----多表查询（一） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/42030ba12059debcaf1ae53f57fc6df2/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL-----多表查询（一）">
+  <meta property="og:description" content="目录
+一.多表关系：
+1.1 一对多(多对一)：
+1.2 多对多:
+1.3 一对一:
+二.多表查询概述：
+三.连接查询：
+3.1内连接：
+3.2外连接：
+3.3自连接查询：
+3.4联合查询：
+一.多表关系： 项目开发中，在进行数据库表结构设计时，会根据业务需求及业务模块之间的关系，分析并设计表结构，由于业务之间相互关联，所以各个表结构之间也存在着各种联系，基本上分为三种：
+一对多(多对一)多对多一对一 1.1 一对多(多对一)： 案例: 部门 与 员工的关系关系: 一个部门对应多个员工，一个员工对应一个部门实现: 在多的一方建立外键，指向一的一方的主键 大致关系图（展示部分）：
+对应SQL脚本：
+create table dept( id int auto_increment comment &#39;ID&#39; primary key, name varchar(50) not null comment &#39;部门名称&#39; )comment &#39;部门表&#39;; INSERT INTO dept (id, name) VALUES (1, &#39;研发部&#39;), (2, &#39;市场部&#39;),(3, &#39;财务部&#39;), (4, &#39;销售部&#39;), (5, &#39;总经办&#39;); create table emp( id int auto_increment comment &#39;ID&#39; primary key, name varchar(50) not null comment &#39;姓名&#39;, age int comment &#39;年龄&#39;, job varchar(20) comment &#39;职位&#39;, salary int comment &#39;薪资&#39;, entrydate date comment &#39;入职时间&#39;, managerid int comment &#39;直属领导ID&#39;, dept_id int comment &#39;部门ID&#39; )comment &#39;员工表&#39;; INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id) VALUES (1, &#39;金庸&#39;, 66, &#39;总裁&#39;,20000, &#39;2000-01-01&#39;, null,5),(2, &#39;张无忌&#39;, 20, &#39;项目经理&#39;,12500, &#39;2005-12-05&#39;, 1,1), (3, &#39;杨逍&#39;, 33, &#39;开发&#39;, 8400,&#39;2000-11-03&#39;, 2,1),(4, &#39;韦一笑&#39;, 48, &#39;开 发&#39;,11000, &#39;2002-02-05&#39;, 2,1), (5, &#39;常遇春&#39;, 43, &#39;开发&#39;,10500, &#39;2004-09-07&#39;, 3,1),(6, &#39;小昭&#39;, 19, &#39;程 序员鼓励师&#39;,6600, &#39;2004-10-12&#39;, 2,1); -- 添加外键约束 alter table emp add constraint fk_emp_dept_id foreign key (dept_id) references dept(id); 1.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-25T15:56:14+08:00">
+    <meta property="article:modified_time" content="2024-04-25T15:56:14+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL-----多表查询（一）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80.%E5%A4%9A%E8%A1%A8%E5%85%B3%E7%B3%BB%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%B8%80.%E5%A4%9A%E8%A1%A8%E5%85%B3%E7%B3%BB%EF%BC%9A" rel="nofollow">一.多表关系：</a></p> 
+<p id="1.1%C2%A0%E4%B8%80%E5%AF%B9%E5%A4%9A(%E5%A4%9A%E5%AF%B9%E4%B8%80)%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.1%C2%A0%E4%B8%80%E5%AF%B9%E5%A4%9A%28%E5%A4%9A%E5%AF%B9%E4%B8%80%29%EF%BC%9A" rel="nofollow">1.1 一对多(多对一)：</a></p> 
+<p id="1.2%C2%A0%E5%A4%9A%E5%AF%B9%E5%A4%9A%3A-toc" style="margin-left:40px;"><a href="#1.2%C2%A0%E5%A4%9A%E5%AF%B9%E5%A4%9A%3A" rel="nofollow">1.2 多对多:</a></p> 
+<p id="1.3%20%E4%B8%80%E5%AF%B9%E4%B8%80%3A-toc" style="margin-left:40px;"><a href="#1.3%20%E4%B8%80%E5%AF%B9%E4%B8%80%3A" rel="nofollow">1.3 一对一:</a></p> 
+<p id="%E4%BA%8C.%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%BA%8C.%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A" rel="nofollow">二.多表查询概述：</a></p> 
+<p id="%E4%B8%89.%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:0px;"><a href="#%E4%B8%89.%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">三.连接查询：</a></p> 
+<p id="3.1%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%9A-toc" style="margin-left:40px;"><a href="#3.1%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%9A" rel="nofollow">3.1内连接：</a></p> 
+<p id="3.2%E5%A4%96%E8%BF%9E%E6%8E%A5%EF%BC%9A-toc" style="margin-left:40px;"><a href="#3.2%E5%A4%96%E8%BF%9E%E6%8E%A5%EF%BC%9A" rel="nofollow">3.2外连接：</a></p> 
+<p id="3.3%E8%87%AA%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:40px;"><a href="#3.3%E8%87%AA%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">3.3自连接查询：</a></p> 
+<p id="3.4%E8%81%94%E5%90%88%E6%9F%A5%E8%AF%A2%EF%BC%9A-toc" style="margin-left:40px;"><a href="#3.4%E8%81%94%E5%90%88%E6%9F%A5%E8%AF%A2%EF%BC%9A" rel="nofollow">3.4联合查询：</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80.%E5%A4%9A%E8%A1%A8%E5%85%B3%E7%B3%BB%EF%BC%9A" style="background-color:transparent;">一.多表关系：</h2> 
+<p>项目开发中，<span style="background-color:#ffd900;">在进行数据库表结构设计时，会根据业务需求及业务模块之间的关系，分析并设计表结构</span>，由于业务之间相互关联，所以各个表结构之间也存在着各种联系，基本上分为三种：</p> 
+<ul><li>一对多(多对一)</li><li>多对多</li><li>一对一</li></ul> 
+<h3 id="1.1%C2%A0%E4%B8%80%E5%AF%B9%E5%A4%9A(%E5%A4%9A%E5%AF%B9%E4%B8%80)%EF%BC%9A">1.1 一对多(多对一)：</h3> 
+<ul><li>案例: 部门 与 员工的关系</li><li>关系: <span style="background-color:#ffd900;">一个部门对应多个员工，一个员工对应一个部门</span></li><li>实现: 在多的一方建立外键，指向一的一方的主键</li></ul> 
+<p>大致关系图（展示部分）：</p> 
+<p><img alt="" height="346" src="https://images2.imgbox.com/01/30/pRPvZqac_o.png" width="1200"></p> 
+<p>对应SQL脚本：</p> 
+<pre><code class="language-sql">create table dept(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '部门名称'
+)comment '部门表';
+INSERT INTO dept (id, name) VALUES (1, '研发部'), (2, '市场部'),(3, '财务部'), (4,
+'销售部'), (5, '总经办');
+ 
+create table emp(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '姓名',
+age int comment '年龄',
+job varchar(20) comment '职位',
+salary int comment '薪资',
+entrydate date comment '入职时间',
+managerid int comment '直属领导ID',
+dept_id int comment '部门ID'
+)comment '员工表';
+ 
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id)
+VALUES
+(1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),(2, '张无忌', 20,
+'项目经理',12500, '2005-12-05', 1,1),
+(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),(4, '韦一笑', 48, '开
+发',11000, '2002-02-05', 2,1),
+(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),(6, '小昭', 19, '程
+序员鼓励师',6600, '2004-10-12', 2,1);
+-- 添加外键约束
+alter table emp add constraint fk_emp_dept_id foreign key (dept_id) references
+dept(id);
+</code></pre> 
+<h3 id="1.2%C2%A0%E5%A4%9A%E5%AF%B9%E5%A4%9A%3A">1.2 多对多:</h3> 
+<ul><li>案例: 学生 与 课程的关系</li><li>关系: <span style="background-color:#ffd900;">一个学生可以选修多门课程，一门课程也可以供多个学生选择</span></li><li>实现: 建立第三张中间表，中间表至少包含两个外键，分别关联两方主键</li></ul> 
+<p>大致关系图：</p> 
+<p><img alt="" height="400" src="https://images2.imgbox.com/5e/0b/D6UxiILR_o.png" width="1200"></p> 
+<p>对应SQL脚本：</p> 
+<pre><code class="language-sql">-- 建立学生表
+reate table student(
+id int auto_increment primary key comment '主键ID',
+name varchar(10) comment '姓名',
+no varchar(10) comment '学号'
+) comment '学生表';
+
+insert into student values (null, '黛绮丝', '2000100101'),(null, '谢逊',
+'2000100102'),(null, '殷天正', '2000100103'),(null, '韦一笑', '2000100104');
+-- 建立课程表
+create table course(
+id int auto_increment primary key comment '主键ID',
+name varchar(10) comment '课程名称'
+) comment '课程表';
+
+insert into course values (null, 'Java'), (null, 'PHP'), (null , 'MySQL') ,
+(null, 'Hadoop');
+
+-- 建立二者关系表
+create table student_course(
+id int auto_increment comment '主键' primary key,
+studentid int not null comment '学生ID',
+courseid int not null comment '课程ID',
+constraint fk_courseid foreign key (courseid) references course (id), -- 加入外键约束
+constraint fk_studentid foreign key (studentid) references student (id)
+)comment '学生课程中间表';
+insert into student_course values (null,1,1),(null,1,2),(null,1,3),(null,2,2),
+(null,2,3),(null,3,4)</code></pre> 
+<h3 id="1.3%20%E4%B8%80%E5%AF%B9%E4%B8%80%3A">1.3 一对一:</h3> 
+<ul><li>案例: 用户 与 用户详情的关系</li><li>关系: <span style="background-color:#ffd900;">一对一关系，多用于单表拆分，将一张表的基础字段放在一张表中，其他详情字段放在另 一张表中，以提升操作效率</span></li><li>实现: 在任意一方加入外键，关联另外一方的主键，并且设置外键为唯一(UNIQUE)</li></ul> 
+<p>大致关系图：</p> 
+<p><img alt="" height="261" src="https://images2.imgbox.com/21/7a/H4nKBaWV_o.png" width="1200"></p> 
+<p>对应SQL脚本：</p> 
+<pre><code class="language-sql">-- 创建用户表
+create table tb_user(
+id int auto_increment primary key comment '主键ID',
+name varchar(10) comment '姓名',
+age int comment '年龄',
+gender char(1) comment '1: 男 , 2: 女',
+phone char(11) comment '手机号'
+) comment '用户基本信息表';
+-- 创建用户受教育信息表
+create table tb_user_edu(
+id int auto_increment primary key comment '主键ID',
+degree varchar(20) comment '学历',
+major varchar(50) comment '专业',
+primaryschool varchar(50) comment '小学',
+middleschool varchar(50) comment '中学',
+university varchar(50) comment '大学',
+userid int unique comment '用户ID',
+constraint fk_userid foreign key (userid) references tb_user(id)
+) comment '用户教育信息表';
+-- 向表中插入数据
+insert into tb_user(id, name, age, gender, phone) values
+(null,'黄渤',45,'1','18800001111'),
+(null,'冰冰',35,'2','18800002222'),
+(null,'码云',55,'1','18800008888'),
+(null,'李彦宏',50,'1','18800009999');
+
+insert into tb_user_edu(id, degree, major, primaryschool, middleschool,
+university, userid) values
+(null,'本科','舞蹈','静安区第一小学','静安区第一中学','北京舞蹈学院',1),
+(null,'硕士','表演','朝阳区第一小学','朝阳区第一中学','北京电影学院',2),
+(null,'本科','英语','杭州市第一小学','杭州市第一中学','杭州师范大学',3),
+(null,'本科','应用数学','阳泉第一小学','阳泉区第一中学','清华大学',4);</code></pre> 
+<h2 id="%E4%BA%8C.%E5%A4%9A%E8%A1%A8%E6%9F%A5%E8%AF%A2%E6%A6%82%E8%BF%B0%EF%BC%9A" style="background-color:transparent;">二.多表查询概述：</h2> 
+<p>我们之前在讲解SQL语句的时候，讲解了DQL语句，也就是数据查询语句，但是之前讲解的查询都是单表查询，而本章节我们要学习的则是多表查询操作,<span style="background-color:#ffd900;">多表查询就是指从多张表中查询数据</span>。其中，多表查询又分为连接查询与子查询</p> 
+<p><strong>在查询之前，我们先导入数据（建立表以及表之间的关系）：</strong></p> 
+<pre><code class="language-sql">-- 创建部门表
+create table dept(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '部门名称'
+)comment '部门表';
+
+INSERT INTO dept (id, name) VALUES (1, '研发部'), (2, '市场部'),(3, '财务部'), (4,
+'销售部'), (5, '总经办'), (6, '人事部');
+-- 创建员工表
+create table emp(
+id int auto_increment comment 'ID' primary key,
+name varchar(50) not null comment '姓名',
+age int comment '年龄',
+job varchar(20) comment '职位',
+salary int comment '薪资',
+entrydate date comment '入职时间',
+managerid int comment '直属领导ID',
+dept_id int comment '部门ID'
+)comment '员工表';
+-- 设置外键约束
+alter table emp add constraint fk_emp_dept_id foreign key (dept_id) references
+dept(id);
+-- 插入数据
+INSERT INTO emp (id, name, age, job,salary, entrydate, managerid, dept_id)
+VALUES
+(1, '金庸', 66, '总裁',20000, '2000-01-01', null,5),
+(2, '张无忌', 20, '项目经理',12500, '2005-12-05', 1,1),
+(3, '杨逍', 33, '开发', 8400,'2000-11-03', 2,1),
+(4, '韦一笑', 48, '开发',11000, '2002-02-05', 2,1),
+(5, '常遇春', 43, '开发',10500, '2004-09-07', 3,1),
+(6, '小昭', 19, '程序员鼓励师',6600, '2004-10-12', 2,1),
+(7, '灭绝', 60, '财务总监',8500, '2002-09-12', 1,3),
+(8, '周芷若', 19, '会计',48000, '2006-06-02', 7,3),
+(9, '丁敏君', 23, '出纳',5250, '2009-05-13', 7,3),
+(10, '赵敏', 20, '市场部总监',12500, '2004-10-12', 1,2),
+(11, '鹿杖客', 56, '职员',3750, '2006-10-03', 10,2),
+(12, '鹤笔翁', 19, '职员',3750, '2007-05-09', 10,2),
+(13, '方东白', 19, '职员',5500, '2009-02-12', 10,2),
+(14, '张三丰', 88, '销售总监',14000, '2004-10-12', 1,4),
+(15, '俞莲舟', 38, '销售',4600, '2004-10-12', 14,4),
+(16, '宋远桥', 40, '销售',4600, '2004-10-12', 14,4),
+(17, '陈友谅', 42, null,2000, '2011-10-12', 1,null);</code></pre> 
+<p>原来查询单表数据，执行的SQL形式为：select * from emp;</p> 
+<p>在多表查询中，我们就只需要使用逗号分隔多张表即可，如： select * from emp , dept</p> 
+<p>查询结果（结果很长，展示部分）：</p> 
+<p><img alt="" height="1012" src="https://images2.imgbox.com/ba/f5/fxQnjjys_o.png" width="1200"></p> 
+<p>为什么会出现这种结果呢？这里要引入笛卡尔积的概念了：</p> 
+<p><strong><span style="background-color:#ffd900;">🦉🦉🦉笛卡尔积: 笛卡尔乘积是指在数学中，两个集合A集合 和 B集合的所有组合情况</span></strong></p> 
+<p><img alt="" height="396" src="https://images2.imgbox.com/54/81/tt9gtqBr_o.png" width="1200"></p> 
+<p>但是在实际的查询当中，我们是要消除笛卡尔积的，具体怎么消除呢？和单表查询类似，加上条件就行了，例如（查询所有员工及其部门对应的信息）：</p> 
+<pre><code class="language-sql">select * from emp , dept where emp.dept_id = dept.id;
+</code></pre> 
+<p><strong>全部查询结果： </strong></p> 
+<p><img alt="" height="725" src="https://images2.imgbox.com/3c/b8/psWyQIGn_o.png" width="1184"></p> 
+<h2 id="%E4%B8%89.%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A" style="background-color:transparent;">三.连接查询：</h2> 
+<p><img alt="" height="224" src="https://images2.imgbox.com/65/8e/pfmdZbAt_o.png" width="834"></p> 
+<ul><li>内连接：相当于查询A、B交集部分数据</li><li>外连接：</li><li>左外连接：查询左表所有数据，以及两张表交集部分数据</li><li>右外连接：查询右表所有数据，以及两张表交集部分数据</li><li>自连接：当前表与自身的连接查询，<span style="background-color:#ffd900;">自连接必须使用表别名</span>！！！</li></ul> 
+<h3 id="3.1%E5%86%85%E8%BF%9E%E6%8E%A5%EF%BC%9A" style="background-color:transparent;">3.1内连接：</h3> 
+<p><img alt="" height="346" src="https://images2.imgbox.com/d8/74/8w4XZJoK_o.png" width="1200"></p> 
+<p>内连接的语法分为两种: <span style="background-color:#ffd900;">隐式内连接、显式内连接</span>，接下来我们看一下语法规则：</p> 
+<pre><code class="language-sql">-- 隐式内连接
+
+SELECT 字段列表 FROM 表1 , 表2 WHERE 条件 ... ;
+
+-- 显式内连接
+
+SELECT 字段列表 FROM 表1 [ INNER ] JOIN 表2 ON 连接条件 ... ;
+</code></pre> 
+<p>案例：</p> 
+<pre><code class="language-sql">#内连接
+-- A. 查询每一个员工的姓名 , 及关联的部门的名称 (隐式内连接实现)
+-- 全部书写，如果表名字过长可能导致书写错误
+select emp.name,dept.name from emp,dept where emp.dept_id = dept.id;
+-- 简写，方便书写，推荐
+select e.name,d.name from emp e,dept d where e.dept_id = d.id;
+
+-- B. 查询每一个员工的姓名 , 及关联的部门的名称 (显式内连接实现)
+select emp.name,dept.name from emp inner join dept on emp.dept_id = dept.id;
+-- 简写
+select e.name,d.name from emp e join dept d on e.dept_id = d.id;</code></pre> 
+<p> 查询结果（两个查询结果一致，这里展示其中一个）：</p> 
+<p><img alt="" height="353" src="https://images2.imgbox.com/d5/e6/NngTNaMV_o.png" width="217"></p> 
+<h3 id="3.2%E5%A4%96%E8%BF%9E%E6%8E%A5%EF%BC%9A">3.2外连接：</h3> 
+<p><img alt="" height="218" src="https://images2.imgbox.com/f2/a6/7hL7xmQA_o.png" width="794"></p> 
+<p>外连接分为 <span style="background-color:#ffd900;">左外连接，右外连接</span>：</p> 
+<ul><li>左外连接语法：</li></ul> 
+<pre><code class="language-sql">SELECT 字段列表 FROM 表1 LEFT [ OUTER ] JOIN 表2 ON 条件 ... ;
+</code></pre> 
+<p>左外连接相当于<span style="background-color:#ffd900;">查询表1(左表)的所有数据，当然也包含表1和表2交集部分的数据</span></p> 
+<ul><li> 右外连接语法：</li></ul> 
+<pre><code class="language-sql">SELECT 字段列表 FROM 表1 RIGHT [ OUTER ] JOIN 表2 ON 条件 ... ;</code></pre> 
+<p>右外连接相当于<span style="background-color:#ffd900;">查询表2(右表)的所有数据，当也然包含表1和表2交集部分的数据</span></p> 
+<p> 案例演示：</p> 
+<pre><code class="language-sql"># 外连接
+-- A. 查询emp表的所有数据, 和对应的部门信息(左外连接)
+
+select e.*,d.name from emp e left outer join dept d on e.dept_id = d.id;
+
+select e.*,d.name from emp e left join dept d on e.dept_id = d.id;
+
+-- B. 查询dept表的所有数据, 和对应的员工信息(右外连接)
+
+select d.*,e.* from emp e right outer join dept d on e.dept_id = d.id;
+
+select d.*,e.* from dept d left outer join emp e on e.dept_id = d.id;</code></pre> 
+<p> 查询结果：</p> 
+<p><img alt="" height="795" src="https://images2.imgbox.com/17/16/QGjpOfQT_o.png" width="1200"></p> 
+<h3 id="3.3%E8%87%AA%E8%BF%9E%E6%8E%A5%E6%9F%A5%E8%AF%A2%EF%BC%9A">3.3自连接查询：</h3> 
+<p> 自连接查询，顾名思义，就是自己连接自己，也就是把一张表连接查询多次。我们先来学习一下自连接的查询语法：</p> 
+<pre><code class="language-sql">SELECT 字段列表 FROM 表A 别名A JOIN 表A 别名B ON 条件 ... ;
+</code></pre> 
+<p>案例：</p> 
+<pre><code class="language-sql">-- 1.自连接查询
+-- A查询员工 及其 所属领导的名字
+
+select a.name,b.name from emp a,emp b where a.managerid = b.id;
+
+-- B 查询所有员工 emp 及其领导的名字 emp , 如果员工没有领导, 也需要查询出来
+
+select a.name '员工',b.name '领导' from emp a left join emp b on a.managerid = b.id;</code></pre> 
+<p> 查询结果：</p> 
+<p><img alt="" height="370" src="https://images2.imgbox.com/04/8b/MqIeFsPC_o.png" width="429"></p> 
+<h3 id="3.4%E8%81%94%E5%90%88%E6%9F%A5%E8%AF%A2%EF%BC%9A" style="background-color:transparent;">3.4联合查询：</h3> 
+<p>对于union查询，就是把多次查询的结果合并起来，形成一个新的查询结果集，语法如下：</p> 
+<pre><code class="language-sql">SELECT 字段列表 FROM 表A ...
+UNION [ ALL ]
+SELECT 字段列表 FROM 表B ....;</code></pre> 
+<p>注意：</p> 
+<ul><li><span style="background-color:#ffd900;">对于联合查询的多张表的列数必须保持一致，字段类型也需要保持一致</span></li><li><span style="background-color:#ffd900;">union all 会将全部的数据直接合并在一起，union 会对合并之后的数据去重</span></li></ul> 
+<p>案例：</p> 
+<pre><code class="language-sql">-- 2.联合查询
+-- A 将薪资低于 5000 的员工， 和 年龄大于 50 岁的员工全部查询出来.
+select * from emp where salary &lt; 5000
+union all
+select * from emp where age &gt; 50;
+-- 由结果可以看出，联合查询只是两表的简单拼接，还有重复部分
+-- union all查询出来的结果，仅仅进行简单的合并，并未去重
+
+-- B对数据进行去重
+select * from emp where salary &lt; 5000
+union 
+select * from emp where age &gt; 50;</code></pre> 
+<p>查询结果：</p> 
+<p><img alt="" height="609" src="https://images2.imgbox.com/1b/1c/ya9twUJD_o.png" width="1200"></p> 
+<p> </p> 
+<p> <strong>结语：</strong> <strong>写博客不仅仅是为了分享学习经历，同时这也有利于我巩固知识点，总结该知识点，由于作者水平有限，对文章有任何问题的还请指出，接受大家的批评，让我改进。同时也希望读者们不吝啬你们的点赞+收藏+关注，你们的鼓励是我创作的最大动力！</strong></p> 
+<p style="text-align:center;"><strong><img alt="" height="390" src="https://images2.imgbox.com/5e/ee/T7eSFREC_o.jpg" width="390"></strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a3fc035bb181f7bc414a699b0af9c9d3/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">深入浅出 Spring Boot 3.x：从原理到实战，全面解锁 Java 后端开发新潮流</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b1db32014b677b1e8905e5315a7ed520/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">基于SpringBoot和Leaflet的地震台网信息预警可视化</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

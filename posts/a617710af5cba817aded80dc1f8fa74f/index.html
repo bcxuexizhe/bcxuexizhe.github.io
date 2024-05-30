@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>QT5.14.2深入解析Qt QProcess用法之彻底掌控进程操作技巧 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a617710af5cba817aded80dc1f8fa74f/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="QT5.14.2深入解析Qt QProcess用法之彻底掌控进程操作技巧">
+  <meta property="og:description" content="通过今天的文章，我将带领大家彻底理解和掌握Qt QProcess的使用技巧，这将成为你控制进程的利器。我们的讨论将通过明确的示例，详细的代码案例，结合我在实际软件开发经验中遇到的问题进行说明。
+1、Qt QProcess - 什么是进程? 在理解Qt QProcess之前，让我们先了解什么是进程。进程是操作系统的一个核心概念。当程序在执行时，它将产生多个进程，每个进程都有自己独立的数据空间，这样就可以同时有多个用户执行同一程序，而不会产生冲突。进程的状态有：新生、执行、等待、就绪和结束。每个进程都有自己的唯一标识符，我们称之为PID。
+2、Qt QProcess - 如何操作？ 在Qt中，我们可以使用QProcess类来操作进程。这个类包含一系列功能丰富的函数，用于启动并控制外部进程。QProcess是QIODevice的子类，这让我们可以使用各种I/O函数来交互，并使得传输变得轻而易举。
+3、QProcess实例 - 打开文本编辑器 以下是在Windows系统下如何用QProcess打开文本编辑器的简单示例。在这个例子中，我们设定了工作目录为&#34;C:\Windows\System32&#34;，然后启动&#34;notepad.exe&#34;程序并等待它结束。
+QString filename=&#34;TEST.txt&#34;; QProcess process; process.setWorkingDirectory(&#34;C:\\Windows\\System32&#34;); process.start(&#34;notepad.exe&#34;, QStringList()&lt;&lt;filename); process.waitForFinished(-1); //等待进程结束 4、QProcess更多功能 - 利用信号和槽 Qt的一个主要特点是其信号和槽的机制，QProcess也不例外。你可以连接各种信号，比如started()、finished()、stateChanged()等，到你的槽函数中去进行响应。
+例如，可以这样处理started和finished信号：
+process = new QProcess(); connect(process, SIGNAL(started()), SLOT(started())); connect(process, SIGNAL(finished(int,QProcess::ExitStatus)), SLOT(finished())); 然后在槽函数中可以获取返回的数据和状态，比如：
+void Widget::finished(intexitCode,QProcess::ExitStatus exitStatus) { qDebug()&lt;&lt;&#34;finished&#34;; qDebug()&lt;&lt;exitCode; // 被调用程序的main返回的int qDebug()&lt;&lt;exitStatus; // QProcess::ExitStatus(NormalExit) qDebug() &lt;&lt;&#34;finished-output-readAll:&#34;; qDebug()&lt;&lt;QString::fromLocal8Bit(process-&gt;readAll()); qDebug()&lt;&lt;&#34;finished-output-readAllStandardOutput:&#34;; qDebug()&lt;&lt;QString::fromLocal8Bit(process-&gt;readAllStandardOutput()); } 5、QProcess注意事项 （1）、关于start和startDetached
+在QProcess中，start()和startDetached()函数提供了两种不同的启动进程的方式。虽然他们在大部分情况下能达到相同的效果，但在某些方面有着重要的不同。具体如下：
+生命周期：start()函数创建的进程的生命周期与创建它的QProcess对象的生命周期相绑定。也就是说，当QProcess对象被销毁时，由它启动的进程也会被销毁。相比之下，startDetached()函数则会创建一个独立的进程，即使创建它的QProcess对象被销毁，启动的进程也会继续运行。
+输入/输出：只有start()启动的进程可以使用QProcess类的一些重要功能。例如，使用setStandardInputFile()设置进程的标准输入，或者用readAllStandardOutput()和readAllStandardError()来获取进程的标准输出和标准错误。而startDetached()启动的进程则没有这样的功能，它的输入/输出不能由创建它的QProcess对象所控制。
+进程间通信：start()启动的进程可以利用QProcess的信号/槽机制进行通信，例如用readyReadStandardOutput()和readyReadStandardError()信号获取到输出信息，并进行处理。而startDetached()则无法实现此类通信。
+所以说，从上面的说明中，如果你需要对创建的进程进行控制的话，推荐使用start()函数。而如果你只是需要创建一个独立的进程，那么startDetached()可能会是更好的选择。
+（2）、在QProcess中如何处理进程错误信息？
+在QProcess中处理进程错误信息主要依靠信号和槽的机制实现。QProcess得到了很好的封装，因此，当有错误发生的时候，会发出errorOccurred信号。
+下面是一段示例代码，提交了一个错误的外部进程路径，我们用errorOccurred信号来捕获错误，并在槽函数中处理。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-19T13:54:42+08:00">
+    <meta property="article:modified_time" content="2024-03-19T13:54:42+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">QT5.14.2深入解析Qt QProcess用法之彻底掌控进程操作技巧</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <br> 
+<p>通过今天的文章，我将带领大家彻底理解和掌握Qt QProcess的使用技巧，这将成为你控制进程的利器。我们的讨论将通过明确的示例，详细的代码案例，结合我在实际软件开发经验中遇到的问题进行说明。</p> 
+<br> 
+<h4><a id="1Qt_QProcess___8"></a>1、Qt QProcess - 什么是进程?</h4> 
+<br> 
+<p>在理解Qt QProcess之前，让我们先了解什么是进程。进程是操作系统的一个核心概念。当程序在执行时，它将产生多个进程，每个进程都有自己独立的数据空间，这样就可以同时有多个用户执行同一程序，而不会产生冲突。进程的状态有：新生、执行、等待、就绪和结束。每个进程都有自己的唯一标识符，我们称之为PID。</p> 
+<br> 
+<h4><a id="2Qt_QProcess___18"></a>2、Qt QProcess - 如何操作？</h4> 
+<br> 
+<p>在Qt中，我们可以使用QProcess类来操作进程。这个类包含一系列功能丰富的函数，用于启动并控制外部进程。QProcess是QIODevice的子类，这让我们可以使用各种I/O函数来交互，并使得传输变得轻而易举。</p> 
+<br> 
+<h4><a id="3QProcess___26"></a>3、QProcess实例 - 打开文本编辑器</h4> 
+<br> 
+<p>以下是在Windows系统下如何用QProcess打开文本编辑器的简单示例。在这个例子中，我们设定了工作目录为"C:\Windows\System32"，然后启动"notepad.exe"程序并等待它结束。</p> 
+<pre><code class="prism language-cpp">QString filename<span class="token operator">=</span><span class="token string">"TEST.txt"</span><span class="token punctuation">;</span>
+QProcess process<span class="token punctuation">;</span>
+process<span class="token punctuation">.</span><span class="token function">setWorkingDirectory</span><span class="token punctuation">(</span><span class="token string">"C:\\Windows\\System32"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+process<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token string">"notepad.exe"</span><span class="token punctuation">,</span> <span class="token function">QStringList</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span>filename<span class="token punctuation">)</span><span class="token punctuation">;</span>
+process<span class="token punctuation">.</span><span class="token function">waitForFinished</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//等待进程结束</span>
+</code></pre> 
+<br> 
+<h4><a id="4QProcess___47"></a>4、QProcess更多功能 - 利用信号和槽</h4> 
+<br> 
+<p>Qt的一个主要特点是其信号和槽的机制，QProcess也不例外。你可以连接各种信号，比如started()、finished()、stateChanged()等，到你的槽函数中去进行响应。</p> 
+<br> 
+<p>例如，可以这样处理started和finished信号：</p> 
+<pre><code class="prism language-cpp">process <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">QProcess</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">connect</span><span class="token punctuation">(</span>process<span class="token punctuation">,</span> <span class="token function">SIGNAL</span><span class="token punctuation">(</span><span class="token function">started</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">SLOT</span><span class="token punctuation">(</span><span class="token function">started</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">connect</span><span class="token punctuation">(</span>process<span class="token punctuation">,</span> <span class="token function">SIGNAL</span><span class="token punctuation">(</span><span class="token function">finished</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">,</span>QProcess<span class="token double-colon punctuation">::</span>ExitStatus<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token function">SLOT</span><span class="token punctuation">(</span><span class="token function">finished</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<br> 
+<p>然后在槽函数中可以获取返回的数据和状态，比如：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token class-name">Widget</span><span class="token double-colon punctuation">::</span><span class="token function">finished</span><span class="token punctuation">(</span>intexitCode<span class="token punctuation">,</span>QProcess<span class="token double-colon punctuation">::</span>ExitStatus exitStatus<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span><span class="token string">"finished"</span><span class="token punctuation">;</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span>exitCode<span class="token punctuation">;</span> <span class="token comment">// 被调用程序的main返回的int</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span>exitStatus<span class="token punctuation">;</span> <span class="token comment">// QProcess::ExitStatus(NormalExit)</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span><span class="token string">"finished-output-readAll:"</span><span class="token punctuation">;</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span><span class="token class-name">QString</span><span class="token double-colon punctuation">::</span><span class="token function">fromLocal8Bit</span><span class="token punctuation">(</span>process<span class="token operator">-&gt;</span><span class="token function">readAll</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span><span class="token string">"finished-output-readAllStandardOutput:"</span><span class="token punctuation">;</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">&lt;&lt;</span><span class="token class-name">QString</span><span class="token double-colon punctuation">::</span><span class="token function">fromLocal8Bit</span><span class="token punctuation">(</span>process<span class="token operator">-&gt;</span><span class="token function">readAllStandardOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<br> 
+<h4><a id="5QProcess_86"></a>5、QProcess注意事项</h4> 
+<br> 
+<p><strong>（1）、关于start和startDetached</strong></p> 
+<p>在QProcess中，<code>start()</code>和<code>startDetached()</code>函数提供了两种不同的启动进程的方式。虽然他们在大部分情况下能达到相同的效果，但在某些方面有着重要的不同。具体如下：</p> 
+<br> 
+<ul><li> <p><strong>生命周期</strong>：<code>start()</code>函数创建的进程的生命周期与创建它的QProcess对象的生命周期相绑定。也就是说，当QProcess对象被销毁时，由它启动的进程也会被销毁。相比之下，<code>startDetached()</code>函数则会创建一个独立的进程，即使创建它的QProcess对象被销毁，启动的进程也会继续运行。</p> <br> </li><li> <p><strong>输入/输出</strong>：只有<code>start()</code>启动的进程可以使用QProcess类的一些重要功能。例如，使用setStandardInputFile()设置进程的标准输入，或者用readAllStandardOutput()和readAllStandardError()来获取进程的标准输出和标准错误。而<code>startDetached()</code>启动的进程则没有这样的功能，它的输入/输出不能由创建它的QProcess对象所控制。</p> <br> </li><li> <p><strong>进程间通信</strong>：<code>start()</code>启动的进程可以利用QProcess的信号/槽机制进行通信，例如用readyReadStandardOutput()和readyReadStandardError()信号获取到输出信息，并进行处理。而<code>startDetached()</code>则无法实现此类通信。</p> </li></ul> 
+<br> 
+<p>所以说，从上面的说明中，如果你需要对创建的进程进行控制的话，推荐使用<code>start()</code>函数。而如果你只是需要创建一个独立的进程，那么<code>startDetached()</code>可能会是更好的选择。</p> 
+<br> 
+<p><strong>（2）、在QProcess中如何处理进程错误信息？</strong></p> 
+<p>在QProcess中处理进程错误信息主要依靠信号和槽的机制实现。QProcess得到了很好的封装，因此，当有错误发生的时候，会发出errorOccurred信号。<br> <br></p> 
+<p>下面是一段示例代码，提交了一个错误的外部进程路径，我们用errorOccurred信号来捕获错误，并在槽函数中处理。</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QCoreApplication&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QProcess&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QDebug&gt;</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token keyword">int</span> argc<span class="token punctuation">,</span> <span class="token keyword">char</span> <span class="token operator">*</span>argv<span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    QCoreApplication <span class="token function">a</span><span class="token punctuation">(</span>argc<span class="token punctuation">,</span> argv<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    QProcess process<span class="token punctuation">;</span>
+    <span class="token class-name">QObject</span><span class="token double-colon punctuation">::</span><span class="token function">connect</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>process<span class="token punctuation">,</span> <span class="token operator">&amp;</span>QProcess<span class="token double-colon punctuation">::</span>errorOccurred<span class="token punctuation">,</span>
+                     <span class="token punctuation">[</span><span class="token operator">&amp;</span>process<span class="token punctuation">]</span><span class="token punctuation">(</span>QProcess<span class="token double-colon punctuation">::</span>ProcessError error<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"Error Occurred. Reason:"</span> <span class="token operator">&lt;&lt;</span> error<span class="token punctuation">;</span>
+        <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> process<span class="token punctuation">.</span><span class="token function">errorString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    process<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token string">"nonExistingProgram"</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// This will emit an error</span>
+    <span class="token keyword">return</span> a<span class="token punctuation">.</span><span class="token function">exec</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>在这个例子中，连接了QProcess的errorOccurred信号到一个匿名函数中。当有错误发生时，匿名函数会进入执行，打印错误的原因和错误信息，达到了错误处理的目的。</p> 
+<br> 
+<h4><a id="6QProcessPython_153"></a>6、实战案例：使用QProcess类执行Python脚本并获取返回值</h4> 
+<br> 
+<p>接下来为你展示一个更复杂的使用QProcess的例子，以便你更好地理解QProcess的运用。<br> <br></p> 
+<p>在这个例子中，我将展示如何使用QProcess类执行一个Python脚本，并从脚本的输出获取返回值。这里假设我们有一个Python脚本，名为"script.py"，其内容如下：</p> 
+<p>python</p> 
+<pre><code class="prism language-python"><span class="token keyword">print</span><span class="token punctuation">(</span><span class="token string">"Hello from Python!"</span><span class="token punctuation">)</span>
+</code></pre> 
+<br> 
+<p>我们将使用QProcess来执行这个脚本，并从其输出中捕获打印的字符串。以下是具体的C++代码：</p> 
+<pre><code class="prism language-cpp"><span class="token comment">// Basic includes for the Qt</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QProcess&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;QDebug&gt;</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    QProcess pythonScript<span class="token punctuation">;</span>
+    pythonScript<span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token string">"python"</span><span class="token punctuation">,</span> <span class="token function">QStringList</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"path-to-your-python-script.py"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    pythonScript<span class="token punctuation">.</span><span class="token function">waitForFinished</span><span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// Will wait forever until finished</span>
+
+    QString <span class="token function">outputString</span><span class="token punctuation">(</span>pythonScript<span class="token punctuation">.</span><span class="token function">readAllStandardOutput</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token function">qDebug</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">"Python script output: "</span> <span class="token operator">&lt;&lt;</span> outputString<span class="token punctuation">;</span>
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<br> 
+<p>在上述代码中，我们首先创建了一个QProcess实例。然后，使用start方法开启一个新的进程来运行我们的Python脚本。此过程需要两个参数，第一个是要执行的命令（在这里为"python"），第二个是这个命令的参数（在这里为我们的脚本路径）。</p> 
+<br> 
+<p>运行这段代码，结果将会在控制台输出 “Python script output: Hello from Python!”，证明我们成功获取了Python脚本的输出。<br> <br></p> 
+<p>虽然这个例子相比前面介绍的单行命令更复杂，但是核心的流程和思想是一致的：我们使用QProcess来启动一个进程，然后通过标准输出获取进程的返回结果。</p> 
+<br> 
+<p>这种方法的威力在于它能与任何支持命令行输入/输出的程序进行交互，不只是Python脚本，还可以是其他类型的脚本或应用，极大地扩展了QProcess的应用范围。</p> 
+<br> 
+<h4><a id="_209"></a>结语</h4> 
+<p>接下来，我们将介绍更多关于使用QProcess进行进程操作的内容，但是在本文中我们就先讲到这。在下一篇文章中，我将带领大家继续探索QProcess的更多功能，包括如何在程序中使用QProcess处理进程的输出流，如何通过main接收参数，以及如何返回main参数等。记住，掌握QProcess，就等于掌握了进程操作的钥匙，让我们拭目以待！<br> <br></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/7811950b82d0ba72c619a0bc7c65ab2c/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据大屏---＞前端实时更新数据的几种方式</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0c1783cf9174763c7f443e5b97709ff0/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Android识别模拟器，判断是模拟器还是真机</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

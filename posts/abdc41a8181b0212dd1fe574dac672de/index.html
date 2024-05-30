@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Spring Cloud Gateway整合Sentinel - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/abdc41a8181b0212dd1fe574dac672de/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Spring Cloud Gateway整合Sentinel">
+  <meta property="og:description" content="日升时奋斗，日落时自省 目录
+1、实现整合
+1.1、添加框架依赖
+1.2、设置配置文件
+1.3、设置限流和熔断规则
+1.3.1、限流配置
+Route ID限流配置
+API限流配置
+1.3.2、熔断配置
+2、实现原理
+先前Sentinel针对是业务微服务，没有整合Sentinel到Spring Cloud Gateway
+Spring Cloud Gateway 默认是有限流功能的，但限流功能比较简单，所以咱们今天要实现的是 Spring Cloud Gateway 整合 Spring Cloud AlibabaSentinel 实现限流和熔断功能，这种方式也是目前生成环境主流的限流和熔断的实现方法。
+1、实现整合 Gateway整合Sentinel总共分为以下4步：
+（1）添加框架依赖
+（2）设置配置文件
+（3）配置拦截规则
+（4）验证效果
+接下来，我们一步一步来实现
+1.1、添加框架依赖 需要框架依赖有3个：gateway、sentinel和sentinel-gateway（Sentinel对接Gateway的适配框架，Sentinel1.6新增模块），如下配置所示：
+&lt;dependency&gt; &lt;groupId&gt;com.alibaba.cloud&lt;/groupId&gt; &lt;artifactId&gt;spring-cloud-alibaba-sentinel-gateway&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;com.alibaba.cloud&lt;/groupId&gt; &lt;artifactId&gt;spring-cloud-starter-alibaba-sentinel&lt;/artifactId&gt; &lt;/dependency&gt; &lt;dependency&gt; &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt; &lt;artifactId&gt;spring-cloud-starter-gateway&lt;/artifactId&gt; &lt;/dependency&gt; 1.2、设置配置文件 在application中设置sentinel控制台的地址，以及限流之后的响应信息：
+spring: cloud: gateway: routes: - id: userservice uri: http://localhost:9090 predicates: - Path=/user/** sentinel: transport: dashboard: localhost:18086 scg: fallback: mode: response response-status: 200 response-body: &#39;{&#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-04T00:00:00+08:00">
+    <meta property="article:modified_time" content="2024-01-04T00:00:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Spring Cloud Gateway整合Sentinel</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/49/a4/xnK3ACx7_o.jpg"></p> 
+<blockquote> 
+ <p>日升时奋斗，日落时自省 </p> 
+</blockquote> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="1%E3%80%81%E5%AE%9E%E7%8E%B0%E6%95%B4%E5%90%88-toc" style="margin-left:0px;"><a href="#1%E3%80%81%E5%AE%9E%E7%8E%B0%E6%95%B4%E5%90%88" rel="nofollow">1、实现整合</a></p> 
+<p id="1.1%E3%80%81%E6%B7%BB%E5%8A%A0%E6%A1%86%E6%9E%B6%E4%BE%9D%E8%B5%96-toc" style="margin-left:40px;"><a href="#1.1%E3%80%81%E6%B7%BB%E5%8A%A0%E6%A1%86%E6%9E%B6%E4%BE%9D%E8%B5%96" rel="nofollow">1.1、添加框架依赖</a></p> 
+<p id="%C2%A01.2%E3%80%81%E8%AE%BE%E7%BD%AE%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6-toc" style="margin-left:40px;"><a href="#%C2%A01.2%E3%80%81%E8%AE%BE%E7%BD%AE%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6" rel="nofollow"> 1.2、设置配置文件</a></p> 
+<p id="1.3%E3%80%81%E8%AE%BE%E7%BD%AE%E9%99%90%E6%B5%81%E5%92%8C%E7%86%94%E6%96%AD%E8%A7%84%E5%88%99-toc" style="margin-left:40px;"><a href="#1.3%E3%80%81%E8%AE%BE%E7%BD%AE%E9%99%90%E6%B5%81%E5%92%8C%E7%86%94%E6%96%AD%E8%A7%84%E5%88%99" rel="nofollow">1.3、设置限流和熔断规则</a></p> 
+<p id="1.3.1%E3%80%81%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#1.3.1%E3%80%81%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE" rel="nofollow">1.3.1、限流配置</a></p> 
+<p id="Route%20ID%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE-toc" style="margin-left:120px;"><a href="#Route%20ID%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE" rel="nofollow">Route ID限流配置</a></p> 
+<p id="API%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE-toc" style="margin-left:120px;"><a href="#API%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE" rel="nofollow">API限流配置</a></p> 
+<p id="1.3.2%E3%80%81%E7%86%94%E6%96%AD%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#1.3.2%E3%80%81%E7%86%94%E6%96%AD%E9%85%8D%E7%BD%AE" rel="nofollow">1.3.2、熔断配置</a></p> 
+<p id="2%E3%80%81%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86-toc" style="margin-left:0px;"><a href="#2%E3%80%81%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86" rel="nofollow">2、实现原理</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p>先前Sentinel针对是业务微服务，没有整合Sentinel到Spring Cloud Gateway</p> 
+<p>Spring Cloud Gateway 默认是有限流功能的，但限流功能比较简单，所以咱们今天要实现的是 Spring Cloud Gateway 整合 Spring Cloud AlibabaSentinel 实现限流和熔断功能，这种方式也是目前生成环境主流的限流和熔断的实现方法。</p> 
+<h2 id="1%E3%80%81%E5%AE%9E%E7%8E%B0%E6%95%B4%E5%90%88">1、实现整合</h2> 
+<p>Gateway整合Sentinel总共分为以下4步：</p> 
+<p>（1）添加框架依赖</p> 
+<p>（2）设置配置文件</p> 
+<p>（3）配置拦截规则</p> 
+<p>（4）验证效果</p> 
+<p>接下来，我们一步一步来实现</p> 
+<h3 id="1.1%E3%80%81%E6%B7%BB%E5%8A%A0%E6%A1%86%E6%9E%B6%E4%BE%9D%E8%B5%96">1.1、添加框架依赖</h3> 
+<p>需要框架依赖有3个：gateway、sentinel和sentinel-gateway（Sentinel对接Gateway的适配框架，Sentinel1.6新增模块），如下配置所示：</p> 
+<pre><code class="language-java">        &lt;dependency&gt;
+            &lt;groupId&gt;com.alibaba.cloud&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-cloud-alibaba-sentinel-gateway&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;com.alibaba.cloud&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-cloud-starter-alibaba-sentinel&lt;/artifactId&gt;
+        &lt;/dependency&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;org.springframework.cloud&lt;/groupId&gt;
+            &lt;artifactId&gt;spring-cloud-starter-gateway&lt;/artifactId&gt;
+        &lt;/dependency&gt;</code></pre> 
+<h3 id="%C2%A01.2%E3%80%81%E8%AE%BE%E7%BD%AE%E9%85%8D%E7%BD%AE%E6%96%87%E4%BB%B6"> 1.2、设置配置文件</h3> 
+<p>在application中设置sentinel控制台的地址，以及限流之后的响应信息：</p> 
+<pre><code class="language-java">spring:
+  cloud:
+    gateway:
+      routes:
+        - id: userservice
+          uri: http://localhost:9090
+          predicates:
+            - Path=/user/**
+    sentinel:
+      transport:
+        dashboard: localhost:18086
+      scg:
+        fallback:
+          mode: response
+          response-status: 200
+          response-body: '{"code":429,"message":"被限流了！"}'
+  application:
+    name: gateway-service
+server:
+  port: 10086</code></pre> 
+<p>scg（Spring Cloud Gateway）：配置网关专用</p> 
+<p>fallback：降级处理配置</p> 
+<p>mode：response 指定降级处理的模式为返回响应</p> 
+<p>response-status：表示响应状态</p> 
+<p>response-body：就是响应信息</p> 
+<p>限制规则中的<strong>重定位配置</strong>如下：</p> 
+<pre><code class="language-java">      scg:
+        fallback:
+          mode: redirect
+          response-status: 200
+          response-body: '{"code":429,"message":"被限流了！"}'
+          redirect: https://blog.csdn.net/c_study__c?spm=1011.2124.3001.5343    #跳转地址</code></pre> 
+<h3 id="1.3%E3%80%81%E8%AE%BE%E7%BD%AE%E9%99%90%E6%B5%81%E5%92%8C%E7%86%94%E6%96%AD%E8%A7%84%E5%88%99">1.3、设置限流和熔断规则</h3> 
+<p>进入sentinel控制台，内容有变</p> 
+<p><img alt="" height="549" src="https://images2.imgbox.com/67/a2/XnY92AYl_o.png" width="1200"></p> 
+<p> 限流或熔断配置就在“请求链路”中配置</p> 
+<h4 id="1.3.1%E3%80%81%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE">1.3.1、限流配置</h4> 
+<p>限流可以配置两种 API 类型: Route ID 和 API 分组</p> 
+<ul><li>Route ID 是和 Gateway 中的 Routes (每个路由)一一对应的API 分组是自定义</li><li>API 规则 (开发人员可以自定义)</li></ul> 
+<h5 id="Route%20ID%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE">Route ID限流配置</h5> 
+<p><img alt="" height="601" src="https://images2.imgbox.com/19/f9/D4c0pLGp_o.png" width="847"></p> 
+<p>限流配置参数：</p> 
+<p><strong>resourceMode: </strong>规则是针对API Gateway 的 Route ID (RESOURCE MODE_ROUTE ID)，还是用户在Sentinel 中定义的 API分组 (RESOURCE MODE CUSTOM API NAME) ，默认是 Route ID.</p> 
+<p><strong>resource:</strong> 资源名称，可以是网关中的 Route ID 名称或者用户自定义的 API 分组名称</p> 
+<p><strong>grade: </strong>阈值类型，QPS 或线程数。</p> 
+<p><strong>count: </strong>具体值intervalSec: 统计时间窗口，单位是秒，默认是 1 秒</p> 
+<p><strong>controlBehavior: </strong>流量整形的控制效果，目前支持快速失败和匀速排队两种模式，默认是快速失败。</p> 
+<p><strong>controlBehavior: </strong>流量整形的控制效果，目前支持快速失败和匀速排队两种模式，默认是快速失败</p> 
+<p><strong>Burst size: </strong>应对突发请求时额外允许的请求数目。</p> 
+<p><strong>maxQueueingTimeoutMs:</strong> 匀速排队模式下的最长排队时间，单位是毫秒，仅在匀速排队模式下生效</p> 
+<p><strong>paramItem: </strong>参数限流配置。若不提供，则代表不针对参数进行限流，该网关规则将会被转换成普通流控规8则;否则会转换成热点规则，它包含的字段:</p> 
+<ul><li><strong>parseStrategy:</strong>从请求中提取参数的策略，目前支持提取来源 IPa.(PARAM PARSE STRATEGY CLIENT IP) 、Host (PARAM PARSE STRATEGY HOST) 、 Header(PARAM PARSE STRATEGY HEADER) 意 URL 参 (PARAM PARSE STRATEGY URL PARAM)种模式。</li><li><strong>fieldName: </strong>若提取策略选择 Header 模式或 URL 参数模式，则需要指定对应的 header 名称或 URL参数名称</li><li><strong>pattern：</strong>参数值的匹配模式，只有匹配该模式的请求属性值会纳入统计和流控，若为空则统计该请求属性的所有值。</li><li><strong>matchStrategy: </strong>参数值的匹配策略，目前支持精确匹配 (PARAM MATCH STRATEGY_EXACT)、子串匹 (PARAM MATCH STRATEGY CONTAINS) 和E则匹 (PARAM MATCH STRATEGY REGEX)。</li></ul> 
+<h5 id="API%E9%99%90%E6%B5%81%E9%85%8D%E7%BD%AE">API限流配置</h5> 
+<p>先到API管理</p> 
+<p><img alt="" height="445" src="https://images2.imgbox.com/ac/51/QbeUUEf7_o.png" width="1200"></p> 
+<p> 这是API组名： 并且添加匹配规则</p> 
+<p><img alt="" height="342" src="https://images2.imgbox.com/a2/ea/ubwLNj1c_o.png" width="994"></p> 
+<p>匹配规则顾名思义：</p> 
+<ul><li>精确：访问那个写那个（写全）</li><li>前缀：凡是这个前缀的都受到限制</li><li>正则：就是类似正则表达匹配方式</li></ul> 
+<p> 新增好以后，回到请求链路</p> 
+<p>此时API名称会有内容供友友们选择</p> 
+<p><img alt="" height="591" src="https://images2.imgbox.com/54/13/TNxr2bI1_o.png" width="862"></p> 
+<p> 注：操控其实差不多，更加灵活了</p> 
+<h4 id="1.3.2%E3%80%81%E7%86%94%E6%96%AD%E9%85%8D%E7%BD%AE">1.3.2、熔断配置</h4> 
+<p>降级配置也就是熔断配置，在程序运行期间出现了某种异常就会触发的机制。它是在"请求链路“中点击“降级”按钮就能看到:</p> 
+<p><img alt="" height="409" src="https://images2.imgbox.com/c1/a2/3Tnha6DS_o.png" width="1200"></p> 
+<p><img alt="" height="511" src="https://images2.imgbox.com/a3/38/IhKxWIMg_o.png" width="920"> </p> 
+<p><strong>熔断策略: </strong>使用哪种策略来进行熔断操作。</p> 
+<p><strong>慢调用比例: </strong>在统计时长内的所有请求，如果请求时间超过 xx 秒则为慢请求，且慢请求的超过一定的比例，且请求数大于最小请求数将触发熔断操作，也就是一段时间内 (熔断时长参数设置) 的请求会快速失败。</p> 
+<p><strong>异常比例: </strong>在统计时长内的所有请求，如果异常的比例大于闯值，且请求数大于最小请求数，将触发熔断，也就是一段时间内 (熔断时长参数设置)的请求会快速失败。</p> 
+<p><strong>异常数:</strong>在统计时长内的所有请求，如果异常数大于闯值，且请求数大于最小请求数，将触发熔断，也就是一段时间内 (熔断时长参数设置)的请求会快速失败。</p> 
+<h2 id="2%E3%80%81%E5%AE%9E%E7%8E%B0%E5%8E%9F%E7%90%86">2、实现原理</h2> 
+<p>外部请求进入 API Gateway 时会经过 Sentinel 实现的 filter，其中会依次进行 <strong>路由/API 分组匹配</strong>、<strong>请求属性解析</strong>和<strong>参数组装</strong>。Sentinel 会根据配置的网关流控规则来解析请求属性，并依照参数索引顺序组装参数数组，最终传入 <code>SphU.entry(res, args)</code> 中。Sentinel API Gateway Adapter Common 模块向 Slot Chain 中添加了一个 <code>GatewayFlowSlot</code>，专门用来做网关规则的检查。<code>GatewayFlowSlot</code> 会从 <code>GatewayRuleManager</code> 中提取生成的热点参数规则，根据传入的参数依次进行规则检查。若某条规则不针对请求属性，则会在参数最后一个位置置入预设的常量，达到普通流控的效果。</p> 
+<p><img alt="" height="399" src="https://images2.imgbox.com/29/c4/DkdweYdz_o.png" width="1126"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/10eb266304191dc90cf281d54255959a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">ruoyi前端vue项目启动问题</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/87af2e709b497a8cab7327f36fabf231/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java国密加密SM2代码</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

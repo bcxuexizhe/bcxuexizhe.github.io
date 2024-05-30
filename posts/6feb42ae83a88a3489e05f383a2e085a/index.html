@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>UR六自由度机械臂运动学正解、逆解及轨迹规划附带python和C源码&#43;webots仿真 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/6feb42ae83a88a3489e05f383a2e085a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="UR六自由度机械臂运动学正解、逆解及轨迹规划附带python和C源码&#43;webots仿真">
+  <meta property="og:description" content="UR六自由度机械臂运动学正解、逆解及轨迹规划附带python和C源码&#43;webots仿真 (一) 准型DH参数建立坐标系(二) 运动学分析1. 运动学正解分析2. 运动学逆解分析 (三) 轨迹规划(四)源码 前段时间做了两种类型的六轴机械臂，分别是UR型和PUMA型六轴机械臂。实践过程中，在运动学分析和轨迹规划中遇到了很多的坑。比如，运动学正、逆解的起始位姿和自己想要的不一样；逆解的时候遇到奇异解或者解不出来的解应该怎么避免等等；本文会对以上情况做一个总结。
+后续我还会写关于如何以STM32F407为核心板，通过运动学正、逆解和轨迹规划来控制UR型和PUMA型六轴机械臂完成作业任务。有舵机版本和步进电机版本。
+本文是以标准型DH法建立坐标系，若想了解改进型DH法建立坐标系，可以看我另一篇文章：六轴机械臂运动学正、逆解及轨迹规划带源码
+(一) 准型DH参数建立坐标系 图1 机械臂起始位置图 图2 机械臂正视图 标准型DH建立坐标系方法：
+z轴：与旋转轴共线。
+x轴：Xi轴同时垂直于Zi轴和Zi-1轴。（x0可以任意选方向）
+y轴：使用右手定则确定。（大拇指指向x轴、中指指向z轴，食指的指向为y轴方向）
+标准型DH参数确定方法：
+标准型 DH 参数表：
+注：该表是以图 2 确定的 DH 参数。 θ \theta θ列代表着，第二关节、第四关节顺时针旋转 90°(以图 1 视角往里看顺时针旋转 90°)，可以转换成图 1 所示姿态。
+重点(建议先看后面的运动学正解和逆解，然后在返回来看)：
+求解运动学正解时，当给的各个关节角度分别为(0°,0°,0°,0°,0°,0°)时，求出的位姿对应的是图 1 的位姿。也就是说，通过标准 DH 参数法建立的坐标系，用运动学正解求解出的起始位姿为图 1 的位姿。如果想要转换成图 2 的位姿，则需要给各个关节角度分别为(0,-90,0,-90,0,0)。运动学逆解求出的角度值，也是基于图 1 起始位姿的角度值。比如，当你输入位姿:(-270.0, -100.59, 84.0, 1.5707963, -0.0, 0.0)时，运动学逆解求出的角度值为：(0°,0°,0°,0°,0°,0°)；当你输入位姿:(0.0, -100.59, 504.0, -1.5707963, -0.0, 3.1415927)时，运动学逆解求出的角度值为：(0°,-90°,0°,-90°,0°,0°);
+总结：当你在实际项目中时，肯定使用的是图 2 所示的起始位姿。那么需要转换 一 下 起 始 位 姿 。 当 求 解 运 动 学 正 解 时 ， 输 入 格 式(th1,th2-90°,th3,th4-90°,th5,th6)；th1 到 th6 为我们想要机械臂以图 2 的起始位姿旋转的角度值。当求解运动学逆解时，输入格式不变(x,y,z,gama,beta,alpha)，输出时需要在求得的第二角度和第四角度上分别加上 90°。那么最终得到的角度值是以图 2 为起始位姿的角度值。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-07T14:39:02+08:00">
+    <meta property="article:modified_time" content="2024-03-07T14:39:02+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">UR六自由度机械臂运动学正解、逆解及轨迹规划附带python和C源码&#43;webots仿真</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>UR六自由度机械臂运动学正解、逆解及轨迹规划附带python和C源码+webots仿真</h4> 
+ <ul><li><a href="#_DH_6" rel="nofollow">(一) 准型DH参数建立坐标系</a></li><li><a href="#__27" rel="nofollow">(二) 运动学分析</a></li><li><ul><li><a href="#1__28" rel="nofollow">1. 运动学正解分析</a></li><li><a href="#2__32" rel="nofollow">2. 运动学逆解分析</a></li></ul> 
+  </li><li><a href="#__50" rel="nofollow">(三) 轨迹规划</a></li><li><a href="#_53" rel="nofollow">(四)源码</a></li></ul> 
+</div> 
+<p></p> 
+<p><font face="宋体" size="5"><b>  前段时间做了两种类型的六轴机械臂，分别是UR型和PUMA型六轴机械臂。实践过程中，在运动学分析和轨迹规划中遇到了很多的坑。比如，运动学正、逆解的起始位姿和自己想要的不一样；逆解的时候遇到奇异解或者解不出来的解应该怎么避免等等；本文会对以上情况做一个总结。<br>   后续我还会写关于如何以STM32F407为核心板，通过运动学正、逆解和轨迹规划来控制UR型和PUMA型六轴机械臂完成作业任务。有舵机版本和步进电机版本。<br>   本文是以标准型DH法建立坐标系，若想了解改进型DH法建立坐标系，可以看我另一篇文章：<a href="https://blog.csdn.net/qq_57519658/article/details/136343129">六轴机械臂运动学正、逆解及轨迹规划带源码</a></b></font></p> 
+<h2><a id="_DH_6"></a>(一) 准型DH参数建立坐标系</h2> 
+<p><img src="https://images2.imgbox.com/dc/cc/MXcoes32_o.png" alt="在这里插入图片描述"></p> 
+<center>
+  图1 机械臂起始位置图 
+</center> 
+<p><img src="https://images2.imgbox.com/d9/b9/2gPnB95B_o.png" alt="在这里插入图片描述"></p> 
+<center>
+  图2 机械臂正视图 
+</center> 
+<p><font face="微软雅黑" size="5"><b><strong>标准型DH建立坐标系方法：</strong><br> <font face="宋体" size="5"><b>z轴：与旋转轴共线。<br> x轴：Xi轴同时垂直于Zi轴和Zi-1轴。（x0可以任意选方向）<br> y轴：使用右手定则确定。（大拇指指向x轴、中指指向z轴，食指的指向为y轴方向）</b></font></b></font></p> 
+<p><font face="微软雅黑" size="5"><b><strong>标准型DH参数确定方法：</strong><br> <img src="https://images2.imgbox.com/85/a9/yw6J7Q95_o.png" alt="在这里插入图片描述"></b></font></p> 
+<p><font face="微软雅黑" size="5"><b><strong>标准型 DH 参数表：</strong><br> <img src="https://images2.imgbox.com/7b/ba/Po8axvZ5_o.png" alt="在这里插入图片描述"><br> <font face="宋体" size="5"><b>注：该表是以图 2 确定的 DH 参数。<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+         
+          
+           
+           
+             θ 
+            
+           
+          
+            \theta 
+           
+          
+        </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.6944em;"></span><span class="mord mathnormal" style="margin-right: 0.0278em;">θ</span></span></span></span></span>列代表着，第二关节、第四关节顺时针旋转 90°(以图 1 视角往里看顺时针旋转 90°)，可以转换成图 1 所示姿态。<br> <strong>重点(建议先看后面的运动学正解和逆解，然后在返回来看)：</strong><br> 求解运动学正解时，当给的各个关节角度分别为(0°,0°,0°,0°,0°,0°)时，求出的位姿对应的是图 1 的位姿。也就是说，通过标准 DH 参数法建立的坐标系，用运动学正解求解出的起始位姿为图 1 的位姿。如果想要转换成图 2 的位姿，则需要给各个关节角度分别为(0,-90,0,-90,0,0)。运动学逆解求出的角度值，也是基于图 1 起始位姿的角度值。比如，当你输入位姿:(-270.0, -100.59, 84.0, 1.5707963, -0.0, 0.0)时，运动学逆解求出的角度值为：(0°,0°,0°,0°,0°,0°)；当你输入位姿:(0.0, -100.59, 504.0, -1.5707963, -0.0, 3.1415927)时，运动学逆解求出的角度值为：(0°,-90°,0°,-90°,0°,0°);<br> <strong>总结：当你在实际项目中时，肯定使用的是图 2 所示的起始位姿。那么需要转换 一 下 起 始 位 姿 。 当 求 解 运 动 学 正 解 时 ， 输 入 格 式(th1,th2-90°,th3,th4-90°,th5,th6)；th1 到 th6 为我们想要机械臂以图 2 的起始位姿旋转的角度值。当求解运动学逆解时，输入格式不变(x,y,z,gama,beta,alpha)，输出时需要在求得的第二角度和第四角度上分别加上 90°。那么最终得到的角度值是以图 2 为起始位姿的角度值。</strong></b></font></b></font></p> 
+<h2><a id="__27"></a>(二) 运动学分析</h2> 
+<h3><a id="1__28"></a>1. 运动学正解分析</h3> 
+<p><img src="https://images2.imgbox.com/cc/ce/WZRyXdxp_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2__32"></a>2. 运动学逆解分析</h3> 
+<p><img src="https://images2.imgbox.com/f5/f5/wOp2IV5i_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/af/81/dH9tQWhh_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/0c/d2/pv7hEitk_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/c1/ec/vSS60IDv_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/eb/09/0YuaHCwS_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/b8/f7/HrmvDbgG_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/01/f2/f2vNGkrm_o.png" alt="在这里插入图片描述"><br> <font face="宋体" size="5"><b><br> <strong>如果在遇到运动学逆解求不出来的情况下，①遇到了奇异解，解不出来；②超出了机械臂的工作空间，解不出来；</strong><br> <font face="宋体" size="6"><b><strong>解决办法</strong>：<br> <font face="宋体" size="5"><b><strong>第一步：首先需要在运动学逆解函数Inverse_Kinematics(X, Y, Z, gama, beta, alpha)中，写判断语句。如果输入的位姿能够顺利的解出，那么函数返回八组(有可能不是八组，根据情况而定)角度值；如果输入的位姿无解，那么返回0；<br> 第二部：可以通过加或者减位姿的值来避开运动学逆解无法求出的情况，比如：<br>        当(x,y,z,gama,beta,alpha) = (x0,y0,z0,gama0,beta0,alpha0)时出现逆解无法求解的情况。那么，我们只需要写一个判断语句,判断逆解函数Inverse_Kinematics(X, Y, Z, gama, beta, alpha)的返回值是否等于0，若等于0，那么代表此次传入的位姿，运动学逆解解不出来。这个时候可以给X、Y、Z三者中的任意一个参数加0,01。可以这样做：<br> (x0+0.01,y0,z0,gama0,beta0,alpha0)、(x0,y0+0.01,z0,gama0,beta0,alpha0)、(x0,y0,z0+0.01,gama0,beta0,alpha0)。虽然在数值上不同了，但是在现实生活中，0.01毫米的偏差肉眼根本看不出来。可以满足工业精度要求</strong>。</b></font></b></font></b></font></p> 
+<h2><a id="__50"></a>(三) 轨迹规划</h2> 
+<p><img src="https://images2.imgbox.com/57/eb/xtqEG83S_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/a4/19/VN8WuaFB_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_53"></a>(四)源码</h2> 
+<p><a href="https://download.csdn.net/download/qq_57519658/88922612">源码及仿真下载</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/5f0441421bf31b4749fcdba95fc8da1f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">探索数据结构：深入了解顺序表的奥秘</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/2450dc5d7e7e7c11093f31d6abcdca1e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">小狗伪原创在哪，小狗AI仿写智能写作词典</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

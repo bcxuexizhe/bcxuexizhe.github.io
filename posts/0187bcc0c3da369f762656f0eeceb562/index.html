@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>使用Java和PostGis的全国A级风景区数据入库实战 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0187bcc0c3da369f762656f0eeceb562/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="使用Java和PostGis的全国A级风景区数据入库实战">
+  <meta property="og:description" content="目录
+前言
+一、数据介绍
+1、空间数据 2、属性表说明
+3、QGIS数据预览 二、PostGIS空间数据库设计
+1、空间表结构
+三、Java空间入库
+1、实体定义
+2、数据操作Mapper
+3、业务层实现
+4、入库
+5、数据入库验证
+总结
+前言 星垂平野阔，月涌大江流”“晴川历历汉阳树，芳草萋萋鹦鹉洲”……祖国的每一寸土地，都饱含着诗情画意。旅行一定是很多朋友的爱好，有人说：“人生至少要有两次冲动：一场奋不顾身的爱情和一段走就走的旅行。”不知道在看博文的朋友，是否也是一位旅行爱好者呢。
+随着后疫情时代的到来，许多人又开始踏上旅行。旅游可以放松自己身心，缓解工作和生活方面的压力.旅行的过程中是不需要有任何的心理负担的，可以使人达到一种完全放松的状况.感受最原始的快乐。旅行的时候不仅可以观赏风景，还可以尝美食，住宾馆，听故事，感受全国各地的饮食文化.增长自己的见识，可以看到更多的人.了解更多的民俗文化，看到更多的景色使自己的内心感到充实。旅游可以开阔眼界，观察到丰富的人文景观，了解各地的文化风俗，饮食习惯和宗教信仰，广交朋友。旅游还可以锤炼人的意志，增加人的智慧，尤其是去一些有挑战性的景区游玩，征服一座山，跨过一条河学会一项新技能，都可以使自己变的更加勇敢。
+中华大地，旅游景点众多，那我们国家到底有多少旅游景区呢？在前面的很多博文中，我们讲过如何将空间数据进行入库。那么文本将采用Java语言，重点讲述如何将全国A级风景区数据导入到PostGis数据库中，为后续我们进行旅游资源和旅游路线的推荐和展示打下坚实的基础。如果您也是WebGis的爱好者，可以从本文了解空间数据的入库开发方式，知道空间数据库的设计和操作。
+一、数据介绍 数据说明，本文下载的数据是朋友分享的2023年全国A级风景区数据。数据大小为36MB左右，数据格式shapfile，下面是数据展示。
+1、空间数据 这里我们采用Qgis对空间数据进行导入前查看。其基础信息如下表所示：
+序号参数说明1文件格式 ESRI Shapefile
+2文件编码 GBK
+3元素类型 Point
+4坐标参考系 EPSG:4326 - WGS 84 5数据单位度6数据总数 14,847
+2、属性表说明 在shp文件中，除了有空间数据的定义，还有属性数据的定义，A级景区shp数据一共有15个字段，详情请看下面的表定义。
+序号字段名数据类型长度1 景区名称
+String 2542 等级
+String2543 所属省份
+String2544 地址
+String2545 评定时间
+String2546 发布时间
+String2547 发布链接
+String2548 lng_GCJ02（高德经度）
+Double189 lat_GCJ02（高德纬度）
+Double1810 lng_BD09（百度经度）
+Double1811 lat_BD09（百度纬度）
+Double1812 lng_WGS84
+Double1813 lat_WGS84
+Double1814 所属城市
+String25415 所属区县">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-28T20:37:14+08:00">
+    <meta property="article:modified_time" content="2024-02-28T20:37:14+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">使用Java和PostGis的全国A级风景区数据入库实战</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h3><a id="_0"></a></h3> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:40px;"></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:40px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E4%B8%80%E3%80%81%E6%95%B0%E6%8D%AE%E4%BB%8B%E7%BB%8D-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E6%95%B0%E6%8D%AE%E4%BB%8B%E7%BB%8D" rel="nofollow">一、数据介绍</a></p> 
+<p id="1%E3%80%81%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%C2%A0-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%C2%A0" rel="nofollow">1、空间数据 </a></p> 
+<p id="%C2%A02%E3%80%81%E5%B1%9E%E6%80%A7%E8%A1%A8%E8%AF%B4%E6%98%8E-toc" style="margin-left:40px;"><a href="#%C2%A02%E3%80%81%E5%B1%9E%E6%80%A7%E8%A1%A8%E8%AF%B4%E6%98%8E" rel="nofollow"> 2、属性表说明</a></p> 
+<p id="3%E3%80%81QGIS%E6%95%B0%E6%8D%AE%E9%A2%84%E8%A7%88%C2%A0-toc" style="margin-left:40px;"><a href="#3%E3%80%81QGIS%E6%95%B0%E6%8D%AE%E9%A2%84%E8%A7%88%C2%A0" rel="nofollow">3、QGIS数据预览 </a></p> 
+<p id="%C2%A0%E4%BA%8C%E3%80%81PostGIS%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%BA%8C%E3%80%81PostGIS%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1" rel="nofollow"> 二、PostGIS空间数据库设计</a></p> 
+<p id="1%E3%80%81%E7%A9%BA%E9%97%B4%E8%A1%A8%E7%BB%93%E6%9E%84-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E7%A9%BA%E9%97%B4%E8%A1%A8%E7%BB%93%E6%9E%84" rel="nofollow">1、空间表结构</a></p> 
+<p id="%C2%A0%E4%B8%89%E3%80%81Java%E7%A9%BA%E9%97%B4%E5%85%A5%E5%BA%93-toc" style="margin-left:0px;"><a href="#%C2%A0%E4%B8%89%E3%80%81Java%E7%A9%BA%E9%97%B4%E5%85%A5%E5%BA%93" rel="nofollow"> 三、Java空间入库</a></p> 
+<p id="1%E3%80%81%E5%AE%9E%E4%BD%93%E5%AE%9A%E4%B9%89-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E5%AE%9E%E4%BD%93%E5%AE%9A%E4%B9%89" rel="nofollow">1、实体定义</a></p> 
+<p id="2%E3%80%81%E6%95%B0%E6%8D%AE%E6%93%8D%E4%BD%9CMapper-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E6%95%B0%E6%8D%AE%E6%93%8D%E4%BD%9CMapper" rel="nofollow">2、数据操作Mapper</a></p> 
+<p id="3%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82%E5%AE%9E%E7%8E%B0-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82%E5%AE%9E%E7%8E%B0" rel="nofollow">3、业务层实现</a></p> 
+<p id="4%E3%80%81%E5%85%A5%E5%BA%93-toc" style="margin-left:40px;"><a href="#4%E3%80%81%E5%85%A5%E5%BA%93" rel="nofollow">4、入库</a></p> 
+<p id="5%E3%80%81%E6%95%B0%E6%8D%AE%E5%85%A5%E5%BA%93%E9%AA%8C%E8%AF%81-toc" style="margin-left:40px;"><a href="#5%E3%80%81%E6%95%B0%E6%8D%AE%E5%85%A5%E5%BA%93%E9%AA%8C%E8%AF%81" rel="nofollow">5、数据入库验证</a></p> 
+<p id="%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E6%80%BB%E7%BB%93" rel="nofollow">总结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h3 id="%E5%89%8D%E8%A8%80">前言</h3> 
+<p>        星垂平野阔，月涌大江流”“晴川历历汉阳树，芳草萋萋鹦鹉洲”……祖国的每一寸土地，都饱含着诗情画意。旅行一定是很多朋友的爱好，有人说：“人生至少要有两次冲动：一场奋不顾身的爱情和一段走就走的旅行。”不知道在看博文的朋友，是否也是一位旅行爱好者呢。</p> 
+<p>        随着后疫情时代的到来，许多人又开始踏上旅行。旅游可以放松自己身心，缓解工作和生活方面的压力.旅行的过程中是不需要有任何的心理负担的，可以使人达到一种完全放松的状况.感受最原始的快乐。旅行的时候不仅可以观赏风景，还可以尝美食，住宾馆，听故事，感受全国各地的饮食文化.增长自己的见识，可以看到更多的人.了解更多的民俗文化，看到更多的景色使自己的内心感到充实。旅游可以开阔眼界，观察到丰富的人文景观，了解各地的文化风俗，饮食习惯和宗教信仰，广交朋友。旅游还可以锤炼人的意志，增加人的智慧，尤其是去一些有挑战性的景区游玩，征服一座山，跨过一条河学会一项新技能，都可以使自己变的更加勇敢。</p> 
+<p>        中华大地，旅游景点众多，那我们国家到底有多少旅游景区呢？在前面的很多博文中，我们讲过如何将空间数据进行入库。那么文本将采用Java语言，重点讲述如何将全国A级风景区数据导入到PostGis数据库中，为后续我们进行旅游资源和旅游路线的推荐和展示打下坚实的基础。如果您也是WebGis的爱好者，可以从本文了解空间数据的入库开发方式，知道空间数据库的设计和操作。</p> 
+<h2 id="%E4%B8%80%E3%80%81%E6%95%B0%E6%8D%AE%E4%BB%8B%E7%BB%8D">一、数据介绍</h2> 
+<p>        数据说明，本文下载的数据是朋友分享的2023年全国A级风景区数据。数据大小为36MB左右，数据格式shapfile，下面是数据展示。</p> 
+<p class="img-center"><img alt="" height="205" src="https://images2.imgbox.com/b7/df/MqkmMyFt_o.png" width="596"></p> 
+<h3 id="1%E3%80%81%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%C2%A0">1、空间数据 </h3> 
+<p>        这里我们采用Qgis对空间数据进行导入前查看。其基础信息如下表所示：</p> 
+<p class="img-center"><img alt="" height="353" src="https://images2.imgbox.com/58/75/wEEpXwF0_o.png" width="654"></p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><tbody><tr><td style="width:122px;">序号</td><td style="width:233px;">参数</td><td style="width:326px;">说明</td></tr><tr><td style="width:122px;">1</td><td style="width:233px;">文件格式</td><td style="width:326px;"> <p>ESRI Shapefile</p> </td></tr><tr><td style="width:122px;">2</td><td style="width:233px;">文件编码</td><td style="width:326px;"> <p>GBK</p> </td></tr><tr><td style="width:122px;">3</td><td style="width:233px;">元素类型</td><td style="width:326px;"> <p>Point</p> </td></tr><tr><td style="width:122px;">4</td><td style="width:233px;">坐标参考系</td><td style="width:326px;"> <p>EPSG:4326 - WGS 84 </p> </td></tr><tr><td style="width:122px;">5</td><td style="width:233px;">数据单位</td><td style="width:326px;">度</td></tr><tr><td style="width:122px;">6</td><td style="width:233px;">数据总数</td><td style="width:326px;"> <p>14,847</p> </td></tr></tbody></table> 
+<h3 id="%C2%A02%E3%80%81%E5%B1%9E%E6%80%A7%E8%A1%A8%E8%AF%B4%E6%98%8E"> 2、属性表说明</h3> 
+<p>        在shp文件中，除了有空间数据的定义，还有属性数据的定义，A级景区shp数据一共有15个字段，详情请看下面的表定义。</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><tbody><tr><td style="width:81px;">序号</td><td style="width:179px;">字段名</td><td style="width:227px;">数据类型</td><td style="width:207px;">长度</td></tr><tr><td style="width:81px;">1</td><td style="width:179px;"> <p>景区名称</p> </td><td style="width:227px;">String </td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">2</td><td style="width:179px;"> <p>等级</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">3</td><td style="width:179px;"> <p>所属省份</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">4</td><td style="width:179px;"> <p>地址</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">5</td><td style="width:179px;"> <p>评定时间</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">6</td><td style="width:179px;"> <p>发布时间</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">7</td><td style="width:179px;"> <p>发布链接</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">8</td><td style="width:179px;"> <p>lng_GCJ02（高德经度）</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">9</td><td style="width:179px;"> <p>lat_GCJ02（高德纬度）</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">10</td><td style="width:179px;"> <p>lng_BD09（百度经度）</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">11</td><td style="width:179px;"> <p>lat_BD09（百度纬度）</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">12</td><td style="width:179px;"> <p>lng_WGS84</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">13</td><td style="width:179px;"> <p>lat_WGS84</p> </td><td style="width:227px;">Double</td><td style="width:207px;">18</td></tr><tr><td style="width:81px;">14</td><td style="width:179px;"> <p>所属城市</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr><tr><td style="width:81px;">15</td><td style="width:179px;"> <p>所属区县</p> </td><td style="width:227px;">String</td><td style="width:207px;">254</td></tr></tbody></table> 
+<p class="img-center"><img alt="" height="320" src="https://images2.imgbox.com/e9/14/BGq89PtA_o.png" width="651"></p> 
+<h3 id="3%E3%80%81QGIS%E6%95%B0%E6%8D%AE%E9%A2%84%E8%A7%88%C2%A0">3、QGIS数据预览 </h3> 
+<p>        我们使用qgis对数据进行简单标绘，使用景区名字进行标注，使用景区等级做分类。可以看到如下的分类结果展示。       </p> 
+<p class="img-center"><img alt="" height="270" src="https://images2.imgbox.com/73/13/r0UxG3JM_o.png" width="632"></p> 
+<h2 id="%C2%A0%E4%BA%8C%E3%80%81PostGIS%E7%A9%BA%E9%97%B4%E6%95%B0%E6%8D%AE%E5%BA%93%E8%AE%BE%E8%AE%A1"> 二、PostGIS空间数据库设计</h2> 
+<p>        空间数据库我们采用PostGIS进行存储，这里来简单设计一下如何存储景区数据。完整的景区数据条数在1万5千条左右。因此我们只需要设计一张景区表即可。与其空间属性保持一一对应的关系，我们来看一下数据表的表结构信息。</p> 
+<p class="img-center"><img alt="" height="323" src="https://images2.imgbox.com/3b/ca/bqGKi3aK_o.png" width="594"></p> 
+<h3 id="1%E3%80%81%E7%A9%BA%E9%97%B4%E8%A1%A8%E7%BB%93%E6%9E%84">1、空间表结构</h3> 
+<p>        下面给出风景区空间数据库表的表结构：</p> 
+<pre><code class="language-sql">/*==============================================================*/
+/* Table: biz_scenic_spot                                       */
+/*==============================================================*/
+create table biz_scenic_spot (
+   id                   INT8                 not null,
+   name                 VARCHAR(255)         null,
+   level                VARCHAR(4)           null,
+   province             VARCHAR(255)         null,
+   city                 VARCHAR(255)         null,
+   area                 VARCHAR(255)         null,
+   address              VARCHAR(255)         null,
+   evaluation_time      VARCHAR(255)         null,
+   publish_time         VARCHAR(255)         null,
+   publish_link         VARCHAR(255)         null,
+   lng_GCJ02            VARCHAR(30)          null,
+   lat_GCJ02            VARCHAR(30)          null,
+   lng_BD09             VARCHAR(30)          null,
+   lat_BD09             VARCHAR(30)          null,
+   lng_WGS84            VARCHAR(30)          null,
+   lat_WGS84            VARCHAR(30)          null,
+   geom                 geometry                null,
+   constraint PK_BIZ_SCENIC_SPOT primary key (id)
+);
+
+comment on table biz_scenic_spot is
+'全国风景区信息表';
+
+comment on column biz_scenic_spot.id is
+'主键';
+
+comment on column biz_scenic_spot.name is
+'景区名称';
+
+comment on column biz_scenic_spot.level is
+'景区级别';
+
+comment on column biz_scenic_spot.province is
+'所属省份';
+
+comment on column biz_scenic_spot.city is
+'所属城市';
+
+comment on column biz_scenic_spot.area is
+'所属区县';
+
+comment on column biz_scenic_spot.address is
+'地址';
+
+comment on column biz_scenic_spot.evaluation_time is
+'评定时间';
+
+comment on column biz_scenic_spot.publish_time is
+'发布时间';
+
+comment on column biz_scenic_spot.publish_link is
+'发布链接';
+
+comment on column biz_scenic_spot.lng_GCJ02 is
+'lng_GCJ02';
+
+comment on column biz_scenic_spot.lat_GCJ02 is
+'lat_GCJ02';
+
+comment on column biz_scenic_spot.lng_BD09 is
+'lng_BD09';
+
+comment on column biz_scenic_spot.lat_BD09 is
+'lat_BD09';
+
+comment on column biz_scenic_spot.lng_WGS84 is
+'lng_WGS84';
+
+comment on column biz_scenic_spot.lat_WGS84 is
+'lat_WGS84';</code></pre> 
+<p>为了在后面的应用中应用空间索引，我们在geom字段上创建空间索引，创建语句如下：</p> 
+<pre><code class="language-sql">-- ----------------------------
+CREATE INDEX "idx_biz_scenic_spot_geom" ON "public"."biz_scenic_spot" USING gist (
+  "geom" "public"."gist_geometry_ops_2d"
+);</code></pre> 
+<h2 id="%C2%A0%E4%B8%89%E3%80%81Java%E7%A9%BA%E9%97%B4%E5%85%A5%E5%BA%93"> 三、Java空间入库</h2> 
+<p>        这里主要讲解如何使用Java语言将shp数据进行导入到PostGis数据库中，主要采用的组件还是Gdal，如果大家对gdal不太熟悉，可以翻看博主以前的博客，有关于gdal的部署和具体使用方法。下面从代码实现来详细讲解具体的入库过程。后台开发框架采用Springboot，ORM框架采用Mybatis-plus，都是熟悉的组件。如果看博客的朋友对上述框架不是很熟悉，可以先学习一下相关的知识，对于理解和代码掌握有很大的帮助。</p> 
+<h3 id="1%E3%80%81%E5%AE%9E%E4%BD%93%E5%AE%9A%E4%B9%89">1、实体定义</h3> 
+<p>        示例工程采用MVC三层开发模式，这里只讲解M层，V和C在后续博文中讲解。</p> 
+<pre><code class="language-java">package com.yelang.project.extend.scenicspot.domain;
+import java.io.Serializable;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.yelang.framework.handler.PgGeometryTypeHandler;
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+import lombok.Setter;
+import lombok.ToString;
+/**
+ *  全国风景区信息表
+* @author wzh
+*
+*/
+@TableName(value = "biz_scenic_spot", autoResultMap = true)
+@NoArgsConstructor
+@AllArgsConstructor
+@Setter
+@Getter
+@ToString
+public class ScenicSpot implements Serializable{
+	private static final long serialVersionUID = 1830004907219610805L;
+
+	@TableId
+	private Long id;
+	
+	private String name;//景区名称
+	
+	private String level;//景区级别
+	
+	private String province;//所属省份
+	
+	private String city;//所属城市
+	
+	private String area;//所属区县
+	
+	private String address;//地址
+	
+	@TableField(value="evaluation_time")
+	private String evaluationTime;//评定时间
+	
+	@TableField(value="publish_time")
+	private String publishTime;//发布时间
+	
+	@TableField(value="publish_link")
+	private String publishLink;//发布时间
+	
+	@TableField(value="lng_GCJ02")
+	private String lngGCJ02;
+	
+	@TableField(value="lat_GCJ02")
+	private String latGCJ02;
+	
+	@TableField(value="lng_BD09")
+	private String lngBD09;
+	
+	@TableField(value="lat_BD09")
+	private String latBD09;
+	
+	@TableField(value="lng_WGS84")
+	private String lngWGS84;
+	
+	@TableField(value="lat_WGS84")
+	private String latWGS84;
+	
+	@TableField(typeHandler = PgGeometryTypeHandler.class)
+	private String geom;
+	
+	@TableField(exist=false)
+	private String geomJson;
+
+	public ScenicSpot(String name, String level, String province, String city, String area, String address,
+			String evaluationTime, String publishTime, String publishLink,String lngGCJ02, String latGCJ02, String lngBD09, String latBD09,
+			String lngWGS84, String latWGS84, String geom) {
+		super();
+		this.name = name;
+		this.level = level;
+		this.province = province;
+		this.city = city;
+		this.area = area;
+		this.address = address;
+		this.evaluationTime = evaluationTime;
+		this.publishTime = publishTime;
+		this.publishLink = publishLink;
+		this.lngGCJ02 = lngGCJ02;
+		this.latGCJ02 = latGCJ02;
+		this.lngBD09 = lngBD09;
+		this.latBD09 = latBD09;
+		this.lngWGS84 = lngWGS84;
+		this.latWGS84 = latWGS84;
+		this.geom = geom;
+	}
+}</code></pre> 
+<p>        这里有几个地方要注意的就是，在类最开始定义的地方，@TableName(value = "biz_scenic_spot", autoResultMap = true)，这里一定要这么写，否则后续将无法操作geometry数据。其次是@TableField(typeHandler = PgGeometryTypeHandler.class)，通过绑定typehandler来设置具体的处理函数。</p> 
+<h3 id="2%E3%80%81%E6%95%B0%E6%8D%AE%E6%93%8D%E4%BD%9CMapper">2、数据操作Mapper</h3> 
+<p>        熟悉Mybatis-Plus（mp）的朋友一定了解ORM操作的三个重要对象之一就是Mapper，相当与对jdbc的封装。下面是mapper的实现：</p> 
+<pre><code class="language-java">package com.yelang.project.extend.scenicspot.mapper;
+import org.apache.ibatis.annotations.Param;
+import org.apache.ibatis.annotations.Select;
+import com.baomidou.mybatisplus.core.mapper.BaseMapper;
+import com.yelang.project.extend.scenicspot.domain.ScenicSpot;
+
+public interface ScenicSpotMapper extends BaseMapper&lt;ScenicSpot&gt;{
+	static final String FIND_GEOJSON_SQL="&lt;script&gt;"
+			+ "select st_asgeojson(geom) as geomJson from biz_scenic_spot "
+			+ "where id = #{id} "
+			+ "&lt;if test='null != name'&gt;and name like concat('%', #{name}, '%')&lt;/if&gt;"
+			+ "&lt;/script&gt;";
+	@Select(FIND_GEOJSON_SQL)
+	ScenicSpot findGeoJsonById(@Param("id")Long id,@Param("name")String name);
+}
+</code></pre> 
+<h3 id="3%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82%E5%AE%9E%E7%8E%B0">3、业务层实现</h3> 
+<p>        为了方便做景区数据的批量入库，我们在Mp之上实现serviceimpl，好直接调用其的批量处理方法，示例代码如下：</p> 
+<pre><code class="language-java">package com.yelang.project.extend.scenicspot.service.impl;
+import org.springframework.stereotype.Service;
+import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
+import com.yelang.project.extend.scenicspot.domain.ScenicSpot;
+import com.yelang.project.extend.scenicspot.mapper.ScenicSpotMapper;
+import com.yelang.project.extend.scenicspot.service.IScenicSpotService;
+@Service
+public class ScenicSpotServiceImpl extends ServiceImpl&lt;ScenicSpotMapper, ScenicSpot&gt; implements IScenicSpotService{
+
+	@Override
+	public ScenicSpot findGeoJsonById(Long id) {
+		return this.baseMapper.findGeoJsonById(id, null);
+	}
+}</code></pre> 
+<h3 id="4%E3%80%81%E5%85%A5%E5%BA%93">4、入库</h3> 
+<p>        这里采用junit测试组件来进行数据入库，首先将调用gdal进行shp数据解析，然后调用service方法进行空间数据入库。这里需要注意的是，要在junit测试方法中注入bean对象，因此，需要在测试bean中使用下面的注解。</p> 
+<pre><code class="language-java">@SpringBootTest
+@RunWith(SpringRunner.class)</code></pre> 
+<pre><code class="language-java">package com.yelang.project;
+import java.util.ArrayList;
+import java.util.List;
+import org.gdal.gdal.gdal;
+import org.gdal.ogr.DataSource;
+import org.gdal.ogr.Feature;
+import org.gdal.ogr.Geometry;
+import org.gdal.ogr.Layer;
+import org.gdal.ogr.ogr;
+import org.gdal.osr.SpatialReference;
+import org.junit.Test;
+import org.junit.runner.RunWith;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.test.context.junit4.SpringRunner;
+import com.yelang.project.extend.scenicspot.domain.ScenicSpot;
+import com.yelang.project.extend.scenicspot.service.IScenicSpotService;
+@SpringBootTest
+@RunWith(SpringRunner.class)
+public class ImportScenicSpot {
+	@Autowired
+	private IScenicSpotService scenicSpotService;
+
+	@Test
+	public void importData() {
+		// 指定文件的名字和路径
+		String strVectorFile = "C:/BaiduDownload/20230726 A级景点、宗教分布、与非遗空间分布\\2023年全国A级景区数据/2023年全国A级景区数据.shp";
+		// 注册所有的驱动
+		ogr.RegisterAll();
+		gdal.SetConfigOption("GDAL_FILENAME_IS_UTF8", "YES");
+		gdal.SetConfigOption("SHAPE_ENCODING", "CP936");
+		String strDriverName = "ESRI Shapefile";
+		org.gdal.ogr.Driver oDriver = ogr.GetDriverByName(strDriverName);
+		if (oDriver == null) {
+			System.out.println(strDriverName + " 驱动不可用！\n");
+			return;
+		}
+		DataSource dataSource = oDriver.Open(strVectorFile);
+		Layer layer = dataSource.GetLayer(0);
+		SpatialReference spatialReference = layer.GetSpatialRef();
+		String srid = spatialReference.GetAttrValue("AUTHORITY", 1);
+		long featureCount = layer.GetFeatureCount();
+		List&lt;ScenicSpot&gt; list = new ArrayList&lt;ScenicSpot&gt;(3000);
+		for (int i = 0; i &lt; featureCount; i++) {
+			Feature feature = layer.GetFeature(i);
+			String name = feature.GetFieldAsString("景区名称");
+			String level = feature.GetFieldAsString("等级");
+			String province = feature.GetFieldAsString("所属省份");
+			String city = feature.GetFieldAsString("所属城市");
+			String area = feature.GetFieldAsString("所属区县");
+			String address = feature.GetFieldAsString("地址");
+			String evaluationTime = feature.GetFieldAsString("评定时间");
+			String publishTime = feature.GetFieldAsString("发布时间");
+			String publishLink = feature.GetFieldAsString("发布链接");
+			String lngGCJ02 = feature.GetFieldAsString("lng_GCJ02");
+			String latGCJ02 = feature.GetFieldAsString("lat_GCJ02");
+			String lngBD09 = feature.GetFieldAsString("lng_BD09");
+			String latBD09 = feature.GetFieldAsString("lat_BD09");
+			String lngWGS84 = feature.GetFieldAsString("lng_WGS84");
+			String latWGS84 = feature.GetFieldAsString("lat_WGS84");
+			Geometry geom = feature.GetGeometryRef();
+			//step 1、生成原始wkt
+			String wkt = geom.ExportToWkt();
+			wkt = "SRID=" + srid +";" + wkt;//拼接srid，实现动态写入
+			list.add(new ScenicSpot(name, level, province, city, area, address, evaluationTime, publishTime, publishLink, lngGCJ02, latGCJ02, lngBD09, latBD09, lngWGS84, latWGS84, wkt));
+			if(list.size() == 2000) {
+				System.out.println("00000000000000");
+				scenicSpotService.saveBatch(list,2000);
+				list.clear();
+			}
+		}
+		if(list.size() &gt;0) {
+			scenicSpotService.saveBatch(list,1000);
+		}
+		System.out.println("完成！！！");
+		dataSource.delete();
+		gdal.GDALDestroyDriverManager();
+	}
+}</code></pre> 
+<h3 id="5%E3%80%81%E6%95%B0%E6%8D%AE%E5%85%A5%E5%BA%93%E9%AA%8C%E8%AF%81">5、数据入库验证</h3> 
+<p>        下面我们来运行一下测试代码，试着将数据导入到数据库中，鼠标右键运行。</p> 
+<p class="img-center"><img alt="" height="337" src="https://images2.imgbox.com/dd/cd/N3Y0lsrt_o.png" width="644"></p> 
+<p>        运行后在控制台可以看到以下输出： </p> 
+<p class="img-center"><img alt="" height="297" src="https://images2.imgbox.com/be/ac/V1dVjWkU_o.png" width="647"></p> 
+<pre><code class="language-java">20:29:30.821 [main] DEBUG c.y.p.e.s.m.S.insert - [debug,137] - ==&gt; Parameters: 1762817301184356354(Long), 八面山景区(String), 3A(String), 湖南(String), 湘西土家族苗族自治州(String), 龙山县(String), 湖南湘西自治州八面山景区(String), -(String), 发布时间：2022-08-03；统计截至时间：2021年底(String), (String), 109.25780600000(String), 28.83474400000(String), 109.26441070000(String), 28.84042333000(String), 109.25318500000(String), 28.83790594000(String), SRID=4326;POINT(109.253185 28.83790594)(PGgeometry)
+20:29:30.822 [main] DEBUG c.y.p.e.s.m.S.insert - [debug,137] - ==&gt; Parameters: 1762817301184356355(Long), 湘西自治州花垣县古苗河百瀑大峡谷景区(String), 3A(String), 湖南(String), 湘西土家族苗族自治州(String), 花垣县(String), 湖南湘西自治州湘西自治州花垣县古苗河百瀑大峡谷景区(String), -(String), 发布时间：2022-08-03；统计截至时间：2021年底(String), (String), 109.48161300000(String), 28.58698200000(String), 109.48818110000(String), 28.59279936000(String), 109.47683150000(String), 28.59022625000(String), SRID=4326;POINT(109.4768315 28.59022625)(PGgeometry)
+20:29:30.822 [main] DEBUG c.y.p.e.s.m.S.insert - [debug,137] - ==&gt; Parameters: 1762817301188550658(Long), 浏阳古风洞(String), 2A(String), 湖南(String), 长沙市(String), 浏阳市(String), 湖南长沙市浏阳古风洞(String), -(String), 发布时间：2022-08-03；统计截至时间：2021年底(String), (String), 113.79441900000(String), 28.21724500000(String), 113.80095370000(String), 28.22317049000(String), 113.78889760000(String), 28.22061438000(String), SRID=4326;POINT(113.7888976 28.22061438)(PGgeometry)
+20:29:30.822 [main] DEBUG c.y.p.e.s.m.S.insert - [debug,137] - ==&gt; Parameters: 1762817301188550659(Long), 耒阳市农耕文化博物馆旅游景区(String), 2A(String), 湖南(String), 衡阳市(String), 耒阳市(String), 湖南衡阳市耒阳市农耕文化博物馆旅游景区(String), -(String), 发布时间：2022-08-03；统计截至时间：2021年底(String), (String), 112.86089200000(String), 26.42240400000(String), 112.86748910000(String), 26.42806999000(String), 112.85559400000(String), 26.42594269000(String), SRID=4326;POINT(112.855594 26.42594269)(PGgeometry)
+20:29:30.822 [main] DEBUG c.y.p.e.s.m.S.insert - [debug,137] - ==&gt; Parameters: 1762817301188550660(Long), 耒阳市党史陈列馆(String), 2A(String), 湖南(String), 衡阳市(String), 耒阳市(String), 湖南衡阳市耒阳市党史陈列馆(String), -(String), 发布时间：2022-08-03；统计截至时间：2021年底(String), (String), 112.85569800000(String), 26.40719700000(String), 112.86228240000(String), 26.41286866000(String), 112.85039320000(String), 26.41072176000(String), SRID=4326;POINT(112.8503932 26.41072176)(PGgeometry)
+完成！！！</code></pre> 
+<p>         最后到数据库中验证数据是否已经成功导入，在客户端中运行以下语句。可以看到数据全部导入，数据总条数是14847条。</p> 
+<p class="img-center"><img alt="" height="280" src="https://images2.imgbox.com/b8/a1/wPCVUQIi_o.png" width="638"></p> 
+<h2 id="%E6%80%BB%E7%BB%93">总结</h2> 
+<p>        以上就是本文的主要内容，那么文本将采用Java语言，重点讲述如何将全国A级风景区数据导入到PostGis数据库中，为后续我们进行旅游资源和旅游路线的推荐和展示打下坚实的基础。如果您也是WebGis的爱好者，可以从本文了解空间数据的入库开发方式，知道空间数据库的设计和操作。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a0440ab042533fe2e4561f3c009e8b53/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">vite打包解决前端发版后浏览器缓存问题</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/1ed69b1e2d93b6e2664c9031255873d8/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Amazon CodeWhisperer——AI助力编程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

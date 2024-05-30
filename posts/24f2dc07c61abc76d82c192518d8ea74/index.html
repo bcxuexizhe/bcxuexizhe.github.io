@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL：1118 - Row size too large（行大小不能超过 65535 问题） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/24f2dc07c61abc76d82c192518d8ea74/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL：1118 - Row size too large（行大小不能超过 65535 问题）">
+  <meta property="og:description" content="文章目录 问题原因问题复现环境 &amp; 版本复现过程 解决方案调整列大小调整列类型 个人简介 问题 当我们创建表或新增字段时，我们可能遇到下面这个问题： 1118 - Row size too large. The maximum row size for the used table type, not counting BLOBs, is 65535. This includes storage overhead, check the manual. You have to change some columns to TEXT or BLOBs 大概的意思是说：行的大小过大，最大限制为 65535 ，其中不包括 TEXT or BLOB 类型，建议调整一些列为 TEXT or BLOB 类型。下面我们来具体分析一下这个问题，并探讨如何解决。 原因 MySQL 行大小最大限制为65535，不包括TEXT、BLOB。
+注：如果未启用严格 SQL 模式， VARCHAR长度规范大于 65535 的列将转换为 TEXT， VARBINARY长度规范大于 65535 的列将转换为 BLOB。否则，在这两种情况下都会发生错误。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-08T22:30:07+08:00">
+    <meta property="article:modified_time" content="2023-12-08T22:30:07+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL：1118 - Row size too large（行大小不能超过 65535 问题）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_1" rel="nofollow">问题</a></li><li><a href="#_12" rel="nofollow">原因</a></li><li><a href="#_19" rel="nofollow">问题复现</a></li><li><ul><li><a href="#___21" rel="nofollow">环境 &amp; 版本</a></li><li><a href="#_29" rel="nofollow">复现过程</a></li></ul> 
+  </li><li><a href="#_50" rel="nofollow">解决方案</a></li><li><ul><li><a href="#_52" rel="nofollow">调整列大小</a></li><li><a href="#_74" rel="nofollow">调整列类型</a></li></ul> 
+  </li><li><a href="#_96" rel="nofollow">个人简介</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_1"></a>问题</h2> 
+<ul><li>当我们创建表或新增字段时，我们可能遇到下面这个问题：</li></ul> 
+<pre><code class="prism language-sql"><span class="token number">1118</span> <span class="token operator">-</span> <span class="token keyword">Row</span> size too large<span class="token punctuation">.</span> The maximum <span class="token keyword">row</span> size <span class="token keyword">for</span> the used <span class="token keyword">table</span> <span class="token keyword">type</span><span class="token punctuation">,</span> <span class="token operator">not</span> counting BLOBs<span class="token punctuation">,</span> <span class="token operator">is</span> <span class="token number">65535.</span> 
+This includes storage overhead<span class="token punctuation">,</span> <span class="token keyword">check</span> the manual<span class="token punctuation">.</span> You have <span class="token keyword">to</span> change <span class="token keyword">some</span> <span class="token keyword">columns</span> <span class="token keyword">to</span> <span class="token keyword">TEXT</span> <span class="token operator">or</span> BLOBs
+</code></pre> 
+<ul><li>大概的意思是说：行的大小过大，最大限制为 65535 ，其中不包括 TEXT or BLOB 类型，建议调整一些列为 TEXT or BLOB 类型。</li><li>下面我们来具体分析一下这个问题，并探讨如何解决。</li></ul> 
+<h2><a id="_12"></a>原因</h2> 
+<ul><li> <p>MySQL 行大小最大限制为65535，不包括TEXT、BLOB。</p> </li><li> <p>注：如果未启用严格 SQL 模式， VARCHAR长度规范大于 65535 的列将转换为 TEXT， VARBINARY长度规范大于 65535 的列将转换为 BLOB。否则，在这两种情况下都会发生错误。</p> </li><li> <p><a href="https://dev.mysql.com/doc/refman/5.7/en/silent-column-changes.html" rel="nofollow">参考：MySQL 5.7 官方文档：13.1.18.6 Silent Column Specification Changes<br> </a></p> </li></ul> 
+<h2><a id="_19"></a>问题复现</h2> 
+<h3><a id="___21"></a>环境 &amp; 版本</h3> 
+<pre><code class="prism language-sql"><span class="token keyword">SELECT</span> VERSION<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token number">5.7</span><span class="token number">.36</span><span class="token operator">-</span>log
+</code></pre> 
+<h3><a id="_29"></a>复现过程</h3> 
+<ul><li>尝试创建一个表 “tb_test”：</li></ul> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> tb_test <span class="token punctuation">(</span>
+	row1 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row2 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row3 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">INNODB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8<span class="token punctuation">;</span>
+
+<span class="token comment">// 创建失败</span>
+<span class="token number">1118</span> <span class="token operator">-</span> <span class="token keyword">Row</span> size too large<span class="token punctuation">.</span> The maximum <span class="token keyword">row</span> size <span class="token keyword">for</span> the used <span class="token keyword">table</span> <span class="token keyword">type</span><span class="token punctuation">,</span> <span class="token operator">not</span> counting BLOBs<span class="token punctuation">,</span> <span class="token operator">is</span> <span class="token number">65535.</span> 
+This includes storage overhead<span class="token punctuation">,</span> <span class="token keyword">check</span> the manual<span class="token punctuation">.</span> You have <span class="token keyword">to</span> change <span class="token keyword">some</span> <span class="token keyword">columns</span> <span class="token keyword">to</span> <span class="token keyword">TEXT</span> <span class="token operator">or</span> BLOBs
+
+<span class="token comment">// 为什么创建失败</span>
+tb_test 使用 <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8，每个编码字符占 <span class="token number">3</span> 个字节
+则 tb_test 行长度为：<span class="token number">1000</span> <span class="token operator">*</span> <span class="token number">3</span> <span class="token operator">*</span> <span class="token operator">=</span> <span class="token number">90000</span> 字节 <span class="token operator">&gt;</span> <span class="token number">63335</span>
+因此创建表失败
+</code></pre> 
+<h2><a id="_50"></a>解决方案</h2> 
+<h3><a id="_52"></a>调整列大小</h3> 
+<ul><li>调整列大小使行大小 &lt;= 65535。</li></ul> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> tb_test <span class="token punctuation">(</span>
+	row1 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row2 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row3 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">INNODB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8<span class="token punctuation">;</span>
+
+tb_test 行长度为：<span class="token number">10000</span> <span class="token operator">*</span> <span class="token number">3</span> <span class="token operator">*</span> <span class="token number">2</span> <span class="token operator">+</span> <span class="token number">10</span> <span class="token operator">*</span><span class="token number">3</span>  <span class="token operator">=</span> <span class="token number">60020</span> 字节 <span class="token operator">&lt;</span> <span class="token number">63335</span>
+
+<span class="token comment">// 创建成功</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> tb_test <span class="token punctuation">(</span>
+	row1 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row2 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row3 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">INNODB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8
+<span class="token operator">&gt;</span> OK
+<span class="token operator">&gt;</span> 查询时间: <span class="token number">0.087</span>s
+</code></pre> 
+<h3><a id="_74"></a>调整列类型</h3> 
+<ul><li>调整其中部分列类型为 TEXT or BLOBs（不计入行大小），使行大小 &lt;= 65535。</li></ul> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> tb_test<span class="token punctuation">(</span>
+	row1 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row2 <span class="token keyword">text</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row3 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">INNODB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8
+
+将 row2 调整为 <span class="token keyword">text</span> 类型
+tb_test 行长度为：<span class="token number">10000</span> <span class="token operator">*</span> <span class="token number">3</span> <span class="token operator">*</span> <span class="token number">2</span> <span class="token operator">=</span> <span class="token number">60000</span> 字节 <span class="token operator">&lt;</span> <span class="token number">63335</span>
+
+<span class="token comment">// 创建成功</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> tb_test<span class="token punctuation">(</span>
+	row1 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row2 <span class="token keyword">text</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+	row3 <span class="token keyword">VARCHAR</span> <span class="token punctuation">(</span> <span class="token number">10000</span> <span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span>
+<span class="token punctuation">)</span> <span class="token keyword">ENGINE</span> <span class="token operator">=</span> <span class="token keyword">INNODB</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8
+<span class="token operator">&gt;</span> OK
+<span class="token operator">&gt;</span> 查询时间: <span class="token number">0.023</span>s
+</code></pre> 
+<h2><a id="_96"></a>个人简介</h2> 
+<p>👋 你好，我是 Lorin 洛林，一位 Java 后端技术开发者！座右铭：<strong>Technology has the power to make the world a better place.</strong></p> 
+<p>🚀 我对技术的热情是我不断学习和分享的动力。我的博客是一个关于Java生态系统、后端开发和最新技术趋势的地方。</p> 
+<p>🧠 作为一个 Java 后端技术爱好者，我不仅热衷于探索语言的新特性和技术的深度，还热衷于分享我的见解和最佳实践。我相信知识的分享和社区合作可以帮助我们共同成长。</p> 
+<p>💡 在我的博客上，你将找到关于Java核心概念、JVM 底层技术、常用框架如Spring和Mybatis 、MySQL等数据库管理、RabbitMQ、Rocketmq等消息中间件、性能优化等内容的深入文章。我也将分享一些编程技巧和解决问题的方法，以帮助你更好地掌握Java编程。</p> 
+<p>🌐 我鼓励互动和建立社区，因此请留下你的问题、建议或主题请求，让我知道你感兴趣的内容。此外，我将分享最新的互联网和技术资讯，以确保你与技术世界的最新发展保持联系。我期待与你一起在技术之路上前进，一起探讨技术世界的无限可能性。</p> 
+<p>📖 保持关注我的博客，让我们共同追求技术卓越。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b0fb46767ba7d39296b53dfcbc7baa4f/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">关于adb devices无法找到设备：error: device not found 的解决办法</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/fdeaa32f0c75a437fd2f9d7068fd6fe8/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Stable Diffusion 跑通总结</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

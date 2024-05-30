@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Kali——密码攻击——Hashcat工具使用 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0e2899df765517d6e7319dbebf623a4e/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Kali——密码攻击——Hashcat工具使用">
+  <meta property="og:description" content="介绍：本文展示了密码存储原理及通过Kali使用Hashcat工具进行密码攻击的流程（也可以在windows系统中下载metasploit工具进行相关操作），工具详细教程可在Sangfor学习平台获取临时免费课程进行学习。
+挂个链接：深信服产业教育中心
+一.密码存储
+1.明文存储
+以普通文本等明文的方式保存数据（账号密码等）的存储方式，以数据库为例，虽然对用户而言很方便，但是一旦被黑客攻击后脱库，信息就完全泄露给黑客了，安全性极低。
+2.加密存储
+加密存储即字面意思，存储使用加密算法加密后的数据信息。加密算法分为对称加密算法和非对称加密算法，常用为对称加密算法，加密算法的原理是通过一个系统密钥对用户信息进行加密，但是这个系统密钥也是问题所在，如果系统密钥泄露，黑客能够通过系统密钥解密用户的信息。
+3.Hash存储
+Hash存储是利用单项散列（杂乱拼凑）函数对用户信息进行运算的，得到的hash值（指纹）存储在数据库中。较加密存储的好处是不需要再保管系统密钥，而且攻击者无法通过hash值逆向推算用户加密的数据信息。
+Hash函数的特性，以 H(x)=h 关系式为例：
+①固定长度的输出，函数H(x)的输入可以是任意长度，但是h的输出是固定长度的，即将任意长度的输入消息映射成一个固定长度的较短的哈希值
+②单向性：已知x，要算出h比较容易，但是已知h，要逆向推算出H(x)是不可行的，个人认为这个和上面的输入输出有关。
+③弱碰撞自由性：已知x，要找出y(y≠x)然后使得H(y)=H(x)是不可能的，个人认为和上面第一点的输入输出有关（这或许就是杂乱拼凑的含义关键）
+④强碰撞自由性：任意选出两个x和y，使得H(y)=H(x)在计算上是不可行的
+强弱碰撞自由性的区别：二者并非矛盾，弱碰撞自由性的意思是给定一个值x，在满足H(x)=H(y)的条件下想要找到另外一个y是不可能的，而强碰撞自由性的意思是要找到任意两个x和y去满足H(x)=H(y)也是不可能的。
+常见的hash函数算法：
+MD5
+SHA系列（SHA-1，SHA-224，SHA-256等等）
+二.密码攻击
+概念：获取目标数据信息加密后的hash值或者密文，然后使用方法进行解密获取明文的过程。
+攻击（破解）方式：
+1.暴力攻击（Brute Force Attack）：尝试对所有可能的密钥组合进行相同的hash运算，并将计算结果与与目标密钥的hash值进行对比，若相同则破解成功，这个方式的缺点是花费时间实在过长。
+2.字典攻击（Dictionary Attack）：提前构建一个&#34;明文-密文&#34;对应的数据库（类似于字典那种的），获取到密文后直接通过字典查找相关明文。这个方式在使用时时间比暴力攻击快很多，但是缺点是需要花费空间去存储这个字典（实际字典列表都比较长）
+3.彩虹表攻击（Rainbow Table Attack）：在字典攻击的基础上改进，以时间换空间，因为彩虹表攻击是根据目标的hash值来与彩虹表中存储的hash值比较，而字典攻击则是比较字符串（明文-密文）来进行比较。
+防御方式——hash加盐法
+字典攻击和彩虹表攻击之所以有效，是因为每一个密钥都是使用一样的运算方式来进行hash运算的，意思是使用同一个密钥的两个用户，他们的hash运算方式是一样的，密钥hash值也一定属于一类，破解一个就能破解另外一个
+加盐法的思路是给hash值再加一个随机的前缀或后缀，增加hash值的复杂度，降低使用相同密钥的用户hash值被同时破解的可能性。加盐后相同密钥运算出的hash值每次也都是不同的值。
+hash加盐法密钥加密存储和对比过程
+Hashcat工具介绍
+Hash作为目前常用的密码恢复工具之一，现在作为免费软件发布。支持多种常用的操作系统和散列算法，如MD4,MD5,SHA,Microsoft LM等等，此外还支持多种运算核心（CPU，GPU这些）。
+Hashcat使用流程
+1.Kali中启动Hashcat
+2.hash常用选项参数：
+（1）-a //指定破解模式
+①-a 0 //Straight（字典破解）
+②-a 1 //Combination（组合破解）
+③-a 3 //Brute-force（掩码暴力破解）
+④-a 6 //Hybrid Wordlist&#43;Mask（混合式，字典加掩码破解）
+注：这里的掩码指的是hashcat的掩码字符集，具体情况如下：
+（2）-m //指定加密类型
+①-m 900 //MD4
+②-m 0 //MD5
+③-m 100 //SHA1
+④-m 1300 //SHA2-224">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-07T18:16:36+08:00">
+    <meta property="article:modified_time" content="2024-03-07T18:16:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Kali——密码攻击——Hashcat工具使用</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>介绍：本文展示了密码存储原理及通过Kali使用Hashcat工具进行密码攻击的流程（也可以在windows系统中下载metasploit工具进行相关操作），工具详细教程可在Sangfor学习平台获取临时免费课程进行学习。</p> 
+<p>挂个链接：<a href="https://study.edu.sangfor.com.cn/" rel="nofollow" title="深信服产业教育中心">深信服产业教育中心</a></p> 
+<p>一.密码存储</p> 
+<p>1.明文存储</p> 
+<p>以普通文本等明文的方式保存数据（账号密码等）的存储方式，以数据库为例，虽然对用户而言很方便，但是一旦被黑客攻击后脱库，信息就完全泄露给黑客了，安全性极低。</p> 
+<p><img alt="" height="268" src="https://images2.imgbox.com/e5/23/idaYanUT_o.png" width="448"></p> 
+<p>2.加密存储</p> 
+<p>加密存储即字面意思，存储使用加密算法加密后的数据信息。加密算法分为对称加密算法和非对称加密算法，常用为对称加密算法，加密算法的原理是通过一个系统密钥对用户信息进行加密，但是这个系统密钥也是问题所在，如果系统密钥泄露，黑客能够通过系统密钥解密用户的信息。</p> 
+<p>3.Hash存储</p> 
+<p>Hash存储是利用单项散列（杂乱拼凑）函数对用户信息进行运算的，得到的hash值（指纹）存储在数据库中。较加密存储的好处是不需要再保管系统密钥，而且攻击者无法通过hash值逆向推算用户加密的数据信息。</p> 
+<p>Hash函数的特性，以 H(x)=h 关系式为例：</p> 
+<p>①固定长度的输出，函数H(x)的输入可以是任意长度，但是h的输出是固定长度的，即将任意长度的输入消息映射成一个固定长度的较短的哈希值</p> 
+<p>②单向性：已知x，要算出h比较容易，但是已知h，要逆向推算出H(x)是不可行的，个人认为这个和上面的输入输出有关。</p> 
+<p>③弱碰撞自由性：已知x，要找出y(y≠x)然后使得H(y)=H(x)是不可能的，个人认为和上面第一点的输入输出有关（这或许就是杂乱拼凑的含义关键）</p> 
+<p>④强碰撞自由性：任意选出两个x和y，使得H(y)=H(x)在计算上是不可行的</p> 
+<p>强弱碰撞自由性的区别：二者并非矛盾，弱碰撞自由性的意思是给定一个值x，在满足H(x)=H(y)的条件下想要找到另外一个y是不可能的，而强碰撞自由性的意思是要找到任意两个x和y去满足H(x)=H(y)也是不可能的。</p> 
+<p>常见的hash函数算法：</p> 
+<p>MD5</p> 
+<p>SHA系列（SHA-1，SHA-224，SHA-256等等）</p> 
+<p>二.密码攻击</p> 
+<p>概念：获取目标数据信息加密后的hash值或者密文，然后使用方法进行解密获取明文的过程。</p> 
+<p>攻击（破解）方式：</p> 
+<p>1.暴力攻击（Brute Force Attack）：尝试对所有可能的密钥组合进行相同的hash运算，并将计算结果与与目标密钥的hash值进行对比，若相同则破解成功，这个方式的缺点是花费时间实在过长。</p> 
+<p>2.字典攻击（Dictionary Attack）：提前构建一个"明文-密文"对应的数据库（类似于字典那种的），获取到密文后直接通过字典查找相关明文。这个方式在使用时时间比暴力攻击快很多，但是缺点是需要花费空间去存储这个字典（实际字典列表都比较长）</p> 
+<p>3.彩虹表攻击（Rainbow Table Attack）：在字典攻击的基础上改进，以时间换空间，因为彩虹表攻击是根据目标的hash值来与彩虹表中存储的hash值比较，而字典攻击则是比较字符串（明文-密文）来进行比较。</p> 
+<p>防御方式——hash加盐法</p> 
+<p>字典攻击和彩虹表攻击之所以有效，是因为每一个密钥都是使用一样的运算方式来进行hash运算的，意思是使用同一个密钥的两个用户，他们的hash运算方式是一样的，密钥hash值也一定属于一类，破解一个就能破解另外一个</p> 
+<p>加盐法的思路是给hash值再加一个随机的前缀或后缀，增加hash值的复杂度，降低使用相同密钥的用户hash值被同时破解的可能性。加盐后相同密钥运算出的hash值每次也都是不同的值。</p> 
+<p>hash加盐法密钥加密存储和对比过程</p> 
+<p><img alt="" height="489" src="https://images2.imgbox.com/40/c4/V7x3RuCJ_o.png" width="502"></p> 
+<p></p> 
+<p>Hashcat工具介绍</p> 
+<p>Hash作为目前常用的密码恢复工具之一，现在作为免费软件发布。支持多种常用的操作系统和散列算法，如MD4,MD5,SHA,Microsoft LM等等，此外还支持多种运算核心（CPU，GPU这些）。</p> 
+<p>Hashcat使用流程</p> 
+<p>1.Kali中启动Hashcat</p> 
+<p><img alt="" height="260" src="https://images2.imgbox.com/38/a0/PlUK3sPz_o.png" width="366"></p> 
+<p>2.hash常用选项参数：</p> 
+<p>（1）-a //指定破解模式</p> 
+<p>①-a 0 //Straight（字典破解）</p> 
+<p>②-a 1 //Combination（组合破解）</p> 
+<p>③-a 3 //Brute-force（掩码暴力破解）</p> 
+<p>④-a 6 //Hybrid Wordlist+Mask（混合式，字典加掩码破解）</p> 
+<p>注：这里的掩码指的是hashcat的掩码字符集，具体情况如下：</p> 
+<p><img alt="" height="528" src="https://images2.imgbox.com/85/f7/EUCyvplG_o.png" width="895"></p> 
+<p><img alt="" height="511" src="https://images2.imgbox.com/7b/63/JSPsyZy3_o.png" width="1135"></p> 
+<p>（2）-m //指定加密类型</p> 
+<p>①-m 900 //MD4</p> 
+<p>②-m 0 //MD5</p> 
+<p>③-m 100 //SHA1</p> 
+<p>④-m 1300 //SHA2-224</p> 
+<p>⑤-m 1400 //SHA2-256</p> 
+<p>⑥-m 10800 //SHA2-384</p> 
+<p>⑦-m 1700 //SHA2-512</p> 
+<p>⑧-m 10 //MD5($pass.$salt)</p> 
+<p>⑨-m 20 //MD5($salt.$pass)</p> 
+<p>⑩-m 3800 //MD5($salt.$pass.$salt)</p> 
+<p>此外还有-m 3000 //Microsoft LM，-m 1000 //NTLM 等等</p> 
+<p>（3）-o //将输出结果存储到指定文件</p> 
+<p>（4）--force //忽略告警信息</p> 
+<p>（5）--show //仅显示已经破解的hash和其对应的明文</p> 
+<p>（6）--increment //启用增量破解模式，可以利用此模式让hashcat在指定的密码长度范围内进行破解。</p> 
+<p>（7）--increment-max //密码最大长度，配合increment一起使用</p> 
+<p>（8）--increment-min //密码最小长度，同上</p> 
+<p>（9）--outfile-format //指定破解结果的输出格式id，默认是3</p> 
+<p>（10）--uesrname //忽略hash文件中的指定的用户名（在破解linux系统账户密码hash的时候可能会用到）</p> 
+<p>（11）--remove //删除已经破解的hash</p> 
+<p>（12）-r //自定义破解规则</p> 
+<p>Hashcat使用实例</p> 
+<p>1.Hashcat字典破解（-a 0）</p> 
+<p>本例使用单个字典对一个经过MD5加密算法加密过后的hash值进行破解</p> 
+<p>hashcat -a 0 -m 0 e10abc3949ba59abbe56e057f20f883e /usr/password.txt</p> 
+<p><img alt="" height="55" src="https://images2.imgbox.com/4e/d5/MK97al5j_o.png" width="539"></p> 
+<p>输入命令回车后显示界面如下：</p> 
+<p><img alt="" height="54" src="https://images2.imgbox.com/9b/72/tgrWaJmZ_o.png" width="346"></p> 
+<p>这个password.txt是自己收集的字典并存放到/usr目录下，这个需要自行收集，否则直接输入命令回车会破解失败，因为找不到password.txt</p> 
+<p><img alt="" height="105" src="https://images2.imgbox.com/5a/00/R97zvbTq_o.png" width="587"></p> 
+<p>2.Hashcat组合破解（-a 1）</p> 
+<p>hashcat -a 1 -m 100 7ce0359f12857f2a90c7de465f40a95f01cb5da9 /usr/p1.txt /usr/p2.txt</p> 
+<p>3.Hashcat掩码暴力破解（-a 3）</p> 
+<p>①在管理员终端命令行界面启动Metasploit，也可在漏洞利用工具集里直接打开</p> 
+<p><img alt="" height="44" src="https://images2.imgbox.com/b9/39/w9wztOJ0_o.png" width="461"></p> 
+<p>②在msf终端下输入以下命令查找ms17-010的相关模块</p> 
+<p>search ms17-010</p> 
+<p><img alt="" height="28" src="https://images2.imgbox.com/e4/cd/xzRjRUV5_o.png" width="203"></p> 
+<p>③在msf终端下输入以下命令对是否存在ms17-010漏洞进行检测</p> 
+<p>use auxiliary/scanner/smb/smb_ms17_010 //使用smb17_010模块</p> 
+<p></p> 
+<p>至此不再延申，因为在下发现了更方便好用的工具（后续会出该工具完整教程）。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9c0e078edc4f45acfb75ad8ec2eb5915/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">FPN和PAN的内容及区别（修改版1.2）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/45e9c59037d914ed99c5af3bf002f081/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">值得收藏！2024年人工智能顶级会议投稿信息汇总（机器学习领域）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

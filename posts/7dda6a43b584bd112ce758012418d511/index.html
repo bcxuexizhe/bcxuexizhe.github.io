@@ -1,0 +1,269 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>心电信号降噪方法（滤波器/移动平均/小波等，MATLAB环境） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7dda6a43b584bd112ce758012418d511/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="心电信号降噪方法（滤波器/移动平均/小波等，MATLAB环境）">
+  <meta property="og:description" content="对于一个正常的、完整的心动周期，对应的心电图波形如下图所示，各个波形都对应着心脏兴奋活动的生理过程，包含P波，PR段，QRS波群，ST段，T波，U波。
+（1）P波心电图中，起始的P波对应心房的兴奋过程，一个完整的心动周期起始于窦房结，P波的起始，代表窦房结将心脏兴奋传递至心房使得心房全部受到激励的过程。P波的方向及形态与兴奋在心房内的传播途径密切相关，在各个导联中，P波形态不尽一致，一般来说，P波顶部圆钝，其幅值不高于0.25mV，时限宽度在0.11s以内。
+（2）QRS复合波在心电图中，QRS复合波也称为QRS波群，表征着心室除极的心脏电位变化状态，由于心室各部位受到激励顺序有先后，因此QRS复合波是代表心室几个部分兴奋过程的综合波形，是由方向向下的Q波，波形宽大且幅值较高的R波，以及波形方向向下的S波组合形成的。QRS复合波在心电图中波形最为明显，有波形宽，斜率大的特点，因此最容易被识别，常作为心电信号研究的基础，应用广泛。一般正常情况下，QRS波的时限宽度在0.06-0.10s。而在不同的导联中，Q波，R波，S波的振幅、方向不尽一致，致使QRS波形态各异。一般来说Q波振幅小于同一导联中R波的1/4~1/2。在双极肢体导联I、II、III中，R波的振幅一般不超过1.5mV，2.5mV，2.0mV。在标准导联中，S波的振幅的变化量不超过0.6mV。
+（3）S-T段在QRS波群的终点到与之相继出现的T波起点中间的水平连线是S-T段，表征着从心室除极结束至缓慢复极的心电活动状态。一般来说，S-T段正常情况下其时限宽度在0.10-0.14s，接近于基线，偏移量较小，一般下移量在0.05mV以内，ST段的抬高量在不同导联中有不同范围，例如在V3导联中抬高量在0.5mV内，ST段的偏移量超过正常范围针对心肌类疾病诊断意义重大。
+（4）T波在QRS波群之后出现的顶部圆钝的波形是T波，表征心室复极的状态，通常T波与其同一心动周期的QRS主波方向统一，但也存在T波倒置，双向等情况，其所占时限较长，一般为0.05-0.250s，在不同导联中其幅值也不尽相同，一般应大于与其相邻的R波幅值的1/10。
+（5）Q-T间期Q-T间期是从Q波的起始点到T波的终点之间的距离，表征的是心室除极开始到复极完成的心脏活动过程。此段间期与心搏速率相关联，心率越慢，间期越长，相反则越短。一般情况下，若心率在70次/分左右，那么Q-T间期在0.32-0.44s左右，超过正常Q-T间期最高值0.03s被称为Q-T间期显著延长。
+（6）U波U波出现在T波之后，是因心室复极化而形成，波形宽而低平，振幅较小，一般不超过0.05mV，时限宽度在0.02~0.04s。U波一般与T波方向相同，其振幅约在0.03mV左右，U波不一定出现在所有导联中，在胸导联中其波形较为明显。
+鉴于此，采用滤波器/移动平均/小波等方法进行心电信号降噪，运行环境为MATLAB，运行代码如下：
+clc clear all; close all; folderType = &#39;AVRT&#39;; fileName = strcat(&#39;JS10493&#39;); % folderType = &#39;AF&#39;; % fileName = strcat(&#39;JS10361&#39;); matFileName = strcat(fileName, &#39;.mat&#39;); heaFileName = strcat(fileName, &#39;.hea&#39;); data_path = fullfile(&#39;data/raw/&#39;, folderType, matFileName); data = load(data_path); ecg_orig = data.val(1, :); ecg_orig(isinf(ecg_orig)|isnan(ecg_orig)) = 0; fs = 125; N = length(ecg_orig); t = (0:N-1) / fs; f = (0:N-1) * (fs / N); frequencies = f(1:N/2&#43;1); %RESAMPLE SIGNAL To 125Hz % [ecg, t] = resample_signal_125(ecg_orig, t_orig); %Assigning new parameter % fs = 125; % N = length(ecg); % f = (0:N-1) * (fs / N); %Applying high pass and low pass filters hl_filter = hpf_lpf(ecg_orig, fs); pl_filter = powerline_removal(hl_filter, fs); movSignal = moving_avg(pl_filter, 5); waveletSignal = wavelet_denoise(movSignal, 5); % Create a single figure with subplots for each signal figure; % Original ECG subplot(5, 1, 1); plot(t, ecg_orig); xlabel(&#39;Time (s)&#39;); ylabel(&#39;Amplitude (mV)&#39;); title(&#39;Original Signal&#39;); % HPF &#43; LPF Filtered subplot(5, 1, 2); plot(t, hl_filter); xlabel(&#39;Time (s)&#39;); ylabel(&#39;Amplitude (mV)&#39;); title(&#39;HPF &#43; LPF Signal&#39;); % Powerline Removal subplot(5, 1, 3); plot(t, pl_filter); xlabel(&#39;Time (s)&#39;); ylabel(&#39;Amplitude (mV)&#39;); title(&#39;Powerline Removal&#39;); % Moving Average applied subplot(5, 1, 4); plot(t, movSignal); xlabel(&#39;Time (s)&#39;); ylabel(&#39;Amplitude (mV)&#39;); title(&#39;Moving Average Applied&#39;); % Wavelet Denoised subplot(5, 1, 5); plot(t, waveletSignal); xlabel(&#39;Time (s)&#39;); ylabel(&#39;Amplitude (mV)&#39;); title(&#39;Wavelet Denoised&#39;); out = waveletSignal; figure subplot(4, 1, 1); [Pxx,F] = periodogram(ecg_orig,[],length(ecg_orig),fs); plot(F,10*log10(Pxx)) title(&#39;Original Signal Spectrum&#39;); xlabel(&#39;Frequency&#39;); subplot(4, 1, 2); [Pxx_out,F_out] = periodogram(out,[],length(out),fs); plot(F,10*log10(Pxx_out)) title(&#39;Output Signal Spectrum&#39;); xlabel(&#39;Frequency&#39;); subplot(4, 1, 3) input_fft = fft(ecg_orig)/N; input_fft = 2 * abs(input_fft(1:N/2&#43;1)); plot(frequencies, input_fft) title(&#39;Original Signal FFT&#39;); xlabel(&#39;Frequency&#39;); subplot(4, 1, 4) output_fft = fft(out)/N; output_fft = 2 * abs(output_fft(1:N/2&#43;1)); plot(frequencies, output_fft) title(&#39;Output Signal FFT&#39;); xlabel(&#39;Frequency&#39;); output_folder_path = fullfile(&#39;data/processed/&#39;, folderType); if ~exist(output_folder_path, &#39;dir&#39;) mkdir(output_folder_path); end output_path = fullfile(&#39;data/processed/&#39;, folderType, matFileName); save(output_path, &#39;out&#39;); source_file_path_hea = fullfile(&#39;data/raw/&#39;, folderType, heaFileName); destination_file_path_hea = fullfile(&#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-27T20:36:38+08:00">
+    <meta property="article:modified_time" content="2024-05-27T20:36:38+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">心电信号降噪方法（滤波器/移动平均/小波等，MATLAB环境）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>对于一个正常的、完整的心动周期，对应的心电图波形如下图所示，各个波形都对应着心脏兴奋活动的生理过程，包含P波，PR段，QRS波群，ST段，T波，U波。</p> 
+<p><img alt="" height="434" src="https://images2.imgbox.com/e7/ce/ykIWWPK4_o.png" width="596"></p> 
+<p>（1）P波心电图中，起始的P波对应心房的兴奋过程，一个完整的心动周期起始于窦房结，P波的起始，代表窦房结将心脏兴奋传递至心房使得心房全部受到激励的过程。P波的方向及形态与兴奋在心房内的传播途径密切相关，在各个导联中，P波形态不尽一致，一般来说，P波顶部圆钝，其幅值不高于0.25mV，时限宽度在0.11s以内。</p> 
+<p>（2）QRS复合波在心电图中，QRS复合波也称为QRS波群，表征着心室除极的心脏电位变化状态，由于心室各部位受到激励顺序有先后，因此QRS复合波是代表心室几个部分兴奋过程的综合波形，是由方向向下的Q波，波形宽大且幅值较高的R波，以及波形方向向下的S波组合形成的。QRS复合波在心电图中波形最为明显，有波形宽，斜率大的特点，因此最容易被识别，常作为心电信号研究的基础，应用广泛。一般正常情况下，QRS波的时限宽度在0.06-0.10s。而在不同的导联中，Q波，R波，S波的振幅、方向不尽一致，致使QRS波形态各异。一般来说Q波振幅小于同一导联中R波的1/4~1/2。在双极肢体导联I、II、III中，R波的振幅一般不超过1.5mV，2.5mV，2.0mV。在标准导联中，S波的振幅的变化量不超过0.6mV。</p> 
+<p>（3）S-T段在QRS波群的终点到与之相继出现的T波起点中间的水平连线是S-T段，表征着从心室除极结束至缓慢复极的心电活动状态。一般来说，S-T段正常情况下其时限宽度在0.10-0.14s，接近于基线，偏移量较小，一般下移量在0.05mV以内，ST段的抬高量在不同导联中有不同范围，例如在V3导联中抬高量在0.5mV内，ST段的偏移量超过正常范围针对心肌类疾病诊断意义重大。</p> 
+<p>（4）T波在QRS波群之后出现的顶部圆钝的波形是T波，表征心室复极的状态，通常T波与其同一心动周期的QRS主波方向统一，但也存在T波倒置，双向等情况，其所占时限较长，一般为0.05-0.250s，在不同导联中其幅值也不尽相同，一般应大于与其相邻的R波幅值的1/10。</p> 
+<p>（5）Q-T间期Q-T间期是从Q波的起始点到T波的终点之间的距离，表征的是心室除极开始到复极完成的心脏活动过程。此段间期与心搏速率相关联，心率越慢，间期越长，相反则越短。一般情况下，若心率在70次/分左右，那么Q-T间期在0.32-0.44s左右，超过正常Q-T间期最高值0.03s被称为Q-T间期显著延长。</p> 
+<p>（6）U波U波出现在T波之后，是因心室复极化而形成，波形宽而低平，振幅较小，一般不超过0.05mV，时限宽度在0.02~0.04s。U波一般与T波方向相同，其振幅约在0.03mV左右，U波不一定出现在所有导联中，在胸导联中其波形较为明显。</p> 
+<p><strong>鉴于此，采用滤波器/移动平均/小波等方法进行心电信号降噪，运行环境为MATLAB，运行代码如下：</strong></p> 
+<pre><code class="language-Matlab">clc
+clear all;
+close all;
+
+folderType = 'AVRT';
+fileName = strcat('JS10493');
+% folderType = 'AF';
+% fileName = strcat('JS10361');
+matFileName = strcat(fileName, '.mat');
+heaFileName = strcat(fileName, '.hea');
+
+data_path = fullfile('data/raw/', folderType, matFileName);
+
+data = load(data_path);
+
+ecg_orig = data.val(1, :);
+ecg_orig(isinf(ecg_orig)|isnan(ecg_orig)) = 0;
+
+
+fs = 125;
+N = length(ecg_orig);
+t = (0:N-1) / fs;
+f = (0:N-1) * (fs / N);
+frequencies = f(1:N/2+1);
+
+%RESAMPLE SIGNAL To 125Hz
+% [ecg, t] = resample_signal_125(ecg_orig, t_orig);
+
+%Assigning new parameter
+% fs = 125;
+% N = length(ecg);
+% f = (0:N-1) * (fs / N);
+
+
+%Applying high pass and low pass filters
+hl_filter = hpf_lpf(ecg_orig, fs);
+pl_filter = powerline_removal(hl_filter, fs);
+movSignal = moving_avg(pl_filter, 5);
+waveletSignal = wavelet_denoise(movSignal, 5);
+
+% Create a single figure with subplots for each signal
+figure;
+
+% Original ECG
+subplot(5, 1, 1);
+plot(t, ecg_orig);
+xlabel('Time (s)');
+ylabel('Amplitude (mV)');
+title('Original Signal');
+
+% HPF + LPF Filtered
+subplot(5, 1, 2);
+plot(t, hl_filter);
+xlabel('Time (s)');
+ylabel('Amplitude (mV)');
+title('HPF + LPF Signal');
+
+% Powerline Removal
+subplot(5, 1, 3);
+plot(t, pl_filter);
+xlabel('Time (s)');
+ylabel('Amplitude (mV)');
+title('Powerline Removal');
+
+% Moving Average applied
+subplot(5, 1, 4);
+plot(t, movSignal);
+xlabel('Time (s)');
+ylabel('Amplitude (mV)');
+title('Moving Average Applied');
+
+% Wavelet Denoised
+subplot(5, 1, 5);
+plot(t, waveletSignal);
+xlabel('Time (s)');
+ylabel('Amplitude (mV)');
+title('Wavelet Denoised');
+
+
+out = waveletSignal;
+
+figure
+subplot(4, 1, 1);
+
+[Pxx,F] = periodogram(ecg_orig,[],length(ecg_orig),fs);
+plot(F,10*log10(Pxx))
+
+title('Original Signal Spectrum');
+xlabel('Frequency');
+
+subplot(4, 1, 2);
+
+[Pxx_out,F_out] = periodogram(out,[],length(out),fs);   
+plot(F,10*log10(Pxx_out))
+
+title('Output Signal Spectrum');
+xlabel('Frequency');
+
+subplot(4, 1, 3)
+input_fft = fft(ecg_orig)/N;
+input_fft = 2 * abs(input_fft(1:N/2+1));
+plot(frequencies, input_fft)
+
+title('Original Signal FFT');
+xlabel('Frequency');
+
+subplot(4, 1, 4)
+output_fft = fft(out)/N;
+output_fft = 2 * abs(output_fft(1:N/2+1));
+plot(frequencies, output_fft)
+
+title('Output Signal FFT');
+xlabel('Frequency');
+
+output_folder_path = fullfile('data/processed/', folderType);
+if ~exist(output_folder_path, 'dir')
+  mkdir(output_folder_path);
+end
+
+output_path = fullfile('data/processed/', folderType, matFileName);
+save(output_path, 'out');
+
+source_file_path_hea = fullfile('data/raw/', folderType, heaFileName);
+destination_file_path_hea = fullfile("data/processed/", folderType, heaFileName);
+
+copyfile(source_file_path_hea, destination_file_path_hea);
+
+%完整代码：https://mbd.pub/o/bread/mbd-ZZiUmJhw
+
+%assess_signals(ecg, out, fs)</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/55/20/XZFiaVuw_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/e5/87/oPblWO9S_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/ee/ca/0ikPDOEe_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/c6/ab/VCphnBgd_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/c8/b5/SF75ZrFr_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/0e/24/DSwNJPQT_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/9e/f6/7mZTcJ8z_o.png" width="865"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="648" src="https://images2.imgbox.com/6c/e7/ov4jaeZq_o.png" width="865"></p> 
+<p><strong>工学博士，担任《Mechanical System and Signal Processing》《中国电机工程学报》《控制与决策》等期刊审稿专家，擅长领域：现代信号处理，机器学习，深度学习，数字孪生，时间序列分析，设备缺陷检测、设备异常检测、设备智能故障诊断与健康管理PHM等。</strong></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/6ac6e9b68dbdac3f6672ac86832ba4af/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MySQL：CRUD初阶(有图有实操)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/4177b46787bf3009afa345e780007de4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Java继承】（超级详细！！！）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

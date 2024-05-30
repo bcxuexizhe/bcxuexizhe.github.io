@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>没有阻塞为什么partition of创建子分区很慢？ - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/21cd6df35a702568ce02b90e085b2e75/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="没有阻塞为什么partition of创建子分区很慢？">
+  <meta property="og:description" content="create table… partition of语句慢分析 2024-05-16 22:02:59.063 CST,&#34;user1&#34;,&#34;dblzl&#34;,125889,&#34;30.88.79.3:37423&#34;,66461213.1ebc1,2,&#34;authentication&#34;,2024-05-16 22:02:59 CST,34/41364668,0,LOG,00000,&#34;connection authorized: user=user1 database=dblzl&#34;,,,,,,,,,&#34;&#34;,&#34;client backend&#34; 2024-05-16 22:02:59.079 CST,&#34;user1&#34;,&#34;dblzl&#34;,125889,&#34;30.88.79.3:37423&#34;,66461213.1ebc1,3,&#34;idle&#34;,2024-05-16 22:02:59 CST,34/41364669,0,LOG,00000,&#34;statement: -- a86fae372f73414bbe1af18213a47beb /*a86fae372f73414bbe1af18213a47beb */ create table if not exists table1_partition_p2406 partition of table1 for values from (&#39;2024-06-01 00:00:00&#39;) to (&#39;2024-07-01 00:00:00&#39;); &#34;,,,,,,,,,&#34;&#34;,&#34;client backend&#34; ... 2024-05-16 22:38:28.555 CST,&#34;user1&#34;,&#34;dblzl&#34;,125889,&#34;30.88.79.3:37423&#34;,66461213.1ebc1,4,&#34;CREATE TABLE&#34;,2024-05-16 22:02:59 CST,34/0,0,LOG,00000,&#34;duration: 2129483.549 ms&#34;,,,,,,,,,&#34;&#34;,&#34;client backend&#34; user1这个用户在22:02:59连接进入数据库后，立即就执行了一个create table.. partition of..的语句，直到22:38:28才跑完。中间的日志忽略了，一大堆会话阻塞信息，阻塞源均是125889这个会话。
+被阻塞的会话类似如下：
+process 33569 still waiting for RowExclusiveLock on relation 53733 of database 17073 after 1000.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-17T22:50:36+08:00">
+    <meta property="article:modified_time" content="2024-05-17T22:50:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">没有阻塞为什么partition of创建子分区很慢？</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h4><a id="create_table_partition_of_1"></a>create table… partition of语句慢分析</h4> 
+<pre><code class="prism language-sql"><span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">02</span>:<span class="token number">59.063</span> CST<span class="token punctuation">,</span><span class="token string">"user1"</span><span class="token punctuation">,</span><span class="token string">"dblzl"</span><span class="token punctuation">,</span><span class="token number">125889</span><span class="token punctuation">,</span><span class="token string">"30.88.79.3:37423"</span><span class="token punctuation">,</span><span class="token number">66461213.1</span>ebc1<span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">"authentication"</span><span class="token punctuation">,</span><span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">02</span>:<span class="token number">59</span> CST<span class="token punctuation">,</span><span class="token number">34</span><span class="token operator">/</span><span class="token number">41364668</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>LOG<span class="token punctuation">,</span><span class="token number">00000</span><span class="token punctuation">,</span><span class="token string">"connection authorized: user=user1 database=dblzl"</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token string">""</span><span class="token punctuation">,</span><span class="token string">"client backend"</span>
+<span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">02</span>:<span class="token number">59.079</span> CST<span class="token punctuation">,</span><span class="token string">"user1"</span><span class="token punctuation">,</span><span class="token string">"dblzl"</span><span class="token punctuation">,</span><span class="token number">125889</span><span class="token punctuation">,</span><span class="token string">"30.88.79.3:37423"</span><span class="token punctuation">,</span><span class="token number">66461213.1</span>ebc1<span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token string">"idle"</span><span class="token punctuation">,</span><span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">02</span>:<span class="token number">59</span> CST<span class="token punctuation">,</span><span class="token number">34</span><span class="token operator">/</span><span class="token number">41364669</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>LOG<span class="token punctuation">,</span><span class="token number">00000</span><span class="token punctuation">,</span><span class="token string">"statement:  -- a86fae372f73414bbe1af18213a47beb
+/*a86fae372f73414bbe1af18213a47beb */
+create table if not exists table1_partition_p2406 partition of table1 for values from ('2024-06-01 00:00:00') to ('2024-07-01 00:00:00'); "</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token string">""</span><span class="token punctuation">,</span><span class="token string">"client backend"</span>
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">38</span>:<span class="token number">28.555</span> CST<span class="token punctuation">,</span><span class="token string">"user1"</span><span class="token punctuation">,</span><span class="token string">"dblzl"</span><span class="token punctuation">,</span><span class="token number">125889</span><span class="token punctuation">,</span><span class="token string">"30.88.79.3:37423"</span><span class="token punctuation">,</span><span class="token number">66461213.1</span>ebc1<span class="token punctuation">,</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token string">"CREATE TABLE"</span><span class="token punctuation">,</span><span class="token number">2024</span><span class="token operator">-</span><span class="token number">05</span><span class="token operator">-</span><span class="token number">16</span> <span class="token number">22</span>:<span class="token number">02</span>:<span class="token number">59</span> CST<span class="token punctuation">,</span><span class="token number">34</span><span class="token operator">/</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span>LOG<span class="token punctuation">,</span><span class="token number">00000</span><span class="token punctuation">,</span><span class="token string">"duration: 2129483.549 ms"</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token punctuation">,</span><span class="token string">""</span><span class="token punctuation">,</span><span class="token string">"client backend"</span>
+</code></pre> 
+<p>user1这个用户在22:02:59连接进入数据库后，立即就执行了一个<code>create table.. partition of..</code>的语句，直到22:38:28才跑完。中间的日志忽略了，一大堆会话阻塞信息，阻塞源均是125889这个会话。<br> 被阻塞的会话类似如下：</p> 
+<pre><code class="prism language-sql">process <span class="token number">33569</span> still waiting <span class="token keyword">for</span> RowExclusiveLock <span class="token keyword">on</span> relation <span class="token number">53733</span> <span class="token keyword">of</span> <span class="token keyword">database</span> <span class="token number">17073</span> <span class="token keyword">after</span> <span class="token number">1000.048</span> ms<span class="token string">","</span>Process holding the <span class="token keyword">lock</span>: <span class="token number">125889.</span> Wait queue: <span class="token number">33569.</span>
+</code></pre> 
+<p>partition of添加分区时，会在主表上加8级锁，然后阻塞分区表上的所有操作。正常来说partition of添加分区是非常快的，锁也会立即释放。不过如果分区表上有长事务，那么这个主表上的8级锁得等着，然后就造成后续的阻塞。<br> 盗<a href="https://blog.csdn.net/qq_40687433/article/details/132525655?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522171591065916800225570929%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=171591065916800225570929&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-132525655-null-null.nonecase&amp;utm_term=%E5%88%86%E5%8C%BA%E8%A1%A8&amp;spm=1018.2226.3001.4450">自己的图</a>：<br> <img src="https://images2.imgbox.com/bb/d1/xOo5qzUp_o.png" alt="在这里插入图片描述"></p> 
+<p>然而这个案例表上没有长事务，partition of添加分区却执行了35分钟。<br> 从历史的进程信息可以看出这个进程是D状态，是有问题的。刚开始以为是内存、磁盘这些问题，排查了一圈都正常。</p> 
+<p>然而这个问题很好复现，直接在仿真环境上跑一个<code>create table parttion of</code>执行会非常慢。pg_stat_activity会话信息显示，该语句等待在IO上：</p> 
+<pre><code class="prism language-sql">wait_event_type  <span class="token operator">|</span> IO
+wait_event	 <span class="token operator">|</span> DataFileRead
+state		<span class="token operator">|</span> active
+query		<span class="token operator">|</span> <span class="token keyword">create</span> <span class="token keyword">table</span> xxx <span class="token keyword">partition</span> <span class="token keyword">of</span> xx <span class="token keyword">for</span> <span class="token keyword">values</span> <span class="token keyword">from</span> <span class="token punctuation">(</span><span class="token string">'2025-05-01 00:00:00'</span><span class="token punctuation">)</span> <span class="token keyword">to</span> <span class="token punctuation">(</span><span class="token string">'2025-06-01 00:00:00'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>strace追踪进程信息发现，该进程大量的读取一个文件</p> 
+<pre><code class="prism language-sql">pread64<span class="token punctuation">(</span><span class="token number">53</span><span class="token punctuation">,</span> <span class="token string">"\22\2\0\0\220w\321&gt;\0\0\5\0\24\0018\1\0 \4 \0\0\0\0\200\237\0\1\310\236p\1"</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">,</span> <span class="token number">8192</span><span class="token punctuation">,</span> <span class="token number">863485952</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">8192</span>
+</code></pre> 
+<p>通过文件描述符53找到该文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span><span class="token operator">/</span><span class="token keyword">proc</span><span class="token operator">/</span><span class="token number">356174</span><span class="token operator">/</span>fd<span class="token punctuation">]</span> ll <span class="token operator">|</span>grep <span class="token number">53</span>
+lrwx<span class="token comment">------ 1 postgres postgres 64 May 17 15:34 53 -&gt; /lzl/pglzl/data/base/17076/25883</span>
+</code></pre> 
+<pre><code class="prism language-sql">oid2name <span class="token operator">-</span>d lzldb  <span class="token operator">-</span>f <span class="token number">25883</span>
+<span class="token keyword">From</span> <span class="token keyword">database</span> <span class="token string">"lzldb"</span>:
+  Filenode				   <span class="token keyword">Table</span> Name
+<span class="token comment">-----------------------------------------------</span>
+     <span class="token number">25883</span>  table_partition_default
+</code></pre> 
+<p>最后定位这个表table_partition_default</p> 
+<pre><code class="prism language-sql"><span class="token operator">=</span><span class="token operator">&gt;</span> \d<span class="token operator">+</span> table_partition_default
+<span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span>
+<span class="token keyword">Partition</span> <span class="token keyword">of</span>: table_partition_default <span class="token keyword">DEFAULT</span>
+<span class="token keyword">Partition</span> <span class="token keyword">constraint</span>: <span class="token punctuation">(</span><span class="token operator">NOT</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>date_created <span class="token operator">IS</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">)</span> <span class="token operator">AND</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>date_created <span class="token operator">&lt;</span> <span class="token string">'2022-05-01 00:00:00'</span>::<span class="token keyword">timestamp</span> without <span class="token keyword">time</span> zone<span class="token punctuation">)</span> <span class="token operator">OR</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>date_created <span class="token operator">&gt;=</span> <span class="token string">'2022-05-01 00:00:00'</span>::<span class="token keyword">timestamp</span> without <span class="token keyword">time</span> zone<span class="token punctuation">)</span> <span class="token operator">AND</span> <span class="token punctuation">(</span>da
+
+
+<span class="token operator">=</span><span class="token operator">&gt;</span> \dt<span class="token operator">+</span> table_partition_default
+                                          List <span class="token keyword">of</span> relations
+ <span class="token keyword">Schema</span> <span class="token operator">|</span>                Name             <span class="token operator">|</span> <span class="token keyword">Type</span>  <span class="token operator">|</span> Owner <span class="token operator">|</span> Persistence <span class="token operator">|</span> Size  <span class="token operator">|</span> Description 
+<span class="token comment">--------+------------------------------------+-------+------------+-------------+-------+-------------</span>
+ <span class="token keyword">public</span> <span class="token operator">|</span> table_partition_default         <span class="token operator">|</span> <span class="token keyword">table</span> <span class="token operator">|</span> user1 <span class="token operator">|</span> permanent   <span class="token operator">|</span> <span class="token number">50</span> GB <span class="token operator">|</span> 
+<span class="token punctuation">(</span><span class="token number">1</span> <span class="token keyword">row</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>原来是default分区表，分区数据有几十GB。oracle dba可能很陌生···pg的default分区会接收不在分区范围中的数据，default分区可以保证即使没有定义到数据范围，也可以接收数据。<br> 如果有数据存在default分区中，新分区又需要包含这部分数据，那这个游戏咋玩呢···直接报错：</p> 
+<pre><code class="prism language-sql"><span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">create</span> <span class="token keyword">table</span> <span class="token keyword">if</span> <span class="token operator">not</span> <span class="token keyword">exists</span> table_partition_pxxxx <span class="token keyword">partition</span> <span class="token keyword">of</span> table_partition <span class="token keyword">for</span> <span class="token keyword">values</span> <span class="token keyword">from</span> <span class="token punctuation">(</span><span class="token string">'2023-01-12 00:00:00'</span><span class="token punctuation">)</span> <span class="token keyword">to</span> <span class="token punctuation">(</span><span class="token string">'2023-01-13 00:00:00'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ERROR:  <span class="token number">23514</span>: updated <span class="token keyword">partition</span> <span class="token keyword">constraint</span> <span class="token keyword">for</span> <span class="token keyword">default</span> <span class="token keyword">partition</span> <span class="token string">"table_partition_default"</span> would be violated <span class="token keyword">by</span> <span class="token keyword">some</span> <span class="token keyword">row</span>
+<span class="token keyword">SCHEMA</span> NAME:  <span class="token keyword">public</span>
+<span class="token keyword">TABLE</span> NAME:  table_partition_default
+LOCATION:  check_default_partition_contents<span class="token punctuation">,</span> partbounds<span class="token punctuation">.</span>c:<span class="token number">3227</span>
+</code></pre> 
+<p>可以看到，添加子分区时，会自动修改default分区的分区约束（Partition constraint）,default分区约束检查即是在做添加普通子分区时的default分区数据校验。</p> 
+<p>到这原因已经很明显：<br> 分区表新增子分区时，由于建分区的语句需要校验default分区中的数据，保证新分区数据范围与default分区的现有数据不冲突，导致<code>create table partition of</code>读取了大量的default分区数据，新建分区一直未完成。随后阻塞扩大，业务数据无法查询和写入。</p> 
+<h4><a id="_75"></a>小结和建议</h4> 
+<p>postgresql分区表使用的越来越多了，维护分区还有很多需要注意的知识点，推荐看下<a href="https://blog.csdn.net/qq_40687433/article/details/132525655?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522171591065916800225570929%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=171591065916800225570929&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-132525655-null-null.nonecase&amp;utm_term=%E5%88%86%E5%8C%BA%E8%A1%A8&amp;spm=1018.2226.3001.4450">PostgreSQL分区表</a>，几乎面面俱到。</p> 
+<p>在这个案例中，改造关键在于default分区的数据。在default改造前，不要使用partition of方式创建子分区。<br> default分区改造方案：</p> 
+<ol><li>detach default子分区，然后合理创建子分区，再将default表数据回插到分区表中。</li><li>如有必要，可在detach且创建合理子分区后，创建一个空的default分区，以保持业务数据的连续性。</li><li>注意detach跟attach不同，detach需要主表的8级锁。PG14支持detach concurrently。</li></ol> 
+<p>如不改造default分区，应检查当前default分区的数据范围。再用attach添加子分区，会很慢，但不会阻塞读写。</p> 
+<p>最后在复习下分区表新增分区最佳实践：<br> partition of添加子分区要申请主表的8级锁，风险还是有的。推荐attach方式为表新增子分区（分区索引也可以这么做），不会阻塞读写，完全不影响业务，可在线执行。<br> <strong>分区表添加新分区的正确姿势</strong>：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> lzlpartition1_202303
+  <span class="token punctuation">(</span><span class="token operator">LIKE</span> lzlpartition1 INCLUDING DEFAULTS INCLUDING CONSTRAINTS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">alter</span> <span class="token keyword">table</span> LZLPARTITION1 attach <span class="token keyword">partition</span> LZLPARTITION1_202303 <span class="token keyword">for</span> <span class="token keyword">values</span> <span class="token keyword">from</span> <span class="token punctuation">(</span><span class="token string">'2023-03-01 00:00:00'</span><span class="token punctuation">)</span> <span class="token keyword">to</span> <span class="token punctuation">(</span><span class="token string">'2023-04-01 00:00:00'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>如果新分区还有数据的话，attach还可能比较慢，可提前创建约束来优化<br> <strong>分区表添加有数据分区的正确姿势</strong>：</p> 
+<pre><code class="prism language-sql"><span class="token comment">--减少繁琐的ddl，like方式创建表</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> lzlpartition1_202303
+  <span class="token punctuation">(</span><span class="token operator">LIKE</span> lzlpartition1 INCLUDING DEFAULTS INCLUDING CONSTRAINTS<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">--无数据可忽略该步骤。参考其他分区的Partition constraint，添加表的check约束，减少attach检查约束的时间。</span>
+<span class="token keyword">alter</span> <span class="token keyword">table</span> lzlpartition1_202303 <span class="token keyword">add</span> <span class="token keyword">constraint</span> chk_202303 <span class="token keyword">CHECK</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>date_created <span class="token operator">IS</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">)</span> <span class="token operator">AND</span> <span class="token punctuation">(</span>date_created <span class="token operator">&gt;=</span> <span class="token string">'2023-03-01 00:00:00'</span>::<span class="token keyword">timestamp</span> without <span class="token keyword">time</span> zone<span class="token punctuation">)</span> <span class="token operator">AND</span> <span class="token punctuation">(</span>date_created <span class="token operator">&lt;</span> <span class="token string">'2023-04-01 00:00:00'</span>::<span class="token keyword">timestamp</span> without <span class="token keyword">time</span> zone<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">--attach方式添加分区</span>
+<span class="token keyword">alter</span> <span class="token keyword">table</span> LZLPARTITION1 attach <span class="token keyword">partition</span> LZLPARTITION1_202303 <span class="token keyword">for</span> <span class="token keyword">values</span> <span class="token keyword">from</span> <span class="token punctuation">(</span><span class="token string">'2023-03-01 00:00:00'</span><span class="token punctuation">)</span> <span class="token keyword">to</span> <span class="token punctuation">(</span><span class="token string">'2023-04-01 00:00:00'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">--可选。在新分区有事务之前，删除多余的check约束</span>
+<span class="token keyword">alter</span> <span class="token keyword">table</span> lzlpartition1_202303 <span class="token keyword">drop</span> <span class="token keyword">constraint</span>  chk_202303<span class="token punctuation">;</span>
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b77aa59fd1eb310b4eba9af414c07de2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">位1的个数-力扣</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/704ed3bd2ce5548ebad37323e434cf50/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【MySQL】数据库基础</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,406 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【研发日记】Matlab/Simulink避坑指南(十二)——Initialize Function执行Bug - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a301ee4d41a56ccf9ef0a2d3e7d0ebbc/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【研发日记】Matlab/Simulink避坑指南(十二)——Initialize Function执行Bug">
+  <meta property="og:description" content="文章目录
+前言
+背景介绍
+问题描述
+分析排查
+解决方案
+总结归纳
+前言 见《研发日记，Matlab/Simulink避坑指南(七)——数据溢出钳位Bug》
+见《研发日记，Matlab/Simulink避坑指南(八)——else if分支结构Bug》
+见《研发日记，Matlab/Simulink避坑指南(九)——可变数组应用Bug》
+见《【研发日记】Matlab/Simulink避坑指南(十)——移位溢出Bug》
+见《【研发日记】Matlab/Simulink避坑指南(十一)——Delay周期Bug》
+背景介绍 最近在一个项目中，使用Simulink写一段嵌入式代码，功能是滚动输出一组0~7的序列，但是软件启动第一个周期输出的0，要做特殊处理改成输出1。乍一看感觉挺简单，想着直接用一个Initialize Function模块重写第一个周期的值就能搞定了，但是就这么一个小应用让我栽了跟头，在整个工程中排查了几个小时才找到问题。下面就来分享一下这一小段个人经历。
+一开始的模型搭建大概是下面这个样子：
+Counter Write设置的优先级最高，Read设置的优先级最低，确保第一个周期的Counter值能被Initialize Function模块重写。
+问题描述 按照上述示例，预想应该可以正常运行，但是实际运行时却跟预想的不一样，示例如下：
+希望看到的是第一个周期输出1，但是看到的运行结果仍是0。
+分析排查 使用前段时间解锁的Debug技能《【研发日记】Matlab/Simulink技能解锁(四)——在Simulink Debugger窗口调试》，来调试一下上述模型，示例如下：
+按Block步进执行，并输出Data Value，可以看到Initialize Function模块是在进入主循环之前就已经执行完了，所以才没有在第一个周期里重写Counter值。
+这时候我们把模型生成C代码，来进一步确认实际执行顺序是否如上面Debuger窗口所示，示例如下：
+#include &lt;stddef.h&gt; #include &lt;stdio.h&gt; /* This ert_main.c example uses printf/fflush */ #include &#34;InitializeFunctionBug.h&#34; /* Model&#39;s header file */ #include &#34;rtwtypes.h&#34; /* * The example &#34;main&#34; function illustrates what is required by your * application code to initialize, execute, and terminate the generated code.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-10T23:57:46+08:00">
+    <meta property="article:modified_time" content="2024-05-10T23:57:46+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【研发日记】Matlab/Simulink避坑指南(十二)——Initialize Function执行Bug</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p class="img-center"><img alt="" height="297" src="https://images2.imgbox.com/bc/76/3wo1JVMq_o.png" width="698"></p> 
+<p id="main-toc"><strong>文章目录</strong></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:40px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E8%83%8C%E6%99%AF%E4%BB%8B%E7%BB%8D-toc" style="margin-left:40px;"><a href="#%E8%83%8C%E6%99%AF%E4%BB%8B%E7%BB%8D" rel="nofollow">背景介绍</a></p> 
+<p id="%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0-toc" style="margin-left:40px;"><a href="#%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0" rel="nofollow">问题描述</a></p> 
+<p id="%E5%88%86%E6%9E%90%E6%8E%92%E6%9F%A5-toc" style="margin-left:40px;"><a href="#%E5%88%86%E6%9E%90%E6%8E%92%E6%9F%A5" rel="nofollow">分析排查</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88-toc" style="margin-left:40px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" rel="nofollow">解决方案</a></p> 
+<p id="%E6%80%BB%E7%BB%93%E5%BD%92%E7%BA%B3-toc" style="margin-left:40px;"><a href="#%E6%80%BB%E7%BB%93%E5%BD%92%E7%BA%B3" rel="nofollow">总结归纳</a></p> 
+<hr id="hr-toc"> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<h3 id="%E5%89%8D%E8%A8%80" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">前言</span></strong></h3> 
+<p>        见《<a href="https://blog.csdn.net/CSSUST/article/details/135885962" title="研发日记，Matlab/Simulink避坑指南(七)——数据溢出钳位Bug">研发日记，Matlab/Simulink避坑指南(七)——数据溢出钳位Bug</a>》</p> 
+<p>        见《<a href="https://blog.csdn.net/CSSUST/article/details/135894606" title="研发日记，Matlab/Simulink避坑指南(八)——else if分支结构Bug">研发日记，Matlab/Simulink避坑指南(八)——else if分支结构Bug</a>》</p> 
+<p>        见《<a href="https://blog.csdn.net/CSSUST/article/details/135902599" title="研发日记，Matlab/Simulink避坑指南(九)——可变数组应用Bug">研发日记，Matlab/Simulink避坑指南(九)——可变数组应用Bug</a>》</p> 
+<p>        见《<a href="https://blog.csdn.net/CSSUST/article/details/136890702" title="【研发日记】Matlab/Simulink避坑指南(十)——移位溢出Bug">【研发日记】Matlab/Simulink避坑指南(十)——移位溢出Bug</a>》</p> 
+<p style="margin-left:0;text-align:justify;">         见《<a class="link-info" href="https://blog.csdn.net/CSSUST/article/details/138421144" title="【研发日记】Matlab/Simulink避坑指南(十一)——Delay周期Bug">【研发日记】Matlab/Simulink避坑指南(十一)——Delay周期Bug</a>》</p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<h3 id="%E8%83%8C%E6%99%AF%E4%BB%8B%E7%BB%8D" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">背景介绍</span></strong></h3> 
+<p style="margin-left:0cm;">        最近在一个项目中，使用Simulink写一段嵌入式代码，功能是滚动输出一组0~7的序列，但是软件启动<span style="color:#ff0000;">第一个周期</span>输出的0，要做特殊处理改成<span style="color:#ff0000;">输出1</span>。乍一看感觉挺简单，想着直接用一个<span style="color:#ff0000;">Initialize Function</span><span style="color:#ff0000;">模块</span>重写第一个周期的值就能搞定了，但是就这么一个小应用让我栽了跟头，在整个工程中排查了几个小时才找到问题。下面就来分享一下这一小段个人经历。</p> 
+<p style="margin-left:0cm;">        一开始的模型搭建大概是下面这个样子：</p> 
+<p class="img-center"><img alt="" height="788" src="https://images2.imgbox.com/d8/ce/Gyttsxxp_o.png" width="667"></p> 
+<p style="margin-left:0cm;">        Counter Write设置的<span style="color:#fe2c24;">优先级</span>最高，Read设置的优先级最低，确保第一个周期的Counter值能被Initialize Function模块<span style="color:#fe2c24;">重写</span>。</p> 
+<p style="margin-left:0cm;"></p> 
+<h3 id="%E9%97%AE%E9%A2%98%E6%8F%8F%E8%BF%B0" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">问题描述</span></strong></h3> 
+<p style="margin-left:0;text-align:justify;">        按照上述示例，预想应该可以正常运行，但是实际运行时却跟预想的不一样，示例如下：</p> 
+<p class="img-center"><img alt="" height="488" src="https://images2.imgbox.com/ba/95/JK9e5fl1_o.png" width="611"></p> 
+<p style="margin-left:0;text-align:justify;">        希望看到的是第一个周期<span style="color:#0d0016;">输出1</span>，但是看到的运行结果<span style="color:#fe2c24;">仍是0</span>。</p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<h3 id="%E5%88%86%E6%9E%90%E6%8E%92%E6%9F%A5" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">分析排查</span></strong></h3> 
+<p style="margin-left:0;text-align:justify;">        使用前段时间解锁的Debug技能《<a class="link-info" href="https://blog.csdn.net/CSSUST/article/details/136825854" title="【研发日记】Matlab/Simulink技能解锁(四)——在Simulink Debugger窗口调试">【研发日记】Matlab/Simulink技能解锁(四)——在Simulink Debugger窗口调试</a>》，来调试一下上述模型，示例如下：</p> 
+<p class="img-center"><img alt="" height="500" src="https://images2.imgbox.com/e1/fe/L7dRzifV_o.png" width="704"></p> 
+<p style="margin-left:0;text-align:justify;">        按Block步进执行，并输出Data Value，可以看到<span style="color:#fe2c24;">Initialize Function模块</span>是在<span style="color:#fe2c24;">进入主循环之前</span>就已经执行完了，所以才没有在第一个周期里重写Counter值。</p> 
+<p style="margin-left:0;text-align:justify;">        这时候我们把模型生成C代码，来进一步确认实际执行顺序是否如上面Debuger窗口所示，示例如下：</p> 
+<pre><code class="language-cpp">#include &lt;stddef.h&gt;
+#include &lt;stdio.h&gt;              /* This ert_main.c example uses printf/fflush */
+#include "InitializeFunctionBug.h"     /* Model's header file */
+#include "rtwtypes.h"
+
+/*
+ * The example "main" function illustrates what is required by your
+ * application code to initialize, execute, and terminate the generated code.
+ * Attaching rt_OneStep to a real-time clock is target specific.  This example
+ * illustrates how you do this relative to initializing the model.
+ */
+int_T main(int_T argc, const char *argv[])
+{
+  /* Unused arguments */
+  (void)(argc);
+  (void)(argv);
+
+  /* Initialize model */
+  InitializeFunctionBug_initialize();//初始化模块
+
+  /* Attach rt_OneStep to a timer or interrupt service routine with
+   * period 0.01 seconds (the model's base sample time) here.  The
+   * call syntax for rt_OneStep is
+   *
+   *  rt_OneStep();
+   */
+  printf("Warning: The simulation will run forever. "
+         "Generated ERT main won't simulate model step behavior. "
+         "To change this behavior select the 'MAT-file logging' option.\n");
+  fflush((NULL));
+  while (rtmGetErrorStatus(InitializeFunctionBug_M) == (NULL)) {
+    /*  Perform other application tasks here */
+	
+	/* Step the model */
+	InitializeFunctionBug_step();//主循环
+	
+  }
+
+  /* Disable rt_OneStep() here */
+
+  /* Terminate model */
+  InitializeFunctionBug_terminate();
+  return 0;
+}</code></pre> 
+<pre><code class="language-cpp">#include "InitializeFunctionBug.h"
+#include "InitializeFunctionBug_private.h"
+
+/* Block states (default storage) */
+DW_InitializeFunctionBug_T InitializeFunctionBug_DW;
+
+/* External outputs (root outports fed by signals with default storage) */
+ExtY_InitializeFunctionBug_T InitializeFunctionBug_Y;
+
+/* Real-time model */
+static RT_MODEL_InitializeFunctionBu_T InitializeFunctionBug_M_;
+RT_MODEL_InitializeFunctionBu_T *const InitializeFunctionBug_M =
+  &amp;InitializeFunctionBug_M_;
+
+/* Model step function */
+void InitializeFunctionBug_step(void)
+{
+  /* Outport: '&lt;Root&gt;/Out1' incorporates:
+   *  DataStoreWrite: '&lt;Root&gt;/Data Store Write'
+   *  UnitDelay: '&lt;S1&gt;/Output'
+   */
+  InitializeFunctionBug_Y.Out1 = InitializeFunctionBug_DW.Output_DSTATE;
+
+  /* Switch: '&lt;S4&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S3&gt;/FixPt Constant'
+   *  Constant: '&lt;S4&gt;/Constant'
+   *  Sum: '&lt;S3&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S1&gt;/Output'
+   */
+  if ((uint8_T)(InitializeFunctionBug_DW.Output_DSTATE + 1U) &gt; 7) {
+    InitializeFunctionBug_DW.Output_DSTATE = 0U;
+  } else {
+    InitializeFunctionBug_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S4&gt;/FixPt Switch' */
+}
+
+/* Model initialize function */
+void InitializeFunctionBug_initialize(void)
+{
+  /* (no initialization code required) */
+  /*  DataStoreWrite: '&lt;Root&gt;/Data Store Write' */
+  InitializeFunctionBug_DW.Output_DSTATE = 1U;
+  
+}
+
+/* Model terminate function */
+void InitializeFunctionBug_terminate(void)
+{
+  /* (no terminate code required) */
+}
+</code></pre> 
+<p>        <span style="color:#fe2c24;"> Counter值赋1</span>的代码位于<span style="color:#fe2c24;">initialize(void)函数</span>中，Counter值累加的代码和输出的代码都位于后面的while()循环体中。</p> 
+<p style="margin-left:0;text-align:justify;">        根据上面的排查和分析，Initialize Function模块是在第一个周期前执行的，所以<span style="color:#fe2c24;">不能重写第一个周期</span>的Counter值，问题就出在这里。</p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<h3 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">解决方案</span></strong></h3> 
+<p style="margin-left:0;text-align:justify;">        根据上面的分析，调整<span style="color:#fe2c24;">第一个周期</span>重写Counter值的方式，使用<span style="color:#fe2c24;">Stateflow</span>做一个只在第一个周期运行的<span style="color:#fe2c24;">使能子系统</span>，并调整优先级确保第一个周期的Counter值能被重写，示例如下：</p> 
+<p class="img-center"><img alt="" height="487" src="https://images2.imgbox.com/d8/72/kOtL46rY_o.png" width="678"></p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<p style="margin-left:0;text-align:justify;">        重新运行程序，问题不再出现，Bug修复完工，示例如下：</p> 
+<p class="img-center"><img alt="" height="477" src="https://images2.imgbox.com/38/ae/nwcAY3GW_o.png" width="620"></p> 
+<p style="margin-left:0;text-align:justify;">        至此，这个滚动输出一组0~7的序列，但是<span style="color:#ff0000;">第一个周期输出1</span>的应用就算是没问题了。</p> 
+<p style="margin-left:0;text-align:justify;">        生的代码示例如下：</p> 
+<pre><code class="language-cpp">#include &lt;stddef.h&gt;
+#include &lt;stdio.h&gt;              /* This ert_main.c example uses printf/fflush */
+#include "InitializeFunctionBug.h"     /* Model's header file */
+#include "rtwtypes.h"
+
+
+
+/*
+ * The example "main" function illustrates what is required by your
+ * application code to initialize, execute, and terminate the generated code.
+ * Attaching rt_OneStep to a real-time clock is target specific.  This example
+ * illustrates how you do this relative to initializing the model.
+ */
+int_T main(int_T argc, const char *argv[])
+{
+  /* Unused arguments */
+  (void)(argc);
+  (void)(argv);
+
+  /* Initialize model */
+  InitializeFunctionBug_initialize();
+
+  /* Attach rt_OneStep to a timer or interrupt service routine with
+   * period 0.01 seconds (the model's base sample time) here.  The
+   * call syntax for rt_OneStep is
+   *
+   *  rt_OneStep();
+   */
+  printf("Warning: The simulation will run forever. "
+         "Generated ERT main won't simulate model step behavior. "
+         "To change this behavior select the 'MAT-file logging' option.\n");
+  fflush((NULL));
+  while (rtmGetErrorStatus(InitializeFunctionBug_M) == (NULL)) {
+    /*  Perform other application tasks here */
+	/* Step the model */
+	InitializeFunctionBug_step();//主循环
+	
+  }
+
+  /* Disable rt_OneStep() here */
+
+  /* Terminate model */
+  InitializeFunctionBug_terminate();
+  return 0;
+}</code></pre> 
+<pre><code class="language-cpp">#include "InitializeFunctionBug.h"
+#include "InitializeFunctionBug_private.h"
+
+/* Named constants for Chart: '&lt;Root&gt;/Chart' */
+#define InitializeFunctionBug_IN_s1    ((uint8_T)1U)
+#define InitializeFunctionBug_IN_s2    ((uint8_T)2U)
+
+/* Block states (default storage) */
+DW_InitializeFunctionBug_T InitializeFunctionBug_DW;
+
+/* External outputs (root outports fed by signals with default storage) */
+ExtY_InitializeFunctionBug_T InitializeFunctionBug_Y;
+
+/* Real-time model */
+static RT_MODEL_InitializeFunctionBu_T InitializeFunctionBug_M_;
+RT_MODEL_InitializeFunctionBu_T *const InitializeFunctionBug_M =
+  &amp;InitializeFunctionBug_M_;
+
+/* Model step function */
+void InitializeFunctionBug_step(void)
+{
+  /* Outport: '&lt;Root&gt;/Out1' incorporates:
+   *  DataStoreWrite: '&lt;Root&gt;/Data Store Write'
+   *  UnitDelay: '&lt;S2&gt;/Output'
+   */
+  InitializeFunctionBug_Y.Out1 = InitializeFunctionBug_DW.Output_DSTATE;
+
+  /* Chart: '&lt;Root&gt;/Chart' */
+  if (InitializeFunctionBug_DW.is_active_c3_InitializeFunction == 0U) {
+    InitializeFunctionBug_DW.is_active_c3_InitializeFunction = 1U;
+    InitializeFunctionBug_DW.is_c3_InitializeFunctionBug =
+      InitializeFunctionBug_IN_s1;
+
+    /* Outputs for Enabled SubSystem: '&lt;Root&gt;/Subsystem' incorporates:
+     *  EnablePort: '&lt;S3&gt;/Enable'
+     */
+    /* Outport: '&lt;Root&gt;/Out1' incorporates:
+     *  Constant: '&lt;S3&gt;/Constant1'
+     *  DataStoreWrite: '&lt;S3&gt;/Data Store Write1'
+     */
+    InitializeFunctionBug_Y.Out1 = 1U;
+
+    /* End of Outputs for SubSystem: '&lt;Root&gt;/Subsystem' */
+  } else if (InitializeFunctionBug_DW.is_c3_InitializeFunctionBug ==
+             InitializeFunctionBug_IN_s1) {
+    InitializeFunctionBug_DW.is_c3_InitializeFunctionBug =
+      InitializeFunctionBug_IN_s2;
+  } else {
+    /* case IN_s2: */
+  }
+
+  /* End of Chart: '&lt;Root&gt;/Chart' */
+
+  /* Switch: '&lt;S5&gt;/FixPt Switch' incorporates:
+   *  Constant: '&lt;S4&gt;/FixPt Constant'
+   *  Constant: '&lt;S5&gt;/Constant'
+   *  Sum: '&lt;S4&gt;/FixPt Sum1'
+   *  UnitDelay: '&lt;S2&gt;/Output'
+   */
+  if ((uint8_T)(InitializeFunctionBug_DW.Output_DSTATE + 1U) &gt; 7) {
+    InitializeFunctionBug_DW.Output_DSTATE = 0U;
+  } else {
+    InitializeFunctionBug_DW.Output_DSTATE++;
+  }
+
+  /* End of Switch: '&lt;S5&gt;/FixPt Switch' */
+}
+
+/* Model initialize function */
+void InitializeFunctionBug_initialize(void)
+{
+  /* (no initialization code required) */
+}
+
+/* Model terminate function */
+void InitializeFunctionBug_terminate(void)
+{
+  /* (no terminate code required) */
+}</code></pre> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<h3 id="%E6%80%BB%E7%BB%93%E5%BD%92%E7%BA%B3" style="margin-left:0;text-align:justify;"><strong><span style="color:#0070c0;">总结归纳</span></strong></h3> 
+<p style="margin-left:0cm;">        那么这个代码调试过程，发现的问题可以积累下来这么几条小经验以供自己将来使用，也供广大网友参考：</p> 
+<p style="margin-left:0cm;">        1、Initialize Function模块并不是我们预想的在主循环的第一个周期执行，而是在<span style="color:#fe2c24;">主循环前面</span>执行。</p> 
+<p style="margin-left:0cm;">        2、Initialize Function模块的应用，<span style="color:#fe2c24;">局现性</span>特别强。就是软件初始化工作，例如读取固件信息，配置基础的运行参数这一类，并不适合参与主程序的运算。</p> 
+<p style="margin-left:0cm;">        3、与<span style="color:#fe2c24;">Initialize</span> Function类似的还有<span style="color:#fe2c24;">Reitialize、Rest、Terminnate</span>，其使用方法和注意事项都是类似的。</p> 
+<p style="margin-left:0cm;">        4、<span style="color:#fe2c24;">Stateflow配合使能子系统</span>，也能事项初始化相关的功能，而且用法更加灵活，适用范围更广。</p> 
+<p style="margin-left:0cm;">        5、设置模块的<span style="color:#fe2c24;">优先级</span>，只能调整同一个周期中，同一级子系统内各个模块之间执行的先后顺序，不能跨越周期。</p> 
+<p style="margin-left:0cm;">        以上就是本人在解决Initialize Function<span style="color:#ff0000;">模块执行Bug</span>时，一些个人理解和分析的总结，首先介绍了基本的项目背景，然后描述了问题的想象，最后分析排查了Bug原因，并给出了问题解决方案。</p> 
+<p style="margin-left:0cm;">        后续还会分享其他的，使用Matlab/Simulink进行研发时遇到的Bug，欢迎评论区留言、点赞、收藏和关注，这些鼓励和支持都将成文本人持续分享的动力。</p> 
+<p style="margin-left:0cm;">        上述例程使用的Demo工程，可以到笔者的主页查找和下载。</p> 
+<p style="margin-left:0cm;"></p> 
+<hr> 
+<p style="margin-left:0cm;">        版权声明：原创文章，转载请注明出处与链接，<span style="color:#fe2c24;">违者必究！</span></p> 
+<p style="margin-left:0;text-align:justify;"></p> 
+<p class="img-center"><img alt="" height="246" src="https://images2.imgbox.com/dc/8c/IRgRTu50_o.png" width="1179"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/1707713a0884f2958b9a1448ec90bd7b/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">基于SpringBoot的全国风景区WebGIS按省展示实践</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b993b5133c105c4c2e5a10b0c9a1ff28/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">MySQL的表级锁</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Time-LLM：为时间序列预测重新编程LLM 探索Time-LLM的架构，并在Python中将其应用于预测项目 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/34bb5d80503e5288608c77a04fdd313a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Time-LLM：为时间序列预测重新编程LLM 探索Time-LLM的架构，并在Python中将其应用于预测项目">
+  <meta property="og:description" content="参考资料：Time-LLM/ Reprogram an LLM for Time Series Forecasting.md
+文章目录 探索Time-LLM输入补丁化重新编程层使用提示前缀增强输入输出投影 使用Time-LLM进行预测在 neuralforecast 中扩展 Time-LLM使用 Time-LLM 进行预测使用 N-BEATS 和 MLP 进行预测 我对 Time-LLM 的看法结论参考文献 研究人员尝试将自然语言处理（NLP）技术应用于时间序列领域并非首次。
+例如，Transformer架构在NLP领域是一个重要的里程碑，但其在时间序列预测方面的表现一直平平，直到PatchTST的提出。
+正如您所知，大型语言模型（LLMs）正在积极开发，并在NLP领域展示出令人印象深刻的泛化和推理能力。
+因此，值得探索将LLM重新用于时间序列预测的想法，以便我们可以从这些大型预训练模型的能力中受益。
+为此，Time-LLM被提出。在原始论文中，研究人员提出了一个框架，重新编程现有的LLM以执行时间序列预测。
+在本文中，我们将探讨Time-LLM的架构以及它如何有效地使LLM能够预测时间序列数据。然后，我们将实现该模型并将其应用于一个小型预测项目。
+要了解更多详情，请务必阅读原始论文。
+让我们开始吧！
+探索Time-LLM Time-LLM更应被视为一个框架，而不是一个具有特定架构的实际模型。
+Time-LLM的一般结构如下所示。
+Time-LLM的一般结构。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为Time-LLM: Time Series Forecasting by Reprogramming Large Language Models
+Time-LLM的整个理念是重新编程一个嵌入可见的语言基础模型，如LLaMA或GPT-2。
+请注意，这与微调LLM是不同的。相反，我们教导LLM接受一系列时间步的输入，并在一定的时间范围内输出预测。这意味着LLM本身保持不变。
+在高层次上，Time-LLM首先通过自定义的补丁嵌入层对输入时间序列序列进行标记化。然后，这些补丁通过一个重新编程层，将预测任务本质上转化为语言任务。请注意，我们还可以传递一个提示前缀以增强模型的推理能力。最后，输出的补丁通过投影层，最终得到预测。
+这里有很多内容需要深入探讨，让我们更详细地探讨每个步骤。
+输入补丁化 第一步是对输入序列进行补丁化，就像在PatchTST中一样。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-11T08:32:36+08:00">
+    <meta property="article:modified_time" content="2024-03-11T08:32:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Time-LLM：为时间序列预测重新编程LLM 探索Time-LLM的架构，并在Python中将其应用于预测项目</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>参考资料：Time-LLM/ Reprogram an LLM for Time Series Forecasting.md<br> </p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#TimeLLM_21" rel="nofollow">探索Time-LLM</a></li><li><ul><li><a href="#_39" rel="nofollow">输入补丁化</a></li><li><a href="#_53" rel="nofollow">重新编程层</a></li><li><a href="#_79" rel="nofollow">使用提示前缀增强输入</a></li><li><a href="#_113" rel="nofollow">输出投影</a></li></ul> 
+  </li><li><a href="#TimeLLM_132" rel="nofollow">使用Time-LLM进行预测</a></li><li><ul><li><a href="#_neuralforecast__TimeLLM_146" rel="nofollow">在 neuralforecast 中扩展 Time-LLM</a></li><li><a href="#_TimeLLM__206" rel="nofollow">使用 Time-LLM 进行预测</a></li><li><a href="#_NBEATS__MLP__297" rel="nofollow">使用 N-BEATS 和 MLP 进行预测</a></li></ul> 
+  </li><li><a href="#_TimeLLM__348" rel="nofollow">我对 Time-LLM 的看法</a></li><li><a href="#_366" rel="nofollow">结论</a></li><li><a href="#_380" rel="nofollow">参考文献</a></li></ul> 
+</div> 
+<br> 
+<img src="https://images2.imgbox.com/13/68/vyprHkDi_o.jpg" alt="img"> 
+<p></p> 
+<p>研究人员尝试将自然语言处理（NLP）技术应用于时间序列领域并非首次。</p> 
+<p>例如，Transformer架构在NLP领域是一个重要的里程碑，但其在时间序列预测方面的表现一直平平，直到<a href="https://medium.com/towards-data-science/patchtst-a-breakthrough-in-time-series-forecasting-e02d48869ccc" rel="nofollow">PatchTST</a>的提出。</p> 
+<p>正如您所知，大型语言模型（LLMs）正在积极开发，并在NLP领域展示出令人印象深刻的泛化和推理能力。</p> 
+<p>因此，值得探索将LLM重新用于时间序列预测的想法，以便我们可以从这些大型预训练模型的能力中受益。</p> 
+<p>为此，<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM</a>被提出。在原始论文中，研究人员提出了一个框架，重新编程现有的LLM以执行时间序列预测。</p> 
+<p>在本文中，我们将探讨Time-LLM的架构以及它如何有效地使LLM能够预测时间序列数据。然后，我们将实现该模型并将其应用于一个小型预测项目。</p> 
+<p>要了解更多详情，请务必阅读<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">原始论文</a>。</p> 
+<p>让我们开始吧！</p> 
+<h2><a id="TimeLLM_21"></a>探索Time-LLM</h2> 
+<p>Time-LLM更应被视为一个框架，而不是一个具有特定架构的实际模型。</p> 
+<p>Time-LLM的一般结构如下所示。</p> 
+<p><img src="https://images2.imgbox.com/78/f4/0qm8ddkH_o.png" alt="img"></p> 
+<p>Time-LLM的一般结构。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>Time-LLM的整个理念是重新编程一个嵌入可见的语言基础模型，如LLaMA或GPT-2。</p> 
+<p>请注意，这与微调LLM是不同的。相反，我们教导LLM接受一系列时间步的输入，并在一定的时间范围内输出预测。这意味着LLM本身保持不变。</p> 
+<p>在高层次上，Time-LLM首先通过自定义的补丁嵌入层对输入时间序列序列进行标记化。然后，这些补丁通过一个重新编程层，将预测任务本质上转化为语言任务。请注意，我们还可以传递一个<em>提示前缀</em>以增强模型的推理能力。最后，输出的补丁通过投影层，最终得到预测。</p> 
+<p>这里有很多内容需要深入探讨，让我们更详细地探讨每个步骤。</p> 
+<h3><a id="_39"></a>输入补丁化</h3> 
+<p>第一步是对输入序列进行补丁化，就像在PatchTST中一样。</p> 
+<p><img src="https://images2.imgbox.com/34/52/7x6Pw4ge_o.png" alt="img"></p> 
+<p>补丁化的可视化。这里，我们有一个包含15个时间步的序列，补丁长度为5，步长也为5，因此得到三个补丁。图片由作者提供。</p> 
+<p>通过补丁化，我们的目标是通过查看一组时间步而不是单个时间步来保留局部语义信息。</p> 
+<p>这样做的附加好处是大大减少了要馈送到重新编程层的标记数量。在这里，每个补丁都变成一个输入标记，因此将标记数量从<em>L</em>减少到大约<em>L/S</em>，其中<em>L</em>是输入序列的长度，<em>S</em>是步长。</p> 
+<p>补丁化完成后，输入序列被发送到重新编程层。</p> 
+<h3><a id="_53"></a>重新编程层</h3> 
+<p>在Time-LLM中，语言模型保持不变。</p> 
+<p>现在，语言模型可以执行许多NLP任务，如情感分析、摘要和文本生成，但不能进行时间序列预测。</p> 
+<p>这就是重新编程层的作用。它本质上将输入时间序列映射到一个语言任务，使我们能够利用语言模型的能力。</p> 
+<p>为此，它使用受限词汇来描述每个输入补丁，如下所示。</p> 
+<p><img src="https://images2.imgbox.com/b6/2d/pqW08bqu_o.png" alt="img"></p> 
+<p>将输入补丁转换为语言任务。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>在上图中，我们可以看到每个时间序列补丁是如何描述的。例如，一个补丁可以被翻译为“短期上涨然后稳步下降”。通过这种方式，我们有效地将时间序列的行为编码为自然语言输入，这正是LLM所期望的。</p> 
+<p>完成此操作后，翻译后的补丁被发送到多头注意力机制，然后进行线性投影，以将重新编程的补丁的维度与LLM骨干的维度对齐。</p> 
+<p><img src="https://images2.imgbox.com/4f/3e/RmqJEsQF_o.png" alt="img"></p> 
+<p>重新编程层的整体架构。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>请注意，重新编程层是一个经过训练的层。我们可以决定为特定数据集对其进行训练，或者预先训练它并将Time-LLM用作零-shot预测器。</p> 
+<p>现在，在翻译后的补丁实际发送到LLM之前，可以使用<em>提示前缀</em>来增强输入。</p> 
+<h3><a id="_79"></a>使用提示前缀增强输入</h3> 
+<p>为了激活LLM的能力，我们使用一个提示，即指定LLM任务的自然语言输入。</p> 
+<p>现在，即使我们传递了被翻译为自然语言的时间序列补丁，对LLM来说仍然是一个挑战进行预测。</p> 
+<p>因此，研究人员建议使用提示前缀来补充补丁重新编程。</p> 
+<p><img src="https://images2.imgbox.com/c1/88/Np1XjJnr_o.png" alt="img"></p> 
+<p>提示前缀的示例。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>在上图中，我们看到了一个在基准数据集<a href="https://github.com/zhouhaoyi/ETDataset">ETT</a>上的提示前缀示例。</p> 
+<p>提示包含三个不同部分：</p> 
+<ol><li>数据集的一般背景</li><li>任务说明</li><li>输入统计信息</li></ol> 
+<p>第一个组件完全由用户定义。在这里，我们可以指定关于数据集的信息，解释其背景并写出观察结果。</p> 
+<p>然后，任务说明根据预测的时间范围和系列的输入大小进行程序化设置。</p> 
+<p>最后，输入统计信息也是根据输入系列自动计算的。请注意，使用快速傅里叶变换计算出了前五个滞后。简而言之，它将输入系列转换为幅度和频率的函数，并认为具有最高幅度的频率更重要。</p> 
+<p>因此，在这一点上，我们有一个包含LLM上下文和说明的提示前缀，以及被发送到LLM的重新编程补丁序列，如下所示。</p> 
+<p><img src="https://images2.imgbox.com/55/a0/4QVAYPt6_o.png" alt="img"></p> 
+<p>提示前缀和重新编程补丁被发送到LLM。最后一步是线性投影以获得最终预测。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>该框架的最后一步是将输出补丁嵌入通过线性投影层以获得最终预测。</p> 
+<h3><a id="_113"></a>输出投影</h3> 
+<p>一旦提示前缀和重新编程补丁被发送到LLM，它将输出补丁嵌入。</p> 
+<p>然后，必须将此输出展平并进行线性投影以得出最终预测，如下所示。</p> 
+<p><img src="https://images2.imgbox.com/e7/8f/q676RZ3y_o.png" alt="img"></p> 
+<p>LLM的输出补丁嵌入被展平并线性投影以获得最终预测。图片由M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen提供，来源为<a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a></p> 
+<p>总结一下通过Time-LLM的流程：</p> 
+<ul><li>首先对输入系列进行补丁化并重新编程为语言任务。</li><li>我们附加一个提示前缀，指定数据的上下文，LLM的说明以及输入统计信息。</li><li>将组合输入发送到LLM。</li><li>输出嵌入被展平并投影以生成预测。</li></ul> 
+<p>现在我们了解了Time-LLM的内部工作原理，让我们在Python中进行一个小实验。</p> 
+<h2><a id="TimeLLM_132"></a>使用Time-LLM进行预测</h2> 
+<p>在这个小实验中，我们将使用Time-LLM进行时间序列预测，并将其性能与其他模型（如N-HiTS和简单的多层感知器（MLP））进行比较。</p> 
+<p>在开始之前，我必须提到以下几点：</p> 
+<ol><li>我将使用<a href="https://nixtlaverse.nixtla.io/neuralforecast/index.html" rel="nofollow"><em>neuralforecast</em></a>库扩展Time-LLM，因为我认为<a href="https://github.com/KimMeen/Time-LLM">Time-LLM的原始代码库</a>很难使用。</li><li>我不是最好的提示工程师，由于Time-LLM依赖于LLM，您可能会通过更好的上下文提示获得比我更好的结果。</li><li>我的时间和计算资源有限。我在单个 GPU 上对 Time-LLM 进行了 100 个 epochs 的训练。如果你有更多时间和更好的 GPU，你可以训练模型更长时间，可能会获得更好的结果。</li></ol> 
+<p>这个实验的代码可以在 <a href="https://github.com/marcopeix/time-series-analysis/blob/master/TimeLLM.ipynb">GitHub</a> 上找到。</p> 
+<p>让我们开始吧！</p> 
+<h3><a id="_neuralforecast__TimeLLM_146"></a>在 neuralforecast 中扩展 Time-LLM</h3> 
+<p>在这个实验中，我将在 <em>neuralforecast</em> 库中实现 Time-LLM，使其比论文中的实现更易于使用和更灵活。</p> 
+<p>遵循 <em>neuralforecast</em> 的贡献指南，我们首先创建一个继承自 <code>BaseWindows</code> 的 <code>TimeLLM</code> 类，该类负责解析输入时间序列的批次。</p> 
+<p>然后，在 <code>__init__</code> 函数中，我们指定与 Time-LLM 相关的参数，然后是继承自 <code>BaseWindows</code> 的参数。</p> 
+<pre><code class="prism language-python"><span class="token keyword">class</span> <span class="token class-name">TimeLLM</span><span class="token punctuation">(</span>BaseWindows<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span>
+                 h<span class="token punctuation">,</span>
+                 input_size<span class="token punctuation">,</span>
+                 patch_len<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">16</span><span class="token punctuation">,</span>
+                 stride<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">8</span><span class="token punctuation">,</span>
+                 d_ff<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">128</span><span class="token punctuation">,</span>
+                 top_k<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">5</span><span class="token punctuation">,</span>
+                 d_llm<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">768</span><span class="token punctuation">,</span>
+                 d_model<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">32</span><span class="token punctuation">,</span>
+                 n_heads<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">8</span><span class="token punctuation">,</span>
+                 enc_in<span class="token punctuation">:</span> <span class="token builtin">int</span> <span class="token operator">=</span> <span class="token number">7</span><span class="token punctuation">,</span>
+                 dec_in<span class="token punctuation">:</span> <span class="token builtin">int</span>  <span class="token operator">=</span> <span class="token number">7</span><span class="token punctuation">,</span>
+                 llm <span class="token operator">=</span> <span class="token boolean">None</span><span class="token punctuation">,</span>
+                 llm_config <span class="token operator">=</span> <span class="token boolean">None</span><span class="token punctuation">,</span>
+                 llm_tokenizer <span class="token operator">=</span> <span class="token boolean">None</span><span class="token punctuation">,</span>
+                 llm_num_hidden_layers <span class="token operator">=</span> <span class="token number">32</span><span class="token punctuation">,</span>
+                 llm_output_attention<span class="token punctuation">:</span> <span class="token builtin">bool</span> <span class="token operator">=</span> <span class="token boolean">True</span><span class="token punctuation">,</span>
+                 llm_output_hidden_states<span class="token punctuation">:</span> <span class="token builtin">bool</span> <span class="token operator">=</span> <span class="token boolean">True</span><span class="token punctuation">,</span>
+                 prompt_prefix<span class="token punctuation">:</span> <span class="token builtin">str</span> <span class="token operator">=</span> <span class="token boolean">None</span><span class="token punctuation">,</span>
+                 dropout<span class="token punctuation">:</span> <span class="token builtin">float</span> <span class="token operator">=</span> <span class="token number">0.1</span><span class="token punctuation">,</span>
+                <span class="token comment"># 继承自 BaseWindows 的参数</span>
+</code></pre> 
+<p>在上面的代码块中，我们看到了用于分块的参数，以及我们希望使用的 LLM 的参数。</p> 
+<p>与原始实现使用 LLaMA 不同，这个实现允许用户使用 <em>transformers</em> 库选择任何他们喜欢的 LLM。</p> 
+<p>然后，我们重用了<a href="https://github.com/KimMeen/Time-LLM/blob/main/models/TimeLLM.py">原始实现</a>的相同逻辑，但修改了 <code>forward</code> 方法以遵循 <em>neuralforecast</em> 的指导原则。</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">forward</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> windows_batch<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    insample_y <span class="token operator">=</span> windows_batch<span class="token punctuation">[</span><span class="token string">'insample_y'</span><span class="token punctuation">]</span>
+    
+    x <span class="token operator">=</span> insample_y<span class="token punctuation">.</span>unsqueeze<span class="token punctuation">(</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span>
+    
+    y_pred <span class="token operator">=</span> self<span class="token punctuation">.</span>forecast<span class="token punctuation">(</span>x<span class="token punctuation">)</span>
+    y_pred <span class="token operator">=</span> y_pred<span class="token punctuation">[</span><span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token operator">-</span>self<span class="token punctuation">.</span>h<span class="token punctuation">:</span><span class="token punctuation">,</span> <span class="token punctuation">:</span><span class="token punctuation">]</span>
+    y_pred <span class="token operator">=</span> self<span class="token punctuation">.</span>loss<span class="token punctuation">.</span>domain_map<span class="token punctuation">(</span>y_pred<span class="token punctuation">)</span>
+    
+    <span class="token keyword">return</span> y_pred
+</code></pre> 
+<p>在上面的代码块中，我们使用 <code>windows_batch</code> 访问输入批次并通过 Time-LLM 运行它。然后，我们使用 <code>self.loss.domain_map(y_pred)</code> 将输出映射到所选损失函数的域和形状。这对于模型实际训练是必要的。</p> 
+<p>要查看详细的实现，可以在<a href="https://github.com/Nixtla/neuralforecast/blob/feature/time-llm/nbs/models.timellm.ipynb">这里</a>查看（该实现仍在积极开发中，因此在您阅读此内容时可能会发生变化）。</p> 
+<p>然后，我们只需将模型添加到适当的 <em>init</em> 文件中，然后运行 <code>pip install .</code> 即可访问新模型。</p> 
+<p>就这样，我们现在可以在 <em>neuralforecast</em> 中使用 Time-LLM 了。</p> 
+<h3><a id="_TimeLLM__206"></a>使用 Time-LLM 进行预测</h3> 
+<p>现在我们准备使用 Time-LLM 进行预测。在这里，我们使用简单的航空乘客数据集。</p> 
+<p>首先，让我们导入所需的库。</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> time
+<span class="token keyword">import</span> numpy <span class="token keyword">as</span> np
+<span class="token keyword">import</span> pandas <span class="token keyword">as</span> pd
+<span class="token keyword">import</span> pytorch_lightning <span class="token keyword">as</span> pl
+<span class="token keyword">import</span> matplotlib<span class="token punctuation">.</span>pyplot <span class="token keyword">as</span> plt
+
+<span class="token keyword">from</span> neuralforecast <span class="token keyword">import</span> NeuralForecast
+<span class="token keyword">from</span> neuralforecast<span class="token punctuation">.</span>models <span class="token keyword">import</span> TimeLLM
+<span class="token keyword">from</span> neuralforecast<span class="token punctuation">.</span>losses<span class="token punctuation">.</span>pytorch <span class="token keyword">import</span> MAE
+<span class="token keyword">from</span> neuralforecast<span class="token punctuation">.</span>tsdataset <span class="token keyword">import</span> TimeSeriesDataset
+<span class="token keyword">from</span> neuralforecast<span class="token punctuation">.</span>utils <span class="token keyword">import</span> AirPassengers<span class="token punctuation">,</span> AirPassengersPanel<span class="token punctuation">,</span> AirPassengersStatic<span class="token punctuation">,</span> augment_calendar_df
+
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> GPT2Config<span class="token punctuation">,</span> GPT2Model<span class="token punctuation">,</span> GPT2Tokenizer
+</code></pre> 
+<p>然后，我们加载数据集，这个数据集方便地包含在 <em>neuralforecast</em> 中。</p> 
+<pre><code class="prism language-python">AirPassengersPanel<span class="token punctuation">,</span> calendar_cols <span class="token operator">=</span> augment_calendar_df<span class="token punctuation">(</span>df<span class="token operator">=</span>AirPassengersPanel<span class="token punctuation">,</span> freq<span class="token operator">=</span><span class="token string">'M'</span><span class="token punctuation">)</span>
+
+Y_train_df <span class="token operator">=</span> AirPassengersPanel<span class="token punctuation">[</span>AirPassengersPanel<span class="token punctuation">.</span>ds<span class="token operator">&lt;</span>AirPassengersPanel<span class="token punctuation">[</span><span class="token string">'ds'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>values<span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">12</span><span class="token punctuation">]</span><span class="token punctuation">]</span>
+Y_test_df <span class="token operator">=</span> AirPassengersPanel<span class="token punctuation">[</span>AirPassengersPanel<span class="token punctuation">.</span>ds<span class="token operator">&gt;=</span>AirPassengersPanel<span class="token punctuation">[</span><span class="token string">'ds'</span><span class="token punctuation">]</span><span class="token punctuation">.</span>values<span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">12</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">.</span>reset_index<span class="token punctuation">(</span>drop<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>接下来，我们需要选择一个 LLM。在这个实验中，让我们选择 GPT-2。我们可以从 <em>transformers</em> 加载模型、配置和分词器。</p> 
+<pre><code class="prism language-python">gpt2_config <span class="token operator">=</span> GPT2Config<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span><span class="token string">'openai-community/gpt2'</span><span class="token punctuation">)</span>
+gpt2 <span class="token operator">=</span> GPT2Model<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span><span class="token string">'openai-community/gpt2'</span><span class="token punctuation">,</span>config<span class="token operator">=</span>gpt2_config<span class="token punctuation">)</span>
+gpt2_tokenizer <span class="token operator">=</span> GPT2Tokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span><span class="token string">'openai-community/gpt2'</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>然后，我们可以定义一个提示来解释数据的上下文。在这里，我使用了以下提示：</p> 
+<pre><code class="prism language-python">prompt_prefix <span class="token operator">=</span> <span class="token string">"The dataset contains data on monthly air passengers. There is a yearly seasonality"</span>
+</code></pre> 
+<p>然后，我们可以使用以下方式初始化模型：</p> 
+<pre><code class="prism language-python">timellm <span class="token operator">=</span> TimeLLM<span class="token punctuation">(</span>h<span class="token operator">=</span><span class="token number">12</span><span class="token punctuation">,</span>
+                 input_size<span class="token operator">=</span><span class="token number">36</span><span class="token punctuation">,</span>
+                 llm<span class="token operator">=</span>gpt2<span class="token punctuation">,</span>
+                 llm_config<span class="token operator">=</span>gpt2_config<span class="token punctuation">,</span>
+                 llm_tokenizer<span class="token operator">=</span>gpt2_tokenizer<span class="token punctuation">,</span>
+                 prompt_prefix<span class="token operator">=</span>prompt_prefix<span class="token punctuation">,</span>
+                 max_steps<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">,</span>
+                 batch_size<span class="token operator">=</span><span class="token number">24</span><span class="token punctuation">,</span>
+                 windows_batch_size<span class="token operator">=</span><span class="token number">24</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>请注意，我只训练了重编程层 100 个 epochs，并且使用了相对较小的批量大小。如果你有更多的计算资源，增加 <code>max_steps</code>、<code>batch_size</code> 和 <code>windows_batch_size</code> 可能会更好。</p> 
+<p>然后，我们可以训练模型并进行预测。</p> 
+<pre><code class="prism language-python">nf <span class="token operator">=</span> NeuralForecast<span class="token punctuation">(</span>
+    models<span class="token operator">=</span><span class="token punctuation">[</span>timellm<span class="token punctuation">]</span><span class="token punctuation">,</span>
+    freq<span class="token operator">=</span><span class="token string">'M'</span>
+<span class="token punctuation">)</span>
+
+nf<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>df<span class="token operator">=</span>Y_train_df<span class="token punctuation">,</span> val_size<span class="token operator">=</span><span class="token number">12</span><span class="token punctuation">)</span>
+forecasts <span class="token operator">=</span> nf<span class="token punctuation">.</span>predict<span class="token punctuation">(</span>futr_df<span class="token operator">=</span>Y_test_df<span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b7/fa/uAud2pMx_o.png" alt="img"></p> 
+<p>使用 GPT-2 进行 Time-LLM 预测的可视化。图片由作者提供。</p> 
+<p>在上图中，我们可以看到我们成功地使用 GPT-2 模型获得了时间序列预测，我认为这是令人兴奋和惊人的！</p> 
+<p>然而，预测结果并不理想。高峰完全被忽略了，甚至趋势在这种情况下似乎也没有被考虑。</p> 
+<p>现在，有许多因素可以提高性能，比如：</p> 
+<ul><li>将模型训练时间延长。我训练了 100 个 epochs，但论文使用了 1000 个 epochs。</li><li>更改 LLM。我使用了 GPT-2，但论文中使用的 LLaMA 要好得多。也许使用 Mistral 模型或 Gemma 会有所帮助。</li><li>更好的提示。我的提示非常简单，也许我们可以更好地设计它。</li></ul> 
+<p>请记住，目标是向您展示如何在自己的用例中使用 Time-LLM，并不是为了获得最先进的结果。尽管我的资源有限，但我们仍然可以使用任何我们想要的 LLM 来预测任何时间序列数据集，这才是这个实现的真正优势。</p> 
+<p>尽管如此，为了完整起见，让我们将 Time-LLM 与其他模型进行比较。</p> 
+<h3><a id="_NBEATS__MLP__297"></a>使用 N-BEATS 和 MLP 进行预测</h3> 
+<p>我的 Time-LLM 运行并没有产生最佳预测，但让我们仍然使用其他模型来看看它们的表现。</p> 
+<p>具体来说，我们使用 N-BEATS 和一个简单的 MLP 模型。在这里，我将仅训练 100 个 epochs，但请随时延长训练时间。</p> 
+<pre><code class="prism language-python">nbeats <span class="token operator">=</span> NBEATS<span class="token punctuation">(</span>h<span class="token operator">=</span><span class="token number">12</span><span class="token punctuation">,</span> input_size<span class="token operator">=</span><span class="token number">36</span><span class="token punctuation">,</span> max_steps<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">)</span>
+mlp <span class="token operator">=</span> MLP<span class="token punctuation">(</span>h<span class="token operator">=</span><span class="token number">12</span><span class="token punctuation">,</span> input_size<span class="token operator">=</span><span class="token number">36</span><span class="token punctuation">,</span> max_steps<span class="token operator">=</span><span class="token number">100</span><span class="token punctuation">)</span>
+
+nf <span class="token operator">=</span> NeuralForecast<span class="token punctuation">(</span>models<span class="token operator">=</span><span class="token punctuation">[</span>nbeats<span class="token punctuation">,</span> mlp<span class="token punctuation">]</span><span class="token punctuation">,</span> freq<span class="token operator">=</span><span class="token string">'M'</span><span class="token punctuation">)</span>
+
+nf<span class="token punctuation">.</span>fit<span class="token punctuation">(</span>df<span class="token operator">=</span>Y_train_df<span class="token punctuation">,</span> val_size<span class="token operator">=</span><span class="token number">12</span><span class="token punctuation">)</span>
+forecasts <span class="token operator">=</span> nf<span class="token punctuation">.</span>predict<span class="token punctuation">(</span>futr_df<span class="token operator">=</span>Y_test_df<span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/7f/23/lOGPtlNY_o.png" alt="img"></p> 
+<p>展示 Time-LLM、N-BEATS 和 MLP 的预测。图片由作者提供。</p> 
+<p>毫不奇怪，N-BEATS 和 MLP 的表现比 Time-LLM 要好得多，但再次，请记住，我的 Time-LLM 运行远未经过优化。</p> 
+<p>然后，让我们使用平均绝对误差（MAE）来评估性能。</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> neuralforecast<span class="token punctuation">.</span>losses<span class="token punctuation">.</span>numpy <span class="token keyword">import</span> mae
+
+mae_timellm <span class="token operator">=</span> mae<span class="token punctuation">(</span>Y_test_df<span class="token punctuation">[</span><span class="token string">'y'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> Y_test_df<span class="token punctuation">[</span><span class="token string">'TimeLLM'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+mae_nbeats <span class="token operator">=</span> mae<span class="token punctuation">(</span>Y_test_df<span class="token punctuation">[</span><span class="token string">'y'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> Y_test_df<span class="token punctuation">[</span><span class="token string">'NBEATS'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+mae_mlp <span class="token operator">=</span> mae<span class="token punctuation">(</span>Y_test_df<span class="token punctuation">[</span><span class="token string">'y'</span><span class="token punctuation">]</span><span class="token punctuation">,</span> Y_test_df<span class="token punctuation">[</span><span class="token string">'MLP'</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+data <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token string">'Time-LLM'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>mae_timellm<span class="token punctuation">]</span><span class="token punctuation">,</span> 
+       <span class="token string">'N-BEATS'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>mae_nbeats<span class="token punctuation">]</span><span class="token punctuation">,</span>
+       <span class="token string">'MLP'</span><span class="token punctuation">:</span> <span class="token punctuation">[</span>mae_mlp<span class="token punctuation">]</span><span class="token punctuation">}</span>
+
+metrics_df <span class="token operator">=</span> pd<span class="token punctuation">.</span>DataFrame<span class="token punctuation">(</span>data<span class="token operator">=</span>data<span class="token punctuation">)</span>
+metrics_df<span class="token punctuation">.</span>index <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'mae'</span><span class="token punctuation">]</span>
+
+metrics_df<span class="token punctuation">.</span>style<span class="token punctuation">.</span>highlight_min<span class="token punctuation">(</span>color<span class="token operator">=</span><span class="token string">'lightgreen'</span><span class="token punctuation">,</span> axis<span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">)</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/96/68/GGz57qHI_o.png" alt="img"></p> 
+<p>航空乘客数据集上所有模型的 MAE。N-BEATS 实现了最佳性能。图片由作者提供。</p> 
+<p>在这种情况下，N-BEATS 实现了最佳性能，因为它具有最低的 MAE。</p> 
+<p>再次强调，Time-LLM 的结果可能令人失望，但有许多方法可以改进我的实验，因为我之前提到过我的资源有限。</p> 
+<p>此外，这只是在一个简单的玩具数据集上进行的非常简单的实验。目标是展示如何在任何情况下使用 Time-LLM，而不是将模型与其他方法进行基准测试。</p> 
+<h2><a id="_TimeLLM__348"></a>我对 Time-LLM 的看法</h2> 
+<p>LLM 在自然语言处理领域代表了一大飞跃，随着它们在计算机视觉中的应用，看到它们被应用于时间序列预测是合情合理的。</p> 
+<p>但是，我会在预测项目中使用 Time-LLM 吗？</p> 
+<p>可能不会。</p> 
+<p>事实是，Time-LLM 需要大量的计算资源和内存。毕竟，我们正在使用一个 LLM。</p> 
+<p>事实上，当使用他们的脚本复现论文中的结果时，使用 GPU 在单个数据集上训练 1000 个 epochs 大约需要 19 小时！</p> 
+<p>此外，LLM 占用大量内存空间，对于非常大的模型，数十亿的参数通常会占用几个千兆字节。相比之下，我们可以在几分钟内训练轻量级深度学习模型，并获得非常好的预测结果。</p> 
+<p>出于这些原因，我认为在可能提高预测准确性与运行此类模型所需的计算资源和内存存储之间的权衡是不值得的。</p> 
+<p>尽管如此，看到时间序列预测现在可以从 LLM 的进步中受益，这是一个积极研究的领域，这令人兴奋。如果 LLM 变得更好、更轻，也许 Time-LLM 将成为一个有趣的选择。</p> 
+<h2><a id="_366"></a>结论</h2> 
+<p>它首先对输入序列进行修补，将其标记化并重新编程为一项语言任务，通过训练一个重新编程层。</p> 
+<p>它还添加了提示前缀，为LLM提供数据集的上下文、预测任务和一些输入统计信息。</p> 
+<p>然后，通过保持LLM模型完整，我们可以将重新编程的修补程序和提示传递给LLM，并获得预测结果。</p> 
+<p>就像往常一样，我认为每个问题都需要其独特的解决方案。请确保将Time-LLM与其他方法进行测试。</p> 
+<h2><a id="_380"></a>参考文献</h2> 
+<p><a href="https://arxiv.org/pdf/2310.01728.pdf" rel="nofollow">Time-LLM: Time Series Forecasting by Reprogramming Large Language Models</a> by M. Jin, S. Wang, L. Ma, Z. Chu, J. Zhang, X. Shi, P. Chen, Y. Liang, Y. Li, S. Pan, Q. Wen</p> 
+<p>Time-LLM的原始代码库 — <a href="https://github.com/KimMeen/Time-LLM">GitHub</a> df_pattern</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/316de512359d29752545fb28568208c1/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Spark编程基础】实验一Spark编程初级实践（附源代码）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/1896f72630248abae705e7650d4cbd52/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">H3C交换机配置IP与MAC绑定</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

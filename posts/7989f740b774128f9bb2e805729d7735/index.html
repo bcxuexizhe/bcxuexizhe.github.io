@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>STM32 入门教程（江科大教材）#笔记1 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7989f740b774128f9bb2e805729d7735/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="STM32 入门教程（江科大教材）#笔记1">
+  <meta property="og:description" content="一、GPIO（通用输入输出口即I/O口）
+GPIO的基本结构
+PA0:引脚1，PA1:引脚2.....PA15:引脚16.
+寄存器：一段特殊的寄存器，内核可以通过APB2总线对寄存器进行读写,以完成输出电平和读取电平的功能。
+输出寄存器写1，对应的引脚就会输出高电平，0则输出低电平
+输入寄存器读取为1，对应的端口是高电平，0则为低电平。
+STM32是32位的单片机，STM32 内部的寄存器都是32位。但端口只有16位，所以寄存器只有低15=6位对应的有端口，高16位没有用到。
+LED：发光二极管，正向通电点亮，反向通电不亮；长正短负，也可通过内部来判断：较大的一半是负极，较小的是正极。
+有源蜂鸣器：内部自带振荡源，将正负极接上直流电压即可持续发声，频率固定
+无源蜂鸣器：内部不带振荡源，需要控制器提供振荡脉冲才可发声，调整提供振荡脉冲的频率，可发出不同频率的声音
+（左上角）一般使用高电平弱驱动，低电平的强驱动规则。
+操作GPIO需要三个步骤：
+1.使用RCC开启GPIO的时钟；
+2.使用GPIO_Init函数初始化GPIO；
+3.使用输出或者输入的函数控制GPIO。
+以上三个函数为：RCC AHB外设时钟控制（使能或者失能AHB外设时钟）、RCC APB2外设时钟控制（第一个参数选择外设，第二个参数选择使能或者失能）、RCC APB1外设时钟控制（第一个参数选择外设，第二个参数选择使能或者失能）。
+void GPIO_DeInit(GPIO_TypeDef* GPIOx);//参数可以写GPIOA、GPIOB等等，调用该函数后所指定的GIO外设会被复位 void GPIO_AFIODeInit(void);//复位AFIO外设 void GPIO_Init(GPIO_TypeDef* GPIOx, GPIO_InitTypeDef* GPIO_InitStruct);//用结构体的参数来初始化GPIO口 void GPIO_StructInit(GPIO_InitTypeDef* GPIO_InitStruct);//可以吧结构体变量赋值一个默认值 //四个GPIO的读取函数 uint8_t GPIO_ReadInputDataBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin); uint16_t GPIO_ReadInputData(GPIO_TypeDef* GPIOx); uint8_t GPIO_ReadOutputDataBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin); uint16_t GPIO_ReadOutputData(GPIO_TypeDef* GPIOx); //GPIO的写入函数 void GPIO_SetBits(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);//可以把指定的端口设置为高电平 x可以是A~G,Pin 是0~15 GPIO_SetBits(GPIOA, GPIO_Pin_0);//PA0已经输入高电平 ，灭 void GPIO_ResetBits(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);//可以把指定的端口设置为低电平 GPIO_ResetBits(GPIOA, GPIO_Pin_0);//PA0已经输入低电平 ，亮 void GPIO_WriteBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, BitAction BitVal);前两个参数是指定端口，第三个是BitValue;根据第三个参数的值来指定参数 GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_RESET);//指定为低电平，亮 GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_SET);//指定为高电平，灭 GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)0);//参数三转换类型，低电平，亮 GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)1);//参数三转换类型，高电平 灭 void GPIO_Write(GPIO_TypeDef* GPIOx, uint16_t PortVal);//第一个参数是GOPI_Write,第一个参数是GPIOx,选择外设；这个函数可以同时对16个端口进行写入操作 （一）LED闪烁">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T21:27:30+08:00">
+    <meta property="article:modified_time" content="2024-05-22T21:27:30+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">STM32 入门教程（江科大教材）#笔记1</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>一、GPIO（通用输入输出口即I/O口）</p> 
+<p><img alt="" height="191" src="https://images2.imgbox.com/72/b7/Fis6xkOI_o.png" width="796"></p> 
+<p>GPIO的基本结构</p> 
+<p>PA0:引脚1，PA1:引脚2.....PA15:引脚16.</p> 
+<p><img alt="" height="415" src="https://images2.imgbox.com/3e/4b/x3EiDx4T_o.png" width="728"></p> 
+<p>寄存器：一段特殊的寄存器，内核可以通过APB2总线对寄存器进行读写,以完成输出电平和读取电平的功能。</p> 
+<p>输出寄存器写1，对应的引脚就会输出高电平，0则输出低电平</p> 
+<p>输入寄存器读取为1，对应的端口是高电平，0则为低电平。</p> 
+<p>STM32是32位的单片机，STM32 内部的寄存器都是32位。但端口只有16位，所以寄存器只有低15=6位对应的有端口，高16位没有用到。</p> 
+<p>LED：发光二极管，正向通电点亮，反向通电不亮；长正短负，也可通过内部来判断：较大的一半是负极，较小的是正极。</p> 
+<p>有源蜂鸣器：内部自带振荡源，将正负极接上直流电压即可持续发声，频率固定</p> 
+<p>无源蜂鸣器：内部不带振荡源，需要控制器提供振荡脉冲才可发声，调整提供振荡脉冲的频率，可发出不同频率的声音</p> 
+<p><img alt="" height="191" src="https://images2.imgbox.com/90/fe/eF54QygY_o.png" width="711"></p> 
+<p><img alt="" height="349" src="https://images2.imgbox.com/ff/d0/dIJmEutA_o.png" width="684"></p> 
+<p>（左上角）一般使用高电平弱驱动，低电平的强驱动规则。</p> 
+<p>操作GPIO需要三个步骤：</p> 
+<p>1.使用RCC开启GPIO的时钟；</p> 
+<p>2.使用GPIO_Init函数初始化GPIO；</p> 
+<p>3.使用输出或者输入的函数控制GPIO。</p> 
+<p><img alt="" height="71" src="https://images2.imgbox.com/99/51/BKSglBAw_o.png" width="786"></p> 
+<p>以上三个函数为：RCC AHB外设时钟控制（使能或者失能AHB外设时钟）、RCC APB2外设时钟控制（第一个参数选择外设，第二个参数选择使能或者失能）、RCC APB1外设时钟控制（第一个参数选择外设，第二个参数选择使能或者失能）。</p> 
+<pre><code class="language-cs">void GPIO_DeInit(GPIO_TypeDef* GPIOx);//参数可以写GPIOA、GPIOB等等，调用该函数后所指定的GIO外设会被复位
+void GPIO_AFIODeInit(void);//复位AFIO外设
+void GPIO_Init(GPIO_TypeDef* GPIOx, GPIO_InitTypeDef* GPIO_InitStruct);//用结构体的参数来初始化GPIO口
+void GPIO_StructInit(GPIO_InitTypeDef* GPIO_InitStruct);//可以吧结构体变量赋值一个默认值
+
+//四个GPIO的读取函数
+uint8_t GPIO_ReadInputDataBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+uint16_t GPIO_ReadInputData(GPIO_TypeDef* GPIOx);
+uint8_t GPIO_ReadOutputDataBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);
+uint16_t GPIO_ReadOutputData(GPIO_TypeDef* GPIOx);
+
+//GPIO的写入函数
+void GPIO_SetBits(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);//可以把指定的端口设置为高电平  x可以是A~G,Pin 是0~15
+GPIO_SetBits(GPIOA, GPIO_Pin_0);//PA0已经输入高电平 ，灭
+
+void GPIO_ResetBits(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin);//可以把指定的端口设置为低电平
+GPIO_ResetBits(GPIOA, GPIO_Pin_0);//PA0已经输入低电平 ，亮
+
+void GPIO_WriteBit(GPIO_TypeDef* GPIOx, uint16_t GPIO_Pin, BitAction BitVal);前两个参数是指定端口，第三个是BitValue;根据第三个参数的值来指定参数
+GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_RESET);//指定为低电平，亮
+GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_SET);//指定为高电平，灭
+GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)0);//参数三转换类型，低电平，亮
+GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)1);//参数三转换类型，高电平 灭
+
+void GPIO_Write(GPIO_TypeDef* GPIOx, uint16_t PortVal);//第一个参数是GOPI_Write,第一个参数是GPIOx,选择外设；这个函数可以同时对16个端口进行写入操作</code></pre> 
+<p>（一）LED闪烁</p> 
+<pre><code class="language-cs">#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+
+int main(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);//RCC里面的外设时钟控制函数
+	                                                     //第一个参数的选择：点亮PA0的LED
+                                                         //第二个参数开启时钟
+	GPIO_InitTypeDef GPIO_InitStructure;
+    //结构体成员
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0;
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &amp;GPIO_InitStructure);//执行完后，GPIOA外设的0号引脚就自动配置为推挽输出、50MHz的速度
+	//读取结构体参数，执行一堆判断，最后写入到GPIO配置寄存器
+	while (1)
+	{
+		GPIO_ResetBits(GPIOA, GPIO_Pin_0);
+		Delay_ms(500);
+		GPIO_SetBits(GPIOA, GPIO_Pin_0);
+		Delay_ms(500);
+		
+		GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_RESET);
+		Delay_ms(500);
+		GPIO_WriteBit(GPIOA, GPIO_Pin_0, Bit_SET);
+		Delay_ms(500);
+		
+		GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)0);
+		Delay_ms(500);
+		GPIO_WriteBit(GPIOA, GPIO_Pin_0, (BitAction)1);
+		Delay_ms(500);
+	}
+}
+</code></pre> 
+<p>（二）LED流水灯</p> 
+<pre><code class="language-cs">#define GPIO_Pin_0                 ((uint16_t)0x0001)  /*!&lt; Pin 0 selected */
+#define GPIO_Pin_1                 ((uint16_t)0x0002)  /*!&lt; Pin 1 selected */
+#define GPIO_Pin_2                 ((uint16_t)0x0004)  /*!&lt; Pin 2 selected */
+#define GPIO_Pin_3                 ((uint16_t)0x0008)  /*!&lt; Pin 3 selected */
+#define GPIO_Pin_4                 ((uint16_t)0x0010)  /*!&lt; Pin 4 selected */
+#define GPIO_Pin_5                 ((uint16_t)0x0020)  /*!&lt; Pin 5 selected */
+#define GPIO_Pin_6                 ((uint16_t)0x0040)  /*!&lt; Pin 6 selected */
+#define GPIO_Pin_7                 ((uint16_t)0x0080)  /*!&lt; Pin 7 selected */
+#define GPIO_Pin_8                 ((uint16_t)0x0100)  /*!&lt; Pin 8 selected */
+#define GPIO_Pin_9                 ((uint16_t)0x0200)  /*!&lt; Pin 9 selected */
+#define GPIO_Pin_10                ((uint16_t)0x0400)  /*!&lt; Pin 10 selected */
+#define GPIO_Pin_11                ((uint16_t)0x0800)  /*!&lt; Pin 11 selected */
+#define GPIO_Pin_12                ((uint16_t)0x1000)  /*!&lt; Pin 12 selected */
+#define GPIO_Pin_13                ((uint16_t)0x2000)  /*!&lt; Pin 13 selected */
+#define GPIO_Pin_14                ((uint16_t)0x4000)  /*!&lt; Pin 14 selected */
+#define GPIO_Pin_15                ((uint16_t)0x8000)  /*!&lt; Pin 15 selected */
+#define GPIO_Pin_All               ((uint16_t)0xFFFF)  /*!&lt; All pins selected */</code></pre> 
+<pre><code class="language-cs">#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+
+int main(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOA, ENABLE);//打开GPIOA的时钟
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_All;//初始化GPIO的所有端口
+   // GPIO_InitStructure.GPIO_Pin = GPIO_Pin_0 | GPIO_Pin_1 |GPIO_Pin_2 |GPIO_Pin_3 ;初始化端口0,1,2,3
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOA, &amp;GPIO_InitStructure);
+	
+	while (1)
+	{
+		GPIO_Write(GPIOA, ~0x0001);	//0000 0000 0000 0001 点亮LED1
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0002);	//0000 0000 0000 0010 点亮LED2
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0004);	//0000 0000 0000 0100 点亮LED3
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0008);	//0000 0000 0000 1000 点亮LED4
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0010);	//0000 0000 0001 0000 点亮LED5
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0020);	//0000 0000 0010 0000 点亮LED6
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0040);	//0000 0000 0100 0000 点亮LED7
+		Delay_ms(100);
+		GPIO_Write(GPIOA, ~0x0080);	//0000 0000 1000 0000 点亮LED8
+		Delay_ms(100);
+	}
+}
+</code></pre> 
+<p>（三）蜂鸣器</p> 
+<p>不选择A15、B3、B4这三个端口，它们默认是JTAG的调试端口，若要用做普通端口，则需再进行一些配置。</p> 
+<p><img alt="" height="57" src="https://images2.imgbox.com/a7/3b/9HZw7Bb9_o.png" width="977"></p> 
+<pre><code class="language-cs">#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+
+int main(void)
+{
+	RCC_APB2PeriphClockCmd(RCC_APB2Periph_GPIOB, ENABLE); //PB口
+	
+	GPIO_InitTypeDef GPIO_InitStructure;
+	GPIO_InitStructure.GPIO_Mode = GPIO_Mode_Out_PP;
+	GPIO_InitStructure.GPIO_Pin = GPIO_Pin_12;//PB12号-&gt;Pin12
+	GPIO_InitStructure.GPIO_Speed = GPIO_Speed_50MHz;
+	GPIO_Init(GPIOB, &amp;GPIO_InitStructure);//GPIOB的初始化
+	
+	while (1)
+	{
+		GPIO_ResetBits(GPIOB, GPIO_Pin_12);//响100ms
+		Delay_ms(100);
+		GPIO_SetBits(GPIOB, GPIO_Pin_12);//停100ms
+		Delay_ms(100);
+		GPIO_ResetBits(GPIOB, GPIO_Pin_12);//响100ms
+		Delay_ms(100);
+		GPIO_SetBits(GPIOB, GPIO_Pin_12);//停700ms
+		Delay_ms(700);
+	}
+}
+</code></pre> 
+<p>（四）按键控制LED</p> 
+<pre><code class="language-cs">#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "LED.h"
+#include "Key.h"
+
+uint8_t KeyNum;
+
+int main(void)
+{
+	LED_Init();
+	Key_Init();
+	
+	while (1)
+	{
+		KeyNum = Key_GetNum();
+		if (KeyNum == 1)
+		{
+			LED1_Turn();
+		}
+		if (KeyNum == 2)
+		{
+			LED2_Turn();
+		}
+	}
+}
+</code></pre> 
+<p>（五）光敏传感器控制蜂鸣器</p> 
+<pre><code class="language-cs">#include "stm32f10x.h"                  // Device header
+#include "Delay.h"
+#include "Buzzer.h"
+#include "LightSensor.h"
+
+int main(void)
+{
+	Buzzer_Init();
+	LightSensor_Init();
+	
+	while (1)
+	{
+		if (LightSensor_Get() == 1)
+		{
+			Buzzer_ON();
+		}
+		else
+		{
+			Buzzer_OFF();
+		}
+	}
+}
+</code></pre> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/ae0ca785eee10d0ce48a42ba58221ad0/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【FFmpeg】Windows 10 平台 FFmpeg 开发环境搭建 ① ( 安装 Visual Studio 2015 | JavaScript_ProjectSystem 安装包丢失或损坏 )</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e1e483cfca8ee54cf497c8aa89292878/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">C&#43;&#43;初阶学习第九弹——探索STL奥秘（四）——vector的深层挖掘和模拟实现</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

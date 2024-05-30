@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>LLama的激活函数SwiGLU 解释 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/32e5f6575ca50321b9c6278617f14d05/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="LLama的激活函数SwiGLU 解释">
+  <meta property="og:description" content="目录
+Swish激活函数
+1. Swish函数公式
+LLaMA模型中的激活函数
+1. SwiGLU激活函数
+2. SwiGLU激活函数的表达式
+3. SwiGLU激活函数的优势
+Swish激活函数 Swish是一种激活函数，其计算公式如下：
+1. Swish函数公式 Swish(x) = x * sigmoid(x)
+其中，sigmoid(x)是sigmoid函数，计算公式为：
+sigmoid(x) = 1 / (1 &#43; exp(-x))
+Swish函数结合了线性函数和非线性函数的特点，能够自适应地调整激活函数的形状，因此在某些深度学习模型中，Swish函数的表现优于常见的ReLU函数。
+LLaMA模型中的激活函数 在LLaMA模型中，使用的激活函数是SwiGLU[1][2][3]。
+1. SwiGLU激活函数 SwiGLU是LLaMA模型在前馈神经网络（FFN）阶段使用的激活函数[2:1]。它取代了ReLU非线性函数，以提高模型的性能[3:1]。
+2. SwiGLU激活函数的表达式 SwiGLU是Gated Linear Units（GLU）激活函数的一种变体，其公式为：
+SwiGLU(x,W, V, b, c) = Swish_1(xW &#43; b) ⊗ (xV &#43; c)
+其中，Swish_β(x) = x σ(β x)，σ为sigmoid函数，⊗为逐元素乘[1][2][3]。
+3. SwiGLU激活函数的优势 SwiGLU的优势主要体现在以下几个方面：
+3.1 提升性能：SwiGLU被应用于Transformer架构中的前馈神经网络（FFN）层，用于增强性能[1:1][2:1][3:1]。
+3.2 可微性：SwiGLU是处处可微的非线性函数[1:2]。
+3.3 自适应性：GLU是一种类似于长短期记忆网络（LSTM）带有门机制的网络结构，通过门机制控制信息通过的比例，来让模型自适应地选择哪些单词和特征对预测下一个词有帮助[3:2]。
+import numpy as np import matplotlib.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-23T20:31:04+08:00">
+    <meta property="article:modified_time" content="2024-04-23T20:31:04+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">LLama的激活函数SwiGLU 解释</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:80px;"></p> 
+<p id="Swish%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#Swish%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0" rel="nofollow">Swish激活函数</a></p> 
+<p id="1.%20Swish%E5%87%BD%E6%95%B0%E5%85%AC%E5%BC%8F-toc" style="margin-left:120px;"><a href="#1.%20Swish%E5%87%BD%E6%95%B0%E5%85%AC%E5%BC%8F" rel="nofollow">1. Swish函数公式</a></p> 
+<p id="LLaMA%E6%A8%A1%E5%9E%8B%E4%B8%AD%E7%9A%84%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#LLaMA%E6%A8%A1%E5%9E%8B%E4%B8%AD%E7%9A%84%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0" rel="nofollow">LLaMA模型中的激活函数</a></p> 
+<p id="1.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0-toc" style="margin-left:120px;"><a href="#1.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0" rel="nofollow">1. SwiGLU激活函数</a></p> 
+<p id="2.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E8%A1%A8%E8%BE%BE%E5%BC%8F-toc" style="margin-left:120px;"><a href="#2.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E8%A1%A8%E8%BE%BE%E5%BC%8F" rel="nofollow">2. SwiGLU激活函数的表达式</a></p> 
+<p id="3.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E4%BC%98%E5%8A%BF-toc" style="margin-left:120px;"><a href="#3.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E4%BC%98%E5%8A%BF" rel="nofollow">3. SwiGLU激活函数的优势</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h4 id="Swish%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0">Swish激活函数</h4> 
+<p>Swish是一种激活函数，其计算公式如下：</p> 
+<h5 id="1.%20Swish%E5%87%BD%E6%95%B0%E5%85%AC%E5%BC%8F">1. Swish函数公式</h5> 
+<p>Swish(x) = x * sigmoid(x)</p> 
+<p>其中，sigmoid(x)是sigmoid函数，计算公式为：</p> 
+<p>sigmoid(x) = 1 / (1 + exp(-x))</p> 
+<p>Swish函数结合了线性函数和非线性函数的特点，能够自适应地调整激活函数的形状，因此在某些深度学习模型中，Swish函数的表现优于常见的ReLU函数。</p> 
+<h4 id="LLaMA%E6%A8%A1%E5%9E%8B%E4%B8%AD%E7%9A%84%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0">LLaMA模型中的激活函数</h4> 
+<p>在LLaMA模型中，使用的激活函数是SwiGLU<a href="https://aigc.sankuai.com/assistant/agent/1#fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-1" rel="nofollow" id="fnref-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-1" title="[1]">[1]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-2" rel="nofollow" id="fnref-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-2" title="[2]">[2]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-3" rel="nofollow" id="fnref-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-3" title="[3]">[3]</a>。</p> 
+<h5 id="1.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0">1. SwiGLU激活函数</h5> 
+<p>SwiGLU是LLaMA模型在前馈神经网络（FFN）阶段使用的激活函数<a href="https://aigc.sankuai.com/assistant/agent/1#fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-2" rel="nofollow" id="fnref-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-2:1" title="[2:1]">[2:1]</a>。它取代了ReLU非线性函数，以提高模型的性能<a href="https://aigc.sankuai.com/assistant/agent/1#fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-3" rel="nofollow" id="fnref-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-3:1" title="[3:1]">[3:1]</a>。</p> 
+<h5 id="2.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E8%A1%A8%E8%BE%BE%E5%BC%8F">2. SwiGLU激活函数的表达式</h5> 
+<p>SwiGLU是Gated Linear Units（GLU）激活函数的一种变体，其公式为：</p> 
+<p>SwiGLU(x,W, V, b, c) = Swish_1(xW + b) ⊗ (xV + c)</p> 
+<p>其中，Swish_β(x) = x σ(β x)，σ为sigmoid函数，⊗为逐元素乘<a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-1" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-1" title="[1]">[1]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-2" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-2" title="[2]">[2]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-3" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-3" title="[3]">[3]</a>。</p> 
+<h5 id="3.%20SwiGLU%E6%BF%80%E6%B4%BB%E5%87%BD%E6%95%B0%E7%9A%84%E4%BC%98%E5%8A%BF">3. SwiGLU激活函数的优势</h5> 
+<p>SwiGLU的优势主要体现在以下几个方面：</p> 
+<p>3.1 提升性能：SwiGLU被应用于Transformer架构中的前馈神经网络（FFN）层，用于增强性能<a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-1" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-1:1" title="[1:1]">[1:1]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-2" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-2:1" title="[2:1]">[2:1]</a><a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-3" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-3:1" title="[3:1]">[3:1]</a>。</p> 
+<p>3.2 可微性：SwiGLU是处处可微的非线性函数<a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-1" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-1:2" title="[1:2]">[1:2]</a>。</p> 
+<p>3.3 自适应性：GLU是一种类似于长短期记忆网络（LSTM）带有门机制的网络结构，通过门机制控制信息通过的比例，来让模型自适应地选择哪些单词和特征对预测下一个词有帮助<a href="https://aigc.sankuai.com/assistant/agent/1#fn-e49fdb4a-c475-4126-afae-3af03778bd9d-3" rel="nofollow" id="fnref-e49fdb4a-c475-4126-afae-3af03778bd9d-3:2" title="[3:2]">[3:2]</a>。</p> 
+<p><img alt="" height="1120" src="https://images2.imgbox.com/84/a8/gWCpna6Y_o.png" width="1200"></p> 
+<pre><code class="hljs">import numpy as np
+import matplotlib.pyplot as plt
+from scipy.stats import norm
+
+def gelu(x):
+   return x * norm.cdf(x)
+
+def relu(x):
+   return np.maximum(0, x)
+
+def swish(x, beta=1):
+   return x * (1 / (1 + np.exp(-beta * x)))
+
+def swiglu(x, W, V, b, c):
+   return swish(x*W + b) * (x*V + c)
+
+x_values = np.linspace(-5, 5, 500)
+gelu_values = gelu(x_values)
+relu_values = relu(x_values)
+swish_values = swish(x_values)
+swish_values2 = swish(x_values, beta=0.5)
+swiglu_values = swiglu(x_values, 1, 1, 0, 0) # Here you need to set the parameters W, V, b, and c according to your needs
+
+plt.plot(x_values, gelu_values, label='GELU')
+plt.plot(x_values, relu_values, label='ReLU')
+plt.plot(x_values, swish_values, label='Swish')
+plt.plot(x_values, swish_values2, label='Swish (beta=0.5)')
+plt.plot(x_values, swiglu_values, label='SwiGLU')
+plt.title("GELU, ReLU, Swish, and SwiGLU Activation Functions")
+plt.xlabel("x")
+plt.ylabel("Activation")
+plt.grid()
+plt.legend()
+plt.show()
+</code></pre> 
+<hr> 
+<ol><li id="fn-e49fdb4a-c475-4126-afae-3af03778bd9d-1"> <p><a href="https://zhuanlan.zhihu.com/p/650237644" rel="nofollow" title="大模型基础｜激活函数｜从ReLU 到SwiGLU - 知乎">大模型基础｜激活函数｜从ReLU 到SwiGLU - 知乎</a></p> </li><li id="fn-e49fdb4a-c475-4126-afae-3af03778bd9d-2"> <p><a href="https://cloud.tencent.com/developer/article/2409008" rel="nofollow" title="为什么大型语言模型都在使用 SwiGLU 作为激活函数？ - 腾讯云">为什么大型语言模型都在使用 SwiGLU 作为激活函数？ - 腾讯云</a></p> </li><li id="fn-e49fdb4a-c475-4126-afae-3af03778bd9d-3"> <p><a href="https://www.jianshu.com/p/2354873fe58a" rel="nofollow" title="大模型系列：SwiGLU激活函数与GLU门控线性单元原理解析">大模型系列：SwiGLU激活函数与GLU门控线性单元原理解析</a></p> </li></ol> 
+<hr> 
+<ol><li id="fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-1"> <p><a href="https://zhuanlan.zhihu.com/p/678731527" rel="nofollow" title="LLaMA：Open and Efficient Foundation Models">LLaMA：Open and Efficient Foundation Models</a></p> </li><li id="fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-2"> <p><a href="https://zhuanlan.zhihu.com/p/647862867" rel="nofollow" title="llama2介绍(模型结构+参数计算)">llama2介绍(模型结构+参数计算)</a></p> </li><li id="fn-c5a5b63d-e329-4ff0-8f9e-2cfbb1e92425-3"> <p><a href="https://paperswithcode.com/method/llama" rel="nofollow" title="LLaMA Explained | Papers With Code">LLaMA Explained | Papers With Code</a></p> </li></ol>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/82143de029ee31a4ce1e305089deb200/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">本地环境运行Llama 3大型模型：可行性与实践指南</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0c206b948fa6b8383e8afe47f2f991e6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java 【数据结构】 二叉树（Binary_Tree）【神装】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

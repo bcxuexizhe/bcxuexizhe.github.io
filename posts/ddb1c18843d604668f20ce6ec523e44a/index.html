@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>数据仓库内容分享(十六)：Doris到底有多牛，为什么大厂都在使用它？ - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ddb1c18843d604668f20ce6ec523e44a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="数据仓库内容分享(十六)：Doris到底有多牛，为什么大厂都在使用它？">
+  <meta property="og:description" content="目录
+Doris 介绍
+OLAP对比
+性能测试报告
+高可用测试
+总结
+今天给各位分享一个非常牛的实时分析型数据库Apache Doris，几乎国内的一二线大厂都在使用它做数据分析，如下图，这只是一小部分
+同时我司也在使用它，它目前支撑了我们亿级业务数据的多维实时查询分析，而且性能很不错
+Doris 介绍 官方地址：https://doris.apache.org/
+Apache Doris源于百度2008年启动的产品Palo在2018年捐献给Apache基金会，是一个基于 MPP 架构的高性能、实时的分析型数据库，它非常简单易用，而且性能还不错，仅需亚秒级响应时间即可获得查询结果，不仅支持高并发的查询场景，也可以支持高吞吐的复杂分析场景，比如你可以基于它做用户行为分析、日志检索平台、用户画像分析、订单分析等应用。
+Doris的架构非常简洁，易于运维，并且可以支持10PB以上的超大数据集
+特性 这里特性很多，但是如果没接触过大数据的同学，可能不是特别了解，但是注意这个特性，支持SQL 语言，兼容MySQL，比如：通过Mybatis 写好 sql，就可以调用查询，而且它能支持亿级数据检索响应，以前想分库分表，现在有了它可以考虑还有必要吗，但是这里要注意下，它是一个 OLAP 引擎与 OLTP还是有点区别，如果业务场景，新增多后期更新少，同时查询场景多，那么可以在 mysql 中保存一段时间的热点数据，来进行相关业务操作，而报表查询都走Doris
+这里可能有些人员不懂什么是 OLAP，下面是一个OLAP与OLTP对比图
+架构
+Doirs只有两个主进程模块。一个是 Frontend（FE），另一个是Backend（BE）
+Frontend（FE） 主要负责用户请求的接入、查询计划的解析、元数据的存储和集群管理相关工作， Doris采用Paxos协议以及Memory &#43; Checkpoint &#43; Journal的机制来确保元数据的高性能及高可靠。
+Leader、follower和 observer它们三个构成一个可靠的服务，保证单节点宕机的情况下，元数据能够实时地在线恢复，而不影响整个服务，与zookeeper角色一样。
+Backend（BE） BE主要负责数据存储、查询计划的执行。
+BE管理tablet副本, tablet是table经过分区分桶形成的子表, 采用列式存储。
+BE受FE指导, 创建或删除子表。
+BE接收FE分发的物理执行计划与其他BE共同协作完成执行。
+BE读本地的列存储引擎, 获取数据, 通过索引和谓词下沉快速过滤数据。
+BE后台执行compact任务, 减少查询时的读放大。
+以上FE和 BE支持动态弹性扩容，而且在扩容过程中对应用无影响，同时Doris 不依赖zk、hdfs等，所以架构很简单，这种架构设计极大的简化了运维成本，其实一个好的产品就应该这样，把复杂留给自己，把简单留给用户
+OLAP对比 在我们解决大数据查询分析时，也调研了比较知名的一些产品，下面是一个对比
+TIDB TIDB 是一个非常优秀的国产分布式数据库，他的主要优势OLTP处理上，但是也支持OLAP，但是在我们调研过程中，抱着使用一个TIDB 完全替代掉Mysql 想法，我们进行了测试，我们使用的版本是v5.3.3，但是在测试过程中效果不理想，因为 TIDB 解析引擎会对SQL进行分析，来决定走 OLTP 还是OLAP，比如我们期望走OLAP 但是走了OLTP导致性能有所降低">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-08T19:16:11+08:00">
+    <meta property="article:modified_time" content="2024-02-08T19:16:11+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">数据仓库内容分享(十六)：Doris到底有多牛，为什么大厂都在使用它？</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="Doris%20%E4%BB%8B%E7%BB%8D-toc" style="margin-left:40px;"><a href="#Doris%20%E4%BB%8B%E7%BB%8D" rel="nofollow">Doris 介绍</a></p> 
+<p id="OLAP%E5%AF%B9%E6%AF%94-toc" style="margin-left:40px;"><a href="#OLAP%E5%AF%B9%E6%AF%94" rel="nofollow">OLAP对比</a></p> 
+<p id="%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E6%8A%A5%E5%91%8A-toc" style="margin-left:40px;"><a href="#%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E6%8A%A5%E5%91%8A" rel="nofollow">性能测试报告</a></p> 
+<p id="%E9%AB%98%E5%8F%AF%E7%94%A8%E6%B5%8B%E8%AF%95-toc" style="margin-left:40px;"><a href="#%E9%AB%98%E5%8F%AF%E7%94%A8%E6%B5%8B%E8%AF%95" rel="nofollow">高可用测试</a></p> 
+<p id="%E6%80%BB%E7%BB%93-toc" style="margin-left:40px;"><a href="#%E6%80%BB%E7%BB%93" rel="nofollow">总结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p>今天给各位分享一个非常牛的实时分析型数据库Apache Doris，几乎国内的一二线大厂都在使用它做数据分析，如下图，这只是一小部分</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="779" src="https://images2.imgbox.com/68/1e/np6Rgjvn_o.png" width="1080"></p> 
+<p>同时我司也在使用它，它目前支撑了我们亿级业务数据的多维实时查询分析，而且性能很不错</p> 
+<h3 id="Doris%20%E4%BB%8B%E7%BB%8D">Doris 介绍</h3> 
+<p>官方地址：https://doris.apache.org/</p> 
+<p>Apache Doris源于百度2008年启动的产品Palo在2018年捐献给Apache基金会，是一个基于 MPP 架构的高性能、实时的分析型数据库，它非常简单易用，而且性能还不错，仅需亚秒级响应时间即可获得查询结果，不仅支持高并发的查询场景，也可以支持高吞吐的复杂分析场景，比如你可以基于它做用户行为分析、日志检索平台、用户画像分析、订单分析等应用。</p> 
+<p>Doris的架构非常简洁，易于运维，并且可以支持10PB以上的超大数据集</p> 
+<h4 id="%E7%89%B9%E6%80%A7">特性</h4> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="398" src="https://images2.imgbox.com/ac/dc/krikxhLb_o.png" width="1080"></p> 
+<p>这里特性很多，但是如果没接触过大数据的同学，可能不是特别了解，但是注意这个特性，<strong>支持SQL 语言，兼容MySQL</strong>，比如：通过Mybatis 写好 sql，就可以调用查询，而且它能支持亿级数据检索响应，以前想分库分表，现在有了它可以考虑还有必要吗，但是这里要注意下，它是一个 OLAP 引擎与 OLTP还是有点区别，如果业务场景，新增多后期更新少，同时查询场景多，那么可以在 mysql 中保存一段时间的热点数据，来进行相关业务操作，而报表查询都走Doris</p> 
+<p>这里可能有些人员不懂什么是 OLAP，下面是一个OLAP与OLTP对比图</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="693" src="https://images2.imgbox.com/11/f8/ojLFMpG8_o.png" width="1080"></p> 
+<p>架构</p> 
+<p>Doirs只有两个主进程模块。一个是 Frontend（FE），另一个是Backend（BE）</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="422" src="https://images2.imgbox.com/25/39/3vNWaFbu_o.png" width="648"></p> 
+<h4 id="Frontend%EF%BC%88FE%EF%BC%89">Frontend（FE）</h4> 
+<p>主要负责用户请求的接入、查询计划的解析、元数据的存储和集群管理相关工作， Doris采用Paxos协议以及Memory + Checkpoint + Journal的机制来确保元数据的高性能及高可靠。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="456" src="https://images2.imgbox.com/25/a5/JZecnBs4_o.png" width="1080"></p> 
+<p><strong>Leader、follower和 observer它们三个构成一个可靠的服务</strong>，保证单节点宕机的情况下，元数据能够实时地在线恢复，而不影响整个服务，与zookeeper角色一样。</p> 
+<h4 id="Backend%EF%BC%88BE%EF%BC%89">Backend（BE）</h4> 
+<p>BE主要负责数据存储、查询计划的执行。</p> 
+<ul><li> <p>BE管理tablet副本, tablet是table经过分区分桶形成的子表, 采用列式存储。</p> </li><li> <p>BE受FE指导, 创建或删除子表。</p> </li><li> <p>BE接收FE分发的物理执行计划与其他BE共同协作完成执行。</p> </li><li> <p>BE读本地的列存储引擎, 获取数据, 通过索引和谓词下沉快速过滤数据。</p> </li><li> <p>BE后台执行compact任务, 减少查询时的读放大。</p> </li></ul> 
+<p>以上FE和 BE支持动态弹性扩容，而且在扩容过程中对应用无影响，同时Doris 不依赖<code>zk</code>、<code>hdfs</code>等，所以架构很简单，这种架构设计极大的简化了运维成本，<strong>其实一个好的产品就应该这样，把复杂留给自己，把简单留给用户</strong></p> 
+<h3 id="OLAP%E5%AF%B9%E6%AF%94">OLAP对比</h3> 
+<p>在我们解决大数据查询分析时，也调研了比较知名的一些产品，下面是一个对比</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="787" src="https://images2.imgbox.com/70/b7/Cu7byRjs_o.png" width="855"></p> 
+<h6 id="TIDB">TIDB</h6> 
+<p>TIDB 是一个非常优秀的国产分布式数据库，他的主要优势OLTP处理上，但是也支持OLAP，但是在我们调研过程中，抱着使用一个TIDB 完全替代掉Mysql 想法，我们进行了测试，我们使用的版本是<strong>v5.3.3</strong>，但是在测试过程中效果不理想，因为 TIDB 解析引擎会对SQL进行分析，来决定走 OLTP 还是OLAP，比如我们期望走OLAP 但是走了OLTP导致性能有所降低</p> 
+<h6 id="ClickHouse">ClickHouse</h6> 
+<p>提到 Doris 不得不提ClickHouse，CK是<strong>由俄罗斯IT公司Yandex为Yandex.Metrica网络分析服务开发的</strong>开发的实时数仓，以性能著称，但是经过测试，与 Doris在不同场景各有优劣，  但是它的架构复杂、运维成本高，同时对 sql 语法兼容性没有Doris好，因此没有选择，不过国内也有不少公司在使用</p> 
+<h6 id="Doris">Doris</h6> 
+<p>运维成本低、兼容Mysql 语法、架构足够简单、社区支持性好（非常活跃），同时经过百度内部长达10 多年的大规模使用，成熟度不容置疑，没有理由不选它</p> 
+<h3 id="%E6%80%A7%E8%83%BD%E6%B5%8B%E8%AF%95%E6%8A%A5%E5%91%8A">性能测试报告</h3> 
+<p>Doris 版本：0.15.0，目前最新版本是：2.03</p> 
+<ul><li> <p>1 FE + 3 BE 独立部署</p> </li><li> <p>CPU：8core 16G Intel(R) Xeon(R) Platinum 8163 CPU @ 2.50GHz</p> </li><li> <p>内存：16GB</p> </li><li> <p>硬盘：1块机械硬盘</p> </li><li> <p>网卡：万兆网卡</p> </li></ul> 
+<h4 id="%E6%B5%8B%E8%AF%951">测试1</h4> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="491" src="https://images2.imgbox.com/be/14/isif0S5L_o.png" width="1080"></p> 
+<p>6亿数据进行多表查询，响应<code>1.98s</code></p> 
+<pre><code>SELECT SUM(lo_revenue), d_year, p_brand FROM lineorder, date, part, supplier WHERE lo_orderdate = d_datekey AND lo_partkey = p_partkey AND lo_suppkey = s_suppkey AND p_category = 'MFGR#12' AND s_region = 'AMERICA' GROUP BY d_year, p_brand ORDER BY d_year, p_brand;
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="546" src="https://images2.imgbox.com/2d/85/pUvKogVs_o.png" width="1080"></p> 
+<h4 id="%E6%B5%8B%E8%AF%952">测试2</h4> 
+<p>ods_test_mysql_test_record_s数据量：148399619，67 个字段</p> 
+<p>ods_test_mysql_test_barrier_s数据量：1385，12个字段</p> 
+<p>执行以下 sql，耗时：<code>0.277s</code></p> 
+<pre><code class="language-sql">SELECT
+    i.a1 AS p_code,
+    IFNULL(IFNULL(i.a56, b.a2), '0') AS gateway_no,
+    1 AS inout_type,
+    DATE_FORMAT(i.a2, '%Y-%m-%d') AS report_date,
+    DATE_FORMAT(i.a2, '%Y') AS report_year,
+    DATE_FORMAT(i.a2, '%c') AS report_month,
+    1 AS total_num,
+    (CASE WHEN i.a6 = 1 THEN 1 ELSE 0 END) AS big_car_num,
+    (CASE WHEN i.a6 != 1 THEN 1 ELSE 0 END) AS small_car_num,
+    (CASE WHEN i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_car_num,
+    (CASE WHEN i.a61 = 2 OR i.a61 = 3 THEN 1 ELSE 0 END) AS reserve_num,
+    (CASE WHEN i.a61 = 1 THEN 1 ELSE 0 END) AS white_list_num,
+    (CASE WHEN i.a6 = 1 AND (i.a61 = 2 OR i.a61 = 3) THEN 1 ELSE 0 END) AS big_car_reserve_num,
+    (CASE WHEN i.a6 = 1 AND i.a61 = 1 THEN 1 ELSE 0 END) AS big_car_white_list_num,
+    (CASE WHEN i.a6 != 1 AND (i.a61 = 2 OR i.a61 = 3) THEN 1 ELSE 0 END) AS small_car_reserve_num,
+    (CASE WHEN i.a6 != 1 AND i.a61 = 1 THEN 1 ELSE 0 END) AS small_car_white_list_num,
+    (CASE WHEN (i.a61 = 2 OR i.a61 = 3) AND i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_reserve_num,
+    (CASE WHEN i.a61 = 1 AND i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_white_list_num,
+    CURRENT_TIMESTAMP() AS update_time
+FROM
+    ods_test_mysql_test_record_s i
+    LEFT JOIN ods_test_mysql_test_barrier_s b ON i.a22 = b.a1
+WHERE
+    i.a67 = 0
+    AND i.a1 = '100280023213'
+    AND i.a2 &lt; '2021-11-20 00:00:00'
+    AND (
+        i.a2 BETWEEN DATE_FORMAT(i.a2, '%Y-%m-%d 00:00:00') AND FROM_UNIXTIME(UNIX_TIMESTAMP(DATE_FORMAT(i.a2, '%Y-%m-%d 00:00:00')) + 90000, '%Y-%m-%d %H:%i:%s')
+    )
+LIMIT 1000;
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="143" src="https://images2.imgbox.com/b9/a1/0VUOuuaD_o.png" width="1080"></p> 
+<h4 id="%E6%B5%8B%E8%AF%953">测试3</h4> 
+<p>只查询小于<code>2022-12-30 00:00:00</code>数据，响应时间：<code>0.241s</code></p> 
+<pre><code class="language-sql">SELECT
+    i.a1 AS p_code,
+    IFNULL(IFNULL(i.a56, b.a2), '0') AS gateway_no,
+    1 AS inout_type,
+    DATE_FORMAT(i.a2, '%Y-%m-%d') AS report_date,
+    DATE_FORMAT(i.a2, '%Y') AS report_year,
+    DATE_FORMAT(i.a2, '%c') AS report_month,
+    1 AS total_num,
+    (CASE WHEN i.a6 = 1 THEN 1 ELSE 0 END) AS big_car_num,
+    (CASE WHEN i.a6 != 1 THEN 1 ELSE 0 END) AS small_car_num,
+    (CASE WHEN i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_car_num,
+    (CASE WHEN i.a61 = 2 OR i.a61 = 3 THEN 1 ELSE 0 END) AS reserve_num,
+    (CASE WHEN i.a61 = 1 THEN 1 ELSE 0 END) AS white_list_num,
+    (CASE WHEN i.a6 = 1 AND (i.a61 = 2 OR i.a61 = 3) THEN 1 ELSE 0 END) AS big_car_reserve_num,
+    (CASE WHEN i.a6 = 1 AND i.a61 = 1 THEN 1 ELSE 0 END) AS big_car_white_list_num,
+    (CASE WHEN i.a6 != 1 AND (i.a61 = 2 OR i.a61 = 3) THEN 1 ELSE 0 END) AS small_car_reserve_num,
+    (CASE WHEN i.a6 != 1 AND i.a61 = 1 THEN 1 ELSE 0 END) AS small_car_white_list_num,
+    (CASE WHEN (i.a61 = 2 OR i.a61 = 3) AND i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_reserve_num,
+    (CASE WHEN i.a61 = 1 AND i.a44 REGEXP '[京津沪渝冀豫云辽黑湘皖鲁新苏浙赣鄂桂甘晋蒙陕吉闽贵粤青藏川宁琼使领A-Z]{1}[A-Z]{1}(([0-9]{5}[DABCEFGHJK])|([DABCEFGHJK][A-HJ-NP-Z0-9][0-9]{4}))$' THEN 1 ELSE 0 END) AS new_power_white_list_num,
+    CURRENT_TIMESTAMP() AS update_time
+FROM
+    ods_test_mysql_test_record_s i
+    LEFT JOIN ods_test_mysql_test_barrier_s b ON i.a22 = b.a1
+WHERE i.a2 &lt; '2022-12-30 00:00:00' LIMIT 10000;
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="76" src="https://images2.imgbox.com/58/bc/5BwKbZWJ_o.png" width="1080"></p> 
+<h4 id="%E6%B5%8B%E8%AF%95%204">测试 4</h4> 
+<p>最新官方性能测试报告：https://doris.apache.org/zh-CN/docs/benchmark/ssb/</p> 
+<h3 id="%E9%AB%98%E5%8F%AF%E7%94%A8%E6%B5%8B%E8%AF%95">高可用测试</h3> 
+<p>如下图FE3台组建一个高可用集群，分别为：</p> 
+<ul><li> <p>172.17.0.3   FOLLOWER</p> </li><li> <p>172.17.0.4  FOLLOWER</p> </li><li> <p>172.17.0.5  MASTER</p> </li></ul> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="285" src="https://images2.imgbox.com/52/19/F0Fw334B_o.png" width="1080"></p> 
+<p>下面对会对常见一些异常场景进行测试验证，以下部分测试案例</p> 
+<h4 id="MASTER%E4%B8%8B%E7%BA%BF%E6%B5%8B%E8%AF%95">MASTER下线测试</h4> 
+<h5></h5> 
+<h5 id="%E6%B5%8B%E8%AF%95%E7%BB%93%E6%9E%9C"><strong>测试结果</strong></h5> 
+<p>成功，所有操作符合预期</p> 
+<h5 id="%E6%B5%8B%E8%AF%95%E8%BF%87%E7%A8%8B"><strong>测试过程</strong></h5> 
+<h5></h5> 
+<p>登录172.17.0.5 服务器杀掉FE节点</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="244" src="https://images2.imgbox.com/71/b9/zsgrePwn_o.png" width="1080"></p> 
+<p></p> 
+<p>查看FE节点状态是否正常， 登录172.17.0.3服务器查看状态，执行以下命令</p> 
+<pre><code>SHOW PROC '/frontends';
+</code></pre> 
+<p>可以看到172.17.0.4成为了master，而172.17.0.5显示已经不在线了 Alive=false</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="214" src="https://images2.imgbox.com/45/32/jNnVesDw_o.png" width="1080"></p> 
+<p>执行插入数据操作，可以看到执行成功。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="289" src="https://images2.imgbox.com/3c/7e/ihB7Yilu_o.png" width="1080"></p> 
+<p>启动172.17.0.5，查看是否能加入集群</p> 
+<pre><code> sh /root/fe/bin/start_fe.sh 172.17.0.3:9010 --daemon
+</code></pre> 
+<p>通过日志可以看到启动成功，并成为了FOLLOWER节点</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="245" src="https://images2.imgbox.com/66/22/KKYgaCjB_o.png" width="1080"></p> 
+<h4 id="%E4%BF%AE%E5%A4%8D%E7%BC%BA%E5%A4%B1%E6%88%96%E6%8D%9F%E5%9D%8F%E5%89%AF%E6%9C%AC">修复缺失或损坏副本</h4> 
+<h5><strong>测试结果</strong></h5> 
+<p>成功，所有操作符合预期</p> 
+<h5><strong>测试过程</strong></h5> 
+<p>1.执行如下命令看到分区10099的副本损坏，需要对它进行恢复创建空白副本</p> 
+<pre><code>ADMIN SHOW REPLICA STATUS FROM table2 PARTITION (p201706, p201707,p201708);
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="159" src="https://images2.imgbox.com/17/e0/gPF3SQav_o.png" width="1080"></p> 
+<p>2.登录master fe</p> 
+<pre><code>ADMIN SET FRONTEND CONFIG ("recover_with_empty_tablet" = "true");
+</code></pre> 
+<p>3.查看数据副本状态</p> 
+<pre><code>ADMIN SHOW REPLICA STATUS FROM table2 PARTITION (p201706, p201707,p201708);
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="97" src="https://images2.imgbox.com/d9/6e/yV5c98mj_o.png" width="1080"></p> 
+<p>4.恢复设置</p> 
+<pre><code>ADMIN SET FRONTEND CONFIG ("recover_with_empty_tablet" = "false");
+</code></pre> 
+<h4 id="%E7%B3%BB%E7%BB%9FDown%E6%9C%BA%E9%87%8D%E5%90%AF%E5%89%AF%E6%9C%AC%E6%B5%8B%E8%AF%95">系统Down机重启副本测试</h4> 
+<h5></h5> 
+<h5><strong>测试结果</strong></h5> 
+<p>成功，所有操作符合预期</p> 
+<h5><strong>测试过程</strong></h5> 
+<h5></h5> 
+<p>1.停止0.5服务</p> 
+<p>2.查询副本状态</p> 
+<pre><code>ADMIN SHOW REPLICA STATUS FROM table4;
+</code></pre> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="369" src="https://images2.imgbox.com/a2/4c/hiBH53H0_o.png" width="1080"></p> 
+<p>3.重启服务，副本状态恢复正常</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="296" src="https://images2.imgbox.com/3f/42/fAD0hv6N_o.png" width="1080"></p> 
+<h3 id="%E6%80%BB%E7%BB%93">总结</h3> 
+<p>以上介绍了Doris架构、性能、故障恢复、动态弹性扩容等特性，正因为这些特性，使不少大厂都在使用它，如果贵司有大数据处理需求，可以深入了解一下它，同时想深入了解 Doris，可以加我微信，拉你进官方社区群！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/18cc2a477ed7262baa364ab49e13a2c5/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【MySQL】MySQL复合查询--多表查询/自连接/子查询</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/647d254562d907dde41496eea545c09c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">购物|电商购物小程序|基于微信小程序的购物系统设计与实现(源码&#43;数据库&#43;文档)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL慢SQL优化方案汇总 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a89c74d94c74a5db4e1b7bd584466bc3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL慢SQL优化方案汇总">
+  <meta property="og:description" content="⛰️个人主页: 蒾酒
+🔥系列专栏：《mysql经验总结》
+目录
+写在前面
+优化思路
+避免查询不必要的列
+分页优化
+索引优化
+JOIN优化
+排序优化
+UNION 优化
+写在最后
+最近发现了一个巨牛的人工智能学习网站，通俗易懂，风趣幽默，忍不住分享一下给大家。
+点击跳转到学习网站
+写在前面 本文介绍了MySQL常见的优化慢sql的手段，坚持看完相信对你有帮助。
+同时欢迎订阅MySQL系列专栏，持续分享MySQL的使用经验。
+优化思路 慢sql的优化无非是从两个方向着手
+SQL语句本身的优化据库设计的优化 下面进行渐进式的分享一些常见优化手段
+避免查询不必要的列 查询应该精准的查出需要的列，对于select * 的写法要避免，因为所有字段查出来不仅sql查询执行慢，若是直接返回给前端，大量的数据也会影响网络传输效率。
+分页优化 对于数据量特别大，这时分页会比较深，查询扫描的数据量会比较大效率自然低，我们就需要进行分页优化
+假设我们有一个包含大量订单记录的订单表，其中每个订单都有一个唯一的不包含业务逻辑的主键，并且我们想要查询最近一个月的订单并按照订单id从小到大进行分页显示某页。
+假设出现深分页的sql如下：
+select * from orders where order_date &gt;= date_sub(now(), interval 1 month) order by id limit 100000, 10; 执行此SQL时需要先扫描到100000行，然后再去取10行，但是随着扫描的记录数越多，SQL的性能就会越差，因为扫描的记录越多，MySQL需要扫描越多的数据来定位到具体的多少行，这样耗费大量的 IO 成本和时间成本。
+对于解决该深分页问题通常有两种方法
+1.延迟关联
+先通过 where 条件提取出主键，在将该表与原数据表关联，通过主键 id 提取数据行，而不是通过原来的二级索引提取数据行
+优化后sql:
+select o.* from ( select id from orders where order_date &gt;= date_sub(now(), interval 1 month) order by id limit 100000, 10 ) as sub join orders as o on sub.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T14:21:43+08:00">
+    <meta property="article:modified_time" content="2024-05-22T14:21:43+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL慢SQL优化方案汇总</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p> <img alt="a31da70afc294501ba5d6e07af20bd59.jpeg" height="64" src="https://images2.imgbox.com/8a/9b/OljvClk9_o.jpg" width="64"></p> 
+<p><strong><span style="color:#38d8f0;">⛰️个人主页:</span>     <strong><strong><strong><a href="https://blog.csdn.net/qq_62262918?spm=1011.2266.3001.5343" title="蒾酒">蒾酒</a></strong></strong></strong></strong></p> 
+<p><strong><span style="color:#956fe7;">🔥系列专栏</span>：<strong><strong><strong><a href="https://blog.csdn.net/qq_62262918/category_12567152.html?spm=1001.2014.3001.5482" title="《mysql经验总结》">《mysql经验总结》</a></strong></strong></strong></strong></p> 
+<hr> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%86%99%E5%9C%A8%E5%89%8D%E9%9D%A2-toc" style="margin-left:0px;"><a href="#%E5%86%99%E5%9C%A8%E5%89%8D%E9%9D%A2" rel="nofollow">写在前面</a></p> 
+<p id="%E4%BC%98%E5%8C%96%E6%80%9D%E8%B7%AF-toc" style="margin-left:0px;"><a href="#%E4%BC%98%E5%8C%96%E6%80%9D%E8%B7%AF" rel="nofollow">优化思路</a></p> 
+<p id="%E9%81%BF%E5%85%8D%E6%9F%A5%E8%AF%A2%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%E5%88%97-toc" style="margin-left:0px;"><a href="#%E9%81%BF%E5%85%8D%E6%9F%A5%E8%AF%A2%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%E5%88%97" rel="nofollow">避免查询不必要的列</a></p> 
+<p id="%E5%88%86%E9%A1%B5%E4%BC%98%E5%8C%96-toc" style="margin-left:0px;"><a href="#%E5%88%86%E9%A1%B5%E4%BC%98%E5%8C%96" rel="nofollow">分页优化</a></p> 
+<p id="%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96-toc" style="margin-left:0px;"><a href="#%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96" rel="nofollow">索引优化</a></p> 
+<p id="JOIN%E4%BC%98%E5%8C%96-toc" style="margin-left:0px;"><a href="#JOIN%E4%BC%98%E5%8C%96" rel="nofollow">JOIN优化</a></p> 
+<p id="%E6%8E%92%E5%BA%8F%E4%BC%98%E5%8C%96-toc" style="margin-left:0px;"><a href="#%E6%8E%92%E5%BA%8F%E4%BC%98%E5%8C%96" rel="nofollow">排序优化</a></p> 
+<p id="UNION%20%E4%BC%98%E5%8C%96-toc" style="margin-left:0px;"><a href="#UNION%20%E4%BC%98%E5%8C%96" rel="nofollow">UNION 优化</a></p> 
+<p id="%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E-toc" style="margin-left:0px;"><a href="#%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E" rel="nofollow">写在最后</a></p> 
+<hr id="hr-toc"> 
+<blockquote> 
+ <p> 最近发现了一个巨牛的人工智能学习网站，通俗易懂，风趣幽默，忍不住分享一下给大家。</p> 
+ <p>    <a href="https://www.captainbed.cn/ding" rel="nofollow" title="点击跳转到学习网站">点击跳转到学习网站</a></p> 
+ <p><img alt="" height="352" src="https://images2.imgbox.com/06/b7/IIx9UWE2_o.png" width="748"></p> 
+</blockquote> 
+<h2>写在前面</h2> 
+<p>本文介绍了MySQL常见的优化慢sql的手段，坚持看完相信对你有帮助。</p> 
+<p>同时欢迎订阅MySQL系列专栏，持续分享MySQL的使用经验。</p> 
+<h2 id="%E4%BC%98%E5%8C%96%E6%80%9D%E8%B7%AF">优化思路</h2> 
+<p>慢sql的优化无非是从两个方向着手</p> 
+<blockquote> 
+ <ul><li>SQL语句本身的优化</li><li>据库设计的优化</li></ul> 
+</blockquote> 
+<p>下面进行渐进式的分享一些常见优化手段</p> 
+<p></p> 
+<h2 id="%E9%81%BF%E5%85%8D%E6%9F%A5%E8%AF%A2%E4%B8%8D%E5%BF%85%E8%A6%81%E7%9A%84%E5%88%97">避免查询不必要的列</h2> 
+<p>查询应该精准的查出需要的列，对于select * 的写法要避免，因为所有字段查出来不仅sql查询执行慢，若是直接返回给前端，大量的数据也会影响网络传输效率。</p> 
+<p></p> 
+<h2 id="%E5%88%86%E9%A1%B5%E4%BC%98%E5%8C%96">分页优化</h2> 
+<p>对于数据量特别大，这时分页会比较深，查询扫描的数据量会比较大效率自然低，我们就需要进行分页优化</p> 
+<p>假设我们有一个包含大量订单记录的订单表，其中每个订单都有一个唯一的不包含业务逻辑的主键，并且我们想要查询最近一个月的订单并按照订单id从小到大进行分页显示某页。</p> 
+<p>假设出现深分页的sql如下：</p> 
+<pre><code class="language-sql">select * from orders where order_date &gt;= date_sub(now(), interval 1 month)
+ order by id limit 100000, 10;</code></pre> 
+<blockquote> 
+ <p>执行此SQL时需要先扫描到100000行，然后再去取10行，但是随着扫描的记录数越多，SQL的性能就会越差，因为扫描的记录越多，MySQL需要扫描越多的数据来定位到具体的多少行，这样耗费大量的 IO 成本和时间成本。</p> 
+</blockquote> 
+<p>对于解决该深分页问题通常有两种方法</p> 
+<blockquote> 
+ <p>1.延迟关联</p> 
+</blockquote> 
+<p>先通过 where 条件提取出主键，在将该表与原数据表关联，通过主键 id 提取数据行，而不是通过原来的二级索引提取数据行</p> 
+<p>优化后sql:</p> 
+<pre><code class="language-sql">select o.*
+from (
+    select id
+    from orders
+    where order_date &gt;= date_sub(now(), interval 1 month)
+    order by id
+    limit 100000, 10
+) as sub
+join orders as o on sub.id = o.id;
+</code></pre> 
+<p>优化后SQL中的子查询只取主键id，可避免通过二级索引中的主键去回表查询，这样性能会快一些。</p> 
+<blockquote> 
+ <p>2.id偏移量</p> 
+</blockquote> 
+<p>偏移量就是找到 limit 第一个参数对应的主键值，根据这个主键值再去过滤并 limit，这种方法又称为基于游标的分页。基于游标的分页的前提是需要保证主键或排序列的连续性、唯一性。</p> 
+<p>优化后sql:</p> 
+<pre><code class="language-sql">select *
+from orders
+where id &gt;= (select id from orders order by id limit 100000, 1)
+order by id
+limit 10;</code></pre> 
+<p>这种方法相对于原来直接使用偏移量和限制结果数量的方式，可以在大数据集上提供更稳定和一致的性能，因为它不需要扫描和跳过大量的行。</p> 
+<h2 id="%E7%B4%A2%E5%BC%95%E4%BC%98%E5%8C%96">索引优化</h2> 
+<p>通过合理的设计和使用索引，能够有效优化sql性能，这也是我们使用最多的手段。</p> 
+<p>下面介绍一下如何进行索引优化：</p> 
+<blockquote> 
+ <p>使用覆盖索引</p> 
+</blockquote> 
+<p>InnoDB使用二级索引查询数据时会回表，但是如果索引的叶节点中已经包含要查询的字段，那它没有必要再回表查询了，这就叫覆盖索引，还有一个简单的理解查询列都是索引列。</p> 
+<p>示例：</p> 
+<pre><code class="language-sql">select product_name, price
+from products
+where category_id = 1;
+</code></pre> 
+<pre><code class="language-sql">create index idx_category_id on products (category_id, product_name, price);
+</code></pre> 
+<blockquote> 
+ <p>避免使用or查询</p> 
+</blockquote> 
+<p>在 MySQL 5.0 之前的版本要尽量避免使用 or 查询，可以使用 union 或者子查询来替代，因为早期的MySQL版本使用 or 查询可能会导致索引失效，高版本引入了索引合并，解决了这个问题，不过建议大家在实际使用中还是规范写法，能不用就少用。</p> 
+<blockquote> 
+ <p>避免使用 != 或者 &lt;&gt;操作符</p> 
+</blockquote> 
+<p>SQL中，不等于操作符会导致查询引擎放弃查询索引，引起全表扫描，即使比较的字段上有索引。解决方法:通过把不等于操作符改成 or，可以使用索引，避免全表扫描</p> 
+<pre><code class="language-sql">id &lt;&gt;'aaa'</code></pre> 
+<pre><code class="language-sql">id &gt;'aaa'or id&lt;'aaa</code></pre> 
+<blockquote> 
+ <p>适当使用前缀索引</p> 
+</blockquote> 
+<p>适当地使用前缀索引，可以降低索引的空间占用，提高索引的查询效率。比如，邮箱的后缀都是固定的“@xxx.com”，那么类似这种后面几位为固定值的字段就非常适合定义为前缀索引</p> 
+<pre><code class="language-sql">create index idx_email_prefix on users (email(6)); -- 假设后缀长度为6</code></pre> 
+<p>需要注意的是，前缀索引也存在缺点，MySQL无法利用前缀索引做 order by和 group by 操作，也无法作为覆盖索引。</p> 
+<blockquote> 
+ <p>避免列上函数运算</p> 
+</blockquote> 
+<p>要避免在列字段上进行算术运算或其他表达式运算，否则可能会导致存储引擎无法正确使用索引，从而影响了查询的效率。</p> 
+<pre><code class="language-sql">select order_id
+from orders
+where total_amount / 2 &gt; 100</code></pre> 
+<blockquote> 
+ <p>正确使用联合索引</p> 
+</blockquote> 
+<p>使用联合索引的时候，注意最左匹配原则。 </p> 
+<h2 id="JOIN%E4%BC%98%E5%8C%96">JOIN优化</h2> 
+<blockquote> 
+ <p>优化子查询</p> 
+</blockquote> 
+<p>尽量使用 Join 语句来替代子査询，因为子査询是嵌套查询，而嵌套查询会新创建一张临时表，而临时表的创建与销毁会占用一定的系统资源以及花费一定的时间，同时对于返回结果集比较大的子查询，其对查询性能的影响更大 </p> 
+<blockquote> 
+ <p>小表驱动大表</p> 
+</blockquote> 
+<p>关联查询的时候要拿小表去驱动大表，因为关联的时候，MySQL内部会遍历驱动表，再去连接被驱动表</p> 
+<pre><code class="language-sql">select name from小表 left join 大表;</code></pre> 
+<blockquote> 
+ <p>适当增加冗余字段</p> 
+</blockquote> 
+<p>增加冗余字段可以减少大量的连表查询，因为多张表的连表查询性能很低，所有可以适当的增加冗余字段，以减少多张表的关联查询，这是以空间换时间的优化策略。</p> 
+<blockquote> 
+ <p>避免使用 JOIN 关联太多的表</p> 
+</blockquote> 
+<p>《阿里巴巴 Java 开发手册》规定不要 join 超过三张表，第一join 太多降低査询的速度，第二 join 的buffer 会占用更多的内存。</p> 
+<p></p> 
+<h2 id="%E6%8E%92%E5%BA%8F%E4%BC%98%E5%8C%96">排序优化</h2> 
+<blockquote> 
+ <p>利用索引扫描做排序</p> 
+</blockquote> 
+<p>MYSQL有两种方式生成有序结果:一是对结果集进行排序的操作，二是按照索引顺序扫描得出的结果，索引是排好序的数据结构，自然是有序的。<br> 但是如果索引不能覆盖查询所需列(覆盖索引)，就会每扫描一条记录回表查询一次(逐个获取)，这个读操作是随机 IO，通常会比顺序全表扫描还慢，有时会直接放弃使用索引转为全表扫描。因此，在设计索引时，尽可能使用同一个索引既满足排序又用于查找行。</p> 
+<pre><code class="language-sql">#索引为 a,b,c
+select b,c from test where a like 'aa%' order by b,c;</code></pre> 
+<p>只有当索引的列顺序和 ORDER BY 子句的顺序完全一致，并且所有列的排序方向都一样时，才能够使用索引来对结果做排序。</p> 
+<p></p> 
+<h2 id="UNION%20%E4%BC%98%E5%8C%96">UNION 优化</h2> 
+<blockquote> 
+ <p>条件下推</p> 
+</blockquote> 
+<p>MySQL处理 union 的策略是先创建临时表，然后将各个查询结果填充到临时表中最后再来做查询，很多优化策略在 union 查询中都会失效，因为它无法利用索引。所以需要将 where、limit 等子句下推到 union 的各个子查询中，以便优化器可以充分利用这些条件进行优化。</p> 
+<p>此外，除非确实需要服务器去重，一定要使用 union all，如果不加 all 关键字，MySQL 会给临时表加上distinct 选项，这会导致对整个临时表做唯一性检查，代价很高。</p> 
+<h2></h2> 
+<h2 id="%E5%86%99%E5%9C%A8%E6%9C%80%E5%90%8E">写在最后</h2> 
+<p>MySQL优化慢SQL的6种方式到这里就结束了，本文介绍了常见慢sql优化的有效方式。任何问题评论区或私信讨论，欢迎指正。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8e1e4531f9b36d7dc350b3b7eb356d5e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">spring boot3整合spring AI组件</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/f3d58fae7c4640ba7f6c71a23d6020f8/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【SPIE独立出版，往届均已见刊并完成EI、SCOPUS检索 | 四川省人工智能学会主办】第四届大数据、人工智能与风险管理国际学术会议 (ICBAR 2024)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

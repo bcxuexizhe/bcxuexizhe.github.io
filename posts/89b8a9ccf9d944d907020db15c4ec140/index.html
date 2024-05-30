@@ -1,0 +1,320 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Flink cdc3.0同步实例（动态变更表结构、分库分表同步） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/89b8a9ccf9d944d907020db15c4ec140/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Flink cdc3.0同步实例（动态变更表结构、分库分表同步）">
+  <meta property="og:description" content="文章目录 前言准备flink环境docker构建mysql、doris环境数据准备 通过 FlinkCDC cli 提交任务整库同步同步变更路由变更路由表结构不一致无法同步 结尾 前言 在FLink cdc 2.x的版本，各企业做了许多类似的基础功能改造工作（B站 2022年企业flink cdc实践分享 ）。
+最近Flink CDC 3.0发布，schema 变更自动同步、整库同步、分库分表等增强功能使 Flink CDC 3.0 在更复杂的数据集成与用户业务场景中发挥作用：用户无需在数据源发生 schema 变更时手动介入，大大降低用户的运维成本；只需对同步任务进行简单配置即可将多表、多库同步至下游，并进行合并等逻辑，显著降低用户的开发难度与入门门槛。Flink CDC 3.0 正式发布。
+我们今天基于 Flink CDC 3.0 同步 MySQL 到 Doris ，来体验下新上的整库同步、表结构变更同步和分库分表同步的功能。
+准备 flink环境 准备 Flink Standalone 集群，下载最新版本 Flink 1.18.0 ，解压后得到 flink-1.18.0 目录。并且设置 FLINK_HOME 为 flink-1.18.0 所在目录。
+通过在 conf/flink-conf.yaml 配置文件追加下列参数开启 checkpoint，每隔 3 秒做一次 checkpoint，方便后续观察数据变更。
+execution.checkpointing.interval: 3000 使用下面的命令启动 Flink 集群。
+./bin/start-cluster.sh 启动成功的话，可以在 http://localhost:8081/ 访问到 Flink Web UI，如下所示：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-22T18:06:41+08:00">
+    <meta property="article:modified_time" content="2023-12-22T18:06:41+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Flink cdc3.0同步实例（动态变更表结构、分库分表同步）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_1" rel="nofollow">前言</a></li><li><a href="#_5" rel="nofollow">准备</a></li><li><ul><li><a href="#flink_6" rel="nofollow">flink环境</a></li><li><a href="#dockermysqldoris_23" rel="nofollow">docker构建mysql、doris环境</a></li><li><a href="#_64" rel="nofollow">数据准备</a></li></ul> 
+  </li><li><a href="#_FlinkCDC_cli__114" rel="nofollow">通过 FlinkCDC cli 提交任务</a></li><li><ul><li><a href="#_123" rel="nofollow">整库同步</a></li><li><a href="#_168" rel="nofollow">同步变更</a></li><li><a href="#_183" rel="nofollow">路由变更</a></li><li><a href="#_256" rel="nofollow">路由表结构不一致无法同步</a></li></ul> 
+  </li><li><a href="#_273" rel="nofollow">结尾</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_1"></a>前言</h2> 
+<p>在FLink cdc 2.x的版本，各企业做了许多类似的基础功能改造工作（<a href="https://space.bilibili.com/33807709/channel/collectiondetail?sid=898976" rel="nofollow">B站 2022年企业flink cdc实践分享</a> ）。<br> 最近Flink CDC 3.0发布，schema 变更自动同步、整库同步、分库分表等增强功能使 Flink CDC 3.0 在更复杂的数据集成与用户业务场景中发挥作用：用户无需在数据源发生 schema 变更时手动介入，大大降低用户的运维成本；只需对同步任务进行简单配置即可将多表、多库同步至下游，并进行合并等逻辑，显著降低用户的开发难度与入门门槛。<a href="https://mp.weixin.qq.com/s/rkjIK2UH_IeC5QIwHw_4fw" rel="nofollow">Flink CDC 3.0 正式发布</a>。<br> 我们今天基于 Flink CDC 3.0 同步 MySQL 到 Doris ，来体验下新上的整库同步、表结构变更同步和分库分表同步的功能。</p> 
+<h2><a id="_5"></a>准备</h2> 
+<h3><a id="flink_6"></a>flink环境</h3> 
+<p>准备 Flink Standalone 集群，下载最新版本 <a href="https://archive.apache.org/dist/flink/flink-1.18.0/flink-1.18.0-bin-scala_2.12.tgz" rel="nofollow">Flink 1.18.0</a> ，解压后得到 flink-1.18.0 目录。并且设置 FLINK_HOME 为 flink-1.18.0 所在目录。<br> 通过在 <code>conf/flink-conf.yaml</code> 配置文件追加下列参数开启 checkpoint，每隔 3 秒做一次 checkpoint，方便后续观察数据变更。</p> 
+<pre><code class="prism language-bash">execution.checkpointing.interval: <span class="token number">3000</span>
+</code></pre> 
+<p>使用下面的命令启动 Flink 集群。</p> 
+<pre><code class="prism language-bash">./bin/start-cluster.sh
+</code></pre> 
+<p>启动成功的话，可以在 <a href="http://localhost:8081/" rel="nofollow">http://localhost:8081/</a> 访问到 Flink Web UI，如下所示：<br> <img src="https://images2.imgbox.com/50/fd/67qaimLv_o.png" alt="在这里插入图片描述"><br> 多次执行 start-cluster.sh 可以拉起多个 TaskManager，保证Total Task Slots &gt;= 2, 不然提交任务会有资源不足异常，比如我这里执行了3次。 或者是修改 <code>conf/flink-conf.yaml</code> 资源配置。</p> 
+<h3><a id="dockermysqldoris_23"></a>docker构建mysql、doris环境</h3> 
+<p>如果有安装这两个组件，就可以免去docker，接下来的教程将以 docker-compose 的方式准备所需要的组件。<br> 由于 Doris 的运行需要内存映射支持，需在宿主机执行如下命令：</p> 
+<blockquote> 
+ <p>sysctl -w vm.max_map_count=2000000</p> 
+</blockquote> 
+<p>docker 镜像启动，使用下面的内容创建一个 <code>docker-compose.yml</code> 文件：</p> 
+<pre><code class="prism language-yml"><span class="token key atrule">version</span><span class="token punctuation">:</span> <span class="token string">'2.1'</span>
+<span class="token key atrule">services</span><span class="token punctuation">:</span>
+  <span class="token key atrule">doris</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> yagagagaga/doris<span class="token punctuation">-</span>standalone
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token string">"8030:8030"</span>
+      <span class="token punctuation">-</span> <span class="token string">"8040:8040"</span>
+      <span class="token punctuation">-</span> <span class="token string">"9030:9030"</span>
+  <span class="token key atrule">mysql</span><span class="token punctuation">:</span>
+    <span class="token key atrule">image</span><span class="token punctuation">:</span> debezium/example<span class="token punctuation">-</span>mysql<span class="token punctuation">:</span><span class="token number">1.1</span>
+    <span class="token key atrule">ports</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> <span class="token string">"3306:3306"</span>
+    <span class="token key atrule">environment</span><span class="token punctuation">:</span>
+      <span class="token punctuation">-</span> MYSQL_ROOT_PASSWORD=123456
+      <span class="token punctuation">-</span> MYSQL_USER=mysqluser
+      <span class="token punctuation">-</span> MYSQL_PASSWORD=mysqlpw
+</code></pre> 
+<p>该 Docker Compose 中包含的容器有：</p> 
+<p>MySQL: 包含商品信息的数据库 <code>app_db</code></p> 
+<p>Doris: 存储从 MySQL 中根据规则映射过来的结果表</p> 
+<p>在 <code>docker-compose.yml</code> 所在目录下执行下面的命令来启动本教程需要的组件：</p> 
+<pre><code class="prism language-bash"><span class="token function">docker-compose</span> up <span class="token parameter variable">-d</span>
+</code></pre> 
+<p>该命令将以 detached 模式自动启动 Docker Compose 配置中定义的所有容器。你可以通过 docker ps 来观察上述的容器是否正常启动了，也可以通过访问 <a href="http://localhost:8030/" rel="nofollow">http://localhost:8030/</a> 来查看 Doris 是否运行正常。</p> 
+<h3><a id="_64"></a>数据准备</h3> 
+<p>进入 MySQL 容器， 或者通过客户端工具连接到mysql</p> 
+<pre><code class="prism language-bash"><span class="token function">docker-compose</span> <span class="token builtin class-name">exec</span> mysql mysql <span class="token parameter variable">-uroot</span> <span class="token parameter variable">-p123456</span>
+</code></pre> 
+<p>创建数据库 app_db 和表 <code>orders,products</code> 并插入数据</p> 
+<pre><code class="prism language-bash">-- 创建数据库
+CREATE DATABASE app_db<span class="token punctuation">;</span>
+
+USE app_db<span class="token punctuation">;</span>
+
+-- 创建 orders 表
+CREATE TABLE <span class="token variable"><span class="token variable">`</span>orders<span class="token variable">`</span></span> <span class="token punctuation">(</span>
+<span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span> INT NOT NULL,
+<span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span> DECIMAL<span class="token punctuation">(</span><span class="token number">10,2</span><span class="token punctuation">)</span> NOT NULL,
+PRIMARY KEY <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+-- 插入数据
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">1</span>, <span class="token number">4.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">2</span>, <span class="token number">100.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+-- 创建 shipments 表
+CREATE TABLE <span class="token variable"><span class="token variable">`</span>shipments<span class="token variable">`</span></span> <span class="token punctuation">(</span>
+<span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span> INT NOT NULL,
+<span class="token variable"><span class="token variable">`</span>city<span class="token variable">`</span></span> VARCHAR<span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span> NOT NULL,
+PRIMARY KEY <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+-- 插入数据
+INSERT INTO <span class="token variable"><span class="token variable">`</span>shipments<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>city<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">1</span>, <span class="token string">'beijing'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+INSERT INTO <span class="token variable"><span class="token variable">`</span>shipments<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>city<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">2</span>, <span class="token string">'xian'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+-- 创建 products 表
+CREATE TABLE <span class="token variable"><span class="token variable">`</span>products<span class="token variable">`</span></span> <span class="token punctuation">(</span>
+<span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span> INT NOT NULL,
+<span class="token variable"><span class="token variable">`</span>product<span class="token variable">`</span></span> VARCHAR<span class="token punctuation">(</span><span class="token number">255</span><span class="token punctuation">)</span> NOT NULL,
+PRIMARY KEY <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>Doris 暂时不支持自动创建数据库，需要先创建写入表对应的数据库。<br> 进入 Doris Web UI。<a href="http://localhost:8030/" rel="nofollow">http://localhost:8030/</a>，默认的用户名为 root，默认密码为空。<br> 通过 Web UI 创建 app_db 数据库</p> 
+<pre><code class="prism language-bash">create database <span class="token keyword">if</span> not exists app_db<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d2/ab/onl9x9Fx_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_FlinkCDC_cli__114"></a>通过 FlinkCDC cli 提交任务</h2> 
+<p>下载下面列出的二进制压缩包，并解压得到目录 <code>flink-cdc-3.0.0</code>：<br> <a href="https://github.com/ververica/flink-cdc-connectors/releases/download/release-3.0.0/flink-cdc-3.0.0-bin.tar.gz">flink-cdc-3.0.0-bin.tar.gz flink-cdc-3.0.0</a> 下会包含 bin、lib、log、conf 四个目录。</p> 
+<p>下载下面列出的 connector 包，并且移动到 lib 目录下</p> 
+<ul><li><a href="https://repo1.maven.org/maven2/com/ververica/flink-cdc-pipeline-connector-mysql/3.0.0/flink-cdc-pipeline-connector-mysql-3.0.0.jar" rel="nofollow">MySQL pipeline connector 3.0.0</a></li><li><a href="https://repo1.maven.org/maven2/com/ververica/flink-cdc-pipeline-connector-doris/3.0.0/flink-cdc-pipeline-connector-doris-3.0.0.jar" rel="nofollow">Apache Doris pipeline connector 3.0.0</a><br> <img src="https://images2.imgbox.com/84/9d/UwMYgnYW_o.png" alt="在这里插入图片描述"></li></ul> 
+<h3><a id="_123"></a>整库同步</h3> 
+<p>编写任务配置 yaml 文件，下面给出了一个整库同步的示例文件 mysql-to-doris.yaml：</p> 
+<pre><code class="prism language-yml"><span class="token comment">################################################################################</span>
+<span class="token comment"># Description: Sync MySQL all tables to Doris</span>
+<span class="token comment">################################################################################</span>
+<span class="token key atrule">source</span><span class="token punctuation">:</span>
+  <span class="token key atrule">type</span><span class="token punctuation">:</span> mysql
+  <span class="token key atrule">hostname</span><span class="token punctuation">:</span> localhost
+  <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">3306</span>
+  <span class="token key atrule">username</span><span class="token punctuation">:</span> root
+  <span class="token key atrule">password</span><span class="token punctuation">:</span> <span class="token number">123456</span>
+  <span class="token key atrule">tables</span><span class="token punctuation">:</span> app_db.\.*
+  <span class="token key atrule">server-id</span><span class="token punctuation">:</span> 5400<span class="token punctuation">-</span><span class="token number">5404</span>
+  <span class="token key atrule">server-time-zone</span><span class="token punctuation">:</span> UTC
+
+<span class="token key atrule">sink</span><span class="token punctuation">:</span>
+  <span class="token key atrule">type</span><span class="token punctuation">:</span> doris
+  <span class="token key atrule">fenodes</span><span class="token punctuation">:</span> 127.0.0.1<span class="token punctuation">:</span><span class="token number">8030</span>
+  <span class="token key atrule">username</span><span class="token punctuation">:</span> root
+  <span class="token key atrule">password</span><span class="token punctuation">:</span> <span class="token string">""</span>
+  <span class="token key atrule">table.create.properties.light_schema_change</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+  <span class="token key atrule">table.create.properties.replication_num</span><span class="token punctuation">:</span> <span class="token number">1</span>
+
+<span class="token key atrule">pipeline</span><span class="token punctuation">:</span>
+  <span class="token key atrule">name</span><span class="token punctuation">:</span> Sync MySQL Database to Doris
+  <span class="token key atrule">parallelism</span><span class="token punctuation">:</span> <span class="token number">2</span>
+</code></pre> 
+<p>其中：<br> source 中的 <code>tables: app_db.\.*</code> 通过正则匹配同步 <code>app_db</code> 下的所有表。<br> sink 添加 <code>table.create.properties.replication_num</code> 参数是由于 Docker 镜像中只有一个 Doris BE 节点。</p> 
+<p>最后，通过命令行提交任务到 Flink Standalone cluster</p> 
+<pre><code class="prism language-bash"><span class="token function">bash</span> bin/flink-cdc.sh conf/mysql-to-doris.yaml
+</code></pre> 
+<p>提交成功后，返回信息如：<br> <img src="https://images2.imgbox.com/04/fc/xQ0ZljFj_o.png" alt="在这里插入图片描述"><br> 在 Flink Web UI，可以看到一个名为 <code>Sync MySQL Database to Doris</code> 的任务正在运行。job id对应上面的cb049fe4a2112510a77ee46e197054a6<br> <img src="https://images2.imgbox.com/4a/9c/J9g3YwOV_o.png" alt="在这里插入图片描述"><br> 打开 Doris 的 Web UI，可以看到数据表已经被创建出来，数据能成功写入。<br> <img src="https://images2.imgbox.com/3d/d3/eqQYLHxS_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_168"></a>同步变更</h3> 
+<p>接下来，修改 MySQL 数据库中表的数据，Doris 中显示的订单数据也将实时更新：</p> 
+<pre><code class="prism language-bash">INSERT INTO app_db.orders <span class="token punctuation">(</span>id, price<span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">3</span>, <span class="token number">100.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ALTER TABLE app_db.orders ADD amount varchar<span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> NULL<span class="token punctuation">;</span>
+UPDATE app_db.orders SET <span class="token assign-left variable">price</span><span class="token operator">=</span><span class="token number">100.00</span>, <span class="token assign-left variable">amount</span><span class="token operator">=</span><span class="token number">100.00</span> WHERE <span class="token assign-left variable">id</span><span class="token operator">=</span><span class="token number">1</span><span class="token punctuation">;</span>
+DELETE FROM app_db.orders WHERE <span class="token assign-left variable">id</span><span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">;</span>
+-- 区别于官方再新增一条数据
+INSERT INTO app_db.orders VALUES <span class="token punctuation">(</span><span class="token number">4</span>, <span class="token number">200</span>, <span class="token number">200.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>也可以拆开每执行一步，刷新一次 Doris Web UI，可以看到 Doris 中显示的 orders 数据将实时更新，如下所示：<br> <img src="https://images2.imgbox.com/2c/d4/USCE56C1_o.png" alt="在这里插入图片描述"><br> 同样的，去修改 shipments, products 表，也能在 Doris 中实时看到同步变更的结果。</p> 
+<h3><a id="_183"></a>路由变更</h3> 
+<p>Flink CDC 提供了将源表的表结构/数据路由到其他表名的配置，借助这种能力，我们能够实现表名库名替换，整库同步等功能。<br> 下面提供一个配置文件<code>conf/mysql-to-doris-route.yaml</code>说明：</p> 
+<pre><code class="prism language-bash"><span class="token comment">################################################################################</span>
+<span class="token comment"># Description: Sync MySQL all tables to Doris</span>
+<span class="token comment">################################################################################</span>
+source:
+  type: mysql
+  hostname: localhost
+  port: <span class="token number">3306</span>
+  username: root
+  password: <span class="token number">123456</span>
+  tables: app_db1.<span class="token punctuation">\</span>.*
+  server-id: <span class="token number">5400</span>-5404
+  server-time-zone: UTC
+
+sink:
+  type: doris
+  fenodes: <span class="token number">127.0</span>.0.1:8030
+  benodes: <span class="token number">127.0</span>.0.1:8040
+  username: root
+  password: <span class="token string">""</span>
+  table.create.properties.light_schema_change: <span class="token boolean">true</span>
+  table.create.properties.replication_num: <span class="token number">1</span>
+
+route:
+  - source-table: app_db1.orders<span class="token punctuation">\</span>.*
+    sink-table: app_db1.ods_orders
+
+pipeline:
+  name: Sync MySQL Database to Doris
+  parallelism: <span class="token number">2</span>
+</code></pre> 
+<p>通过上面的 route 配置，使用正则表达式，可以将诸如 app_db1.order_01、app_db1.order_02 的表汇总到 app_db1.ods_orders 中。从而实现分库分表同步的功能。注意，目前还不支持多表中存在相同主键数据的场景，将在后续版本支持。<br> 另外官方文档里的写法存在一个问题。<br> <img src="https://images2.imgbox.com/fc/d1/GraANPXA_o.png" alt="在这里插入图片描述"><br> 正则表达式前面加上’\‘转义，<code>app_db1.orders\.*</code>，否则会抛出异常：java.util.regex.PatternSyntaxException: Dangling meta character ‘*’ near index 0 *<br> <img src="https://images2.imgbox.com/6b/f4/HaHF8iYU_o.png" alt="在这里插入图片描述"><br> 目前已在git提了<a href="https://github.com/ververica/flink-cdc-connectors/issues/2905">issue</a>，后面应该会处理这里的问题。<br> 我们在mysql和doris分别创建数据库<code>app_db1</code>， 然后初始化mysql</p> 
+<pre><code class="prism language-bash">-- 创建表orders_01
+CREATE TABLE <span class="token variable"><span class="token variable">`</span>orders_01<span class="token variable">`</span></span> <span class="token punctuation">(</span>
+  <span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span> int NOT NULL,
+  <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span> decimal<span class="token punctuation">(</span><span class="token number">10,2</span><span class="token punctuation">)</span> NOT NULL,
+  <span class="token variable"><span class="token variable">`</span>amount<span class="token variable">`</span></span> varchar<span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> DEFAULT NULL,
+  PRIMARY KEY <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token assign-left variable">ENGINE</span><span class="token operator">=</span>InnoDB DEFAULT <span class="token assign-left variable">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token assign-left variable">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+
+-- 创建表orders_02
+CREATE TABLE <span class="token variable"><span class="token variable">`</span>orders_02<span class="token variable">`</span></span> <span class="token punctuation">(</span>
+  <span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span> int NOT NULL,
+  <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span> decimal<span class="token punctuation">(</span><span class="token number">10,2</span><span class="token punctuation">)</span> NOT NULL,
+  <span class="token variable"><span class="token variable">`</span>amount<span class="token variable">`</span></span> varchar<span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span> DEFAULT NULL,
+  PRIMARY KEY <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token assign-left variable">ENGINE</span><span class="token operator">=</span>InnoDB DEFAULT <span class="token assign-left variable">CHARSET</span><span class="token operator">=</span>utf8mb4 <span class="token assign-left variable">COLLATE</span><span class="token operator">=</span>utf8mb4_0900_ai_ci<span class="token punctuation">;</span>
+</code></pre> 
+<p>启动新的job。<br> <img src="https://images2.imgbox.com/66/0f/eNengAd9_o.png" alt="在这里插入图片描述"><br> 然后在orders_01，orders_02分别插入数据</p> 
+<pre><code class="prism language-bash">
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders_01<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">11</span>, <span class="token number">4.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders_02<span class="token variable">`</span></span> <span class="token punctuation">(</span><span class="token variable"><span class="token variable">`</span><span class="token function">id</span><span class="token variable">`</span></span>, <span class="token variable"><span class="token variable">`</span>price<span class="token variable">`</span></span><span class="token punctuation">)</span> VALUES <span class="token punctuation">(</span><span class="token number">12</span>, <span class="token number">100.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>在doris里验证，数据都写入了<code>app_db1.ods_orders</code><br> <img src="https://images2.imgbox.com/67/b2/H4FkvR0v_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_256"></a>路由表结构不一致无法同步</h3> 
+<p>看Schema Evolution 设计原理，Flink CDC 3.0 在作业拓扑中引入了 SchemaRegistry，结合 SchemaOperator 协调并控制作业拓扑中的 schema 变更事件处理。当上游数据源发生 schema 变更时，SchemaRegistry 会控制 SchemaOperator 以暂停数据流，并将流水线中的数据从 sink 全部刷出以保证 schema 一致性。当 schema 变更事件在外部系统处理成功后，SchemaOperator 恢复数据流，完成本次 schema 变更的处理。<br> <img src="https://images2.imgbox.com/8e/3a/0d1ySNjy_o.png" alt="在这里插入图片描述"><br> 所以考虑只修改orders_01，再插入数据看doris同步的变化。</p> 
+<pre><code class="prism language-bash">-- 添加sku字段
+ALTER TABLE app_db1.orders_01 ADD sku varchar<span class="token punctuation">(</span><span class="token number">32</span><span class="token punctuation">)</span> NULL<span class="token punctuation">;</span>
+-- 向orders_01插入id<span class="token operator">=</span><span class="token number">13</span>
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders_01<span class="token variable">`</span></span> VALUES <span class="token punctuation">(</span><span class="token number">13</span>, <span class="token number">4.00</span>, <span class="token number">8.00</span>, <span class="token string">'apple01'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+-- 向orders_02插入id<span class="token operator">=</span><span class="token number">14</span>
+INSERT INTO <span class="token variable"><span class="token variable">`</span>orders_02<span class="token variable">`</span></span> VALUES <span class="token punctuation">(</span><span class="token number">14</span>, <span class="token number">1.00</span>, <span class="token number">1.00</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+</code></pre> 
+<p>可以看到doris中的<code>app_db1.orders</code>表结构发生了变化，但是<code>orders_02</code>的id=14这条数据没有正常写入。flink异常提示：java.lang.IllegalStateException: Column size does not match the data size<br> <img src="https://images2.imgbox.com/3f/f2/D1B27puB_o.png" alt="在这里插入图片描述"><br> 而当修改orders_02的表结构，也会有异常：Caused by: java.util.concurrent.ExecutionException: java.lang.IllegalArgumentException: status of AddColumnEvent is already existed。并且之后写入的数据无法正常同步。</p> 
+<h2><a id="_273"></a>结尾</h2> 
+<p>flink cdc的功能越来越强，也再尝试解决用户的使用痛点。不过放到生产环境使用还需要建立在更多的实践测试之上。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/ea4284c33c04d16ffa7745c8254aa080/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Python - Vscode显示无法调用相关库(无法解析导入x) Mac版</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/dcfa82899c18c369cd7dc81a0d4624b6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">怎么下载python并安装3.9.0,python下载安装教程3.10.0</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【基于netty&#43;zookeeper的rpc远程调用框架】首篇——缘起 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/72e525d1e6bb924f2b2105317156aa6b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【基于netty&#43;zookeeper的rpc远程调用框架】首篇——缘起">
+  <meta property="og:description" content="🐼作者简介：一名大三在校生🎋
+空有想法，没有实践
+文章目录 第一章 概述缘起一、为什么要手写一个rpc项目二、什么是rpc三、rpc怎么使用四、rpc的通信流程 欢迎添加微信，加入我的核心小队，请备注来意 第一章 概述 缘起 作为一名即将步入社会的大三学生，我深知一份优秀的简历对于求职的重要性。暑期实习作为大学生涯中的一个重要节点，不仅是锻炼自己、积累经验的宝贵机会，更是向未来雇主展示自己能力和潜力的关键时期。我开始着手准备自己的求职简历，同时也在积极寻找能够提升个人竞争力的项目经验。
+在这个过程中，我意识到，一个好项目不仅能够丰富我的简历，更能在面试中成为我与面试官沟通的桥梁，展现我的实际操作能力和解决问题的思路。因此，我开始在网上寻找各种资源，希望找到一个既符合我专业背景，又能体现我技术实力的项目。
+在众多的技术资源中，RPC（Remote Procedure Call，远程过程调用）框架引起了我的注意。RPC框架作为一种允许程序调用另一个地址空间的子程序的机制，广泛应用于分布式系统中，对于提高系统的模块化和可扩展性具有重要意义。于是跟着楠哥一起来手写属于自己的rpc项目，该专栏详细记录着学习中的点点滴滴，感兴趣的可我一起开始这颇有挑战的时光吧！
+一、为什么要手写一个rpc项目 只要你学习过dubbo，学习过微服务，你一定会对rpc这个概念很熟悉。最近几年，不管是在实际的工作中，还是面试中，我们经常可以看到rpc的影子，现在，他几乎成了我们工作中必不可少的一个基础组件，值得我们学习。有些朋友可能会提出疑问，我们已经有了很成熟的rpc框架，比如dubbo、grpc那么我们为什么还要自己去手写呢？
+这个问题我们要这样来看：
+1、学习本身就是为了增长知识，只有懂其原理，才能更好的利用框架，才能更好的解决问题。
+2、大厂都有自己的中间件部门，很多组件必须要自行研发，一方面是自研组件可以更好的满足自己的业务需要，
+一方面是防止开源作者停更无法维护、甚至卡脖子。
+很重要的一点：如果我们可以在简历中写出一个很完善的rpc项目，并且能在面试中讲出其中的核心知识点，那对于校招、或者找工作来说，简直无敌。
+二、什么是rpc RPC（Remote Procedure Call，远程过程调用）是一种允许一个程序调用另一个程序的函数或方法，而这两个程序可以位于同一台计算机上，也可以位于不同的计算机上，甚至可以运行在不同的操作系统中。RPC使得开发者可以像调用本地函数一样调用远程函数，从而实现分布式计算和通信。
+RPC的关键特性包括：
+位置透明性：调用远程过程就像调用本地过程一样，无需关心远程过程的位置。网络通信抽象：RPC框架负责处理底层的网络通信细节，开发者不需要直接处理网络编程。协议支持：RPC可以支持多种通信协议，如TCP/IP、HTTP等。参数传递：远程过程调用允许参数从客户端传递到服务器端，并且将结果返回给客户端。异步调用：很多RPC框架支持异步调用，允许客户端在等待远程调用结果时继续执行其他任务。错误处理：RPC需要能够处理远程调用过程中可能出现的错误，如网络故障、服务不可用等。安全性：确保远程调用过程的安全性，包括认证、授权和数据加密等。 除了基本的远程调用能力，现代RPC框架通常还提供以下高级功能：
+负载均衡：将请求分发到多个服务器，以提高系统的性能和可用性。优雅启停：确保服务在启动和停止时能够优雅地处理当前的请求，避免数据丢失或不一致。链路追踪：跟踪请求在系统中流动的路径，帮助调试和监控系统。灰度发布：逐步推出新版本的服务，以测试其稳定性和性能。 RPC框架的实现通常涉及以下几个关键组件：
+客户端存根（Client Stub）：在客户端模拟远程服务接口的代理对象。服务器端存根（Server Stub）：在服务器端接收客户端请求并调用实际服务的代理对象。通信协议：定义客户端和服务器之间如何交换消息。序列化/反序列化：将数据结构转换为可以在网络上传输的格式，并在接收端将其转换回原始格式。 常见的RPC框架包括gRPC、Apache Thrift、RMI（Java远程方法调用）等。这些框架为分布式系统的开发提供了强大的支持，使得开发者可以更容易地构建和管理分布式应用程序。
+三、rpc怎么使用 目前我们对rpc有了一个基本的了解，那 rpc 在项目中应该如何使用呢，如果有同学熟悉dubbo、grpc、或者openFegin那一定很清楚这个问题的答案。
+我们就以dubbo为例，大家可以参考dubbo的官网讲解，在springboot中，服务提供者和消费者只要依赖相同接口，就可以使用如下的方式进行远程调用了。
+1、服务端只需要使用 @DubboService 注解将对应接口的实现暴露出去。
+@DubboService public class DemoServiceImpl implements DemoService { @Override public String sayHello(String name) { return &#34;Hello &#34; &#43; name; } } 2、客户端就可以直接使用 @DubboReference 直接注入使用了。
+@Component public class Task implements CommandLineRunner { @DubboReference private DemoService demoService; @Override public void run(String.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-25T00:09:51+08:00">
+    <meta property="article:modified_time" content="2024-04-25T00:09:51+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【基于netty&#43;zookeeper的rpc远程调用框架】首篇——缘起</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/27/a2/71X2WYuy_o.gif" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>🐼<font color="djlk"><em><strong>作者简介：一名大三在校生🎋</strong></em></font><br> <em>空有想法，没有实践</em></p> 
+</blockquote> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#__7" rel="nofollow">第一章 概述</a></li><li><ul><li><a href="#_11" rel="nofollow">缘起</a></li><li><a href="#rpc_18" rel="nofollow">一、为什么要手写一个rpc项目</a></li><li><a href="#rpc_27" rel="nofollow">二、什么是rpc</a></li><li><a href="#rpc_60" rel="nofollow">三、rpc怎么使用</a></li><li><a href="#rpc_113" rel="nofollow">四、rpc的通信流程</a></li></ul> 
+   </li><li><a href="#_146" rel="nofollow">欢迎添加微信，加入我的核心小队，请备注来意</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="__7"></a>第一章 概述</h3> 
+<p><img src="https://images2.imgbox.com/cb/1c/UN6r6nss_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_11"></a>缘起</h4> 
+<p>作为一名即将步入社会的大三学生，我深知一份优秀的简历对于求职的重要性。暑期实习作为大学生涯中的一个重要节点，不仅是锻炼自己、积累经验的宝贵机会，更是向未来雇主展示自己能力和潜力的关键时期。我开始着手准备自己的求职简历，同时也在积极寻找能够提升个人竞争力的项目经验。</p> 
+<p>在这个过程中，我意识到，一个好项目不仅能够丰富我的简历，更能在面试中成为我与面试官沟通的桥梁，展现我的实际操作能力和解决问题的思路。因此，我开始在网上寻找各种资源，希望找到一个既符合我专业背景，又能体现我技术实力的项目。</p> 
+<p>在众多的技术资源中，RPC（Remote Procedure Call，远程过程调用）框架引起了我的注意。RPC框架作为一种允许程序调用另一个地址空间的子程序的机制，广泛应用于分布式系统中，对于提高系统的模块化和可扩展性具有重要意义。于是跟着楠哥一起来手写属于自己的rpc项目，该专栏详细记录着学习中的点点滴滴，感兴趣的可我一起开始这颇有挑战的时光吧！</p> 
+<h4><a id="rpc_18"></a>一、为什么要手写一个rpc项目</h4> 
+<p>只要你学习过dubbo，学习过微服务，你一定会对rpc这个概念很熟悉。最近几年，不管是在实际的工作中，还是面试中，我们经常可以看到rpc的影子，现在，他几乎成了我们工作中必不可少的一个基础组件，值得我们学习。有些朋友可能会提出疑问，我们已经有了很成熟的rpc框架，比如dubbo、grpc那么我们为什么还要自己去手写呢？</p> 
+<p>这个问题我们要这样来看：<br> 1、学习本身就是为了增长知识，只有懂其原理，才能更好的利用框架，才能更好的解决问题。<br> 2、大厂都有自己的中间件部门，很多组件必须要自行研发，一方面是自研组件可以更好的满足自己的业务需要，<br> 一方面是防止开源作者停更无法维护、甚至卡脖子。<br> 很重要的一点：如果我们可以在简历中写出一个很完善的rpc项目，并且能在面试中讲出其中的核心知识点，那对于校招、或者找工作来说，简直无敌。</p> 
+<h4><a id="rpc_27"></a>二、什么是rpc</h4> 
+<p><img src="https://images2.imgbox.com/9d/55/5I1FuWuQ_o.png" alt="在这里插入图片描述"></p> 
+<p>RPC（Remote Procedure Call，远程过程调用）是一种允许一个程序调用另一个程序的函数或方法，而这两个程序可以位于同一台计算机上，也可以位于不同的计算机上，甚至可以运行在不同的操作系统中。RPC使得开发者可以像调用本地函数一样调用远程函数，从而实现分布式计算和通信。</p> 
+<p>RPC的关键特性包括：</p> 
+<ol><li><strong>位置透明性</strong>：调用远程过程就像调用本地过程一样，无需关心远程过程的位置。</li><li><strong>网络通信抽象</strong>：RPC框架负责处理底层的网络通信细节，开发者不需要直接处理网络编程。</li><li><strong>协议支持</strong>：RPC可以支持多种通信协议，如TCP/IP、HTTP等。</li><li><strong>参数传递</strong>：远程过程调用允许参数从客户端传递到服务器端，并且将结果返回给客户端。</li><li><strong>异步调用</strong>：很多RPC框架支持异步调用，允许客户端在等待远程调用结果时继续执行其他任务。</li><li><strong>错误处理</strong>：RPC需要能够处理远程调用过程中可能出现的错误，如网络故障、服务不可用等。</li><li><strong>安全性</strong>：确保远程调用过程的安全性，包括认证、授权和数据加密等。</li></ol> 
+<p>除了基本的远程调用能力，现代RPC框架通常还提供以下高级功能：</p> 
+<ul><li><strong>负载均衡</strong>：将请求分发到多个服务器，以提高系统的性能和可用性。</li><li><strong>优雅启停</strong>：确保服务在启动和停止时能够优雅地处理当前的请求，避免数据丢失或不一致。</li><li><strong>链路追踪</strong>：跟踪请求在系统中流动的路径，帮助调试和监控系统。</li><li><strong>灰度发布</strong>：逐步推出新版本的服务，以测试其稳定性和性能。</li></ul> 
+<p>RPC框架的实现通常涉及以下几个关键组件：</p> 
+<ul><li><strong>客户端存根（Client Stub）</strong>：在客户端模拟远程服务接口的代理对象。</li><li><strong>服务器端存根（Server Stub）</strong>：在服务器端接收客户端请求并调用实际服务的代理对象。</li><li><strong>通信协议</strong>：定义客户端和服务器之间如何交换消息。</li><li><strong>序列化/反序列化</strong>：将数据结构转换为可以在网络上传输的格式，并在接收端将其转换回原始格式。</li></ul> 
+<p>常见的RPC框架包括gRPC、Apache Thrift、RMI（Java远程方法调用）等。这些框架为分布式系统的开发提供了强大的支持，使得开发者可以更容易地构建和管理分布式应用程序。</p> 
+<h4><a id="rpc_60"></a>三、rpc怎么使用</h4> 
+<p>目前我们对rpc有了一个基本的了解，那 rpc 在项目中应该如何使用呢，如果有同学熟悉dubbo、grpc、或者openFegin那一定很清楚这个问题的答案。</p> 
+<p>我们就以dubbo为例，大家可以参考dubbo的官网讲解，在springboot中，服务提供者和消费者只要依赖相同接口，就可以使用如下的方式进行远程调用了。</p> 
+<p>1、服务端只需要使用 @DubboService 注解将对应接口的实现暴露出去。</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@DubboService</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">DemoServiceImpl</span> <span class="token keyword">implements</span> <span class="token class-name">DemoService</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">sayHello</span><span class="token punctuation">(</span><span class="token class-name">String</span> name<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token string">"Hello "</span> <span class="token operator">+</span> name<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>2、客户端就可以直接使用 @DubboReference 直接注入使用了。</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Task</span> <span class="token keyword">implements</span> <span class="token class-name">CommandLineRunner</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@DubboReference</span>
+    <span class="token keyword">private</span> <span class="token class-name">DemoService</span> demoService<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">String</span> result <span class="token operator">=</span> demoService<span class="token punctuation">.</span><span class="token function">sayHello</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"Receive result ======&gt; "</span> <span class="token operator">+</span> result<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">new</span> <span class="token class-name">Thread</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">-&gt;</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+                    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">sleep</span><span class="token punctuation">(</span><span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">" Receive result ======&gt; "</span> <span class="token operator">+</span> demoService<span class="token punctuation">.</span><span class="token function">sayHello</span><span class="token punctuation">(</span><span class="token string">"world"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">InterruptedException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                    <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">interrupt</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">start</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这样就是实现了调用远程接口就和调用本地接口一样的能力。事实上，我们使用 MQ 来处理异步流程、Redis 处理缓存热点数据、MySQL 进行持久化数据，调用其他业务系统接口，都可以说是属于 yrpc 调用，由此可见，rpc 确实是我们日常开发中经常接触的东西，只是被包装成了各种框架，导致我们很少意识到这就是 rpc，让 rpc 变成了我们最“熟悉的陌生人”。</p> 
+<p>rpc 是整个应用系统的“经络”，这不为过吧？我们真的很有必要学好 rpc，不仅因为 rpc 是构建复杂系统的基石，还是提升自身认知的利器。</p> 
+<h4><a id="rpc_113"></a>四、rpc的通信流程</h4> 
+<p>rpc能实现调用远程方法就跟调用本地（同一个项目中的方法）一样，发起调用请求的那一方叫做调用方，被调用的一方叫做服务提供方。</p> 
+<p>发起远程调用的核心是网络通信，那我们手动实现rpc框架的核心就是封装通信细节，现在带大家一起来思考整个调用过程中的一些流程和细节：</p> 
+<p>**1、传输协议：**既然 yrpc 存在的核心目的是为了实现远程调用，既然是远程调用那肯定就需要通过网络来传输数据，并且 yrpc 常用于业务系统之间的数据交互，需要保证其可靠性，所以 yrpc 一般默认采用 TCP 来传输。事实上。我们常用的 HTTP 协议也是建立在 TCP 之上的。选择tcp的核心原因还是因为他的效率要比很多应用层协议高很多。</p> 
+<p>**2、封装一个可用的协议：**选择了合适的传输层协议之后，我们需要基于此建立一个我们自己的通用协议，和http一样需要封装自己的应用层协议，详细的内容会在后边的课程里详细介绍。</p> 
+<p>**3、序列化：**网络传输的数据必须是二进制数据，但调用方请求的出入参数都是对象。对象是肯定没法直接在网络中传输的，需要提前把它转成可传输的二进制，并且要求转换算法是可逆的，这个过程我们一般叫做“序列化”。</p> 
+<p>**4、压缩：**如果我们觉得序列化后的字节数组体积比较大，我们还可以对他进行压缩，压缩后的字节数组体积更小，能在传输的过程中更加节省带宽和内存。</p> 
+<p>到这里，一个简单版本的 yrpc 框架就实现了。我把整个流程都画出来了，供你参考：</p> 
+<p><img src="https://images2.imgbox.com/22/81/E21nVE54_o.png" alt="在这里插入图片描述"><br> <mark>那上述几个流程就组成了一个完整的 rpc 吗？</mark></p> 
+<p>在我看来，还缺点东西。因为对于研发人员来说，这样做要掌握太多的 rpc 底层细节，需要手动写代码去<mark>构造请求、调用序列化，并进行网络调用</mark>，整个 API 非常不友好。</p> 
+<p>那我们有什么办法来简化 API，屏蔽掉 rpc 细节，让使用方只需要关注业务接口，像调用本地一样来调用远程呢？</p> 
+<p>如果你了解 Spring，一定对其 AOP 技术很佩服，其核心是采用动态代理的技术，通过字节码增强对方法进行拦截增强，以便于增加需要的额外处理逻辑。其实这个技术也可以应用到 rpc 场景来解决我们刚才面临的问题。</p> 
+<p>由服务提供者给出业务接口声明，在调用方的程序里面，rpc 框架根据调用的服务接口提前生成动态代理实现类，并通过依赖注入等技术注入到声明了该接口的相关业务逻辑里面。该代理实现类会拦截所有的方法调用，在提供的方法处理逻辑里面完成一整套的远程调用，并把远程调用结果返回给调用方，这样调用方在调用远程方法的时候就获得了像调用本地接口一样的体验。</p> 
+<p>了解了我们的一些基础概念和知识，我们开始设计并编写我们自己的rpc框架，我们把他命名为yrpc，y就是我的名字缩写，也可以理解为落鱼——&gt;"y"或者鱼。</p> 
+<hr> 
+<p><img src="https://images2.imgbox.com/a2/cd/K5HVCRM5_o.jpg" alt="在这里插入图片描述"></p> 
+<h3><a id="_146"></a>欢迎添加微信，加入我的核心小队，请备注来意</h3> 
+<p>👇👇👇👇👇👇👇👇👇👇👇👇👇👇👇</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/490592b5c913a9ec80262a7cb6f357ce/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MacOS使用ollama部署codellama&#43;openui以及llama.cpp部署</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b7ae2536cb29a6cf12d461a94f40580f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">SpringCloud-搭建XXL-JOB任务调度平台教程</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

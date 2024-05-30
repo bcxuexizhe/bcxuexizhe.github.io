@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【MySQL精炼宝库】深度解析索引 | 事务 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f5d8d86037268a0903884e16f998e51b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【MySQL精炼宝库】深度解析索引 | 事务">
+  <meta property="og:description" content="目录
+一、索引
+1.1 索引(index)概念：
+1.2 索引的作用：
+1.3 索引的缺点：
+1.4 索引的使用场景：
+1.5 索引的使用：
+1.6 面试题:索引底层的数据结构（核心内容）：
+1.7 索引列查询(主键 | 非主键)过程：
+二、事务
+2.1 事务的概念：
+2.2 事务操作：
+2.3 面试题:事务的基本特性：
+2.4 MySQL事务的隔离性：
+一、索引 1.1 索引(index)概念： 索引是一种特殊的文件，包含着对数据表里所有记录的引用指针。可以对表中的一列或多列创建索引， 并指定索引的类型，各类索引有各自的数据结构实现。
+注意：数组下标，目录，索引这三个是不同的术语，虽然它们的英文都是 index 但是表示的含义各不相同，希望友友们不要混淆。
+本文章主要讲解MySQL中的索引及事务。
+1.2 索引的作用： • 数据库中的表、数据、索引之间的关系，类似于书架上的图书、书籍内容和书籍目录的关系。
+• 索引所起的作用类似书籍目录，可用于快速定位、检索数据。 • 索引对于提高数据库的性能有很大的帮助。
+1.3 索引的缺点： 主要体现在下面两点：
+• 索引本身要占据存储空间。
+• 索引能提高查询速度，但是可能会拖慢增删改的速度（对数据进行增删改都是要同步更新索引的）。
+1.4 索引的使用场景： 要考虑对数据库表的某列或某几列创建索引，需要考虑以下几点：
+• 数据量较大，且经常对这些列进行条件查询（索引是用在条件查询的时候）。
+• 该数据库表的插入操作，及对这些列的修改操作频率较低。 • 索引会占用额外的磁盘空间。
+满足以上条件时，考虑对表中的这些字段创建索引，以提高查询效率。
+相反，如果非条件查询列，或经常做插入、修改操作，或磁盘空间不足时，不考虑创建索引。
+1.5 索引的使用： 创建主键约束（PRIMARY KEY）、唯一约束（UNIQUE）、外键约束（FOREIGN KEY）时，会自动创建对应列的索引。
+例如下图：只需关注画红框的这几个即可，至于如何查看表中的索引，后续马上讲到。
+通过sql我们能够创建索引，查看索引，删除索引。 • 查看索引">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-01T08:13:28+08:00">
+    <meta property="article:modified_time" content="2024-05-01T08:13:28+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【MySQL精炼宝库】深度解析索引 | 事务</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%E4%B8%80%E3%80%81%E7%B4%A2%E5%BC%95-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E7%B4%A2%E5%BC%95" rel="nofollow">一、索引</a></p> 
+<p id="1.1%20%E7%B4%A2%E5%BC%95(index)%E6%A6%82%E5%BF%B5%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.1%20%E7%B4%A2%E5%BC%95%28index%29%E6%A6%82%E5%BF%B5%EF%BC%9A" rel="nofollow">1.1 索引(index)概念：</a></p> 
+<p id="1.2%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%9C%E7%94%A8%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.2%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%9C%E7%94%A8%EF%BC%9A" rel="nofollow">1.2 索引的作用：</a></p> 
+<p id="1.3%20%E7%B4%A2%E5%BC%95%E7%9A%84%E7%BC%BA%E7%82%B9%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.3%20%E7%B4%A2%E5%BC%95%E7%9A%84%E7%BC%BA%E7%82%B9%EF%BC%9A" rel="nofollow">1.3 索引的缺点：</a></p> 
+<p id="1.4%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.4%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%EF%BC%9A" rel="nofollow">1.4 索引的使用场景：</a></p> 
+<p id="1.5%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.5%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9A" rel="nofollow">1.5 索引的使用：</a></p> 
+<p id="1.6%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E7%B4%A2%E5%BC%95%E5%BA%95%E5%B1%82%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%EF%BC%88%E6%A0%B8%E5%BF%83%E5%86%85%E5%AE%B9%EF%BC%89%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.6%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E7%B4%A2%E5%BC%95%E5%BA%95%E5%B1%82%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%EF%BC%88%E6%A0%B8%E5%BF%83%E5%86%85%E5%AE%B9%EF%BC%89%EF%BC%9A" rel="nofollow">1.6 面试题:索引底层的数据结构（核心内容）：</a></p> 
+<p id="1.7%20%E7%B4%A2%E5%BC%95%E5%88%97%E6%9F%A5%E8%AF%A2(%E4%B8%BB%E9%94%AE%20%7C%20%E9%9D%9E%E4%B8%BB%E9%94%AE)%E8%BF%87%E7%A8%8B%EF%BC%9A-toc" style="margin-left:40px;"><a href="#1.7%20%E7%B4%A2%E5%BC%95%E5%88%97%E6%9F%A5%E8%AF%A2%28%E4%B8%BB%E9%94%AE%20%7C%20%E9%9D%9E%E4%B8%BB%E9%94%AE%29%E8%BF%87%E7%A8%8B%EF%BC%9A" rel="nofollow">1.7 索引列查询(主键 | 非主键)过程：</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E4%BA%8B%E5%8A%A1-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E4%BA%8B%E5%8A%A1" rel="nofollow">二、事务</a></p> 
+<p id="2.1%20%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%A6%82%E5%BF%B5%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.1%20%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%A6%82%E5%BF%B5%EF%BC%9A" rel="nofollow">2.1 事务的概念：</a></p> 
+<p id="2.2%20%E4%BA%8B%E5%8A%A1%E6%93%8D%E4%BD%9C%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.2%20%E4%BA%8B%E5%8A%A1%E6%93%8D%E4%BD%9C%EF%BC%9A" rel="nofollow">2.2 事务操作：</a></p> 
+<p id="2.3%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%89%B9%E6%80%A7%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.3%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%89%B9%E6%80%A7%EF%BC%9A" rel="nofollow">2.3 面试题:事务的基本特性：</a></p> 
+<p id="2.4%20MySQL%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%EF%BC%9A-toc" style="margin-left:40px;"><a href="#2.4%20MySQL%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%EF%BC%9A" rel="nofollow">2.4 MySQL事务的隔离性：</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E7%B4%A2%E5%BC%95">一、索引</h2> 
+<h3 id="1.1%20%E7%B4%A2%E5%BC%95(index)%E6%A6%82%E5%BF%B5%EF%BC%9A">1.1 索引(index)概念：</h3> 
+<p>索引是一种特殊的文件，包含着对数据表里所有记录的引用指针。可以对表中的一列或多列创建索引， 并指定索引的类型，各类索引有各自的数据结构实现。</p> 
+<p><span style="color:#fe2c24;">注意：数组下标，目录，索引这三个是不同的术语，虽然它们的英文都是 index 但是表示的含义各不相同，希望友友们不要混淆。</span></p> 
+<p><span style="color:#fe2c24;">本文章主要讲解MySQL中的索引及事务。</span></p> 
+<h3 id="1.2%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%9C%E7%94%A8%EF%BC%9A">1.2 索引的作用：</h3> 
+<blockquote> 
+ <p><strong>• 数据库中的表、数据、索引之间的关系，类似于书架上的图书、书籍内容和书籍目录的关系。</strong></p> 
+ <p><strong>• 索引所起的作用类似书籍目录，可用于快速定位、检索数据。 </strong></p> 
+ <p><strong>• 索引对于提高数据库的性能有很大的帮助。</strong></p> 
+</blockquote> 
+<p><img alt="" height="1086" src="https://images2.imgbox.com/dc/c0/IBieOisd_o.png" width="1200"></p> 
+<h3 id="1.3%20%E7%B4%A2%E5%BC%95%E7%9A%84%E7%BC%BA%E7%82%B9%EF%BC%9A">1.3 索引的缺点：</h3> 
+<p>主要体现在下面两点：</p> 
+<blockquote> 
+ <p><strong>• 索引本身要占据存储空间。</strong></p> 
+ <p><strong>• 索引能提高查询速度，但是可能会拖慢增删改的速度（对数据进行增删改都是要同步更新索引的）。</strong></p> 
+</blockquote> 
+<h3 id="1.4%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%E5%9C%BA%E6%99%AF%EF%BC%9A">1.4 索引的使用场景：</h3> 
+<p>要考虑对数据库表的某列或某几列创建索引，需要考虑以下几点：</p> 
+<blockquote> 
+ <p><strong>• 数据量较大，且经常对这些列进行条件查询（索引是用在条件查询的时候）。</strong></p> 
+ <p><strong>• 该数据库表的插入操作，及对这些列的修改操作频率较低。 </strong></p> 
+ <p><strong>• 索引会占用额外的磁盘空间。</strong></p> 
+</blockquote> 
+<p>满足以上条件时，考虑对表中的这些字段创建索引，以提高查询效率。</p> 
+<p>相反，如果<span style="color:#fe2c24;">非条件查询列，或经常做插入、修改操作，或磁盘空间不足时，不考虑创建索引。</span></p> 
+<h3 id="1.5%20%E7%B4%A2%E5%BC%95%E7%9A%84%E4%BD%BF%E7%94%A8%EF%BC%9A">1.5 索引的使用：</h3> 
+<p>创建主键约束（PRIMARY KEY）、唯一约束（UNIQUE）、外键约束（FOREIGN KEY）时，会自动创建对应列的索引。</p> 
+<p>例如下图：<span style="color:#fe2c24;">只需关注画红框的这几个即可</span>，至于如何查看表中的索引，后续马上讲到。</p> 
+<p><img alt="" height="617" src="https://images2.imgbox.com/0b/a7/qdchnwHs_o.png" width="1200"></p> 
+<p>通过sql我们能够创建索引，查看索引，删除索引。 </p> 
+<p><strong> • 查看索引</strong></p> 
+<p>sql脚本语法：</p> 
+<pre><code class="language-sql">show index from 表名;
+</code></pre> 
+<p>案例：查看学生表已有的索引</p> 
+<pre><code class="language-sql">show index from student;
+</code></pre> 
+<p><img alt="" height="546" src="https://images2.imgbox.com/87/10/yeZktmzL_o.png" width="1200"></p> 
+<p><span style="color:#fe2c24;">问题：为什么建立外键约束时，子表中的对应列（外键）为什么也要建立索引？ </span></p> 
+<p><span style="color:#fe2c24;">解答：在父表中进行删除修改的时候要去子表查询（如果子表有对应外键那么要先修改子表）.为了让子表查询的速度加快，所以这里加上了索引。</span></p> 
+<p><strong> • 创建索引</strong></p> 
+<p>sql脚本语法：</p> 
+<pre><code class="language-sql">create index 索引名 on 表名(字段名);
+</code></pre> 
+<p>案例：创建班级表中，name字段的索引。</p> 
+<pre><code class="language-sql">create index idx_classes_name on classes(name);
+</code></pre> 
+<p><img alt="" height="185" src="https://images2.imgbox.com/8a/01/xwkBQC9k_o.png" width="1200"></p> 
+<p>注意1：创建索引都是根据具体的列来创建的，所以后续查询的时候，也必须针对这一列进行<span style="color:#fe2c24;">条件查询</span>才能够通过索引来提速。</p> 
+<p>注意2：索引的创建是一个<span style="color:#fe2c24;">危险操作</span>。如果表中的数据不多，创建索引啥的哪都无所谓。如果表本身很大，这个时候进行创建索引操作，就会引起大量的 CPU / 硬盘 IO 的消耗，也是可能会把数据库给搞挂了的（年终奖也挂了😭）。</p> 
+<p><span style="color:#fe2c24;">那么如果我们因为业务需要就是要加上索引该怎么加呢？</span></p> 
+<p>解决办法如下：</p> 
+<p>（1）另外弄一个机器，也是搭建好一样的数据库服务器。</p> 
+<p>（2）创建表，建立索引（空表无所谓）。</p> 
+<p>（3）把旧的数据库的数据，导入到新的数据库中（非常耗时）我们可以慢慢导~控制一下数据传输的速度。</p> 
+<p>（4）数据导好了，把应用程序的请求切换到新的服务器上。</p> 
+<p>这样就可以在数据库不会挂的前提把索引加上。</p> 
+<p><strong> • 删除索引</strong></p> 
+<p>sql脚本语法：</p> 
+<pre><code class="language-sql">drop index 索引名 on 表名;
+</code></pre> 
+<p>案例：删除班级表中name字段的索引</p> 
+<pre><code class="language-sql">drop index idx_classes_name on classes;
+</code></pre> 
+<p><img alt="" height="174" src="https://images2.imgbox.com/13/c7/mNdbaF64_o.png" width="1200"></p> 
+<p><span style="color:#fe2c24;">注意：删除索引也是一个比较危险的操作，因为会涉及到大量的 IO ，那么就可能会把 mysql 主机弄挂了。</span></p> 
+<h3 id="1.6%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E7%B4%A2%E5%BC%95%E5%BA%95%E5%B1%82%E7%9A%84%E6%95%B0%E6%8D%AE%E7%BB%93%E6%9E%84%EF%BC%88%E6%A0%B8%E5%BF%83%E5%86%85%E5%AE%B9%EF%BC%89%EF%BC%9A">1.6 面试题:索引底层的数据结构（核心内容）：</h3> 
+<p><span style="color:#ff9900;">在面试中，mysql 相关的面试题很少出现，如果考 SQL 的话就是考察多表查询，更加常见更加高频的问题是（1）索引：谈谈索引内部的结构是怎么样的。（2）谈谈事务的基本特性。</span></p> 
+<p><span style="color:#ff9900;">数据库索引数据结构的最终形态是 B+ 树</span>，B树的升级版。例如下图就是一颗B+树。</p> 
+<p><img alt="" height="885" src="https://images2.imgbox.com/b4/e6/tWL71kiE_o.png" width="1200"></p> 
+<p>这里解释一下为什么不使用二叉搜索树和哈希表。</p> 
+<p><strong>• 不使用哈希表的原因</strong></p> 
+<p>哈希表只能查询 key 相等的情况无法进行大于小于的范围查询。</p> 
+<p><strong>• 不使用二叉搜索树原因</strong></p> 
+<p>二叉搜索树虽然可以进行范围查询但是要找到中序遍历的下一个后继元素的操作很可能需要向父亲节点进行回溯，才能找到后续。如果通过“线索化”的方式来解决，需要付出更多的存储空间。当元素非常多的时候由于是二叉，树的高度就会比较高，查询的效率就会低，数据库的数据/索引都是存储在硬盘上的，<span style="color:#fe2c24;">上述的每次比较都需要一次硬盘 IO 操作，是非常耗时的</span>。<span style="color:#ff9900;">因此，红黑树（二叉搜索树）不太适合于大规模在硬盘上管理数据的场景。</span></p> 
+<p><strong>• 使用B树的优点</strong></p> 
+<p>为了方便叙述下面就是一颗B树。<span style="color:#fe2c24;">注意：每个方框是一个节点（每个数字代表一个key，一个方框里面可以存储多个数字）。</span></p> 
+<p><img alt="" height="782" src="https://images2.imgbox.com/ff/43/NBgj3kbP_o.png" width="1200"></p> 
+<p><strong>优点：</strong></p> 
+<blockquote> 
+ <p><strong>1. 每个节点上的 key 也是有序排序的，比较的时候可以直接进行二分查找。</strong></p> 
+ <p><strong>2. B 树会控制（可以自己调整），某个节点上存储的 key 不会太多，如果插入更多的元素，那么节点会分裂出更多的子树出来。</strong></p> 
+ <p><strong>3. 多个数据放在一块连续的存储空间上，在进行比较的时候，一次硬盘 IO 就能读取出整个节点（进行多次比较，实际上只有一次硬盘的 IO）。</strong></p> 
+</blockquote> 
+<p><strong>• B+树相对于B树的优点</strong></p> 
+<p>要想理解B+ 树的优点那么至少要知道B+ 树的特点（图在上面给过了）</p> 
+<p><strong>• B+ 树的特点：</strong></p> 
+<blockquote> 
+ <p><strong>1. N叉搜索树.</strong></p> 
+ <p><strong>2. 每个父节点中的元素都会在子节点中以最大值的方式存在。</strong></p> 
+ <p><strong>3. 叶子节点这一层通过链表连接。</strong></p> 
+ <p><strong>4. 所有节点都会在叶子节点出现。</strong></p> 
+</blockquote> 
+<p><strong>• B+ 树的优势：</strong></p> 
+<blockquote> 
+ <p><strong>1. 方便查询范围（数据都是在叶子节点，可以直接通过链表找到下一个数据不用回溯）。</strong></p> 
+ <p><strong>2. 查询操作稳定（每次都要查询到叶子节点，稳定本身就是最大的优势）。</strong></p> 
+ <p><strong>3. 数据存储在叶子节点，非叶子节点能够存储在内存。（由于叶子节点是数据的全集，非叶子节点都是重复出现的数据，那么就可以把表中的每一行数据，最终都关联到叶子节点这一层。非叶子节点中只保存一个单纯的 key 值即可，例如(id))。</strong></p> 
+</blockquote> 
+<p>因为B+ 树的稳定，查询的速度又快，所以我们选择B + 树作为底层的数据结构。 </p> 
+<p><span style="color:#fe2c24;">B+ 树这个结构是一直存在的如果定义了主键，那么就是按照主键来建立，如果没有定义主键，数据库会用自带的隐藏的列建立。</span></p> 
+<p>查询一次B+树的时间复杂度为O（以M为底的logN）M为树的度。</p> 
+<h3 id="1.7%20%E7%B4%A2%E5%BC%95%E5%88%97%E6%9F%A5%E8%AF%A2(%E4%B8%BB%E9%94%AE%20%7C%20%E9%9D%9E%E4%B8%BB%E9%94%AE)%E8%BF%87%E7%A8%8B%EF%BC%9A">1.7 索引列查询(主键 | 非主键)过程：</h3> 
+<p><strong>• 针对索引列进行查询</strong></p> 
+<p>非叶子节点存储索引对应列的信息。</p> 
+<p><strong>1. 主键索引：</strong>叶子节点存储数据行(全部信息)。</p> 
+<p><strong>2. 非主键索引：</strong>叶子节点存储的是主键的id，找到id后再进行主键的索引（称为“回表”），也就是要查询两次。</p> 
+<p><strong>• 针对非索引列查询</strong></p> 
+<p>直接去最底下的叶子节点，遍历链表（直接遍历是最慢的）。</p> 
+<h2 id="%E4%BA%8C%E3%80%81%E4%BA%8B%E5%8A%A1">二、事务</h2> 
+<p>在日常开发中，有很多操作不是通过一个 SQL 就能完成的，往往需要多个SQL配合完成，当执行多个SQL操作的时候，如果中间出现了特殊的情况（程序奔溃，系统奔溃，网络断开等）可能会出现前面的 SQL 执行成功，后面的 SQL 执行失败了。例如：转账，钱扣了但是账没有转出去，那么钱就丢了，这是非常严重的问题。因此事务的出现就是为了解决这个问题。</p> 
+<p><img alt="" height="770" src="https://images2.imgbox.com/fb/34/FHff1gCW_o.png" width="1200"></p> 
+<p></p> 
+<h3 id="2.1%20%E4%BA%8B%E5%8A%A1%E7%9A%84%E6%A6%82%E5%BF%B5%EF%BC%9A">2.1 事务的概念：</h3> 
+<p><span style="color:#ff9900;">事务指逻辑上的一组操作，组成这组操作的各个单元，要么全部成功，要么全部失败。</span></p> 
+<p>在不同的环境中，都可以有事务。对应在数据库中，就是数据库事务。</p> 
+<p><span style="color:#ff9900;">简单来说事务就是把多个操作打包成一个整体，那么就能够包装这个整体要么都执行成功，要么就</span></p> 
+<p><span style="color:#ff9900;">一个都不执行，这样就能有效避免，部分执行产生的一些“中间状态引起的问题”。</span></p> 
+<p>其实出现问题并非是没有执行，而是事务能够保证当执行到某一条出现问题，数据库能够自动的把前面 sql 造成的影响恢复回去，看起来就好像没有执行过一样。把这里的“翻新”操作称为“回滚”(rollback)。为了实现回滚机制，数据库会在执行事务的时候记录日志。</p> 
+<h3 id="2.2%20%E4%BA%8B%E5%8A%A1%E6%93%8D%E4%BD%9C%EF%BC%9A">2.2 事务操作：</h3> 
+<p>为了方便叙述我们先引入测试表：</p> 
+<pre><code class="language-sql">drop table if exists accout;
+create table accout(
+ id int primary key auto_increment,
+ name varchar(20) comment '账户名称',
+ money decimal(11,2) comment '金额'
+);
+insert into accout(name, money) values
+('阿里巴巴', 3000),
+('四十大盗', 3000);</code></pre> 
+<p><strong>操作流程如下：</strong></p> 
+<p><span style="color:#ff9900;">• 开启事务：start transaction; </span></p> 
+<p><span style="color:#ff9900;">• 执行多条SQL语句  </span></p> 
+<p><span style="color:#ff9900;">• 回滚或提交：rollback/commit;</span></p> 
+<p><span style="color:#ff9900;">说明：rollback即是全部失败，commit即是全部成功。 </span></p> 
+<p>具体案例如下：</p> 
+<pre><code class="language-sql">start transaction;
+-- 阿里巴巴账户减少2000
+update accout set money=money-2000 where name = '阿里巴巴';
+-- 四十大盗账户增加2000
+update accout set money=money+2000 where name = '四十大盗';
+commit;
+</code></pre> 
+<p> 案例演示效果如下：<img alt="" height="358" src="https://images2.imgbox.com/74/b8/WEvpO2iR_o.png" width="1200"></p> 
+<p>上面这些都是基本操作，</p> 
+<h3 id="2.3%20%E9%9D%A2%E8%AF%95%E9%A2%98%3A%E4%BA%8B%E5%8A%A1%E7%9A%84%E5%9F%BA%E6%9C%AC%E7%89%B9%E6%80%A7%EF%BC%9A">2.3 面试题:事务的基本特性：</h3> 
+<p>基本特性主要有四个：<span style="color:#ff9900;">原子性，一致性，持久性，隔离性。</span></p> 
+<p><strong>• 原子性</strong></p> 
+<p>把多个操作打包成一个整体。</p> 
+<p><strong>• 一致性</strong></p> 
+<p>执行事务之前，和执行事务完毕之后，数据是一致的（不会出现 “对不上” 的情况）。</p> 
+<p><strong>• 持久性</strong></p> 
+<p>把数据存储在硬盘上（程序重启/主机重启，数据依然能存在）。</p> 
+<p><strong>• 隔离性</strong></p> 
+<p>描述的是，数据库并发（多个客户端同时给服务器发起事务）执行事务时，产生的情况。</p> 
+<p>这个是最难理解的，面试官考你事务的四个核心特征其实就是在考隔离性。</p> 
+<p>将事务同时处理会出现三个问题：</p> 
+<p><strong>1. 脏读问题：</strong></p> 
+<p>描述：事务B读到了事务A中未提交的临时数据（脏数据）。</p> 
+<p><strong>解决方法：写操作加锁。</strong></p> 
+<p><strong>2. 不可重复读问题：</strong></p> 
+<p>描述：事务B读的过程中，又有一个事务C对刚才事务A提交的数据进行了修改，使事务B内部不同的读操作读到的结果不同。</p> 
+<p><strong>解决方法：读操作加锁。</strong></p> 
+<p><strong>3. 幻读问题：</strong></p> 
+<p>描述：和不可重复读类似，事务B读的过程中，事务C没有修改数据内容，而是修改了“结果集”，导致B内部不同的读操作读到的结果集合不同。</p> 
+<p><strong>解决方法：串行化。</strong></p> 
+<p>解决上述问题的过程中，要想让数据更准确，就需要牺牲一部分的并发/效率。</p> 
+<h3 id="2.4%20MySQL%E4%BA%8B%E5%8A%A1%E7%9A%84%E9%9A%94%E7%A6%BB%E6%80%A7%EF%BC%9A">2.4 MySQL事务的隔离性：</h3> 
+<p>那么在MySQL 中事务的隔离性具体是如何体现的呢？</p> 
+<p>MySQL给程序员提供了四个隔离级别。可以在MySQL配置文件中进行设置。具体如下：</p> 
+<p><img alt="" height="388" src="https://images2.imgbox.com/15/57/GjDh9qe3_o.png" width="1200"></p> 
+<p>到这我们今天要讲解的内容就已经全部讲解完毕了🎉🎉🎉 ，还是希望大家一定要把面试题多看看，这是最重要的部分。</p> 
+<p><strong>结语：</strong></p> 
+<p><strong>其实写博客不仅仅是为了教大家，同时这也有利于我巩固知识点，和做一个学习的总结，由于作者水平有限，对文章有任何问题还请指出，非常感谢。如果大家有所收获的话还请不要吝啬你们的点赞收藏和关注，这可以激励我写出更加优秀的文章。</strong></p> 
+<p><img alt="" height="400" src="https://images2.imgbox.com/3d/1a/YVIRpDYz_o.png" width="1080"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fb13bfbafd743c78ec94d5539a889616/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">python烟花代码</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7832b7e91dad8f709eecf8bf8bc54c5b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java 【数据结构】 优先级队列（PriorityQueue）和堆（Heap）【神装】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

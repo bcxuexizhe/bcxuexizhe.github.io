@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Java】IO流：字节流 字符流 缓冲流 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7ef903c58eab05e29c8ad38f2041da68/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Java】IO流：字节流 字符流 缓冲流">
+  <meta property="og:description" content="接续上文，在这篇文章将继续介绍在Java中关于文件操作的一些内容 【Java】文件操作
+文章目录 一、“流”的概念1.“流”的分类1.1输入流和输出流1.2字节流和字符流 ==字节和字符的区别？====为什么要有字符流？==1.3节点流和处理流 ==字符流自带缓冲区，为什么还要用字符缓冲流?==2.“流”的特性3.“流”的分类 二、Stream流（字节流）1.InputStream流版本一(无参)read()版本二 read(byte[] b)版本三 read(byte[] b,int offset,int len) 2.OutPutStream流 三、Stream流（字符流）readerwriter 四、 scanner 一、“流”的概念 “流”是一个抽象的概念，是对输入输出设备的一种抽象理解，在Java中，对数据的输入输出都是以“流”的的方式进行的。“流”具有方向性，输入流、输出流是相对的。当程序需要从数据源中读入数据的时候就会开启一个输入流，相反，写出数据到某个数据源目的地的时候也会开启一个输出流。数据源可以是文件、内存或者网络等
+1.“流”的分类 “流”序列中的数据可以是未经加工的原始二进制数据，也可以是经过一定编码处理后符合某种格式的特定数据，因此java中的“流”分为以下三种流：
+按数据流的方向：输入流、输出流按处理数据单位：字节流、字符流按功能：节点流，处理流 1.1输入流和输出流 “流”具有方向性，输入流、输出流是相对的
+输入与输出是相对于应用程序而言的，比如文件读写，读取文件是输入流，写文件是输出流，这点很容易搞反。
+1.2字节流和字符流 字节流：数据流中的最小的数据单元是字节，一次读入读出8位二进制；
+字符流：数据流中的最小的数据单元是字符，一次读入读出16位二进制，java中的字符是Unicode编码，一个字符占用两个字节。
+字节和字符的区别？ 存储方式： 字节（byte）：字节是计算机存储和通信的基本单位。在Java中，一个字节由8位（bit）组成，可以表示256种不同的状态，其取值范围是-128到127（对于byte类型）。
+字符（char）：字符用于表示文本信息。在Java中，一个字符使用Unicode编码，占用2个字节（16位）的空间。因此，Java中的char类型可以表示65536种不同的字符。
+表示范围： 由于字节只有8位，其表示范围相对较小，只能表示-128到127之间的整数，或者0到255之间的无符号整数。
+字符类型则能表示更多的字符，包括各种文字、符号等。由于使用了Unicode编码，Java中的char类型可以表示世界上几乎所有的字符。
+为什么要有字符流？ 在UTF8 编码中，“爱吃南瓜的北瓜”对应的字节如下
+如果使用字节流处理中文，如果一次读写一个字符对应的字节数就不会有问题，一旦将一个字符对应的字节分裂开来，就会出现乱码了。为了更方便地处理中文这些字符，Java就推出了字符流。
+用途： 字节主要用于处理二进制数据、图像、音频、视频等非文本信息，或者在网络通信中传输数据。
+字符则主要用于处理文本信息，如字符串、文件名、用户输入等。
+在Java中，经常需要将字节和字符进行转换。例如，当我们从文件或网络读取数据时，通常得到的是字节流，而我们需要将其转换为字符流以便进行文本处理。这时，可以使用Java提供的解码器（Decoder）将字节转换为字符。反之，当需要将文本信息写入文件或发送到网络时，需要将字符转换为字节，这时可以使用编码器（Encoder）。
+区别 字节流一般用来处理图像、视频、音频、PPT、Word等类型的文件。字符流一般用于处理纯文本类型的文件，如TXT文件等，但不能处理图像视频等非文本文件。用一句话说就是：字节流可以处理一切文件，而字符流只能处理纯文本文件。字节流本身没有缓冲区，缓冲字节流相对于字节流，效率提升非常高。而字符流本身就带有缓冲区，缓冲字符流相对于字符流效率提升就不是那么大了。 1.3节点流和处理流 节点流：节点流可以从一个特定的数据源读写数据，如FileInputStream ，FileOutputStream ，FileReader ，FileWrite 处理流：对一个已存在的流的链接和封装，通过对数据进行处理为程序提供功能强大、灵活的读写功能，例如BufferedInputStream（缓冲字节流）
+在诸多处理流中，有一个非常重要，那就是缓冲流。
+我们知道，程序与磁盘的交互相对于内存运算是很慢的，容易成为程序的性能瓶颈。减少程序与磁盘的交互，是提升程序效率一种有效手段。缓冲流，就应用这种思路：普通流每次读写一个字节，而缓冲流在内存中设置一个缓存区，缓冲区先存储足够的待操作数据后，再与内存或磁盘进行交互。这样，在总数据量不变的情况下，通过提高每次交互的数据量，减少了交互次数。
+联想一下生活中的例子，我们搬砖的时候，一块一块地往车上装肯定是很低效的。我们可以使用一个小推车，先把砖装到小推车上，再把这小推车推到车前，把砖装到车上。这个例子中，小推车可以视为缓冲区，小推车的存在，减少了我们装车次数，从而提高了效率。、
+需要注意的是，缓冲流效率一定高吗？不一定，某些情形下，缓冲流效率反而更低
+字符流自带缓冲区，为什么还要用字符缓冲流? 尽管字符流已经具备了缓冲的功能，但字符缓冲流（BufferedReader 和 BufferedWriter）仍然有其自身的优势和用途：
+缓冲区大小可控：字符缓冲流提供了更大的缓冲区，可以指定缓冲区的大小。较大的缓冲区可以一次性读取或写入更多的字符数据，减少对底层I/O的频繁访问，提高读写效率。
+提供了更方便的读写方法：字符缓冲流提供了一些便捷的方法，如 readLine() 方法可以一次读取一行数据，而不需要一个字符一个字符地读取。newLine() 方法可以写入一个平台特定的换行符，而不需要手动处理不同操作系统的换行符。
+支持预读取和回滚：字符缓冲流具有 mark() 和 reset() 方法，可以在读取过程中进行标记（mark）并在需要时回滚（reset），方便进行预读取和回溯操作。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-07T11:12:37+08:00">
+    <meta property="article:modified_time" content="2024-05-07T11:12:37+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Java】IO流：字节流 字符流 缓冲流</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="httpsimgblogcsdnimgcndirect3bb55bad16b84ff5b3be7aaf6aaaa38fpngpic_center_1"></a><img src="https://images2.imgbox.com/e0/cf/BGkX2iQn_o.png" alt=""></h3> 
+<pre><code class="prism language-java">接续上文，在这篇文章将继续介绍在<span class="token class-name">Java</span>中关于文件操作的一些内容
+</code></pre> 
+<p><a href="http://t.csdnimg.cn/2JYh6" rel="nofollow">【Java】文件操作</a></p> 
+<hr> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#httpsimgblogcsdnimgcndirect3bb55bad16b84ff5b3be7aaf6aaaa38fpngpic_center_1" rel="nofollow"></a></li></ul> 
+  </li><li><a href="#_13" rel="nofollow">一、“流”的概念</a></li><li><ul><li><a href="#1_16" rel="nofollow">1.“流”的分类</a></li><li><ul><li><a href="#11_22" rel="nofollow">1.1输入流和输出流</a></li><li><a href="#12_27" rel="nofollow">1.2字节流和字符流</a></li></ul> 
+   </li><li><a href="#_31" rel="nofollow">==字节和字符的区别？==</a></li><li><a href="#_41" rel="nofollow">==为什么要有字符流？==</a></li><li><ul><li><a href="#13_57" rel="nofollow">1.3节点流和处理流</a></li></ul> 
+   </li><li><a href="#_79" rel="nofollow">==字符流自带缓冲区，为什么还要用字符缓冲流?==</a></li><li><a href="#2_89" rel="nofollow">2.“流”的特性</a></li><li><a href="#3_95" rel="nofollow">3.“流”的分类</a></li></ul> 
+  </li><li><a href="#Stream_104" rel="nofollow">二、Stream流（字节流）</a></li><li><ul><li><a href="#1InputStream_105" rel="nofollow">1.InputStream流</a></li><li><ul><li><a href="#read_128" rel="nofollow">版本一(无参)read()</a></li><li><a href="#_readbyte_b_171" rel="nofollow">版本二 read(byte[] b)</a></li><li><a href="#_readbyte_bint_offsetint_len_199" rel="nofollow">版本三 read(byte[] b,int offset,int len)</a></li></ul> 
+   </li><li><a href="#2OutPutStream_205" rel="nofollow">2.OutPutStream流</a></li></ul> 
+  </li><li><a href="#Stream_248" rel="nofollow">三、Stream流（字符流）</a></li><li><ul><li><a href="#reader_249" rel="nofollow">reader</a></li><li><a href="#writer_298" rel="nofollow">writer</a></li></ul> 
+  </li><li><a href="#_scanner_302" rel="nofollow">四、 scanner</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_13"></a>一、“流”的概念</h2> 
+<p>“流”是一个抽象的概念，是对输入输出设备的一种抽象理解，在Java中，对数据的输入输出都是以“流”的的方式进行的。“流”具有方向性，输入流、输出流是相对的。当程序需要从数据源中读入数据的时候就会开启一个输入流，相反，写出数据到某个数据源目的地的时候也会开启一个输出流。数据源可以是文件、内存或者网络等<br> <img src="https://images2.imgbox.com/6f/84/8bfY5a3w_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="1_16"></a>1.“流”的分类</h3> 
+<p>“流”序列中的数据可以是未经加工的原始二进制数据，也可以是经过一定编码处理后符合某种格式的特定数据，因此java中的“流”分为以下三种流：</p> 
+<ol><li><strong>按数据流的方向</strong>：输入流、输出流</li><li><strong>按处理数据单位</strong>：字节流、字符流</li><li><strong>按功能</strong>：节点流，处理流</li></ol> 
+<h4><a id="11_22"></a>1.1输入流和输出流</h4> 
+<p>“流”具有方向性，输入流、输出流是相对的<br> 输入与输出是相对于应用程序而言的，比如文件读写，读取文件是输入流，写文件是输出流，这点很容易搞反。<br> <img src="https://images2.imgbox.com/f7/aa/GhTYskTU_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="12_27"></a>1.2字节流和字符流</h4> 
+<p>字节流：数据流中的最小的数据单元是字节，一次读入读出8位二进制；<br> 字符流：数据流中的最小的数据单元是字符，一次读入读出16位二进制，java中的字符是Unicode编码，一个字符占用两个字节。</p> 
+<h3><a id="_31"></a><mark>字节和字符的区别？</mark></h3> 
+<ul><li><strong>存储方式：</strong></li></ul> 
+<p><strong>字节（byte）</strong>：字节是计算机存储和通信的基本单位。在Java中，一个字节由8位（bit）组成，可以表示256种不同的状态，其取值范围是-128到127（对于byte类型）。<br> <strong>字符（char）</strong>：字符用于表示文本信息。在Java中，一个字符使用Unicode编码，占用2个字节（16位）的空间。因此，Java中的char类型可以表示65536种不同的字符。</p> 
+<ul><li><strong>表示范围：</strong></li></ul> 
+<p>由于字节只有8位，其表示范围相对较小，只能表示-128到127之间的整数，或者0到255之间的无符号整数。<br> 字符类型则能表示更多的字符，包括各种文字、符号等。由于使用了Unicode编码，Java中的char类型可以表示世界上几乎所有的字符。</p> 
+<h3><a id="_41"></a><mark>为什么要有字符流？</mark></h3> 
+<p>在UTF8 编码中，“爱吃南瓜的北瓜”对应的字节如下<br> <img src="https://images2.imgbox.com/c5/e7/U4GiOo6K_o.png" alt="在这里插入图片描述"><br> 如果使用字节流处理中文，如果一次读写一个字符对应的字节数就不会有问题，一旦将一个字符对应的字节分裂开来，就会出现乱码了。为了更方便地处理中文这些字符，Java就推出了字符流。</p> 
+<ul><li><strong>用途：</strong></li></ul> 
+<p>字节主要用于处理二进制数据、图像、音频、视频等非文本信息，或者在网络通信中传输数据。<br> 字符则主要用于处理文本信息，如字符串、文件名、用户输入等。<br> 在Java中，经常需要将字节和字符进行转换。例如，当我们从文件或网络读取数据时，通常得到的是字节流，而我们需要将其转换为字符流以便进行文本处理。这时，可以使用Java提供的解码器（Decoder）将字节转换为字符。反之，当需要将文本信息写入文件或发送到网络时，需要将字符转换为字节，这时可以使用编码器（Encoder）。</p> 
+<ul><li><strong>区别</strong></li></ul> 
+<ol><li>字节流一般用来处理图像、视频、音频、PPT、Word等类型的文件。字符流一般用于处理纯文本类型的文件，如TXT文件等，但不能处理图像视频等非文本文件。用一句话说就是：字节流可以处理一切文件，而字符流只能处理纯文本文件。</li><li>字节流本身没有缓冲区，缓冲字节流相对于字节流，效率提升非常高。而字符流本身就带有缓冲区，缓冲字符流相对于字符流效率提升就不是那么大了。</li></ol> 
+<h4><a id="13_57"></a>1.3节点流和处理流</h4> 
+<ul><li><strong>节点流</strong>：节点流可以从一个特定的数据源读写数据，如FileInputStream ，FileOutputStream ，FileReader ，FileWrite</li></ul> 
+<p><img src="https://images2.imgbox.com/7a/dd/9moKlsoS_o.png" alt="在这里插入图片描述"></p> 
+<ul><li><strong>处理流</strong>：对一个已存在的流的链接和封装，通过对数据进行处理为程序提供功能强大、灵活的读写功能，例如BufferedInputStream（缓冲字节流）<br> <img src="https://images2.imgbox.com/3d/af/uXSUx4Sp_o.png" alt="在这里插入图片描述"></li></ul> 
+<p><img src="https://images2.imgbox.com/69/e1/7ALwlt1E_o.png" alt="在这里插入图片描述"></p> 
+<p>在诸多处理流中，有一个非常重要，那就是缓冲流。</p> 
+<p>我们知道，程序与磁盘的交互相对于内存运算是很慢的，容易成为程序的性能瓶颈。减少程序与磁盘的交互，是提升程序效率一种有效手段。缓冲流，就应用这种思路：普通流每次读写一个字节，而缓冲流在内存中设置一个缓存区，缓冲区先存储足够的待操作数据后，再与内存或磁盘进行交互。这样，在总数据量不变的情况下，通过提高每次交互的数据量，减少了交互次数。</p> 
+<p><img src="https://images2.imgbox.com/90/b2/7brFaEYC_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/2e/0a/sgUFPigY_o.png" alt=""></p> 
+<p>联想一下生活中的例子，我们搬砖的时候，一块一块地往车上装肯定是很低效的。我们可以使用一个小推车，先把砖装到小推车上，再把这小推车推到车前，把砖装到车上。这个例子中，小推车可以视为缓冲区，小推车的存在，减少了我们装车次数，从而提高了效率。、</p> 
+<p><img src="https://images2.imgbox.com/87/81/hdAzvtmE_o.png" alt="在这里插入图片描述"></p> 
+<p>需要注意的是，缓冲流效率一定高吗？不一定，某些情形下，缓冲流效率反而更低</p> 
+<h3><a id="_79"></a><mark>字符流自带缓冲区，为什么还要用字符缓冲流?</mark></h3> 
+<p><strong>尽管字符流已经具备了缓冲的功能，但字符缓冲流（BufferedReader 和 BufferedWriter）仍然有其自身的优势和用途：</strong></p> 
+<p>缓冲区大小可控：字符缓冲流提供了更大的缓冲区，可以指定缓冲区的大小。较大的缓冲区可以一次性读取或写入更多的字符数据，减少对底层I/O的频繁访问，提高读写效率。</p> 
+<p>提供了更方便的读写方法：字符缓冲流提供了一些便捷的方法，如 readLine() 方法可以一次读取一行数据，而不需要一个字符一个字符地读取。newLine() 方法可以写入一个平台特定的换行符，而不需要手动处理不同操作系统的换行符。</p> 
+<p>支持预读取和回滚：字符缓冲流具有 mark() 和 reset() 方法，可以在读取过程中进行标记（mark）并在需要时回滚（reset），方便进行预读取和回溯操作。</p> 
+<p>支持写入自动刷新：字符缓冲流提供了 flush() 方法，用于手动刷新缓冲区，并将缓冲区中的数据强制写入底层的输出流。此外，可以通过设置缓冲区的大小和自动刷新策略（如自动换行符）来控制写入时的刷新。</p> 
+<h3><a id="2_89"></a>2.“流”的特性</h3> 
+<p>一般来说关于流的特性有下面几点：</p> 
+<ol><li><strong>先进先出</strong>：最先写入输出流的数据最先被输入流读取到。</li><li><strong>顺序存取</strong>：可以一个接一个地往流中写入一串字节，读出时也将按写入顺序读取一串字节，不能随机访问中间的数据。（RandomAccessFile除外）</li><li><strong>只读或只写</strong>：每个流只能是输入流或输出流的一种，不能同时具备两个功能，输入流只能进行读操作，对输出流只能进行写操作。在一个数据传输通道中，如果既要写入数据，又要读取数据，则要分别提供两个流。</li></ol> 
+<h3><a id="3_95"></a>3.“流”的分类</h3> 
+<p>“流”存在于Java.io包中，主要包含四种基本的类，InputStream、OutputStream、Reader及Writer类，它们分别处理字节流和字符流：</p> 
+<table><thead><tr><th>输入\输出</th><th>字节流</th><th>字符流</th></tr></thead><tbody><tr><td>输入</td><td>InputStream</td><td>Reader</td></tr><tr><td>输出</td><td>OutputStream</td><td>Writer</td></tr></tbody></table> 
+<h2><a id="Stream_104"></a>二、Stream流（字节流）</h2> 
+<h3><a id="1InputStream_105"></a>1.InputStream流</h3> 
+<p><img src="https://images2.imgbox.com/94/41/rSO1hDya_o.png" alt="在这里插入图片描述"></p> 
+<table><thead><tr><th>修饰符及返回值类型</th><th>⽅法签名</th><th>说明</th></tr></thead><tbody><tr><td>int</td><td>read()</td><td>读取⼀个字节的数据，返回 -1 代表已经完全读完了</td></tr><tr><td>int</td><td>read(byte[] b)</td><td>最多读取 b.length 字节的数据到 b中，返回实际读到的数量；-1 代表以及读完了</td></tr><tr><td>int</td><td>read(byte[] b, int off, int len)</td><td>最多读取 len - off 字节的数据到 b中，放在从 off 开始，返回实际读到的数量；-1 代表以及读完了</td></tr><tr><td>void</td><td>close()</td><td>关闭字节流</td></tr></tbody></table> 
+<p><img src="https://images2.imgbox.com/a9/2b/yCrh5GAa_o.png" alt="在这里插入图片描述"><br> 这里InputStream是一个抽象类，不能实例化<br> 因为它不仅仅对应的是硬盘的文件，也可以对应网卡，也可以对应控制台，也可以对应蓝牙设备<br> 这里我们是对文件进行操作，所以我们使用系统提供对应的api来进行实例<br> 这里使用FileInputStream</p> 
+<table><thead><tr><th>签名</th><th>说明</th></tr></thead><tbody><tr><td>FileInputStream(File file)</td><td>利⽤ File 构造⽂件输⼊流</td></tr><tr><td>FileInputStream(String name)</td><td>利⽤⽂件路径构造⽂件输⼊流</td></tr></tbody></table> 
+<h4><a id="read_128"></a>版本一(无参)read()</h4> 
+<p><mark>版本一（无参类型)读取的是字节类型，那么为什么返回值的类型却是int呢？？？</mark></p> 
+<p>我们点开read（）的源码</p> 
+<p><img src="https://images2.imgbox.com/9a/9b/qFHaYa14_o.png" alt="在这里插入图片描述"><br> 手动翻译一下</p> 
+<blockquote> 
+ <p>从输入流中读取下一个字节的数据。返回值byte为int型，取值范围为0到255。如果由于到达流的末尾而没有可用的字节，则返回值-1。此方法将一直阻塞，直到输入数据可用、检测到流的结尾或抛出异常。子类必须提供此方法的实现。返回:数据的下一个字节，如果到达流的结尾则返回-1。抛出:IOException -如果I/O错误发生。</p> 
+</blockquote> 
+<pre><code class="prism language-cpp">此处返回<span class="token keyword">int</span>
+<span class="token number">1</span>）为了有额外的余地来表示“到达末尾”<span class="token operator">-</span><span class="token number">1</span>这样的情况
+<span class="token number">2</span>）确保读到的数据都是正数
+   原则上来说，字节这样的概念，本应该是无符号的
+   但是byte类型，本身是有符号的。
+   此处使用<span class="token keyword">int</span>就可以确保读出来的字节都是正数，按照“无符号”来处理了<span class="token punctuation">.</span>
+<span class="token number">3</span><span class="token punctuation">)</span>为什么不用<span class="token keyword">short</span><span class="token operator">?</span>
+  因为<span class="token keyword">short</span>是两个字节<span class="token punctuation">,</span><span class="token keyword">int</span>是四个字节
+  随着计算机技术的发展<span class="token punctuation">,</span>空间的存储成本会越来越低的<span class="token punctuation">,</span>
+  CPU的不断发展<span class="token punctuation">,</span>每次读取的数据也会越来越长
+  对于<span class="token number">32</span>位的CPU来说<span class="token punctuation">,</span>一次读取四个字节的数据
+  也就是说在计算机内部<span class="token punctuation">,</span>如果是<span class="token keyword">short</span>也会转换成<span class="token keyword">int</span>来处理
+  对于<span class="token number">64</span>位的CPU来说<span class="token punctuation">,</span>一次就会读取八个字节的数据
+  所以<span class="token keyword">short</span>的使用会逐步的减少<span class="token punctuation">,</span>由<span class="token keyword">int</span>来代替<span class="token punctuation">,</span>
+</code></pre> 
+<pre><code class="prism language-cpp"> <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span>String<span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span> <span class="token punctuation">(</span>InputStream inputStream <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">FileInputStream</span><span class="token punctuation">(</span><span class="token string">"D:/hello.txt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+             <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                <span class="token keyword">int</span> b <span class="token operator">=</span> inputStream<span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+                 <span class="token keyword">if</span> <span class="token punctuation">(</span>b <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                     <span class="token keyword">break</span><span class="token punctuation">;</span>
+                 <span class="token punctuation">}</span>
+                 System<span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"0x%x "</span><span class="token punctuation">,</span>b<span class="token punctuation">)</span><span class="token punctuation">;</span>
+             <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span>IOException e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token function">RuntimeException</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="_readbyte_b_171"></a>版本二 read(byte[] b)</h4> 
+<pre><code class="prism language-cpp">    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span>String<span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span> <span class="token punctuation">(</span>InputStream inputStream <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">FileInputStream</span><span class="token punctuation">(</span><span class="token string">"D:/hello.txt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+            byte<span class="token punctuation">[</span><span class="token punctuation">]</span> bytes <span class="token operator">=</span> <span class="token keyword">new</span> byte<span class="token punctuation">[</span><span class="token number">1024</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+
+            <span class="token keyword">int</span> len<span class="token punctuation">;</span>
+            <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                len <span class="token operator">=</span> inputStream<span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span>bytes<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">if</span> <span class="token punctuation">(</span>len <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                    <span class="token keyword">break</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+                <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> len<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    System<span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"0x%x "</span><span class="token punctuation">,</span> bytes<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>  <span class="token keyword">catch</span> <span class="token punctuation">(</span>IOException e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token function">RuntimeException</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p>这两种版本的访问速度谁更快呢?</p> 
+<p>版本二速度快,<br> 访问硬盘是低效操作,IO次数越多,整体速度就越慢.</p> 
+<h4><a id="_readbyte_bint_offsetint_len_199"></a>版本三 read(byte[] b,int offset,int len)</h4> 
+<p>一次读取一部分,放置到指定位置</p> 
+<p>在网络协议中,一个报文就是由 报头 和 载荷 组成的<br> 我们就可以用版本三来读取</p> 
+<h3><a id="2OutPutStream_205"></a>2.OutPutStream流</h3> 
+<table><thead><tr><th>修饰符及返回值类型</th><th>⽅法签名</th><th>说明</th></tr></thead><tbody><tr><td>void</td><td>write(int b)</td><td>写⼊要给字节的数据</td></tr><tr><td>void</td><td>write(byte[] b)</td><td>将 b 这个字符数组中的数据全部写⼊ os 中</td></tr><tr><td>int</td><td>write(byte[] b, int off, int len)</td><td>将 b 这个字符数组中从 off 开始的数据写⼊ os 中，⼀共写 len 个</td></tr><tr><td>void</td><td>close()</td><td>关闭字节流</td></tr><tr><td>void</td><td>flush()</td><td>重要：我们知道 I/O 的速度是很慢的，所以，⼤多的 OutputStream为了减少设备操作的次数，在写数据的时候都会将数据先暂时写⼊内存的⼀个指定区域⾥，直到该区域满了或者其他指定条件时才真正将数据写⼊设备中，这个区域⼀般称为缓冲区。但造成⼀个结果，就是我们写的数据，很可能会遗留⼀部分在缓冲区中。需要在最后或者合适的位置，调⽤ flush（刷新）操作，将数据刷到设备中。</td></tr></tbody></table> 
+<p>OutputStream 同样只是⼀个抽象类，要使⽤还需要具体的实现类。我们现在还是只关⼼写⼊⽂件中，所以使⽤ <strong>FileOutputStream</strong></p> 
+<p>同read一样,也是三个版本<br> <img src="https://images2.imgbox.com/cd/11/i6h7acwH_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-cpp"> <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span>String<span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span> <span class="token punctuation">(</span>OutputStream outputStream <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">FileOutputStream</span><span class="token punctuation">(</span><span class="token string">"D:/hello.txt"</span><span class="token punctuation">,</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">97</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">98</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">99</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">101</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            outputStream<span class="token punctuation">.</span><span class="token function">write</span><span class="token punctuation">(</span><span class="token number">102</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span>IOException e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">throw</span> <span class="token keyword">new</span> <span class="token function">RuntimeException</span><span class="token punctuation">(</span>e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p>这里的参数中多了一个Boolean类型<br> 这个是打开了"追加写"的意思<br> 这个功能是在对文件内容进行写入时,不会清空上次文件中的内存<br> 会在文件的原有内容中继续写入,<br> <img src="https://images2.imgbox.com/fc/84/cuBfd9SW_o.png" alt="在这里插入图片描述"></p> 
+<p><mark>为什么要将InputStream OutputStream流的创建写入到try（） {} catch 里的小括号内呢？</mark></p> 
+<p>这是因为我们在创建流后，在流使用后，需要对流进行关闭，在写入到try后面的小括号内时，我们就可以不必手动的来进行流的关闭，减少一些情况下我们忘记关闭流这一操作带来的风险，<br> 这一语法被称作 try–with–resources。<br> 但并非所有的类都可以放到try（）的括号里，这个类必须实现Closeable接口<br> 我们点开InputStream的源码<br> <img src="https://images2.imgbox.com/3b/67/L9h71XCO_o.png" alt="在这里插入图片描述"><br> 可以看到，InputStream流实现了closeable接口。</p> 
+<h2><a id="Stream_248"></a>三、Stream流（字符流）</h2> 
+<h3><a id="reader_249"></a>reader</h3> 
+<p><img src="https://images2.imgbox.com/5d/3e/Uas5WBNL_o.png" alt="在这里插入图片描述"><br> 点开read（）的源码<br> <img src="https://images2.imgbox.com/d6/04/Iq7MMOn7_o.png" alt="在这里插入图片描述"><br> 手动翻译一下</p> 
+<blockquote> 
+ <p>读取单个字符。此方法将阻塞，直到字符可用、发生I/O错误或到达流的末尾。想要支持有效的单字符输入的子类应该覆盖这个方法。返回:读取的字符，取值范围为0到65535 (0x00-0xffff)的整数，如果到达流的末尾则为-1。抛出:IOException -如果发生I/O错误</p> 
+</blockquote> 
+<p>取值范围为0到65535 (0x00-0xffff)也就是读取两个字节</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span>String<span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span><span class="token punctuation">(</span>Reader reader <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">FileReader</span><span class="token punctuation">(</span><span class="token string">"D:/hello.txt"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+               <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                   <span class="token keyword">int</span> c <span class="token operator">=</span> reader<span class="token punctuation">.</span><span class="token function">read</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+                   <span class="token keyword">if</span> <span class="token punctuation">(</span>c <span class="token operator">==</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+                       <span class="token keyword">break</span><span class="token punctuation">;</span>
+                   <span class="token punctuation">}</span>
+                   <span class="token keyword">char</span> ch <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">char</span><span class="token punctuation">)</span>c<span class="token punctuation">;</span>
+                   System<span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%c"</span><span class="token punctuation">,</span>ch<span class="token punctuation">)</span><span class="token punctuation">;</span>
+               <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span><span class="token keyword">catch</span> <span class="token punctuation">(</span>IOException e<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/86/c3/jn0uwx6W_o.png" alt="在这里插入图片描述"></p> 
+<p>那么不出意外的话，意外就要来了<br> Java中的char是两个字节，而汉字确实三个字节<br> 但是read（）确可以正常读取，这是为什么呢？</p> 
+<p>在文件中的原始数据，是三个字节一个字符<br> read在读取操作时，能够识别文件时UTF8编码方式<br> 读的是三个字节，返回成一个char的时候，把UTF8编码方式，转换成了Unicode，在Unicode中一个汉字是两个字节的<br> 链接: <a href="http://t.csdnimg.cn/J4wmk" rel="nofollow">Java中一个汉字究竟占几个字节？</a></p> 
+<p>在Java内部，<br> char用的是Unicode<br> String里面默认是UTF8</p> 
+<p>那么有小可爱就可能会提出疑问了<br> 那直接用char来接收read的返回值不就可以了，还可以省去转换这一步</p> 
+<p>这样做肯定有这样做的道理<br> char只能表示两个字节<br> 文件末尾的-1怎么表示呢？</p> 
+<h3><a id="writer_298"></a>writer</h3> 
+<p><img src="https://images2.imgbox.com/e6/b1/sJS9CpoD_o.png" alt="在这里插入图片描述"><br> writer也存在“追加写”<br> <img src="https://images2.imgbox.com/41/3b/lXlcoRlM_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_scanner_302"></a>四、 scanner</h2> 
+<pre><code class="prism language-cpp">Scanner scanner <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">Scanner</span><span class="token punctuation">(</span>System<span class="token punctuation">.</span>in<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>你是否好奇Sacnner里的System.in到底是什么<br> 我们点开in的源码<br> <img src="https://images2.imgbox.com/a9/31/LLD1p0bM_o.png" alt="在这里插入图片描述"></p> 
+<hr> 
+<p>以上就是本文所有内容，如果对你有帮助的话，点赞收藏支持一下吧！💞💞💞</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a876e8215d706f91e6bd0ba0c707f140/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Spring Gateway的核心功能：路由、过滤、限流一网打尽</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/24aa7c0470c85df4f73774ef8ea96691/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">C# Web控件与数据感应之 BaseDataList 类</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

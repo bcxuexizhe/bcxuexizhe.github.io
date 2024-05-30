@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>关于C&#43;&#43;的IO流简单总结 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/82c86f922b8e913386384a5812b288c3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="关于C&#43;&#43;的IO流简单总结">
+  <meta property="og:description" content="基础IO流 C&#43;&#43;的IO以面向对象的形式实现, 同时兼容了C语言面向过程的IO方式
+C&#43;&#43; 标准库提供了四个基本流对象：
+cin：用于从标准输入（通常是键盘）读取数据。
+cout：用于向标准输出（通常是控制台）写入数据。
+cerr：用于向标准错误输出写入数据，通常用于报告错误。
+clog：用于向标准日志输出写入数据，通常用于记录日志信息。
+C&#43;&#43;中可以通过重载流插入和流提取（std::istream、std::ostream）操作符更好的支持自定义对象的输入输出 如下：
+string str; while(cin &gt;&gt; str){} 上述该种方式输入时, 首先是因为string重载了&gt;&gt;操作符, 调用了istream&amp; operator &gt;&gt; (istream&amp; is, string&amp; str)重载函数, 然后返回值调用了operator bool() 将自定义类型转换成对应的true或者false(bool类型)进行判断.
+结束该进程时, 可以通过Ctrl &#43; C直接杀死进程, 或者Ctrl &#43; Z &#43; 换行表示读取到了结尾即退出循环
+tips1: 将自定义类型转换为内置类型时, 可以通过重载对应的explicit operator 类型(){} 函数来实现, 如operator int(){return _a}//无显式写出返回值,但是要返回对应类型的变量 ,内置类型转换为自定义类型时, 则是通过自定义类型对应的构造函数实现.
+tips2: 自定义类型实现的流插入和流提取可以提供给cout/cin, ifstream/ofstream等类型的流提取和流插入函数实现多态使用, 可更方便的构造自定义类型.如
+Date date; cin &gt;&gt; date; //或者是如下 ifstream ifs(&#34;date.txt&#34;);//默认打开方式是文本读的方式 ifs &gt;&gt; date;//可直接读入该date对象中 二进制读写: 在内存中是如何存储则如何写到磁盘文件(以如下模式打开文件流：ios_base::in | ios_base::binary)
+优点: 读写效率高缺点 写出的内容无法读懂对于需要深浅拷贝的自定义类型无法正确拷贝(地址会改变) 文本读写: 对象数据序列化字符串写出, 读回时也是字符串, 即由二进制序列, 反序列化转成对象数据(即将字符串转为对应数据)">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-28T15:49:57+08:00">
+    <meta property="article:modified_time" content="2024-05-28T15:49:57+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">关于C&#43;&#43;的IO流简单总结</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="IO_0"></a>基础IO流</h3> 
+<p>C++的IO以面向对象的形式实现, 同时兼容了C语言面向过程的IO方式<br> <img src="https://images2.imgbox.com/b8/41/T0NDldym_o.png" alt="在这里插入图片描述"><br> C++ 标准库提供了四个基本流对象：</p> 
+<p>cin：用于从标准输入（通常是键盘）读取数据。<br> cout：用于向标准输出（通常是控制台）写入数据。<br> cerr：用于向标准错误输出写入数据，通常用于报告错误。<br> clog：用于向标准日志输出写入数据，通常用于记录日志信息。</p> 
+<ul><li>C++中可以通过<strong>重载流插入和流提取</strong>（std::istream、std::ostream）操作符更好的支持自定义对象的输入输出</li></ul> 
+<p>如下：</p> 
+<pre><code class="prism language-cpp">string str<span class="token punctuation">;</span>
+<span class="token keyword">while</span><span class="token punctuation">(</span>cin <span class="token operator">&gt;&gt;</span> str<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+</code></pre> 
+<p>上述该种方式输入时, 首先是因为string重载了<code>&gt;&gt;</code>操作符, 调用了<code>istream&amp; operator &gt;&gt; (istream&amp; is, string&amp; str)</code>重载函数, 然后返回值调用了<code>operator bool()</code> 将自定义类型转换成对应的true或者false(bool类型)进行判断.</p> 
+<p>结束该进程时, 可以通过<code>Ctrl + C</code>直接杀死进程, 或者<code>Ctrl + Z + 换行</code>表示读取到了结尾即退出循环</p> 
+<ul><li> <p>tips1: 将自定义类型转换为内置类型时, 可以通过重载对应的<code>explicit operator 类型(){}</code> 函数来实现, 如<code>operator int(){return _a}//无显式写出返回值,但是要返回对应类型的变量</code> ,内置类型转换为自定义类型时, 则是通过自定义类型对应的构造函数实现.</p> </li><li> <p>tips2: 自定义类型实现的流插入和流提取可以提供给cout/cin, ifstream/ofstream等类型的流提取和流插入函数实现多态使用, 可更方便的构造自定义类型.如</p> <pre><code class="prism language-cpp">Date date<span class="token punctuation">;</span>
+cin <span class="token operator">&gt;&gt;</span> date<span class="token punctuation">;</span>
+<span class="token comment">//或者是如下</span>
+ifstream <span class="token function">ifs</span><span class="token punctuation">(</span><span class="token string">"date.txt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//默认打开方式是文本读的方式</span>
+ifs <span class="token operator">&gt;&gt;</span> date<span class="token punctuation">;</span><span class="token comment">//可直接读入该date对象中</span>
+</code></pre> </li></ul> 
+<hr> 
+<ul><li> <p>二进制读写: 在内存中是如何存储则如何写到磁盘文件(以如下模式打开文件流：ios_base::in | ios_base::binary)</p> 
+  <ul><li>优点: 读写效率高</li><li>缺点 
+    <ul><li>写出的内容无法读懂</li><li>对于需要深浅拷贝的自定义类型无法正确拷贝(地址会改变)</li></ul> </li></ul> </li><li> <p>文本读写: 对象数据序列化字符串写出, 读回时也是字符串, 即由二进制序列, 反序列化转成对象数据(即将字符串转为对应数据)<br> (以字符串方式读写)</p> 
+  <ul><li>优点: 能够读懂写出的内容</li><li>缺点: 存在转换过程, 效率较慢</li></ul> </li><li> <p>上述读写方式当要进行自定义类型的读写时, 只要自定义类型重写了流插入和流提取操作符, 都可直接使用流插入和流提取进行操作</p> <p>即可以直接如下方式操作进行写入文件(同cout和cin的使用一样, 默认以空格或换行分割)</p> <pre><code class="prism language-cpp">Date date<span class="token punctuation">;</span>
+ofstream <span class="token function">ofs</span><span class="token punctuation">(</span><span class="token string">"date.txt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+ofs <span class="token operator">&lt;&lt;</span> date<span class="token punctuation">;</span>
+</code></pre> </li></ul> 
+<h3><a id="_58"></a>文件流</h3> 
+<p>C++ 提供了 std::fstream、std::ifstream 和 std::ofstream 类来支持文件 IO。</p> 
+<p>std::fstream：同时支持读写文件。<br> std::ifstream：只支持从文件读取数据。<br> std::ofstream：只支持将数据写入文件。</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;fstream&gt;</span>  </span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream&gt;</span>  </span>
+  
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+    std<span class="token double-colon punctuation">::</span>ofstream <span class="token function">outfile</span><span class="token punctuation">(</span><span class="token string">"example.txt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>outfile<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"Error opening file for writing!"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+        <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>  
+    <span class="token punctuation">}</span>  
+  
+    outfile <span class="token operator">&lt;&lt;</span> <span class="token string">"Hello, world!"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+    outfile<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+  
+    std<span class="token double-colon punctuation">::</span>ifstream <span class="token function">infile</span><span class="token punctuation">(</span><span class="token string">"example.txt"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>infile<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+        std<span class="token double-colon punctuation">::</span>cerr <span class="token operator">&lt;&lt;</span> <span class="token string">"Error opening file for reading!"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+        <span class="token keyword">return</span> <span class="token number">1</span><span class="token punctuation">;</span>  
+    <span class="token punctuation">}</span>  
+  
+    std<span class="token double-colon punctuation">::</span>string line<span class="token punctuation">;</span>  
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>std<span class="token double-colon punctuation">::</span><span class="token function">getline</span><span class="token punctuation">(</span>infile<span class="token punctuation">,</span> line<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> line <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+    <span class="token punctuation">}</span>  
+  
+    infile<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+  
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>  
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_96"></a>字符流</h3> 
+<p>C++ 提供了 std::stringstream、std::istringstream 和 std::ostringstream 类来支持字符串 IO。</p> 
+<p>std::stringstream：同时支持从字符串读取和写入数据。<br> std::istringstream：只支持从字符串读取数据。<br> std::ostringstream：只支持将数据写入字符串。</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sstream&gt;</span>  </span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream&gt;</span>  </span>
+  
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+    std<span class="token double-colon punctuation">::</span>string input <span class="token operator">=</span> <span class="token string">"123 456 789"</span><span class="token punctuation">;</span>  
+    std<span class="token double-colon punctuation">::</span>istringstream <span class="token function">iss</span><span class="token punctuation">(</span>input<span class="token punctuation">)</span><span class="token punctuation">;</span>  
+  
+    <span class="token keyword">int</span> num<span class="token punctuation">;</span>  
+    <span class="token keyword">while</span> <span class="token punctuation">(</span>iss <span class="token operator">&gt;&gt;</span> num<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+        std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> num <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+    <span class="token punctuation">}</span>  
+  
+    std<span class="token double-colon punctuation">::</span>ostringstream oss<span class="token punctuation">;</span>  
+    oss <span class="token operator">&lt;&lt;</span> <span class="token string">"The sum is "</span> <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span><span class="token number">123</span> <span class="token operator">+</span> <span class="token number">456</span> <span class="token operator">+</span> <span class="token number">789</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> oss<span class="token punctuation">.</span><span class="token function">str</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>  
+  
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>  
+<span class="token punctuation">}</span>
+</code></pre> 
+<hr> 
+<h3><a id="_125"></a>格式化输出</h3> 
+<p>C++ 提供了各种流操纵符（如 std::setw、std::setprecision、std::left、std::right 等）来格式化输出<br> 一般不常用，还是使用printf吧</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iostream&gt;</span>  </span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;iomanip&gt;</span> <span class="token comment">// 包含流操纵符  </span></span>
+  
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>  
+    <span class="token keyword">double</span> pi <span class="token operator">=</span> <span class="token number">3.141592653589793</span><span class="token punctuation">;</span>  
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>fixed <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span><span class="token function">setprecision</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> pi <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span> <span class="token comment">// 输出两位小数的π  </span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span><span class="token function">setw</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>left <span class="token operator">&lt;&lt;</span> <span class="token string">"Hello"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span> <span class="token comment">// 左对齐并设置字段宽度为10  </span>
+    std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span><span class="token function">setw</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>right <span class="token operator">&lt;&lt;</span> <span class="token string">"World"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span> <span class="token comment">// 右对齐并设置字段宽度为10  </span>
+  
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>  
+<span class="token punctuation">}</span>
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fe0de5a1f30c8e12d5c4a77d04406fb9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Mysql 单行转多行，把逗号分隔的字段拆分成多行</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/41ce21eb6f5086f7a1c972878d69979f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">平方回文数-第13届蓝桥杯选拔赛Python真题精选</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

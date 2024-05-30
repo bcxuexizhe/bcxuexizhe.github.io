@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Spring Boot3整合Redis - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0791d8924a0df6d847fb3ef1afc76557/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Spring Boot3整合Redis">
+  <meta property="og:description" content="⛰️个人主页: 蒾酒
+🔥系列专栏：《spring boot实战》
+目录
+前置条件
+1.导依赖
+2.配置连接信息以及连接池参数
+3.配置序列化方式
+4.编写测试
+前置条件 已经初始化好一个spring boot项目且版本为3X，项目可正常启动。
+作者版本为3.2.2
+初始化教程：
+新版idea(2023)创建spring boot3项目-CSDN博客https://blog.csdn.net/qq_62262918/article/details/135785412?spm=1001.2014.3001.5501
+1.导依赖 pom.xml:
+&lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-data-redis&lt;/artifactId&gt; &lt;/dependency&gt; 如果还没安装redis可以参照这篇：
+阿里云ECS使用docke搭建redis服务-CSDN博客https://blog.csdn.net/qq_62262918/article/details/135707725?spm=1001.2014.3001.5502
+2.配置连接信息以及连接池参数 application.yml：
+server: port: 8080 spring: data: redis: # Redis连接配置 host: localhost # Redis主机地址 port: 6379 # Redis端口号 password: 123456 # 访问Redis所需密码 database: 0 # 使用的数据库编号 lettuce: #Lettuce客户端配置 pool: # 连接池配置 max-active: 8 # 最大活跃连接数 max-wait: -1 # 最大等待时间（-1表示无限等待） max-idle: 8 # 最大空闲连接数 min-idle: 0 # 最小空闲连接数 修改为你的连接信息即可。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-27T15:39:00+08:00">
+    <meta property="article:modified_time" content="2024-04-27T15:39:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Spring Boot3整合Redis</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p> <img alt="" height="68" src="https://images2.imgbox.com/ee/73/oxlMMb24_o.jpg" width="68"></p> 
+<p><span style="color:#ed7976;">⛰️个人主页:     <a href="https://blog.csdn.net/qq_62262918?spm=1011.2266.3001.5343" title="蒾酒">蒾酒</a></span></p> 
+<p><span style="color:#1c7331;">🔥系列专栏：<a href="https://blog.csdn.net/qq_62262918/category_12571219.html?spm=1001.2014.3001.5482" title="《spring boot实战》">《spring boot实战》</a></span></p> 
+<hr> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%89%8D%E7%BD%AE%E6%9D%A1%E4%BB%B6-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E7%BD%AE%E6%9D%A1%E4%BB%B6" rel="nofollow">前置条件</a></p> 
+<p id="1.%E5%AF%BC%E4%BE%9D%E8%B5%96-toc" style="margin-left:0px;"><a href="#1.%E5%AF%BC%E4%BE%9D%E8%B5%96" rel="nofollow">1.导依赖</a></p> 
+<p id="2.%E9%85%8D%E7%BD%AE%E8%BF%9E%E6%8E%A5%E4%BF%A1%E6%81%AF%E4%BB%A5%E5%8F%8A%E8%BF%9E%E6%8E%A5%E6%B1%A0%E5%8F%82%E6%95%B0-toc" style="margin-left:0px;"><a href="#2.%E9%85%8D%E7%BD%AE%E8%BF%9E%E6%8E%A5%E4%BF%A1%E6%81%AF%E4%BB%A5%E5%8F%8A%E8%BF%9E%E6%8E%A5%E6%B1%A0%E5%8F%82%E6%95%B0" rel="nofollow">2.配置连接信息以及连接池参数</a></p> 
+<p id="3.%E9%85%8D%E7%BD%AE%E5%BA%8F%E5%88%97%E5%8C%96%E6%96%B9%E5%BC%8F-toc" style="margin-left:0px;"><a href="#3.%E9%85%8D%E7%BD%AE%E5%BA%8F%E5%88%97%E5%8C%96%E6%96%B9%E5%BC%8F" rel="nofollow">3.配置序列化方式</a></p> 
+<p id="4.%E7%BC%96%E5%86%99%E6%B5%8B%E8%AF%95-toc" style="margin-left:0px;"><a href="#4.%E7%BC%96%E5%86%99%E6%B5%8B%E8%AF%95" rel="nofollow">4.编写测试</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2>前置条件</h2> 
+<p>已经<a href="https://so.csdn.net/so/search?q=%E5%88%9D%E5%A7%8B%E5%8C%96&amp;spm=1001.2101.3001.7020" title="初始化">初始化</a>好一个spring boot项目且版本为3X，项目可正常启动。</p> 
+<p>作者版本为3.2.2</p> 
+<p>初始化教程：</p> 
+<p><a class="has-card" href="https://blog.csdn.net/qq_62262918/article/details/135785412?spm=1001.2014.3001.5501" title="新版idea(2023)创建spring boot3项目-CSDN博客"><span class="link-card-box"><span class="link-title">新版idea(2023)创建spring boot3项目-CSDN博客</span><span class="link-link"><img class="link-link-icon" src="https://images2.imgbox.com/87/59/rw3XuoVM_o.png" alt="icon-default.png?t=N7T8">https://blog.csdn.net/qq_62262918/article/details/135785412?spm=1001.2014.3001.5501</span></span></a></p> 
+<h2 id="1.%E5%AF%BC%E4%BE%9D%E8%B5%96">1.导依赖</h2> 
+<p>pom.xml:</p> 
+<pre><code class="language-XML">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-boot-starter-data-redis&lt;/artifactId&gt;
+&lt;/dependency&gt;</code></pre> 
+<p>如果还没安装redis可以参照这篇：</p> 
+<p><a class="has-card" href="https://blog.csdn.net/qq_62262918/article/details/135707725?spm=1001.2014.3001.5502" title="阿里云ECS使用docke搭建redis服务-CSDN博客"><span class="link-card-box"><span class="link-title">阿里云ECS使用docke搭建redis服务-CSDN博客</span><span class="link-link"><img class="link-link-icon" src="https://images2.imgbox.com/53/32/9A4YEklj_o.png" alt="icon-default.png?t=N7T8">https://blog.csdn.net/qq_62262918/article/details/135707725?spm=1001.2014.3001.5502</span></span></a></p> 
+<p></p> 
+<h2 id="2.%E9%85%8D%E7%BD%AE%E8%BF%9E%E6%8E%A5%E4%BF%A1%E6%81%AF%E4%BB%A5%E5%8F%8A%E8%BF%9E%E6%8E%A5%E6%B1%A0%E5%8F%82%E6%95%B0">2.配置连接信息以及连接池参数</h2> 
+<p>application.yml：</p> 
+<p><img alt="" height="495" src="https://images2.imgbox.com/fa/c5/WP5Xvn0F_o.png" width="734"></p> 
+<pre><code class="language-XML">server:
+  port: 8080
+spring:
+  data:
+    redis: # Redis连接配置
+      host: localhost  # Redis主机地址
+      port: 6379  # Redis端口号
+      password: 123456  # 访问Redis所需密码
+      database: 0  # 使用的数据库编号
+      lettuce: #Lettuce客户端配置
+        pool: # 连接池配置
+          max-active: 8  # 最大活跃连接数
+          max-wait: -1  # 最大等待时间（-1表示无限等待）
+          max-idle: 8  # 最大空闲连接数
+          min-idle: 0  # 最小空闲连接数</code></pre> 
+<p>修改为你的连接信息即可。</p> 
+<p>这里要说的是：</p> 
+<p>Lettuce和Jedis两者都是Java连接Redis的客户端</p> 
+<p>选择使用Lettuce而不是Jedis的原因如下：</p> 
+<blockquote> 
+ <p><strong>线程安全性：</strong></p> 
+ <ul><li>Lettuce 是基于 Netty 构建的，它使用异步和事件驱动的方式处理连接。因此，它可以在多个线程之间共享一个连接而不需要额外的同步，因此在高并发环境下更高效。</li><li>Jedis 是基于阻塞 I/O 的，并且不是线程安全的，如果在多个线程中共享同一个 Jedis 实例，需要使用连接池进行同步管理，这可能引入额外的复杂性。</li></ul> 
+</blockquote> 
+<blockquote> 
+ <p><strong>连接方式：</strong></p> 
+ <ul><li>Lettuce 支持基于 Reactive Streams 的响应式编程模型，能够更好地与 Spring Reactor、Project Reactor 等框架集成，提供异步和非阻塞的操作。</li><li>Jedis 是同步的，并且在执行某些操作时会阻塞线程，这可能会影响应用程序的性能和响应性。</li></ul> 
+</blockquote> 
+<blockquote> 
+ <p><strong>性能和扩展性：</strong></p> 
+ <ul><li>Lettuce 的设计目标是高性能和扩展性，它可以更好地利用 Redis 4.0 中引入的一些新特性（如 Redis Sentinel 和 Redis Cluster）。</li><li>Jedis 的设计目标更偏向于简单易用，对于一些特殊的 Redis 集群模式可能支持不够完善。</li></ul> 
+</blockquote> 
+<blockquote> 
+ <p><strong>维护和更新：</strong></p> 
+ <ul><li>Lettuce 是一个活跃的项目，并且持续地得到更新和改进。</li><li>Jedis 在某些方面已经相对稳定，并且在一段时间内没有大的更新。</li></ul> 
+</blockquote> 
+<p></p> 
+<h2 id="3.%E9%85%8D%E7%BD%AE%E5%BA%8F%E5%88%97%E5%8C%96%E6%96%B9%E5%BC%8F">3.配置序列化方式</h2> 
+<p>config目录下新建redis配置类</p> 
+<p><img alt="" height="622" src="https://images2.imgbox.com/3b/84/cku5BRCn_o.png" width="617"></p> 
+<p>配置类代码如下：</p> 
+<pre><code class="language-java">import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.connection.RedisConnectionFactory;
+import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.serializer.JdkSerializationRedisSerializer;
+import org.springframework.data.redis.serializer.StringRedisSerializer;
+
+/**
+ * @author mijiupro
+ */
+@Configuration
+public class RedisConfig {
+
+    @Bean
+    public RedisTemplate&lt;String, Object&gt; redisTemplate(RedisConnectionFactory connectionFactory) {
+        RedisTemplate&lt;String, Object&gt; redisTemplate = new RedisTemplate&lt;&gt;();
+        redisTemplate.setConnectionFactory(connectionFactory);
+        // 设置key和value的序列化方式
+        redisTemplate.setKeySerializer(new StringRedisSerializer()); // 设置key的序列化器为StringRedisSerializer
+        redisTemplate.setValueSerializer(new JdkSerializationRedisSerializer()); // 设置value的序列化器为JdkSerializationRedisSerializer
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer()); // 设置hash key的序列化器为StringRedisSerializer
+        redisTemplate.setHashValueSerializer(new JdkSerializationRedisSerializer()); // 设置hash value的序列化器为JdkSerializationRedisSerializer
+        redisTemplate.afterPropertiesSet(); // 初始化RedisTemplate
+        return redisTemplate; // 返回配置好的RedisTemplate
+    }
+}</code></pre> 
+<h2 id="4.%E7%BC%96%E5%86%99%E6%B5%8B%E8%AF%95">4.编写测试</h2> 
+<p><img alt="" height="141" src="https://images2.imgbox.com/f4/30/atHuFJZE_o.png" width="655"></p> 
+<pre><code class="language-java">import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.data.redis.core.StringRedisTemplate;
+
+import java.util.concurrent.TimeUnit;
+
+@SpringBootTest
+public class RedisTest {
+    @Autowired
+    private StringRedisTemplate stringRedisTemplate;
+
+    @Test
+    //测试redis
+    void contextLoads2() {
+        //添加缓存键值对name:mijiu并设置过期时间为1小时
+        stringRedisTemplate.opsForValue().set("name","mijiu",10, TimeUnit.SECONDS);
+        System.out.println(stringRedisTemplate.opsForValue().get("name"));
+
+    }
+}</code></pre> 
+<p>运行测试</p> 
+<p><img alt="" height="236" src="https://images2.imgbox.com/3c/9d/eciHQIDV_o.png" width="1006"></p> 
+<p>测试成功，整合完毕！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/39f88dd1c60ab575bfcdaadb4bbb9b69/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Spring Web MVC入门（2）——请求</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7ea648647bcf98658f12bbf7cfa728f1/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">23种设计模式学习导航（Java完整版）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

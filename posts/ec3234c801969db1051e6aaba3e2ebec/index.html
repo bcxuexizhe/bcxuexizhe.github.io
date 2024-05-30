@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>SD-WebUI视频重绘：TemporalKit&#43;EbsynthUtility避坑指南 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ec3234c801969db1051e6aaba3e2ebec/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="SD-WebUI视频重绘：TemporalKit&#43;EbsynthUtility避坑指南">
+  <meta property="og:description" content="大家好，我是程序员晓晓
+AI视频重绘，在当下大家并不陌生。我们的实现方式大致可以分为三种:
+第三方平台和discord上转绘，如DomoAI ，GoEnhance AI 等。
+优点：效果佳，门槛低。
+缺点：需要科学上网，和支付一定的使用费用。
+ComfyUI转绘工作流，通过animateDiff 结合CN控制网生成视频。
+优点：本地部署，可控性高，根据自己的配置灵活取舍。
+缺点：门槛高，安装麻烦，需要下载大量的模型。
+SD-WebUI通过TemporalKit和EbsynthUtility插件插件生成视频。
+优点：本地部署，不需要网络。
+缺点：门槛中，操作也很多。
+那么我们今天就详细地讲解一下SD-WebUI下重绘视频的详细生成步骤，如果你也想生成AI视频转绘高清视频，请继续往下看。
+测试的视频资源我用的是GoEnhance.Al 官方上的视频。
+如何使用：
+1. 安装ffmpeg：
+下载ffmpeg软件包，将其解压到C盘。
+然后将其完整路径添加到系统环境变量，注意是bin目录。
+然后我们可以“win&#43;r” 输出“cmd”
+调出控制台输入“ffmpeg -version” 出现详细信息就表示ffmpeg安装成功。
+2. 安装transparent-background：
+在开始“运行” 输入“cmd” （或者键盘Win&#43;R，输入“cmd”）
+在弹出的命令行里面输出“pip install transparent-background”
+等待输入提示符闪烁，安装完成。
+3. 安装SD插件：
+首先我们需要有绘世SD webUI软件（如没有AI绘画软件SD，请看文末扫描获取），然后双击启动“A绘世启动器.exe”，在启动器面板左边“版本管理中”找到“安装新扩展”
+搜索一下“Ebsynth ” 点击后面的“安装”，（如无法安装，请看文末获取本地插件安装包）
+再搜索“Temporal” 点击安装。（如无法安装，请看文末获取本地插件安装包）
+然后我们来到首页点击“一键启动” ，启动SD-WebUI。
+它会自动下载安装插件，安装完成后会自动弹出URL网页链接。
+此时我们需要的插件和环境都安装完成了，接下来看看如何使用。
+4. 分割视频：
+首先，我们找一个要转绘的视频，将其拖拽入WebUI中。设置如下，每1帧都采样，动作幅度较大就设置成每3帧提取一个关键帧。
+分辨率我们可以在视频上右键“属性”-详细信息中查看，填写入视频的高度点击“保存设置”。
+然后，我们需要在本地任意地方创建一个纯英文路径的文件夹。我在C:\Users\75691\Videos\test创建了个文件夹用于接收渲染的文件。
+将这个路径填入设置，勾选“批量处理” 和“分割视频” 选项，然后我们就可以点击右边的“运行”了。
+我们会看到刚创建的目录下面，会存放分割的视频文件图片。
+0~6是刚刚每隔3帧取一个关键帧的储存文件夹。
+input是原始视频逐帧图存放的文件夹。
+output是一会儿要重绘的图的存放文件夹。
+main_video.mp4是原始视频文件。
+5. 确定风格：
+然后我们需要确认我们转换的风格，比如是转换成卡通，还是3D又或者是真人，这些取决于我们选择的大模型的风格。我们这里选择卡通二次元。
+将刚刚input路径下的图片拖入图生图，跑图测试。
+修改提示词，先用DeepBooru 反推提示词。将红色背景，改成简单背景。加入LCM加速，提升出图速度。（我还加了个添加细节的lora这个随意）选择一个二次元模板。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-09T11:31:23+08:00">
+    <meta property="article:modified_time" content="2024-04-09T11:31:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">SD-WebUI视频重绘：TemporalKit&#43;EbsynthUtility避坑指南</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>大家好，我是程序员晓晓</p> 
+<p>AI视频重绘，在当下大家并不陌生。我们的实现方式大致可以分为三种:</p> 
+<p>第三方平台和discord上转绘，如DomoAI ，GoEnhance AI 等。</p> 
+<ul><li> <p>优点：效果佳，门槛低。</p> </li><li> <p>缺点：需要科学上网，和支付一定的使用费用。</p> </li></ul> 
+<p>ComfyUI转绘工作流，通过animateDiff 结合CN控制网生成视频。</p> 
+<ul><li> <p>优点：本地部署，可控性高，根据自己的配置灵活取舍。</p> </li><li> <p>缺点：门槛高，安装麻烦，需要下载大量的模型。</p> </li></ul> 
+<p>SD-WebUI通过TemporalKit和EbsynthUtility插件插件生成视频。</p> 
+<ul><li> <p>优点：本地部署，不需要网络。</p> </li><li> <p>缺点：门槛中，操作也很多。</p> </li></ul> 
+<p>那么我们今天就详细地讲解一下SD-WebUI下重绘视频的详细生成步骤，如果你也想生成AI视频转绘高清视频，请继续往下看。</p> 
+<p>测试的视频资源我用的是GoEnhance.Al 官方上的视频。</p> 
+<p><img src="https://images2.imgbox.com/78/92/WhQZ1OFa_o.png" alt=""></p> 
+<hr> 
+<p><strong>如何使用：</strong></p> 
+<p><strong>1. 安装ffmpeg：</strong></p> 
+<p>下载ffmpeg软件包，将其解压到C盘。</p> 
+<p><img src="https://images2.imgbox.com/67/1f/AgXaBU5w_o.png" alt=""></p> 
+<p>然后将其完整路径添加到系统环境变量，注意是bin目录。</p> 
+<p><img src="https://images2.imgbox.com/a4/49/C4cqJmcU_o.png" alt=""></p> 
+<p>然后我们可以“win+r” 输出“cmd”</p> 
+<p><img src="https://images2.imgbox.com/85/9d/NnnzNZhf_o.png" alt=""></p> 
+<p>调出控制台输入“ffmpeg -version” 出现详细信息就表示ffmpeg安装成功。</p> 
+<p><strong>2. 安装transparent-background：</strong></p> 
+<p>在开始“运行” 输入“cmd” （或者键盘Win+R，输入“cmd”）</p> 
+<p>在弹出的命令行里面输出“pip install transparent-background”</p> 
+<p><img src="https://images2.imgbox.com/65/66/I6X9M1BY_o.jpg" alt=""></p> 
+<p>等待输入提示符闪烁，安装完成。</p> 
+<p><strong>3. 安装SD插件：</strong></p> 
+<p>首先我们需要有绘世SD webUI软件（如没有AI绘画软件SD，请看文末扫描获取），然后双击启动“A绘世启动器.exe”，在启动器面板左边“版本管理中”找到“安装新扩展”</p> 
+<p>搜索一下“Ebsynth ” 点击后面的“安装”，（如无法安装，请看文末获取本地插件安装包）</p> 
+<p><img src="https://images2.imgbox.com/ea/50/uqbIcPur_o.png" alt=""></p> 
+<p>再搜索“Temporal” 点击安装。（如无法安装，请看文末获取本地插件安装包）</p> 
+<p><img src="https://images2.imgbox.com/0f/fe/RbHibaUU_o.png" alt=""></p> 
+<p>然后我们来到首页点击“一键启动” ，启动SD-WebUI。</p> 
+<p><img src="https://images2.imgbox.com/4b/1f/4WpZycl9_o.jpg" alt=""></p> 
+<p>它会自动下载安装插件，安装完成后会自动弹出URL网页链接。</p> 
+<p><img src="https://images2.imgbox.com/2e/9c/qI72nlnt_o.png" alt=""></p> 
+<p>此时我们需要的插件和环境都安装完成了，接下来看看如何使用。</p> 
+<p><strong>4. 分割视频：</strong></p> 
+<p>首先，我们找一个要转绘的视频，将其拖拽入WebUI中。设置如下，每1帧都采样，动作幅度较大就设置成每3帧提取一个关键帧。</p> 
+<p><img src="https://images2.imgbox.com/27/b3/hHRhXdjT_o.png" alt=""></p> 
+<p>分辨率我们可以在视频上右键“属性”-详细信息中查看，填写入视频的高度点击“保存设置”。</p> 
+<p><img src="https://images2.imgbox.com/3a/35/mZzSWESm_o.png" alt=""></p> 
+<p>然后，我们需要在本地任意地方创建一个纯英文路径的文件夹。我在C:\Users\75691\Videos\test创建了个文件夹用于接收渲染的文件。</p> 
+<p>将这个路径填入设置，勾选“批量处理” 和“分割视频” 选项，然后我们就可以点击右边的“运行”了。</p> 
+<p><img src="https://images2.imgbox.com/6f/74/Npc5WxWD_o.png" alt=""></p> 
+<p>我们会看到刚创建的目录下面，会存放分割的视频文件图片。</p> 
+<p><img src="https://images2.imgbox.com/ca/69/fcYAKn6V_o.png" alt=""></p> 
+<p>0~6是刚刚每隔3帧取一个关键帧的储存文件夹。</p> 
+<p>input是原始视频逐帧图存放的文件夹。</p> 
+<p>output是一会儿要重绘的图的存放文件夹。</p> 
+<p>main_video.mp4是原始视频文件。</p> 
+<p><strong>5. 确定风格：</strong></p> 
+<p>然后我们需要确认我们转换的风格，比如是转换成卡通，还是3D又或者是真人，这些取决于我们选择的大模型的风格。我们这里选择卡通二次元。</p> 
+<p>将刚刚input路径下的图片拖入图生图，跑图测试。</p> 
+<p><img src="https://images2.imgbox.com/4a/34/4LRFjykq_o.png" alt=""></p> 
+<p>修改提示词，先用DeepBooru 反推提示词。将红色背景，改成简单背景。加入LCM加速，提升出图速度。（我还加了个添加细节的lora这个随意）选择一个二次元模板。</p> 
+<p><img src="https://images2.imgbox.com/2b/f0/QVjTLIpQ_o.png" alt=""></p> 
+<p>如果你没有DeepBooru ，也可以用“WD 1.4标签器”反推提示词。</p> 
+<p><img src="https://images2.imgbox.com/b2/7a/Z8IoFjro_o.png" alt=""></p> 
+<p>随后，我启用了“ADetailer”用于面部和手部修复。</p> 
+<p><img src="https://images2.imgbox.com/48/4f/9xFMawoR_o.png" alt=""></p> 
+<p>加入了ControlNet 设置了两个单元，分别控制形态和前景。</p> 
+<p><img src="https://images2.imgbox.com/8d/fa/xCRWescb_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/cf/99/w8QULWn2_o.png" alt=""></p> 
+<p>渲染确定风格，这里风格主要取决于我们选择的大模型。</p> 
+<p><img src="https://images2.imgbox.com/ec/cc/nX64d7or_o.png" alt=""></p> 
+<p>比如我选择的是tmndMix，你也可以选择写实的麦橘，那样出的风格就是写实的啦。</p> 
+<p><img src="https://images2.imgbox.com/d8/20/4iIhBmSH_o.png" alt=""></p> 
+<p>6. 批量渲染：</p> 
+<p>我们来到图生图的窗口，点击“批量处理”，将之前的输入输出目录的路径填入其中。</p> 
+<p><img src="https://images2.imgbox.com/47/ee/yOfNXLea_o.png" alt=""></p> 
+<p>接下来，再将下面的“ControlNet ”的“批量处理” 页签打开，路径不用填写，它会继承图生图的路径设置。</p> 
+<p><img src="https://images2.imgbox.com/35/31/uHzAbXdY_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/54/f7/cZNdinGA_o.png" alt=""></p> 
+<p>注意上面是两个“ControlNet ”都要设置，完成后我们就可以点击“生成” 按钮了。</p> 
+<p><img src="https://images2.imgbox.com/e8/b0/59EocKLD_o.png" alt=""></p> 
+<p>因为有lcm加速，所以速度要比以前快很多。显示大约需要的时间。</p> 
+<p><img src="https://images2.imgbox.com/7e/42/y0Omwcoq_o.png" alt=""></p> 
+<p>补充：这里有个bug注意一下，就是输出目录output填入了显示正常，但是跑图的时候无效。</p> 
+<p><img src="https://images2.imgbox.com/e5/9d/3BpJtkBG_o.png" alt=""></p> 
+<p>我们会看见后台正常在跑图，但是填写的路径下目录里没东西。这时候我们需要“终止” 渲染。</p> 
+<p>将输出目录的地址清空不填写地址，用sd默认的地址。</p> 
+<p><img src="https://images2.imgbox.com/c5/d3/BAWGLf2O_o.png" alt=""></p> 
+<p>然后我们点击“文件夹”图标，来到sd默认的img2img-images文件夹。</p> 
+<p><img src="https://images2.imgbox.com/03/59/OYCcnifA_o.png" alt=""></p> 
+<p>在弹出的目录里，选择今天日期的文件夹，将里面的图片清空。</p> 
+<p><img src="https://images2.imgbox.com/cb/50/qxvxQMa6_o.png" alt=""></p> 
+<p>回到SD，后面就会正常输出在这个默认的目录下了。将这些图片复制到之前的output目录中，但是这些图片是无法构建key的，因为input下的图片命名要和output下的图片命名一致。</p> 
+<p>所以我们需要使用批量修改命名工具去处理output下的图片命名。</p> 
+<p><img src="https://images2.imgbox.com/1a/dd/sJBYTCF4_o.png" alt=""></p> 
+<p>左边是修改策略，右边是图片文件和预览修改后的样子。工具文末获取。</p> 
+<p><img src="https://images2.imgbox.com/b7/6a/CMfoHPBz_o.png" alt=""></p> 
+<p>统一资源命名后，我们来到“Temporal-kit” 页签将视频和路径都填入设置。</p> 
+<p><img src="https://images2.imgbox.com/4e/70/Wc99ORf6_o.png" alt=""></p> 
+<p>填写完成后，点击“预处理 Ebsynth” 让其为我们的0-6文件跑“frames”和“keys”</p> 
+<p><img src="https://images2.imgbox.com/bc/9a/gDkVsuQG_o.png" alt=""></p> 
+<p>后台完成后，我们即将进入自动生成补间帧环节。</p> 
+<p>7. 生成补间帧：</p> 
+<p>解压EbSynth-Beta-Win.zip压缩包到任意位置，这是一个exe执行程序，处理我们之前生成的0-6文件夹内的关键帧。资源可以在文末获取。</p> 
+<p>双击运行“EbSynth.exe”</p> 
+<p><img src="https://images2.imgbox.com/62/d9/KHBLrFhL_o.png" alt=""></p> 
+<p>将“frames”文件夹拖拽到，“Video:” 后面的路径里面。</p> 
+<p>将“keys”文件夹拖拽到，“Keyframes:” 后面的路径里面。</p> 
+<p><img src="https://images2.imgbox.com/3f/28/AqqFmXoE_o.png" alt=""></p> 
+<p>然后运行“EbSynth” 面板最下面的“Run AII” ，程序会开始自动生成补帧。</p> 
+<p><img src="https://images2.imgbox.com/43/72/53BaNtAv_o.png" alt=""></p> 
+<p>我们可以多开几个同时对0-6的文件夹处理，</p> 
+<p>注意每次使用，最好关掉重开！因为它不会自动更新最上级的路径。</p> 
+<p><img src="https://images2.imgbox.com/6a/9f/aXusqe2p_o.png" alt=""></p> 
+<p>完成后，我们将6个文件全部用上面一样的操作，执行一边。</p> 
+<p>8. 生成视频：</p> 
+<p>最后，我们再次回到“Temporal-Kit” 页签下“Ebsynth-流程” 页签，点击“重组 Ebsynth”来生成视频。</p> 
+<p><img src="https://images2.imgbox.com/ca/35/DMvnmaBi_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/b5/3e/UiWSiIRw_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/aa/f8/TnfXvVA9_o.png" alt=""></p> 
+<p>OK啦生成完成，流程部分到这里就结束了。但我一想其实还可结合之前的工具对视频进行放大处理。SD也有放大功能但是要重新渲染，下面的方式更简单。</p> 
+<p><img src="https://images2.imgbox.com/7c/d3/uuGKFUlr_o.png" alt=""></p> 
+<p>工具获取看下方扫描获取</p> 
+<hr> 
+<p><strong>总结：</strong></p> 
+<p>在本文中，我们详细探讨了使用SD-WebUI进行AI视频重绘的整个过程。这一过程涉及多个步骤，包括安装必要的软件和插件、分割视频、确定风格、批量渲染以及最终的视频生成。虽然这一流程相对复杂，需要一定的技术知识和耐心，但它提供了高度的自定义能力和本地化处理的优势，使得用户可以根据自己的需求和偏好来生成独特的视频内容。</p> 
+<p>总的来说，尽管SD-WebUI的视频重绘流程存在一定的门槛，但它提供了一个强大的平台，让用户能够创造出个性化的视频内容。通过本文的指导，即使是初学者也能够逐步掌握这一技术，享受到AI视频重绘带来的乐趣和创造力。</p> 
+<h3><a id="_282"></a>写在最后</h3> 
+<p><font face="幼圆" size="4" color="red">感兴趣的小伙伴，赠送全套AIGC学习资料，包含AI绘画、AI人工智能等前沿科技教程和软件工具，具体看这里。<br> </font><br> <img src="https://images2.imgbox.com/e8/f2/F4CvUsLV_o.png"></p> 
+<p>AIGC技术的未来发展前景广阔，随着人工智能技术的不断发展，AIGC技术也将不断提高。未来，AIGC技术将在游戏和计算领域得到更广泛的应用，使游戏和计算系统具有更高效、更智能、更灵活的特性。同时，AIGC技术也将与人工智能技术紧密结合，在更多的领域得到广泛应用，对程序员来说影响至关重要。未来，AIGC技术将继续得到提高，同时也将与人工智能技术紧密结合，在更多的领域得到广泛应用。<br>  <br> <img src="https://images2.imgbox.com/69/9b/rSjQSm5G_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>一、AIGC所有方向的学习路线</strong></p> 
+<p>AIGC所有方向的技术点做的整理，形成各个领域的知识点汇总，它的用处就在于，你可以按照下面的知识点去找对应的学习资源，保证自己学得较为全面。</p> 
+<p><img src="https://images2.imgbox.com/0c/31/NFG6nukK_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/60/83/LyRv1vsa_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>二、AIGC必备工具</strong></p> 
+<p>工具都帮大家整理好了，安装就可直接上手！<br> <img src="https://images2.imgbox.com/a5/12/sj5c2FaT_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>三、最新AIGC学习笔记</strong></p> 
+<p>当我学到一定基础，有自己的理解能力的时候，会去阅读一些前辈整理的书籍或者手写的笔记资料，这些笔记详细记载了他们对一些技术点的理解，这些理解是比较独到，可以学到不一样的思路。<br> <img src="https://images2.imgbox.com/97/17/qX5vEkcC_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/41/f2/klXp5UX3_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>四、AIGC视频教程合集</strong></p> 
+<p>观看全面零基础学习视频，看视频学习是最快捷也是最有效果的方式，跟着视频中老师的思路，从基础到深入，还是很容易入门的。</p> 
+<p><img src="https://images2.imgbox.com/62/12/XgnbEBQ8_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>五、实战案例</strong></p> 
+<p>纸上得来终觉浅，要学会跟着视频一起敲，要动手实操，才能将自己的所学运用到实际当中去，这时候可以搞点实战案例来学习。<br> <img src="https://images2.imgbox.com/de/39/ad8FTl06_o.png" alt="在这里插入图片描述"></p> 
+<img src="https://images2.imgbox.com/56/8f/cnRZZiY5_o.png"> 若有侵权，请联系删除
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f69b605d81ab183a6bf93f454b4b7e50/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【大数据】大数据概论与Hadoop</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/952983d3f7f5115d30da5094a4fbbbe5/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">英伟达H100算力出租，Punkhash探索AI无限，GB200/H800算力租赁解决方案GPU算力租赁成本揭秘史上最贵芯片Nvidia H100是什么？</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

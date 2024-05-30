@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【已解决】伪分布式Hadoop服务已经开启，但是无法访问http://localhost:9870（缺少NameNode进程）\http://localhost:8088 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0e082035388c356b4186f0f98618bac7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【已解决】伪分布式Hadoop服务已经开启，但是无法访问http://localhost:9870（缺少NameNode进程）\http://localhost:8088">
+  <meta property="og:description" content="一、问题描述 使用如下方法启动成功hadoop服务
+进入相应文件夹
+cd /usr/local/hadoop/ 首先停止启动所有的节点，使用命令行启动stop-all.sh脚本
+./sbin/stop-all.sh 解决方法是首先停止启动所有的节点，使用命令行启动stop-all.sh脚本：
+./sbin/start-all.sh 使用jps命令查看当前hadoop运行
+貌似没问题
+其实这里就是有问题！！！后续解决方法里面说
+继续打开http://localhost:9870，查看web界面
+显示无法连接到
+二、解决方法和问题分析 下面两个方法是在网上搜到的，大家可以先试试
+1.有博主建议查看防火墙的
+输入命令发现我的Linux并没有防火墙。。。所以不可能是防火墙问题
+详见：Ubuntu - 查看、开启、关闭和永久关闭防火墙
+2.也有博主建议 编辑配置文件hdfs-site.xml
+&lt;configuration&gt; &lt;property&gt; &lt;name&gt;dfs.replication&lt;/name&gt; &lt;value&gt;1&lt;/value&gt; &lt;/property&gt; &lt;property&gt; &lt;name&gt;dfs.namenode.name.dir&lt;/name&gt; &lt;value&gt;file:/usr/local/hadoop/tmp/dfs/name&lt;/value&gt; &lt;/property&gt; &lt;property&gt; &lt;name&gt;dfs.datanode.data.dir&lt;/name&gt; &lt;value&gt;file:/usr/local/hadoop/tmp/dfs/data&lt;/value&gt; &lt;/property&gt; &lt;property&gt; &lt;name&gt;dfs.namenode.http-address&lt;/name&gt; &lt;value&gt;0.0.0.0:9870&lt;/value&gt; &lt;/property&gt; &lt;/configuration&gt; 这些都有尝试 但是仍没有解决
+最后我重新看了一下我部署伪分布式Hadoop的那篇博客：Hadoop安装搭建伪分布式教程（全面）吐血整理发现我前面启动节点时确实有问题！！！
+PS：其实至少需要4个进程:Namenode、DataNode、SecondaryNameNOde、JPS
+再会看我之前的那个命令，居然连NameNode都没有！！！我们知道http://localhost:9870就是来查看主节点情况的，居然连主节点NameNode都没有，当然会连不上呀~~
+那么现在的思路就变成了：如何启动主节点NameNode（其实还有另外两个进程：NodeManager和ResourceManager没有启动成功，这也和影响我们通过web界面对其资源管理器的查看等有影响，稍后我们一起说）
+2.1：缺少NameNode进程 核心：初始化namenode。需要我们先执行如下命令
+hdfs namenode -format 然后再启动hadoop服务（注意，再次启动前需要先停止之前启动的，否则会报错）
+然后如下：
+之后我们再次访问http://localhost:9870即可成功访问！🎆
+2.1：没有ResourceManager和NodeManager 原因：只使用了start-dfs.sh命令（这个命令只会启动上述四个进程）
+应该使用：命令start-all.sh（该命令是start-dfs.sh与start-yarn.sh这两个命令的合并）
+这样才会启动6个进程：
+补充：启动Hadoop时提示 start-all.sh（该命令是start-dfs.sh与start-yarn.sh这两个命令的合并）：找不到命令 的解决方法：
+这个问题出现的原因是环境变量没有配置好
+参考这篇博客的3.3.2步配置好环境变量：Hadoop安装搭建伪分布式教程（全面）吐血整理
+于是我们可以成功访问hadoop的http://localhost:8088资源管理界面：
+2.3：hadoop拒绝history通过19888端口连接查看已完成的job的日志 原因在于：通过start-all.sh启动hadoop各项节点后，historyserver并没有启动，需要手动启动，因此可以通过以下命令来手动启动historyserver，关闭命令也给出.
+启动命令：
+mr-jobhistory-daemon.sh start historyserver 关闭命令：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-30T11:15:44+08:00">
+    <meta property="article:modified_time" content="2024-03-30T11:15:44+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【已解决】伪分布式Hadoop服务已经开启，但是无法访问http://localhost:9870（缺少NameNode进程）\http://localhost:8088</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-dracula">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/7b/7d/fTJzJuY2_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_2"></a>一、问题描述</h2> 
+<p>使用如下方法启动成功hadoop服务</p> 
+<p>进入相应文件夹</p> 
+<pre><code class="prism language-shell"><span class="token builtin class-name">cd</span> /usr/local/hadoop/
+</code></pre> 
+<p>首先停止启动所有的节点，使用命令行启动stop-all.sh脚本</p> 
+<pre><code class="prism language-powershell"><span class="token punctuation">.</span><span class="token operator">/</span>sbin/<span class="token function">stop-all</span><span class="token punctuation">.</span>sh
+</code></pre> 
+<p>解决方法是首先停止启动所有的节点，使用命令行启动stop-all.sh脚本：</p> 
+<pre><code class="prism language-shell">./sbin/start-all.sh
+</code></pre> 
+<p>使用<code>jps</code>命令查看当前hadoop运行<br> <img src="https://images2.imgbox.com/65/40/J2WwVctj_o.png" alt="在这里插入图片描述"></p> 
+<p>貌似没问题</p> 
+<blockquote> 
+ <p>其实这里就是有问题！！！后续解决方法里面说</p> 
+</blockquote> 
+<p>继续打开<code>http://localhost:9870</code>，查看web界面</p> 
+<p>显示无法连接到<br> <img src="https://images2.imgbox.com/2a/8c/ZFaIHUlQ_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_36"></a>二、解决方法和问题分析</h2> 
+<p>下面两个方法是在网上搜到的，大家可以先试试</p> 
+<ul><li> <p>1.有博主建议查看防火墙的<br> 输入命令发现我的Linux并没有防火墙。。。所以不可能是防火墙问题<br> 详见：<a href="https://blog.csdn.net/qq_43116031/article/details/133818049">Ubuntu - 查看、开启、关闭和永久关闭防火墙</a></p> </li><li> <p>2.也有博主<strong>建议 编辑配置文件<code>hdfs-site.xml</code></strong></p> <pre><code class="prism language-shell"><span class="token operator">&lt;</span>configuration<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>dfs.replication<span class="token operator">&lt;</span>/name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token operator"><span class="token file-descriptor important">1</span>&lt;</span>/value<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>/property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>dfs.namenode.name.dir<span class="token operator">&lt;</span>/name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>file:/usr/local/hadoop/tmp/dfs/name<span class="token operator">&lt;</span>/value<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>/property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>dfs.datanode.data.dir<span class="token operator">&lt;</span>/name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>file:/usr/local/hadoop/tmp/dfs/data<span class="token operator">&lt;</span>/value<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>/property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+	<span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>dfs.namenode.http-address<span class="token operator">&lt;</span>/name<span class="token operator">&gt;</span>
+	<span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token number">0.0</span>.0.0:987<span class="token operator"><span class="token file-descriptor important">0</span>&lt;</span>/value<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>/property<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span>/configuration<span class="token operator">&gt;</span>
+</code></pre> </li></ul> 
+<p>这些都有尝试 但是仍没有解决</p> 
+<p>最后我重新看了一下我部署伪分布式Hadoop的那篇博客：<a href="https://blog.csdn.net/m0_53786284/article/details/120442472">Hadoop安装搭建伪分布式教程（全面）吐血整理</a>发现我前面启动节点时确实有问题！！！<br> <img src="https://images2.imgbox.com/f7/e9/Pkrt3uVE_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>PS：其实至少需要4个进程:<code>Namenode、DataNode、SecondaryNameNOde、JPS</code></p> 
+</blockquote> 
+<p>再会看我之前的那个命令，居然连<code>NameNode</code>都没有！！！我们知道<code>http://localhost:9870</code>就是来查看主节点情况的，居然连主节点<code>NameNode</code>都没有，当然会连不上呀~~</p> 
+<p><img src="https://images2.imgbox.com/b7/9e/ReDdpKXN_o.png" alt="在这里插入图片描述"></p> 
+<p>那么现在的思路就变成了：如何启动主节点<code>NameNode</code>（其实还有另外两个进程：<code>NodeManager</code>和<code>ResourceManager</code>没有启动成功，这也和影响我们通过web界面对其资源管理器的查看等有影响，稍后我们一起说）</p> 
+<h3><a id="21NameNode_79"></a>2.1：缺少NameNode进程</h3> 
+<p><b><i><font color="#e84393">核心：初始化namenode。需要我们先执行如下命令</font></i></b></p> 
+<pre><code class="prism language-shell">hdfs namenode <span class="token parameter variable">-format</span>
+</code></pre> 
+<p>然后再启动hadoop服务（注意，再次启动前需要先停止之前启动的，否则会报错）</p> 
+<p>然后如下：<br> <img src="https://images2.imgbox.com/c1/8e/xE9tldP3_o.png" alt="在这里插入图片描述"></p> 
+<p>之后我们再次访问<code>http://localhost:9870</code>即可成功访问！🎆<br> <img src="https://images2.imgbox.com/02/4b/N9zM5bjy_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="21ResourceManagerNodeManager_94"></a>2.1：没有ResourceManager和NodeManager</h3> 
+<p>原因：只使用了<code>start-dfs.sh</code>命令（这个命令只会启动上述四个进程）</p> 
+<p>应该使用：命令<code>start-all.sh</code>（该命令是start-dfs.sh与start-yarn.sh这两个命令的合并）</p> 
+<p>这样才会启动6个进程：</p> 
+<p><img src="https://images2.imgbox.com/61/4a/xNemywOa_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>补充：启动Hadoop时提示 start-all.sh（该命令是start-dfs.sh与start-yarn.sh这两个命令的合并）：找不到命令 的解决方法：</p> 
+ <p>这个问题出现的原因是<strong>环境变量没有配置</strong>好<br> 参考这篇博客的<code>3.3.2</code>步配置好环境变量：<a href="https://blog.csdn.net/m0_53786284/article/details/120442472">Hadoop安装搭建伪分布式教程（全面）吐血整理</a></p> 
+</blockquote> 
+<p>于是我们可以成功访问hadoop的<code>http://localhost:8088</code>资源管理界面：<br> <img src="https://images2.imgbox.com/ee/0d/Fu74aXoN_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="23hadoophistory19888job_111"></a>2.3：hadoop拒绝history通过19888端口连接查看已完成的job的日志</h3> 
+<p>原因在于：通过start-all.sh启动hadoop各项节点后，historyserver并没有启动，需要手动启动，因此可以通过以下命令来手动启动historyserver，关闭命令也给出.</p> 
+<p>启动命令：</p> 
+<pre><code class="prism language-shell">mr-jobhistory-daemon.sh start historyserver
+</code></pre> 
+<p>关闭命令：</p> 
+<pre><code class="prism language-shell">mr-jobhistory-daemon.sh stop historyserver
+</code></pre> 
+<p>可能会出现下面两个警告，没有关系<br> <img src="https://images2.imgbox.com/64/0a/1987V7BY_o.png" alt="在这里插入图片描述"><br> 再次访问：<br> <img src="https://images2.imgbox.com/15/54/uVTawIwe_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9ec9f45d60a064eabbecb6e743b3128a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Java / Spring Boot &#43; POI 给 Word 添加水印</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9836edff68612969bb96eb350819b94c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">AIGC重塑金融：AI大模型驱动的金融变革与实践</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,362 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Kafka中的auto-offset-reset配置 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/90b6fe56e2044591a8b2a6169ceec794/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Kafka中的auto-offset-reset配置">
+  <meta property="og:description" content="Kafka这个服务在启动时会依赖于Zookeeper，Kafka相关的部分数据也会存储在Zookeeper中。如果kafka或者Zookeeper中存在脏数据的话（即错误数据），这个时候虽然生产者可以正常生产消息，但是消费者会出现无法正常消费消息的情况。
+所以在进行下述这个案例进行测试时，为了避免一些错误，可以将两个镜像服务全部进行重装，重装的镜像服务由于未设定数据存储方式（即采用非持久化的匿名数据卷），所以在重装以后会采用新的匿名数据卷，是一个全新的配置信息。
+PS：同样是MQ，相比较而言，RabbitMQ针对异常情况的兼容处理比Kafka要好很多，使用Kafka需要有很丰富的经验，生产环境非必要不建议使用这个。
+1、earliest Windosw环境下面使用下述两个命令重装Zookeeper和Kafka：
+docker run -d --name zookeeper -p 2181:2181 -t zookeeper:latest docker run -d --name kafka -p 9092:9092 -e KAFKA_ZOOKEEPER_CONNECT=192.168.1.15:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.1.15:9092 -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 -e TZ=&#34;Asia/Shanghai&#34; wurstmeister/kafka:latest 假设前面的环境准备我已经完成了，现在正式进入案例测试流程。当前kafka的版本为2.8.11，Spring Boot的版本为2.7.6，在pom.xml中引入下述依赖：
+&lt;dependency&gt; &lt;groupId&gt;org.springframework.kafka&lt;/groupId&gt; &lt;artifactId&gt;spring-kafka&lt;/artifactId&gt; &lt;version&gt;2.8.11&lt;/version&gt; &lt;/dependency&gt; 然后在yml配置文件进行如下配置：
+spring: kafka: bootstrap-servers: 127.0.0.1:9092 consumer: group-id: 0 key-deserializer: org.apache.kafka.common.serialization.StringDeserializer value-deserializer: org.apache.kafka.common.serialization.StringDeserializer auto-offset-reset: earliest producer: key-serializer: org.apache.kafka.common.serialization.StringSerializer value-serializer: org.apache.kafka.common.serialization.StringSerializer 在项目中创建一个生产者用于往主题topic0中投递消息，如下所示：
+import lombok.extern.slf4j.Slf4j; import org.springframework.beans.factory.annotation.Autowired; import org.springframework.kafka.core.KafkaTemplate; import org.springframework.kafka.support.SendResult; import org.springframework.util.concurrent.ListenableFuture; import org.springframework.util.concurrent.ListenableFutureCallback; import org.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-02T10:00:00+08:00">
+    <meta property="article:modified_time" content="2023-12-02T10:00:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Kafka中的auto-offset-reset配置</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>Kafka这个服务在启动时会依赖于Zookeeper，Kafka相关的部分数据也会存储在Zookeeper中。如果kafka或者Zookeeper中存在脏数据的话（即错误数据），这个时候虽然生产者可以正常生产消息，但是消费者会出现无法正常消费消息的情况。</p> 
+<p>所以在进行下述这个案例进行测试时，为了避免一些错误，可以将两个镜像服务全部进行重装，重装的镜像服务由于未设定数据存储方式（<span style="color:#fe2c24;"><strong>即采用非持久化的匿名数据卷</strong></span>），所以在重装以后会采用新的匿名数据卷，是一个全新的配置信息。</p> 
+<p><span style="color:#b95514;"><strong>PS：同样是MQ，相比较而言，RabbitMQ针对异常情况的兼容处理比Kafka要好很多，使用Kafka需要有很丰富的经验，生产环境非必要不建议使用这个。</strong></span></p> 
+<h4><span style="color:#1c7331;"><strong>1、earliest</strong></span></h4> 
+<p>Windosw环境下面使用下述两个命令重装Zookeeper和Kafka：</p> 
+<pre><code class="language-bash">docker run -d --name zookeeper -p 2181:2181 -t zookeeper:latest</code></pre> 
+<pre><code class="language-bash">docker run  -d --name kafka -p 9092:9092 -e KAFKA_ZOOKEEPER_CONNECT=192.168.1.15:2181 -e KAFKA_ADVERTISED_LISTENERS=PLAINTEXT://192.168.1.15:9092 -e KAFKA_LISTENERS=PLAINTEXT://0.0.0.0:9092 -e TZ="Asia/Shanghai" wurstmeister/kafka:latest</code></pre> 
+<p>假设前面的环境准备我已经完成了，现在正式进入案例测试流程。当前kafka的版本为2.8.11，Spring Boot的版本为2.7.6，在pom.xml中引入下述依赖：</p> 
+<pre><code class="language-html">&lt;dependency&gt;
+    &lt;groupId&gt;org.springframework.kafka&lt;/groupId&gt;
+    &lt;artifactId&gt;spring-kafka&lt;/artifactId&gt;
+    &lt;version&gt;2.8.11&lt;/version&gt;
+&lt;/dependency&gt;</code></pre> 
+<p>然后在yml配置文件进行如下配置：</p> 
+<pre><code class="language-java">spring:
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: 0
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: earliest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer</code></pre> 
+<p>在项目中创建一个生产者用于往主题<span style="color:#fe2c24;"><strong>topic0</strong></span>中投递消息，如下所示：</p> 
+<pre><code class="language-java">import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.kafka.core.KafkaTemplate;
+import org.springframework.kafka.support.SendResult;
+import org.springframework.util.concurrent.ListenableFuture;
+import org.springframework.util.concurrent.ListenableFutureCallback;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.RestController;
+
+@Slf4j
+@RestController
+@RequestMapping("/kafka")
+public class KafkaProducer {
+
+    // 自定义的主题名称
+    public static final String TOPIC_NAME="topic0";
+
+    @Autowired
+    private KafkaTemplate&lt;String, String&gt; kafkaTemplate;
+
+    @RequestMapping("/send")
+    public String send(@RequestParam("msg")String msg) {
+        log.info("准备发送消息为：{}",msg);
+        // 1.发送消息
+        ListenableFuture&lt;SendResult&lt;String,String&gt;&gt; future=kafkaTemplate.send(TOPIC_NAME,msg);
+        future.addCallback(new ListenableFutureCallback&lt;SendResult&lt;String, String&gt;&gt;() {
+            @Override
+            public void onFailure(Throwable throwable) {
+                // 2.发送失败的处理
+                log.error("生产者 发送消息失败："+throwable.getMessage());
+            }
+            @Override
+            public void onSuccess(SendResult&lt;String, String&gt; stringObjectSendResult) {
+                // 3.发送成功的处理
+                log.info("生产者 发送消息成功："+stringObjectSendResult.toString());
+            }
+        });
+        return "接口调用成功";
+    }
+}</code></pre> 
+<p>项目启动以后，如果Kafka中没有<span style="color:#fe2c24;"><strong>topic0</strong></span>这个主题，那么在利用上述接口首次往Kafka中投递消息时会创建这个主题。此处利用 <span style="color:#be191c;"><strong>/kafka/send?msg=xxx </strong></span>接口往主题topic0中生产10条消息，接着再在项目中创建一个消费者用于消息主题<span style="color:#fe2c24;"><strong>topic0</strong></span>中的消息，如下所示：</p> 
+<pre><code class="language-java">import java.util.Optional;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class KafkaConsumer {
+
+    // 自定义topic
+    public static final String TOPIC_NAME="topic0";
+
+    @KafkaListener(topics = TOPIC_NAME, groupId = "ONE")
+    public void topic_one(ConsumerRecord&lt;?, ?&gt; record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        Optional message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("消费者One消费了消息：Topic:" + topic + ",Record:" + record + ",Message:" + msg);
+        }
+    }
+}</code></pre> 
+<p>然后再重启整个项目， 这时控制台中会打印下述信息，消费者One消费了10条之前投递的消息：</p> 
+<pre><code class="language-java">消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 0, CreateTime = 1701261195020, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 1),Message:1
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 1, CreateTime = 1701261203540, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 2),Message:2
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 2, CreateTime = 1701261211937, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 3),Message:3
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 3, CreateTime = 1701261429324, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 4),Message:4
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 4, CreateTime = 1701261435706, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 5),Message:5
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 5, CreateTime = 1701261439877, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 6),Message:6
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 6, CreateTime = 1701261444315, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 7),Message:7
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 7, CreateTime = 1701261448213, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 8),Message:8
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 8, CreateTime = 1701261455452, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 9),Message:9
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 9, CreateTime = 1701261459889, serialized key size = -1, serialized value size = 2, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 10),Message:10</code></pre> 
+<p>同时在Kafka服务的日志文件目录中会产生一些记录<span style="color:#be191c;"><strong>消息被消费到的偏移量</strong></span>文件，在消息没有被消费之前，是不会产生类似于<span style="color:#b95514;"> <strong>__consumer_offsets_x </strong></span>的文件，如下图所示：</p> 
+<p><img alt="" height="253" src="https://images2.imgbox.com/5e/96/LOlWYTNB_o.png" width="317"></p> 
+<h4><span style="color:#1c7331;"><strong>2、latest</strong></span></h4> 
+<p>再次重装Zookeeper和Kafka，并清空Zookeeper和Kafka中的数据，将上述yml文件中的 <span style="color:#fe2c24;"><strong>auto-offset-reset </strong></span>配置修改为<span style="color:#fe2c24;"><strong>latest</strong></span>，如下所示：</p> 
+<pre><code class="language-java">spring:
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: 0
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: latest
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer</code></pre> 
+<p>然后屏蔽掉消费者消费消息的监听类，重启整个项目，再次调用<span style="color:#be191c;"><strong> /kafka/send?msg=xxx </strong></span>接口往主题topic0中生产10条消息。 接着再将消费者消费消息的监听类放开，重启项目，这时可以看到消费者One并没有消费之前发送的10条消息，但是这时在Kafka服务的日志文件目录中会产生一些记录消息被消费到的偏移量文件，类似于<span style="color:#b95514;"><strong> __consumer_offsets_x</strong></span> 的文件。</p> 
+<p>我们再次调用 <span style="color:#be191c;"><strong>/kafka/send?msg=11 </strong></span>接口往主题topic0中生产1条消息，这时控制台中会输出下述内容：</p> 
+<pre><code class="language-java">消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 10, CreateTime = 1701311220521, serialized key size = -1, serialized value size = 2, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 11),Message:11
+</code></pre> 
+<p>可以看到kafka中没有offset时，如果<span style="color:#fe2c24;"><strong> auto-offset-reset </strong></span>配置设置为<span style="color:#fe2c24;"><strong>latest</strong></span>，消费者会从最近的offset开始消费，就是新加入到主题中的消息才会被消费。 </p> 
+<h4><strong><span style="color:#1c7331;">3、none</span></strong></h4> 
+<p>再次重装Zookeeper和Kafka，并清空Zookeeper和Kafka中的数据，将上述yml文件中的 <span style="color:#fe2c24;"><strong>auto-offset-reset </strong></span>配置修改为<span style="color:#fe2c24;"><strong>none</strong></span>，如下所示：</p> 
+<pre><code class="language-bash">spring:
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+    consumer:
+      group-id: 0
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      auto-offset-reset: none
+    producer:
+      key-serializer: org.apache.kafka.common.serialization.StringSerializer
+      value-serializer: org.apache.kafka.common.serialization.StringSerializer</code></pre> 
+<p>然后屏蔽掉消费者消费消息的监听类，重启整个项目，再次调用<span style="color:#be191c;"><strong> /kafka/send?msg=xxx </strong></span>接口往主题topic0中生产10条消息。 接着再将消费者消费消息的监听类放开，重启项目，可以看到在项目重启过程中控制台中会报下述异常信息： </p> 
+<pre><code class="language-bash">org.apache.kafka.clients.consumer.NoOffsetForPartitionException: Undefined offset with no reset policy for partitions: [主题名-xxx]</code></pre> 
+<p>虽然消费者One并没有消费之前发送的10条消息，但是在Kafka服务的日志文件目录中仍然也会产生一些记录消息被消费到的偏移量文件，类似于<span style="color:#b95514;"><strong> __consumer_offsets_x </strong></span>的文件。</p> 
+<p>同时通过日志打印信息，我们也可以看到由于异常，该消费者服务已经停止了，不能再消费新的消息。</p> 
+<pre><code class="language-bash">Fatal consumer exception; stopping container</code></pre> 
+<p>所以我们再次调用/kafka/send?msg=11接口往主题topic0中生产1条消息，可以看到控制台是没有任何关于消费者消费消息的日志信息。<span style="color:#956fe7;"><strong>PS：一般生产环境基本用不到该参数</strong></span></p> 
+<h4><strong><span style="color:#1c7331;">4、默认配置</span></strong></h4> 
+<p>如果我们没有在yml文件中显式配置auto-offset-reset，那么其默认值为<span style="color:#fe2c24;"><strong>latest</strong></span>。</p> 
+<h4><span style="color:#1c7331;"><strong>5、多个消费者组消费同一个主题，配置为earliest</strong></span></h4> 
+<p>再次重装Zookeeper和Kafka，并清空Zookeeper和Kafka中的数据，将上述yml文件中的 <span style="color:#fe2c24;"><strong>auto-offset-reset </strong></span>配置修改为<span style="color:#fe2c24;"><strong>earliest</strong></span>， 构建两个消费者组One和Two来消费同一个主题中的消息：</p> 
+<pre><code class="language-java">import java.util.Optional;
+
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+
+@Slf4j
+@Component
+public class KafkaConsumer {
+
+    // 自定义topic
+    public static final String TOPIC_NAME="topic0";
+
+    @KafkaListener(topics = TOPIC_NAME, groupId = "ONE")
+    public void topic_one(ConsumerRecord&lt;?, ?&gt; record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        Optional message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("消费者One消费了消息：Topic:" + topic + ",Record:" + record + ",Message:" + msg);
+        }
+    }
+
+    @KafkaListener(topics = TOPIC_NAME, groupId = "TWO")
+    public void topic_two(ConsumerRecord&lt;?, ?&gt; record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        Optional message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("消费者TwO消费了： +++++++++++++++ Topic:" + topic + ",Record:" + record + ",Message:" + msg);
+        }
+    }
+}</code></pre> 
+<p>屏蔽两个消费者组，让它们暂时不监听主题 <span style="color:#fe2c24;"><strong>topic0</strong></span>，重启项目利用生产者往主题 <span style="color:#fe2c24;"><strong>topic0</strong></span>中投递三条消息。</p> 
+<p>打开消费者组One的屏蔽，重启项目可以看到消费者组One消费了3条数据：</p> 
+<pre><code class="language-java">消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 0, CreateTime = 1701323282779, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 1),Message:1
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 1, CreateTime = 1701323286219, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 2),Message:2
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 2, CreateTime = 1701323289105, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 3),Message:3
+</code></pre> 
+<p>然后打开消费者组Two的屏蔽，重启项目可以看到消费者组Two也消费了3条数据： </p> 
+<pre><code class="language-java">消费者TwO消费了： +++++++++++++++ Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 0, CreateTime = 1701323282779, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 1),Message:1
+消费者TwO消费了： +++++++++++++++ Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 1, CreateTime = 1701323286219, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 2),Message:2
+消费者TwO消费了： +++++++++++++++ Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 2, CreateTime = 1701323289105, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 3),Message:3
+</code></pre> 
+<p><span style="color:#ad720d;"><strong>所以在Kafka服务的日志文件目录中产生的偏移量文件（__consumer_offsets_x ），针对的是每一个消费者组而言，它记录的是某一个消费者组已经消费到的消息偏移量。</strong></span> </p> 
+<h4><span style="color:#1c7331;"><strong>6、多个消费者组消费同一个主题消息，其中一个消费者组没有偏移量</strong></span></h4> 
+<p>再次重装Zookeeper和Kafka，并清空Zookeeper和Kafka中的数据，构建两个消费者组One和Two来消费同一个主题中的消息：</p> 
+<pre><code class="language-java">import java.util.Optional;
+ 
+import lombok.extern.slf4j.Slf4j;
+import org.apache.kafka.clients.consumer.ConsumerRecord;
+import org.springframework.kafka.annotation.KafkaListener;
+import org.springframework.kafka.support.KafkaHeaders;
+import org.springframework.messaging.handler.annotation.Header;
+import org.springframework.stereotype.Component;
+ 
+@Slf4j
+@Component
+public class KafkaConsumer {
+ 
+    // 自定义topic
+    public static final String TOPIC_NAME="topic0";
+ 
+    @KafkaListener(topics = TOPIC_NAME, groupId = "ONE")
+    public void topic_one(ConsumerRecord&lt;?, ?&gt; record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        Optional message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("消费者One消费了消息：Topic:" + topic + ",Record:" + record + ",Message:" + msg);
+        }
+    }
+ 
+    @KafkaListener(topics = TOPIC_NAME, groupId = "TWO")
+    public void topic_two(ConsumerRecord&lt;?, ?&gt; record, @Header(KafkaHeaders.RECEIVED_TOPIC) String topic) {
+        Optional message = Optional.ofNullable(record.value());
+        if (message.isPresent()) {
+            Object msg = message.get();
+            log.info("消费者TwO消费了： +++++++++++++++ Topic:" + topic + ",Record:" + record + ",Message:" + msg);
+        }
+    }
+}</code></pre> 
+<p>在yml文件中不配置auto-offset-reset（即采用默认配置），打开消费者组One的监听，屏蔽消费者组Two的监听。</p> 
+<p>重启项目利用生产者往主题 topic0中投递三条消息，消费者组0ne立马消费了三条消息：</p> 
+<pre><code class="language-java">准备发送消息为：1
+生产者 发送消息成功：SendResult [producerRecord=ProducerRecord(topic=topic0, partition=null, headers=RecordHeaders(headers = [], isReadOnly = true), key=null, value=1, timestamp=null), recordMetadata=topic0-0@0]
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 0, CreateTime = 1701324482632, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 1),Message:1
+准备发送消息为：2
+生产者 发送消息成功：SendResult [producerRecord=ProducerRecord(topic=topic0, partition=null, headers=RecordHeaders(headers = [], isReadOnly = true), key=null, value=2, timestamp=null), recordMetadata=topic0-0@1]
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 1, CreateTime = 1701324485351, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 2),Message:2
+准备发送消息为：3
+生产者 发送消息成功：SendResult [producerRecord=ProducerRecord(topic=topic0, partition=null, headers=RecordHeaders(headers = [], isReadOnly = true), key=null, value=3, timestamp=null), recordMetadata=topic0-0@2]
+消费者One消费了消息：Topic:topic0,Record:ConsumerRecord(topic = topic0, partition = 0, leaderEpoch = 0, offset = 2, CreateTime = 1701324488104, serialized key size = -1, serialized value size = 1, headers = RecordHeaders(headers = [], isReadOnly = false), key = null, value = 3),Message:3
+</code></pre> 
+<p>这时再在yml文件中配置auto-offset-reset为None，打开消费者Two的屏蔽，然后重启项目这个时候会发现由于消费者组Two没有记录偏移量，所以在项目启动的过程中会报下述异常信息，该消费者组服务会停止监听：</p> 
+<pre><code class="language-java">Fatal consumer exception; stopping container
+App info kafka.consumer for consumer-TWO-2 unregistered</code></pre> 
+<h4><strong><span style="color:#1c7331;">7、总结</span></strong></h4> 
+<p><span style="color:#be191c;"><strong>做了上述这么多的案例测试，各个消费者组都是按照预期去消费主题消息，其它情况的预期结果的原理都是一样的。 </strong></span> </p> 
+<p><span style="color:#fe2c24;"><strong>如果kafka服务器记录有消费者消费到的offset，那么消费者会从该offset开始消费。</strong></span>如果Kafka中没有初始偏移量，或者当前偏移量在服务器上不再存在(例如，因为该数据已被删除)，那么这时<span style="color:#ff9900;"><strong> auto.offset.reset</strong></span> 配置项就会起作用。</p> 
+<blockquote> 
+ <ul><li>earliest：从最早的offset开始消费，就是partition的起始位置开始消费</li><li>latest：从最近的offset开始消费，就是新加入partition的消息才会被消费</li><li>none：服务启动时会抛出异常，消费者服务会停止</li></ul> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/191f495d178c28404267f673ea73751a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">使用 JavaScript 和 TronWeb 库来实现监控TRC20余额</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/fe6e70ada20bc6a96d10c201694bf04e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">操作系统（动态分区分配算法：首次适应算法、循环首次适应算法、最佳适应算法和最坏适应算法）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

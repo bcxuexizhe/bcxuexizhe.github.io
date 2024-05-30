@@ -1,0 +1,1239 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>大数据开发之电商数仓（hadoop、flume、hive、hdfs、zookeeper、kafka） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9b8759e2392ce43b9fb4ac2efea056da/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="大数据开发之电商数仓（hadoop、flume、hive、hdfs、zookeeper、kafka）">
+  <meta property="og:description" content="第 1 章：数据仓库 1.1 数据仓库概述 1.1.1 数据仓库概念 1、数据仓库概念：
+为企业制定决策，提供数据支持的集合。通过对数据仓库中数据的分析，可以帮助企业，改进业务流程、控制成本，提高产品质量。
+数据仓库并不是数据的最终目的地，而是为数据最终的目的地做好准备，这些准备包括对数据的：清洗、转义、分类、重组、合并、拆分、统计等。
+2、数据仓库的数据通常包括：业务数据、用户行为数据和爬虫数据等
+3、业务系统数据库（关系型数据库中）
+1）业务数据：主要指的是各行业在处理事务过程中产生的业务数据
+2）产生：用户在电商网站中登录、下单、支付等过程中，需要和网站后台数据库进行增删改查交互，产生的数据
+3）存储：都是存储到关系型数据库（如：mysql、oracle）中。
+4、用户行为数据（日志文件log）
+1）用户行为数据：用户在使用产品过程中，通过埋点与客户端产品交互所产生的数据，并发往日志服务器进行保存。
+2）存储：用户数据通常存储在日志文件中。
+5、爬虫数据：通过技术手段获取其它公司网站的数据。
+1.1.2 数据仓库示意图 数据仓库（data warehouse），为企业指定决策，提供数据支持的。可以帮助企业，改进业务流程、提高产品质量等。
+数据仓库，并不是数据的最终目的地，而是为数据最终的目的地做好准备。这些准备包括对数据的：备份、清洗、聚合、统计等。
+1、报表系统：对存储的数据做数据统计分析
+2、用户画像：即用户信息标签化，是基于数据挖掘的用户特征提取即需求深度挖掘，是大数据时代围绕“以用户为中心”开展的个性化服务。标签化的模型是从用户社交属性、生活习惯、消费行为等信息中抽象出来的产物，是用户“特征标签”的几个。
+3、推荐系统：通过对用户的历史行为、用户兴趣偏好来经过推荐算法计算分析，然后产生用户可能感兴趣的项目列表。推荐系统可以更精准的理解用户需求，对用户进行聚类、打标签，推荐用户感兴趣的商品，帮助用户快速找到需要的商品，同时放大需求、增加流量入口、提高商品销售的有效转化率。
+4、机器学习：利用机器学习算法模型基于大数据集进行数据挖掘，发现和利用数据价值。
+1.2 数仓项目搭建概述 1.2.1 项目需求分析 1、数据需求：用户分析日志log、业务数据db
+2、采集需求：日志采集系统（flume）、业务数据同步系统（Maxwell，datax）
+3、数据仓库建模：维度建模
+4、数据分析：对设备、会员、商品、地区、活动等电商核心主题进行统计，统计的报表指标接近100个。
+5、即席查询：用户在使用系统时，根据自己当时的需求定义的查询，通常使用即席查询工具。
+6、集群监控：对集群性能进行监控，发生异常及时报警。
+7、元数据管理：存储所有表对象的详细信息，通过元数据管理有助于开发人员理解管理数据。
+8、数据质量监控：数据质量是数据分析和数据挖掘结果有效性和准确性的基础。数据的导入导出是否完整、一致等问题。一般使用数据质量监控工具完成。
+1.2.2 项目框架 思考：项目技术如何选型？
+1、技术选型
+考虑的因素：数据量的大小、业务需求、行业经验、技术成熟度、开发维护成本、总成本预算
+技术选型
+数据采集传输：Flume、kafka、datax，maxwell，sqoop，logstash
+数据存储：mysql、hdfs、hbase、redis、mongodb
+数据计算：hive、spark、flink、storm、tez
+数据查询：presto、kylin、impala、druid、clickhouse、doris
+数据可视化：superset、echarts、quickbi、datav
+任务调度、dolphinscheduler、azkabanoozie、airflow
+集群监控：zabbix、prometheus
+元数据管理：atlas
+权限管理：ranger、sentry
+2、系统流程设计
+思考：框架版本如何选择？
+3、框架版本选型
+1）框架选型
+(1)如何选择apache/cdh/hdp版本？
+apache：运维麻烦，组件间兼容性需要自己调研。（大厂使用）
+cdh：国内使用最多的版本，开始收费
+hdp：开源，可以进行二次开发，但没cdh稳定，国内很少使用
+（2）云服务选择
+阿里云的emr、maxcompute、dataworks
+亚马逊云emr
+腾讯云emr
+华为云emr
+2）apache框架版本选型">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-21T21:46:45+08:00">
+    <meta property="article:modified_time" content="2024-01-21T21:46:45+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">大数据开发之电商数仓（hadoop、flume、hive、hdfs、zookeeper、kafka）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="_1__0"></a>第 1 章：数据仓库</h2> 
+<h3><a id="11__1"></a>1.1 数据仓库概述</h3> 
+<h4><a id="111__2"></a>1.1.1 数据仓库概念</h4> 
+<p>1、数据仓库概念：<br> 为企业制定决策，提供数据支持的集合。通过对数据仓库中数据的分析，可以帮助企业，改进业务流程、控制成本，提高产品质量。<br> 数据仓库并不是数据的最终目的地，而是为数据最终的目的地做好准备，这些准备包括对数据的：清洗、转义、分类、重组、合并、拆分、统计等。<br> 2、数据仓库的数据通常包括：业务数据、用户行为数据和爬虫数据等<br> 3、业务系统数据库（关系型数据库中）<br> 1）业务数据：主要指的是各行业在处理事务过程中产生的业务数据<br> 2）产生：用户在电商网站中登录、下单、支付等过程中，需要和网站后台数据库进行增删改查交互，产生的数据<br> 3）存储：都是存储到关系型数据库（如：mysql、oracle）中。<br> <img src="https://images2.imgbox.com/73/fc/LNgGF1b3_o.png" alt="在这里插入图片描述"></p> 
+<p>4、用户行为数据（日志文件log）<br> 1）用户行为数据：用户在使用产品过程中，通过埋点与客户端产品交互所产生的数据，并发往日志服务器进行保存。<br> 2）存储：用户数据通常存储在日志文件中。</p> 
+<p>5、爬虫数据：通过技术手段获取其它公司网站的数据。<br> <img src="https://images2.imgbox.com/19/93/VeE15VkM_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="112__19"></a>1.1.2 数据仓库示意图</h4> 
+<p>数据仓库（data warehouse），为企业指定决策，提供数据支持的。可以帮助企业，改进业务流程、提高产品质量等。<br> <img src="https://images2.imgbox.com/3b/b5/FViAlAeA_o.png" alt="在这里插入图片描述"></p> 
+<p>数据仓库，并不是数据的最终目的地，而是为数据最终的目的地做好准备。这些准备包括对数据的：备份、清洗、聚合、统计等。<br> 1、报表系统：对存储的数据做数据统计分析<br> 2、用户画像：即用户信息标签化，是基于数据挖掘的用户特征提取即需求深度挖掘，是大数据时代围绕“以用户为中心”开展的个性化服务。标签化的模型是从用户社交属性、生活习惯、消费行为等信息中抽象出来的产物，是用户“特征标签”的几个。<br> 3、推荐系统：通过对用户的历史行为、用户兴趣偏好来经过推荐算法计算分析，然后产生用户可能感兴趣的项目列表。推荐系统可以更精准的理解用户需求，对用户进行聚类、打标签，推荐用户感兴趣的商品，帮助用户快速找到需要的商品，同时放大需求、增加流量入口、提高商品销售的有效转化率。<br> 4、机器学习：利用机器学习算法模型基于大数据集进行数据挖掘，发现和利用数据价值。</p> 
+<h3><a id="12__28"></a>1.2 数仓项目搭建概述</h3> 
+<h4><a id="121__29"></a>1.2.1 项目需求分析</h4> 
+<p>1、数据需求：用户分析日志log、业务数据db<br> 2、采集需求：日志采集系统（flume）、业务数据同步系统（Maxwell，datax）<br> 3、数据仓库建模：维度建模<br> 4、数据分析：对设备、会员、商品、地区、活动等电商核心主题进行统计，统计的报表指标接近100个。<br> <img src="https://images2.imgbox.com/47/9d/gLgc1vX5_o.png" alt="在这里插入图片描述"></p> 
+<p>5、即席查询：用户在使用系统时，根据自己当时的需求定义的查询，通常使用即席查询工具。<br> 6、集群监控：对集群性能进行监控，发生异常及时报警。<br> 7、元数据管理：存储所有表对象的详细信息，通过元数据管理有助于开发人员理解管理数据。<br> 8、数据质量监控：数据质量是数据分析和数据挖掘结果有效性和准确性的基础。数据的导入导出是否完整、一致等问题。一般使用数据质量监控工具完成。</p> 
+<h4><a id="122__40"></a>1.2.2 项目框架</h4> 
+<p>思考：项目技术如何选型？<br> 1、技术选型<br> 考虑的因素：数据量的大小、业务需求、行业经验、技术成熟度、开发维护成本、总成本预算<br> 技术选型<br> 数据采集传输：Flume、kafka、datax，maxwell，sqoop，logstash<br> 数据存储：mysql、hdfs、hbase、redis、mongodb<br> 数据计算：hive、spark、flink、storm、tez<br> 数据查询：presto、kylin、impala、druid、clickhouse、doris<br> 数据可视化：superset、echarts、quickbi、datav<br> 任务调度、dolphinscheduler、azkabanoozie、airflow<br> 集群监控：zabbix、prometheus<br> 元数据管理：atlas<br> 权限管理：ranger、sentry<br> <img src="https://images2.imgbox.com/a0/32/PoiCo0jN_o.png" alt="在这里插入图片描述"><br> 2、系统流程设计<br> <img src="https://images2.imgbox.com/ff/1f/XmVPsLZt_o.png" alt="在这里插入图片描述"></p> 
+<p>思考：框架版本如何选择？<br> 3、框架版本选型<br> 1）框架选型<br> (1)如何选择apache/cdh/hdp版本？<br> apache：运维麻烦，组件间兼容性需要自己调研。（大厂使用）<br> cdh：国内使用最多的版本，开始收费<br> hdp：开源，可以进行二次开发，但没cdh稳定，国内很少使用<br> （2）云服务选择<br> 阿里云的emr、maxcompute、dataworks<br> 亚马逊云emr<br> 腾讯云emr<br> 华为云emr<br> 2）apache框架版本选型<br> <img src="https://images2.imgbox.com/11/5d/E772Pnl8_o.png" alt="在这里插入图片描述"></p> 
+<p>版本选择基本原则：<br> 大版本：框架版本选择尽量不要选择最新的框架，选择最新版本半年前的稳定版本。<br> 小版本：选大不选小。</p> 
+<h3><a id="13__76"></a>1.3 基础设施</h3> 
+<h4><a id="131__77"></a>1.3.1 服务器选型</h4> 
+<p>思考：服务器选择物理机还是云主机呢？主要看成本<br> <img src="https://images2.imgbox.com/95/41/HjIve0ts_o.png" alt="在这里插入图片描述"></p> 
+<p>不同类型主机的成本投入：<br> <img src="https://images2.imgbox.com/a3/06/UHZ30FGX_o.png" alt="在这里插入图片描述"></p> 
+<p>如何选择？<br> 1、有钱并且和阿里有业务冲突的 -&gt; 物理机<br> 2、中小公司，为了快速拉到投资 -&gt; 阿里云<br> 3、资金充足，有长期打算的公司 -&gt; 物理机</p> 
+<h4><a id="132__88"></a>1.3.2 集群资源规划</h4> 
+<p>在企业中通常会搭建一套生产集群和一套测试集群。<br> 生产集群运行生产任务。<br> 测试集群用于上线前代码编写和测试。<br> 1、集群规模<br> 数据量有关<br> 1）如何确认集群规模？（假设：每台服务器8T磁盘，128G内存）<br> （1）每天日活用户100万，每人一天平均100条：100万<em>100条=1亿条<br> （2）每条日志1K左右，每天1亿条：100000000/1024/1024=约100G<br> （3）半年内不扩容服务器来算：100G</em>180天=约18T<br> （4）保存3副本：18T<em>3=54T<br> （5）预留20%~30%Buf=54T/0.7=77T<br> （6）算到这：约8T</em>10台服务器<br> 2）如果考虑数仓分层？数据采用压缩？需要重新再计算</p> 
+<p>2、部署原则：<br> 1）消耗内存的分开<br> 2）传输数据比较紧密的放在一起（kafka、zookeeper）<br> 3）客户端尽量放在1到2台服务器上，方便外部访问<br> 4）有依赖关系的尽量放在同一台服务器上<br> （1）生产集群部署规划<br> <img src="https://images2.imgbox.com/93/fa/5SrJov51_o.png" alt="在这里插入图片描述"></p> 
+<p>（2）测试集群服务部署规划<br> <img src="https://images2.imgbox.com/fa/19/qxuQmOMZ_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_2__113"></a>第 2 章：用户行为日志</h2> 
+<h3><a id="21__114"></a>2.1 用户行为日志概述</h3> 
+<p>1、用户行为日志：包括用户的各项行为信息以及行为所处的环境信息<br> 2、目的：优化产品和为各项分析统计指标提供数据支撑<br> 3、收集手段：埋点</p> 
+<h3><a id="22__118"></a>2.2 用户行为日志内容</h3> 
+<p>本项目中收集和分析目标数据主要有：页面数据、事件数据、曝光数据、启动数据和错误数据</p> 
+<h4><a id="221__120"></a>2.2.1 页面数据</h4> 
+<p>1、页面数据：主要记录一个页面的用户访问情况，包括访问时间、停留时间、页面路径等信息。<br> <img src="https://images2.imgbox.com/47/7c/6dxbbKxB_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/a4/df/cCmPVwGS_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="222__124"></a>2.2.2 事件数据</h4> 
+<p>事件数据主要记录应用内一个具体的操作行为，包括操作类型、操作对象、操作对象描述等信息<br> <img src="https://images2.imgbox.com/bd/12/8Jhf88TB_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/3c/87/wcq3Yo7R_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="223__128"></a>2.2.3 曝光数据</h4> 
+<p>曝光数据主要记录页面所曝光的内容，包括曝光对象，曝光类型等信息<br> <img src="https://images2.imgbox.com/f7/cb/kmrZalGR_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/35/fe/wZB8AlDC_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="224__132"></a>2.2.4 启动数据</h4> 
+<p>启动数据记录应用的启动信息<br> <img src="https://images2.imgbox.com/c1/30/CkaW3FGh_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/dd/6b/P23VLebQ_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="225__136"></a>2.2.5 错误数据</h4> 
+<p>应用使用过程中的错误信息，包括错误编号和错误信息</p> 
+<h2><a id="23__138"></a>2.3 用户行为日志格式</h2> 
+<p>埋点日志数据可分为两大类：普通页面埋点日志、启动日志<br> 普通页面埋点日志包括：一个页面浏览记录、若干个用户在该页面所做的动作记录、若干个该页面的曝光记录、以及一个在该页面发生的报错记录。除上述行为信息，页面日志还包括了这些行为所处的各种环境信息，包括用户信息、事件信息、地理位置信息、设备信息、应用信息、渠道信息等。<br> 1、普通页面埋点日志<br> <img src="https://images2.imgbox.com/17/d5/vH2CshQn_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/76/18/YIVBxyJb_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/b2/13/2y2YhkzX_o.png" alt="在这里插入图片描述"><br> 启动日志：以启动为单位，及一次启动行为，生成一条启动日志。一条完整的启动日志包括一个启动记录，一个本次启动时的报错记录，以及启动时所处的环境信息，包括用户信息、时间信息、地理位置信息、设备信息、应用信息、渠道信息等。</p> 
+<p><img src="https://images2.imgbox.com/5d/cd/yNyZ6Z5f_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_1__149"></a>第 1 章：电商业务介绍</h2> 
+<h3><a id="11__150"></a>1.1 电商的业务流程</h3> 
+<p><img src="https://images2.imgbox.com/13/c6/lE7AxFKk_o.png" alt="在这里插入图片描述"></p> 
+<p>1、我们以一个普通用户的浏览足迹为例进行说明：<br> 1）用户点开电商首页开始浏览，可能会通过分类查询或者通过全文搜索找到自己中意的商品，这些商品无疑都是存储在后台的管理系统中的<br> 2）当用户寻址到自己中意的商品，可能会想要购买，将商品加入到购物车中，发现需要登录，登录后，对商品进行结算，这时候购物车的管理和商品订单信息的生成都会对业务数据库产生影响，会生成相应的订单数据和支付数据。<br> 3）订单数据生成之后，还会对订单进行跟踪处理，直到订单全部完成。<br> 2、主要业务流程包括：<br> 1）用户前台浏览商品时的商品详情的管理<br> 2）用户商品加入购物车进行支付时用户个人中心和支付服务的管理<br> 3）用户支付完成后订单后台服务的管理<br> 这些流程涉及到了十几个甚至几十个业务数据表，甚至更多</p> 
+<h3><a id="12__162"></a>1.2 电商常识</h3> 
+<h4><a id="121_skuspu_163"></a>1.2.1 sku和spu</h4> 
+<p>sku：库存量基本单位。产品统一编号的简称，每种商品均对应有唯一的sku号。sku表示一个商品<br> spu：商品信息集合的最小单位。一组可复用、易检索的标准化信息集合。spu表示一类商品，同一spu的商品可以共用商品图片、海报、销售属性等<br> <img src="https://images2.imgbox.com/a1/ed/m8p97n7U_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="122__168"></a>1.2.2 平台属性和销售属性</h4> 
+<p><img src="https://images2.imgbox.com/69/f9/9w67pS0T_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="123__170"></a>1.2.3 电商系统表结构</h4> 
+<p><img src="https://images2.imgbox.com/a4/ab/jlmwg6Kp_o.png" alt="在这里插入图片描述"></p> 
+<p>上面展示的就是本电商数仓系统涉及到的业务数据表结构关系。<br> 1、这一共34张表，以订单表、用户表、sku商品表、活动表和优惠卷表为中心。<br> 2、延申出了优惠卷领用表，支付流水表、活动订单表、订单详情表、订单状态表、商品品论表、编码字典表、退单表、spu商品表等。<br> 3、其中的用户表提供用户的详细信息：支付流水表提供订单的支付详情；订单详情表提供订单的商品数量情况；商品表给订单详情表提供商品的详细信息。<br> 本次讲解以此34各表为例，实际生产项目中，业务数据库中的表远远不止这些。<br> <img src="https://images2.imgbox.com/4a/61/KNgVgPtC_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/f7/77/ENlCAF5q_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/c6/b0/yFXaVjF3_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/0e/20/VsmoL0m5_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/a0/fe/fxo1abcz_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/df/93/OpBJYzWT_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/59/d2/byrq9UF3_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_1__185"></a>第 1 章：实时数仓同步数据</h2> 
+<p>实时数仓用flink源源不断地从kafka中读取数据进行计算，所以不需要手动同步数据到实时数仓。</p> 
+<h2><a id="_2__187"></a>第 2 章：离线数仓同步数据</h2> 
+<h3><a id="21__188"></a>2.1 用户行为数据同步</h3> 
+<h4><a id="211__189"></a>2.1.1 数据通道</h4> 
+<p>用户行为数据由flume从kafka直接同步到hdfs上，由于离线数仓采用hive地分区表按天统计，所以目标路径要包括一层日期。具体数据流向如图：</p> 
+<h4><a id="212_flume_192"></a>2.1.2 日志消费flume概述</h4> 
+<p>1、日志消费flume在架构中的定位<br> 日志消费flume主要用于消费kafka集群中topic_log的数据写入到hdfs中。</p> 
+<p>flume的集群规划如下：</p> 
+<p>日志消费flume我们将其安装部署在flume04上。<br> 1）背景：安装规划，该flume需要将kafka中的topic_log的数据采集并发送到hdfs，并且需要对每天产生的用户行为数据进行分区存储，将不同日期的数据发送到hdfs中以不同日期命名的路径下。<br> 2）flume插件选择：kafkasource、fliechannel、hdfssink<br> 3）关键配置如下：<br> <img src="https://images2.imgbox.com/dc/88/pmYDuy1D_o.png" alt="在这里插入图片描述"><br> kafkasource：<br> #订阅kafka中的topic_log<br> a1.source.r1.kafka.topics=topic_log<br> #使用时间戳拦截器为event增加一个header，key为timestamp，value为json字符串中ts字段的值<br> interceptors=i1<br> interceptors.i1.type=timestampinterceptor.builder</p> 
+<p>hdfssink<br> #path中包括时间转移序列，用于将不同日期的数据放在不同的路径<br> path=/orgin_data/gmall/log/topic_log/%Y-%m-%d</p> 
+<h4><a id="213_flume_214"></a>2.1.3 日志消费flume配置分析</h4> 
+<p>#订阅kafka中topic<br> a1.sources.r1.kafka.topics=topic_log<br> #path包括时间转义序列，将不同日期的数据放到不同的目录下<br> a1.sinks.k1.hdfs.path=/orgin_data/gmall/log/topic_log/%Y-%m-%d<br> <img src="https://images2.imgbox.com/c6/ed/FDS6v5dh_o.png" alt="在这里插入图片描述"></p> 
+<p>#使用时间拦截器为event增加一个header，其中key是timestamp，value是json字符串中的ts字段的值<br> interceptors=i1<br> interceptors.i1.type=timestampinterceptor$builder</p> 
+<h4><a id="214_flume_224"></a>2.1.4 自定义flume拦截器</h4> 
+<p>1、日志消费flume使用拦截器的目的-处理时间漂移问题<br> 我们知道在使用hdfs sink时需要在event的header上设置时间戳属性。但是使用默认的timestrampinterceptor拦截器会默认使用linux系统时间，作为输出到hdfs路径的时间。<br> 但是如果数据时23：59：59分钟产生的，flume消费kafka中数据时，有可能已经到了第二天了，那么这部分数据就会发送到第二天的hdfs路径。<br> 我们希望根据日志里面的实际时间，发往hdfs的路径，所以我们需要自定义拦截器实现将日志里面的实际时间，提取出来，配置到event的header中。<br> 注意：想要复现时间飘逸现象时，需要保证数据产生时间是在时间节点重新计算附件，如：按天的就需要在00:00前的一分钟以内；按分钟的就要在每分钟的前5秒以内。<br> 2、自定义拦截器<br> 1）创建类timestampinterceptor类</p> 
+<pre><code class="prism language-sql">package com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>interceptor<span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> com<span class="token punctuation">.</span>alibaba<span class="token punctuation">.</span>fastjson<span class="token punctuation">.</span>JSONObject<span class="token punctuation">;</span>
+<span class="token keyword">import</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>Context<span class="token punctuation">;</span>
+<span class="token keyword">import</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>Event<span class="token punctuation">;</span>
+<span class="token keyword">import</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>interceptor<span class="token punctuation">.</span>Interceptor<span class="token punctuation">;</span>
+<span class="token keyword">import</span> java<span class="token punctuation">.</span>nio<span class="token punctuation">.</span><span class="token keyword">charset</span><span class="token punctuation">.</span>StandardCharsets<span class="token punctuation">;</span>
+<span class="token keyword">import</span> java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>List<span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * @author leon
+ * @ClassName TimeStampInterceptor.java
+ * @createTime 2022年01月23日 13:30:00
+ */</span>
+<span class="token keyword">public</span> class TimeStampInterceptor implements Interceptor {
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> void initialize<span class="token punctuation">(</span><span class="token punctuation">)</span> {
+        
+    }
+    
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> Event intercept<span class="token punctuation">(</span>Event event<span class="token punctuation">)</span> {
+        <span class="token comment">// 1. 获取Event的Body</span>
+        String log <span class="token operator">=</span> new String<span class="token punctuation">(</span>event<span class="token punctuation">.</span>getBody<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> StandardCharsets<span class="token punctuation">.</span>UTF_8<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 2. 解析log为json对象</span>
+        JSONObject jsonObject <span class="token operator">=</span> JSONObject<span class="token punctuation">.</span>parseObject<span class="token punctuation">(</span>log<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 3. 获取log中的时间戳</span>
+        String ts <span class="token operator">=</span> jsonObject<span class="token punctuation">.</span>getString<span class="token punctuation">(</span><span class="token string">"ts"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 4. 将时间戳属性配置到header中</span>
+        event<span class="token punctuation">.</span>getHeaders<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>put<span class="token punctuation">(</span><span class="token string">"timestamp"</span><span class="token punctuation">,</span>ts<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> event<span class="token punctuation">;</span>
+    }
+
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> List<span class="token operator">&lt;</span>Event<span class="token operator">&gt;</span> intercept<span class="token punctuation">(</span>List<span class="token operator">&lt;</span>Event<span class="token operator">&gt;</span> events<span class="token punctuation">)</span> {
+        <span class="token keyword">for</span> <span class="token punctuation">(</span>Event event : events<span class="token punctuation">)</span> {
+            intercept<span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        }
+        <span class="token keyword">return</span> events<span class="token punctuation">;</span>
+    }
+
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> void <span class="token keyword">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {
+    }
+    
+    <span class="token keyword">public</span> static class Builder implements Interceptor<span class="token punctuation">.</span>Builder{
+        <span class="token variable">@Override</span>
+        <span class="token keyword">public</span> Interceptor build<span class="token punctuation">(</span><span class="token punctuation">)</span> {
+            <span class="token keyword">return</span> new TimeStampInterceptor<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        }
+
+        <span class="token variable">@Override</span>
+        <span class="token keyword">public</span> void configure<span class="token punctuation">(</span>Context context<span class="token punctuation">)</span> {
+        }
+    }
+}
+
+</code></pre> 
+<p>2）重新打包后，上传到hadoop104的flume根目录下lib文件夹下</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop104</span> lib<span class="token punctuation">]</span>$ ls <span class="token operator">-</span>al <span class="token operator">|</span> grep flume<span class="token operator">-</span>interceptor<span class="token operator">*</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">--. 1 atguigu atguigu  662479 1月  23 13:40 flume-interceptor-1.0-SNAPSHOT-jar-with-dependencies.jar</span>
+
+</code></pre> 
+<h4><a id="215_flume_300"></a>2.1.5 编写日志消费flume的配置文件</h4> 
+<p>1、编写配置日志消费flume的配置文件<br> 在hadoop104的/opt/module/flume/job目录下创建flume-kafka-hdfs.conf</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop104</span> conf<span class="token punctuation">]</span>$ vim flume<span class="token operator">-</span>kafka<span class="token operator">-</span>hdfs<span class="token punctuation">.</span>conf
+<span class="token comment"># 组件</span>
+a1<span class="token punctuation">.</span>sources<span class="token operator">=</span>r1
+a1<span class="token punctuation">.</span>channels<span class="token operator">=</span>c1
+a1<span class="token punctuation">.</span>sinks<span class="token operator">=</span>k1
+
+<span class="token comment"># source1</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>source<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>KafkaSource
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>batchSize <span class="token operator">=</span> <span class="token number">5000</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>batchDurationMillis <span class="token operator">=</span> <span class="token number">2000</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>bootstrap<span class="token punctuation">.</span>servers <span class="token operator">=</span> hadoop102:<span class="token number">9092</span><span class="token punctuation">,</span>hadoop103:<span class="token number">9092</span><span class="token punctuation">,</span>hadoop104:<span class="token number">9092</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>topics<span class="token operator">=</span>topic_log
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>interceptors <span class="token operator">=</span> i1
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>interceptors<span class="token punctuation">.</span>i1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>interceptor<span class="token punctuation">.</span>TimeStampInterceptor$Builder
+
+<span class="token comment"># channel1</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> <span class="token keyword">file</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>checkpointDir <span class="token operator">=</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>flume<span class="token operator">/</span><span class="token keyword">checkpoint</span><span class="token operator">/</span>behavior1
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>dataDirs <span class="token operator">=</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>flume<span class="token operator">/</span><span class="token keyword">data</span><span class="token operator">/</span>behavior1<span class="token operator">/</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>maxFileSize <span class="token operator">=</span> <span class="token number">2146435071</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>capacity <span class="token operator">=</span> <span class="token number">1000000</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>keep<span class="token operator">-</span>alive <span class="token operator">=</span> <span class="token number">6</span>
+
+<span class="token comment"># sink1</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> hdfs
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>path <span class="token operator">=</span> <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>log<span class="token operator">/</span>topic_log<span class="token operator">/</span><span class="token operator">%</span>Y<span class="token operator">-</span><span class="token operator">%</span>m<span class="token operator">-</span><span class="token operator">%</span>d
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>filePrefix <span class="token operator">=</span> log<span class="token operator">-</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>round <span class="token operator">=</span> <span class="token boolean">false</span>
+
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollInterval <span class="token operator">=</span> <span class="token number">10</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollSize <span class="token operator">=</span> <span class="token number">134217728</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollCount <span class="token operator">=</span> <span class="token number">0</span>
+<span class="token comment"># 控制输出文件DataStream格式。</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>fileType <span class="token operator">=</span> CompressedStream
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>codeC <span class="token operator">=</span> gzip
+
+<span class="token comment"># bind</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>channels <span class="token operator">=</span> c1
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>channel<span class="token operator">=</span> c1
+
+</code></pre> 
+<p>2、配置优化<br> 1）FIlechannel优化<br> （1）通过配置datadirs指向多个路径，每个路径对应不同的硬盘，增大flume吞吐量</p> 
+<pre><code class="prism language-sql">Comma separated list <span class="token keyword">of</span> directories <span class="token keyword">for</span> storing log files<span class="token punctuation">.</span> <span class="token keyword">Using</span> multiple directories <span class="token keyword">on</span> separate disks can improve <span class="token keyword">file</span> channel peformance
+</code></pre> 
+<p>（2）checkpointdir和backupcheckpointdir也尽量配置到不同的硬盘对应的目录中，保证checkpoint坏掉后，可以快速使用backupcheckpointdir恢复数据<br> 2）hdfs sink优化<br> （1）hdfs存入大量小文件的影响<br> （2）hdfs小文件处理：配置三个参数hdfs.rollinterval=3600，hdfs.rollsize=134217728，hdfs.rollcount=0效果；当文件达到128m时会产生新的文件；当创建超过3600秒时会滚动产生新的文件。</p> 
+<h4><a id="216_flume_359"></a>2.1.6 编写日志消费flume启动停止脚本</h4> 
+<p>1、在hadoop102下的atguima用户根目录/home/atguigu/bin下，创建f2.sh文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ vim f2<span class="token punctuation">.</span>sh 
+<span class="token comment">#! /bin/bash</span>
+<span class="token comment"># 1. 判断是否存在参数</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> $<span class="token comment"># == 0 ];then</span>
+  echo <span class="token operator">-</span>e <span class="token string">"请输入参数：\nstart   启动日志消费flume；\nstop   关闭日志消费flume；"</span><span class="token operator">&amp;&amp;</span><span class="token keyword">exit</span>
+fi
+<span class="token keyword">case</span> $<span class="token number">1</span> <span class="token operator">in</span>
+<span class="token string">"start"</span><span class="token punctuation">)</span>{
+      echo <span class="token string">" --------启动 hadoop104 消费flume-------"</span>
+      ssh hadoop104 <span class="token string">"nohup /opt/module/flume/bin/flume-ng agent --conf-file /opt/module/flume/job/flume-kafka-hdfs.conf --conf /opt/module/flume/conf --name a1 -Dflume.root.logger=INFO,LOGFILE &gt;/opt/module/flume/logs/flume.log  2&gt;&amp;1 &amp;"</span>
+}<span class="token punctuation">;</span><span class="token punctuation">;</span>
+
+<span class="token string">"stop"</span><span class="token punctuation">)</span>{
+      echo <span class="token string">"---------- 停止 hadoop104 上的 日志消费flume ----------"</span>
+      flume_count<span class="token operator">=</span>$<span class="token punctuation">(</span>xcall jps <span class="token operator">-</span>ml <span class="token operator">|</span> grep flume<span class="token operator">-</span>kafka<span class="token operator">-</span>hdfs<span class="token operator">|</span>wc <span class="token operator">-</span>l<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">if</span> <span class="token punctuation">[</span> $flume_count <span class="token operator">!=</span> <span class="token number">0</span> <span class="token punctuation">]</span><span class="token punctuation">;</span><span class="token keyword">then</span>
+          ssh hadoop104 <span class="token string">"ps -ef | grep flume-kafka-hdfs | grep -v grep | awk '{print \$2}' | xargs -n1 kill -9"</span>
+      <span class="token keyword">else</span>
+          echo <span class="token string">" hadoop104 当前没有日志采集flume在运行"</span>
+      fi
+  }<span class="token punctuation">;</span><span class="token punctuation">;</span>
+esac
+
+</code></pre> 
+<p>2、设置f2.sh文件的执行权限</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ chmod <span class="token operator">+</span>x f2<span class="token punctuation">.</span>sh 
+</code></pre> 
+<h4><a id="217__393"></a>2.1.7 用户行为数据同步测试</h4> 
+<p>1、首先执行脚本f2.sh启动日志消费flume，消费kafka中topic_log的数据</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ f2<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+</code></pre> 
+<p>2、执行脚本f1.sh启动日志采集flume，采集日志文件到kafka中的topic_log</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ f1<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+</code></pre> 
+<p>3、执行脚本lg.sh启动日志数据模拟程序，生产模拟数据（需要修改配置文件）</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ lg<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>4、查看各节点的运行程序</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> <span class="token operator">~</span><span class="token punctuation">]</span>$ xcall <span class="token string">"jps -ml"</span>
+<span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span> hadoop102 <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span>
+<span class="token number">11584</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>server<span class="token punctuation">.</span>namenode<span class="token punctuation">.</span>NameNode
+<span class="token number">12256</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>mapreduce<span class="token punctuation">.</span>v2<span class="token punctuation">.</span>hs<span class="token punctuation">.</span>JobHistoryServer
+<span class="token number">6113</span> kafka<span class="token punctuation">.</span>Kafka <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>kafka<span class="token operator">/</span>config<span class="token operator">/</span>server<span class="token punctuation">.</span>properties
+<span class="token number">11747</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>server<span class="token punctuation">.</span>datanode<span class="token punctuation">.</span>DataNode
+<span class="token number">12420</span> gmall2020<span class="token operator">-</span>mock<span class="token operator">-</span>log<span class="token operator">-</span><span class="token number">2021</span><span class="token operator">-</span><span class="token number">01</span><span class="token operator">-</span><span class="token number">22.</span>jar
+<span class="token number">12453</span> sun<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>jps<span class="token punctuation">.</span>Jps <span class="token operator">-</span>ml
+<span class="token number">5705</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>zookeeper<span class="token punctuation">.</span>server<span class="token punctuation">.</span>quorum<span class="token punctuation">.</span>QuorumPeerMain <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>zookeeper<span class="token operator">-</span><span class="token number">3.5</span><span class="token number">.7</span><span class="token operator">/</span>bin<span class="token operator">/</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token operator">/</span>conf<span class="token operator">/</span>zoo<span class="token punctuation">.</span>cfg
+<span class="token number">10764</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>node<span class="token punctuation">.</span>Application <span class="token comment">--conf-file /opt/module/flume/conf/flume-tailDir-kafka.conf --name a1</span>
+<span class="token number">12031</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>yarn<span class="token punctuation">.</span>server<span class="token punctuation">.</span>nodemanager<span class="token punctuation">.</span>NodeManager
+<span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span> hadoop103 <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span>
+<span class="token number">5584</span> kafka<span class="token punctuation">.</span>Kafka <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>kafka<span class="token operator">/</span>config<span class="token operator">/</span>server<span class="token punctuation">.</span>properties
+<span class="token number">8355</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>yarn<span class="token punctuation">.</span>server<span class="token punctuation">.</span>nodemanager<span class="token punctuation">.</span>NodeManager
+<span class="token number">7589</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>node<span class="token punctuation">.</span>Application <span class="token comment">--conf-file /opt/module/flume/conf/flume-tailDir-kafka.conf --name a1</span>
+<span class="token number">8213</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>yarn<span class="token punctuation">.</span>server<span class="token punctuation">.</span>resourcemanager<span class="token punctuation">.</span>ResourceManager
+<span class="token number">5174</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>zookeeper<span class="token punctuation">.</span>server<span class="token punctuation">.</span>quorum<span class="token punctuation">.</span>QuorumPeerMain <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>zookeeper<span class="token operator">-</span><span class="token number">3.5</span><span class="token number">.7</span><span class="token operator">/</span>bin<span class="token operator">/</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token operator">/</span>conf<span class="token operator">/</span>zoo<span class="token punctuation">.</span>cfg
+<span class="token number">8843</span> sun<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>jps<span class="token punctuation">.</span>Jps <span class="token operator">-</span>ml
+<span class="token number">8046</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>server<span class="token punctuation">.</span>datanode<span class="token punctuation">.</span>DataNode
+<span class="token number">8814</span> gmall2020<span class="token operator">-</span>mock<span class="token operator">-</span>log<span class="token operator">-</span><span class="token number">2021</span><span class="token operator">-</span><span class="token number">01</span><span class="token operator">-</span><span class="token number">22.</span>jar
+<span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span> hadoop104 <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span>
+<span class="token number">5651</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>zookeeper<span class="token punctuation">.</span>server<span class="token punctuation">.</span>quorum<span class="token punctuation">.</span>QuorumPeerMain <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>zookeeper<span class="token operator">-</span><span class="token number">3.5</span><span class="token number">.7</span><span class="token operator">/</span>bin<span class="token operator">/</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token operator">/</span>conf<span class="token operator">/</span>zoo<span class="token punctuation">.</span>cfg
+<span class="token number">8627</span> sun<span class="token punctuation">.</span>tools<span class="token punctuation">.</span>jps<span class="token punctuation">.</span>Jps <span class="token operator">-</span>ml
+<span class="token number">8084</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>server<span class="token punctuation">.</span>datanode<span class="token punctuation">.</span>DataNode
+<span class="token number">8265</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>yarn<span class="token punctuation">.</span>server<span class="token punctuation">.</span>nodemanager<span class="token punctuation">.</span>NodeManager
+<span class="token number">6059</span> kafka<span class="token punctuation">.</span>Kafka <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>kafka<span class="token operator">/</span>config<span class="token operator">/</span>server<span class="token punctuation">.</span>properties
+<span class="token number">8427</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>node<span class="token punctuation">.</span>Application <span class="token comment">--conf-file /opt/module/flume/conf/flume-kafka-hdfs.conf --name a1</span>
+<span class="token number">8173</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>hadoop<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>server<span class="token punctuation">.</span>namenode<span class="token punctuation">.</span>SecondaryNameNode
+
+</code></pre> 
+<p>5、查看对应hdfs上的目录下是否生成了新的数据文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ hdfs dfs <span class="token operator">-</span>ls <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>log<span class="token operator">/</span>topic_log
+Found <span class="token number">2</span> items
+drwxr<span class="token operator">-</span>xr<span class="token operator">-</span>x   <span class="token operator">-</span> atguigu supergroup          <span class="token number">0</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">01</span><span class="token operator">-</span><span class="token number">23</span> <span class="token number">16</span>:<span class="token number">21</span> <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>log<span class="token operator">/</span>topic_log<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span>
+<span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ hdfs dfs <span class="token operator">-</span>ls <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>log<span class="token operator">/</span>topic_log<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">--r--   3 atguigu supergroup     544097 2022-01-23 16:20 /origin_data/gmall/log/topic_log/2020-06-14/log-.1642926024093</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">--r--   3 atguigu supergroup    1075832 2022-01-23 16:21 /origin_data/gmall/log/topic_log/2020-06-14/log-.1642926030114</span>
+<span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ hdfs dfs <span class="token operator">-</span>cat <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>log<span class="token operator">/</span>topic_log<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span><span class="token operator">/</span>log<span class="token operator">-</span><span class="token number">.1642926024093</span> <span class="token operator">|</span>zcat
+……
+{<!-- --><span class="token string">"common"</span>:{<!-- --><span class="token string">"ar"</span>:<span class="token string">"110000"</span><span class="token punctuation">,</span><span class="token string">"ba"</span>:<span class="token string">"iPhone"</span><span class="token punctuation">,</span><span class="token string">"ch"</span>:<span class="token string">"Appstore"</span><span class="token punctuation">,</span><span class="token string">"is_new"</span>:<span class="token string">"0"</span><span class="token punctuation">,</span><span class="token string">"md"</span>:<span class="token string">"iPhone Xs Max"</span><span class="token punctuation">,</span><span class="token string">"mid"</span>:<span class="token string">"mid_125455"</span><span class="token punctuation">,</span><span class="token string">"os"</span>:<span class="token string">"iOS 13.2.3"</span><span class="token punctuation">,</span><span class="token string">"uid"</span>:<span class="token string">"65"</span><span class="token punctuation">,</span><span class="token string">"vc"</span>:<span class="token string">"v2.1.134"</span>}<span class="token punctuation">,</span><span class="token string">"page"</span>:{<!-- --><span class="token string">"during_time"</span>:<span class="token number">19258</span><span class="token punctuation">,</span><span class="token string">"last_page_id"</span>:<span class="token string">"home"</span><span class="token punctuation">,</span><span class="token string">"page_id"</span>:<span class="token string">"mine"</span>}<span class="token punctuation">,</span><span class="token string">"ts"</span>:<span class="token number">1592122835000</span>}
+……
+
+</code></pre> 
+<h3><a id="22__461"></a>2.2 业务数据同步策略</h3> 
+<p>业务数据是数据仓库的重要数据来源，我们需要每日定时从业务数据库中抽取数据，传输到数据仓库中，之后再对数据进行分析统计。为保证统计结果的正确性，需要保证数据仓库中的数据与业务数据库是同步的，离线数仓的计算周期通常为天，所以数据同步周期也通常为天，即每天同步一次即可。<br> 在同步业务数据时有两种同步策略：全量同步和增量同步</p> 
+<h4><a id="221__464"></a>2.2.1 全量同步策略</h4> 
+<p>1、解释：每日全量，就是每天都将业务数据库中的全部数据同步一份到数据仓库，是保证两侧数据同步的最简单的方式<br> 2、适用：表数据量不大，且每天即会有新数据加入，也会有旧的数据修改<br> 3、编码字典表、品牌表、商品三级分类表、商品二级分类表、商品一级分类表、优惠规则表、活动表、活动参与商品表、加购表、商品收藏表、优惠卷表、sku商品表、spu商品表<br> <img src="https://images2.imgbox.com/67/b7/BkstQGzY_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="222__469"></a>2.2.2 增量同步策略</h4> 
+<p>解释：每日增量，就是每天只将业务数据中的新增及变化的数据同步到数据仓库中。<br> 适用：表数据量大，且每天只会有新的数据插入的场景。<br> 特点：采用每日增量的表，通常会在首日先进行一个全量同步。<br> 例如：退单表、订单状态表、支付流水表、订单详情表、活动与订单关联表、商品评论表<br> <img src="https://images2.imgbox.com/6d/90/aRg5fOb3_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="223__475"></a>2.2.3 数据同步策略的选择</h4> 
+<p>两种策略都能保证数据仓库和业务数据库的数据同步，那应该选择哪个呢？<br> <img src="https://images2.imgbox.com/7c/d5/rdjplaNF_o.png" alt="在这里插入图片描述"></p> 
+<p>结论：若业务数据量比较大，且每天的数据变化比例还比较低，这时应该选择增量同步，否则采用全量同步。<br> <img src="https://images2.imgbox.com/32/12/Wwe9hhgw_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="224__481"></a>2.2.4 同步工具概述</h4> 
+<p>1、种类繁多的数据同步工具中，大致可以分为两大类<br> 1）基于Select查询的离线、批量同步工具，代表：datax、sqoop<br> 2）基于数据库表述变更日志（mysql的binlog）的实时流式同步工具，代表：maxwell、canal<br> 2、上述同步工具的全量或增量同步适用如下<br> <img src="https://images2.imgbox.com/a6/54/k3m2hRVy_o.png" alt="在这里插入图片描述"></p> 
+<p>3、同步工具之间对增量同步不同方案的对比<br> <img src="https://images2.imgbox.com/01/8d/AAX6xudL_o.png" alt="在这里插入图片描述"></p> 
+<p>本项目中，全量同步采用datax，增量同步采用maxwell<br> 注：由于后续数仓建模需要，cart_inso需进行全量同步和增量同步</p> 
+<h3><a id="23__493"></a>2.3 全量表数据同步</h3> 
+<h4><a id="231_datax_494"></a>2.3.1 数据同步工具datax部署</h4> 
+<p><img src="https://images2.imgbox.com/8c/61/Ayazcm0J_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="232__497"></a>2.3.2 数据通道</h4> 
+<p>全量表数据有datax从mysql业务数据库中直接同步到hdfs，具体数据流向如下表<br> <img src="https://images2.imgbox.com/c2/b9/EcgYxOs6_o.png" alt="在这里插入图片描述"></p> 
+<p>注：<br> 1、目标路径中表名需包含后缀full，表示该表为全量同步<br> 2、目标路径中包含一层日期，用以对不同天的数据进行区分</p> 
+<h4><a id="233_datax_504"></a>2.3.3 编写datax配置文件</h4> 
+<p>我们需要为每张全量表编写一个datax的json配置文件，此处为activity_Info为例，编辑配置文件如下：</p> 
+<pre><code class="prism language-sql">{
+    <span class="token string">"job"</span>: {
+        <span class="token string">"content"</span>: <span class="token punctuation">[</span>
+            {
+                <span class="token string">"reader"</span>: {
+                    <span class="token string">"name"</span>: <span class="token string">"mysqlreader"</span><span class="token punctuation">,</span>
+                    <span class="token string">"parameter"</span>: {
+                        <span class="token string">"column"</span>: <span class="token punctuation">[</span>
+                            <span class="token string">"id"</span><span class="token punctuation">,</span>
+                            <span class="token string">"activity_name"</span><span class="token punctuation">,</span>
+                            <span class="token string">"activity_type"</span><span class="token punctuation">,</span>
+                            <span class="token string">"activity_desc"</span><span class="token punctuation">,</span>
+                            <span class="token string">"start_time"</span><span class="token punctuation">,</span>
+                            <span class="token string">"end_time"</span><span class="token punctuation">,</span>
+                            <span class="token string">"create_time"</span>
+                        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                        <span class="token string">"connection"</span>: <span class="token punctuation">[</span>
+                            {
+                                <span class="token string">"jdbcUrl"</span>: <span class="token punctuation">[</span>
+                                    <span class="token string">"jdbc:mysql://hadoop102:3306/gmall"</span>
+                                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                                <span class="token string">"table"</span>: <span class="token punctuation">[</span>
+                                    <span class="token string">"activity_info"</span>
+                                <span class="token punctuation">]</span>
+                            }
+                        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                        <span class="token string">"password"</span>: <span class="token string">"jianglai"</span><span class="token punctuation">,</span>
+                        <span class="token string">"splitPk"</span>: <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string">"username"</span>: <span class="token string">"root"</span>
+                    }
+                }<span class="token punctuation">,</span>
+                <span class="token string">"writer"</span>: {
+                    <span class="token string">"name"</span>: <span class="token string">"hdfswriter"</span><span class="token punctuation">,</span>
+                    <span class="token string">"parameter"</span>: {
+                        <span class="token string">"column"</span>: <span class="token punctuation">[</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"id"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"bigint"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"activity_name"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"activity_type"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"activity_desc"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"start_time"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"end_time"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }<span class="token punctuation">,</span>
+                            {
+                                <span class="token string">"name"</span>: <span class="token string">"create_time"</span><span class="token punctuation">,</span>
+                                <span class="token string">"type"</span>: <span class="token string">"string"</span>
+                            }
+                        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                        <span class="token string">"compress"</span>: <span class="token string">"gzip"</span><span class="token punctuation">,</span>
+                        <span class="token string">"defaultFS"</span>: <span class="token string">"hdfs://hadoop102:8020"</span><span class="token punctuation">,</span>
+                        <span class="token string">"fieldDelimiter"</span>: <span class="token string">"\t"</span><span class="token punctuation">,</span>
+                        <span class="token string">"fileName"</span>: <span class="token string">"activity_info"</span><span class="token punctuation">,</span>
+                        <span class="token string">"fileType"</span>: <span class="token string">"text"</span><span class="token punctuation">,</span>
+                        <span class="token string">"path"</span>: <span class="token string">"${targetdir}"</span><span class="token punctuation">,</span>
+                        <span class="token string">"writeMode"</span>: <span class="token string">"append"</span>
+                    }
+                }
+            }
+        <span class="token punctuation">]</span><span class="token punctuation">,</span>
+        <span class="token string">"setting"</span>: {
+            <span class="token string">"speed"</span>: {
+                <span class="token string">"channel"</span>: <span class="token number">1</span>
+            }
+        }
+    }
+}
+
+</code></pre> 
+<p>这个配置文件定义了一个从 MySQL 数据库读取特定表和列的数据，并将其写入到 HDFS 的过程，同时涵盖了数据类型、连接信息、输出格式和压缩方式等详细信息。这种配置通常用于数据仓库的数据抽取、转换和加载（ETL）过程。<br> <img src="https://images2.imgbox.com/ce/07/OqXiWrjC_o.png" alt="在这里插入图片描述"></p> 
+<p>注：我们需要对不同天的数据加以分区，故path参数的值配置为动态传入参数，名为targetdir<br> 2、测试配置文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> datax<span class="token punctuation">]</span>$ python bin<span class="token operator">/</span>datax<span class="token punctuation">.</span>py job<span class="token operator">/</span>activity_info<span class="token punctuation">.</span>json <span class="token operator">-</span>p<span class="token string">"-DtargetDir=/origin_data/gmall/db/activity_info_full/2020-06-14"</span>
+</code></pre> 
+<p>3、执行时如果报错如下：</p> 
+<pre><code class="prism language-sql">经DataX智能分析<span class="token punctuation">,</span>该任务最可能的错误原因是:
+com<span class="token punctuation">.</span>alibaba<span class="token punctuation">.</span>datax<span class="token punctuation">.</span>common<span class="token punctuation">.</span>exception<span class="token punctuation">.</span>DataXException: Code:<span class="token punctuation">[</span>HdfsWriter<span class="token operator">-</span><span class="token number">02</span><span class="token punctuation">]</span><span class="token punctuation">,</span> Description:<span class="token punctuation">[</span>您填写的参数值不合法<span class="token punctuation">.</span><span class="token punctuation">]</span><span class="token punctuation">.</span> <span class="token operator">-</span> 您配置的path: <span class="token punctuation">[</span><span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_info<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span><span class="token punctuation">]</span> 不存在<span class="token punctuation">,</span> 请先在hive端创建对应的数据库和表<span class="token punctuation">.</span>
+</code></pre> 
+<p>4、这文件一个个写太麻烦了，每天的日期都不一样，怎么办呢？</p> 
+<h4><a id="234_datax_610"></a>2.3.4 datax配置文件生成脚本</h4> 
+<p>1、为了方便起见，我们适用脚本gen_import_config.py批量生成datax的配置文件，脚本内容如下：</p> 
+<pre><code class="prism language-sql"><span class="token comment"># coding=utf-8</span>
+<span class="token keyword">import</span> json
+<span class="token keyword">import</span> getopt
+<span class="token keyword">import</span> os
+<span class="token keyword">import</span> sys
+<span class="token keyword">import</span> MySQLdb
+
+<span class="token comment">#MySQL相关配置，需根据实际情况作出修改</span>
+mysql_host <span class="token operator">=</span> <span class="token string">"hadoop102"</span>
+mysql_port <span class="token operator">=</span> <span class="token string">"3306"</span>
+mysql_user <span class="token operator">=</span> <span class="token string">"root"</span>
+mysql_passwd <span class="token operator">=</span> <span class="token string">"你的密码"</span>
+
+<span class="token comment">#HDFS NameNode相关配置，需根据实际情况作出修改</span>
+hdfs_nn_host <span class="token operator">=</span> <span class="token string">"hadoop102"</span>
+hdfs_nn_port <span class="token operator">=</span> <span class="token string">"8020"</span>
+
+<span class="token comment">#生成配置文件的目标路径，可根据实际情况作出修改</span>
+output_path <span class="token operator">=</span> <span class="token string">"/opt/module/datax/job/import"</span>
+
+def get_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>:
+    <span class="token keyword">return</span> MySQLdb<span class="token punctuation">.</span><span class="token keyword">connect</span><span class="token punctuation">(</span>host<span class="token operator">=</span>mysql_host<span class="token punctuation">,</span> port<span class="token operator">=</span><span class="token keyword">int</span><span class="token punctuation">(</span>mysql_port<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token keyword">user</span><span class="token operator">=</span>mysql_user<span class="token punctuation">,</span> passwd<span class="token operator">=</span>mysql_passwd<span class="token punctuation">)</span>
+
+def get_mysql_meta<span class="token punctuation">(</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">)</span>:
+    connection <span class="token operator">=</span> get_connection<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">cursor</span> <span class="token operator">=</span> connection<span class="token punctuation">.</span><span class="token keyword">cursor</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">sql</span> <span class="token operator">=</span> <span class="token string">"SELECT COLUMN_NAME,DATA_TYPE from information_schema.COLUMNS WHERE TABLE_SCHEMA=%s AND TABLE_NAME=%s ORDER BY ORDINAL_POSITION"</span>
+    <span class="token keyword">cursor</span><span class="token punctuation">.</span><span class="token keyword">execute</span><span class="token punctuation">(</span><span class="token keyword">sql</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    fetchall <span class="token operator">=</span> <span class="token keyword">cursor</span><span class="token punctuation">.</span>fetchall<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">cursor</span><span class="token punctuation">.</span><span class="token keyword">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    connection<span class="token punctuation">.</span><span class="token keyword">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> fetchall
+
+def get_mysql_columns<span class="token punctuation">(</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">)</span>:
+    <span class="token keyword">return</span> map<span class="token punctuation">(</span>lambda x: x<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> get_mysql_meta<span class="token punctuation">(</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+def get_hive_columns<span class="token punctuation">(</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">)</span>:
+    def type_mapping<span class="token punctuation">(</span>mysql_type<span class="token punctuation">)</span>:
+        mappings <span class="token operator">=</span> {
+            <span class="token string">"bigint"</span>: <span class="token string">"bigint"</span><span class="token punctuation">,</span>
+            <span class="token string">"int"</span>: <span class="token string">"bigint"</span><span class="token punctuation">,</span>
+            <span class="token string">"smallint"</span>: <span class="token string">"bigint"</span><span class="token punctuation">,</span>
+            <span class="token string">"tinyint"</span>: <span class="token string">"bigint"</span><span class="token punctuation">,</span>
+            <span class="token string">"decimal"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"double"</span>: <span class="token string">"double"</span><span class="token punctuation">,</span>
+            <span class="token string">"float"</span>: <span class="token string">"float"</span><span class="token punctuation">,</span>
+            <span class="token string">"binary"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"char"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"varchar"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"datetime"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"time"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"timestamp"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"date"</span>: <span class="token string">"string"</span><span class="token punctuation">,</span>
+            <span class="token string">"text"</span>: <span class="token string">"string"</span>
+        }
+        <span class="token keyword">return</span> mappings<span class="token punctuation">[</span>mysql_type<span class="token punctuation">]</span>
+    meta <span class="token operator">=</span> get_mysql_meta<span class="token punctuation">(</span><span class="token keyword">database</span><span class="token punctuation">,</span> <span class="token keyword">table</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> map<span class="token punctuation">(</span>lambda x: {<!-- --><span class="token string">"name"</span>: x<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token string">"type"</span>: type_mapping<span class="token punctuation">(</span>x<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">.</span>lower<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>}<span class="token punctuation">,</span> meta<span class="token punctuation">)</span>
+
+def generate_json<span class="token punctuation">(</span>source_database<span class="token punctuation">,</span> source_table<span class="token punctuation">)</span>:
+    job <span class="token operator">=</span> {
+        <span class="token string">"job"</span>: {
+            <span class="token string">"setting"</span>: {
+                <span class="token string">"speed"</span>: {
+                    <span class="token string">"channel"</span>: <span class="token number">3</span>
+                }<span class="token punctuation">,</span>
+                <span class="token string">"errorLimit"</span>: {
+                    <span class="token string">"record"</span>: <span class="token number">0</span><span class="token punctuation">,</span>
+                    <span class="token string">"percentage"</span>: <span class="token number">0.02</span>
+                }
+            }<span class="token punctuation">,</span>
+            <span class="token string">"content"</span>: <span class="token punctuation">[</span>{
+                <span class="token string">"reader"</span>: {
+                    <span class="token string">"name"</span>: <span class="token string">"mysqlreader"</span><span class="token punctuation">,</span>
+                    <span class="token string">"parameter"</span>: {
+                        <span class="token string">"username"</span>: mysql_user<span class="token punctuation">,</span>
+                        <span class="token string">"password"</span>: mysql_passwd<span class="token punctuation">,</span>
+                        <span class="token string">"column"</span>: get_mysql_columns<span class="token punctuation">(</span>source_database<span class="token punctuation">,</span> source_table<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token string">"splitPk"</span>: <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string">"connection"</span>: <span class="token punctuation">[</span>{
+                            <span class="token string">"table"</span>: <span class="token punctuation">[</span>source_table<span class="token punctuation">]</span><span class="token punctuation">,</span>
+                            <span class="token string">"jdbcUrl"</span>: <span class="token punctuation">[</span><span class="token string">"jdbc:mysql://"</span> <span class="token operator">+</span> mysql_host <span class="token operator">+</span> <span class="token string">":"</span> <span class="token operator">+</span> mysql_port <span class="token operator">+</span> <span class="token string">"/"</span> <span class="token operator">+</span> source_database<span class="token punctuation">]</span>
+                        }<span class="token punctuation">]</span>
+                    }
+                }<span class="token punctuation">,</span>
+                <span class="token string">"writer"</span>: {
+                    <span class="token string">"name"</span>: <span class="token string">"hdfswriter"</span><span class="token punctuation">,</span>
+                    <span class="token string">"parameter"</span>: {
+                        <span class="token string">"defaultFS"</span>: <span class="token string">"hdfs://"</span> <span class="token operator">+</span> hdfs_nn_host <span class="token operator">+</span> <span class="token string">":"</span> <span class="token operator">+</span> hdfs_nn_port<span class="token punctuation">,</span>
+                        <span class="token string">"fileType"</span>: <span class="token string">"text"</span><span class="token punctuation">,</span>
+                        <span class="token string">"path"</span>: <span class="token string">"${targetdir}"</span><span class="token punctuation">,</span>
+                        <span class="token string">"fileName"</span>: source_table<span class="token punctuation">,</span>
+                        <span class="token string">"column"</span>: get_hive_columns<span class="token punctuation">(</span>source_database<span class="token punctuation">,</span> source_table<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                        <span class="token string">"writeMode"</span>: <span class="token string">"append"</span><span class="token punctuation">,</span>
+                        <span class="token string">"fieldDelimiter"</span>: <span class="token string">"\t"</span><span class="token punctuation">,</span>
+                        <span class="token string">"compress"</span>: <span class="token string">"gzip"</span>
+                    }
+                }
+            }<span class="token punctuation">]</span>
+        }
+    }
+    <span class="token keyword">if</span> <span class="token operator">not</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span><span class="token keyword">exists</span><span class="token punctuation">(</span>output_path<span class="token punctuation">)</span>:
+        os<span class="token punctuation">.</span>makedirs<span class="token punctuation">(</span>output_path<span class="token punctuation">)</span>
+    <span class="token keyword">with</span> <span class="token keyword">open</span><span class="token punctuation">(</span>os<span class="token punctuation">.</span>path<span class="token punctuation">.</span><span class="token keyword">join</span><span class="token punctuation">(</span>output_path<span class="token punctuation">,</span> <span class="token string">"."</span><span class="token punctuation">.</span><span class="token keyword">join</span><span class="token punctuation">(</span><span class="token punctuation">[</span>source_database<span class="token punctuation">,</span> source_table<span class="token punctuation">,</span> <span class="token string">"json"</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token string">"w"</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f:
+        json<span class="token punctuation">.</span><span class="token keyword">dump</span><span class="token punctuation">(</span>job<span class="token punctuation">,</span> f<span class="token punctuation">)</span>
+
+def main<span class="token punctuation">(</span>args<span class="token punctuation">)</span>:
+    source_database <span class="token operator">=</span> <span class="token string">""</span>
+    source_table <span class="token operator">=</span> <span class="token string">""</span>
+    options<span class="token punctuation">,</span> arguments <span class="token operator">=</span> getopt<span class="token punctuation">.</span>getopt<span class="token punctuation">(</span>args<span class="token punctuation">,</span> <span class="token string">'-d:-t:'</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token string">'sourcedb='</span><span class="token punctuation">,</span> <span class="token string">'sourcetbl='</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+    <span class="token keyword">for</span> opt_name<span class="token punctuation">,</span> opt_value <span class="token operator">in</span> options:
+        <span class="token keyword">if</span> opt_name <span class="token operator">in</span> <span class="token punctuation">(</span><span class="token string">'-d'</span><span class="token punctuation">,</span> <span class="token string">'--sourcedb'</span><span class="token punctuation">)</span>:
+            source_database <span class="token operator">=</span> opt_value
+        <span class="token keyword">if</span> opt_name <span class="token operator">in</span> <span class="token punctuation">(</span><span class="token string">'-t'</span><span class="token punctuation">,</span> <span class="token string">'--sourcetbl'</span><span class="token punctuation">)</span>:
+            source_table <span class="token operator">=</span> opt_value
+    generate_json<span class="token punctuation">(</span>source_database<span class="token punctuation">,</span> source_table<span class="token punctuation">)</span>
+
+<span class="token keyword">if</span> __name__ <span class="token operator">=</span><span class="token operator">=</span> <span class="token string">'__main__'</span>:
+    main<span class="token punctuation">(</span>sys<span class="token punctuation">.</span>argv<span class="token punctuation">[</span><span class="token number">1</span>:<span class="token punctuation">]</span><span class="token punctuation">)</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f1/7f/OsU4wZxx_o.png" alt="在这里插入图片描述"></p> 
+<p>这个脚本是为了简化 DataX 数据迁移任务的配置过程。它自动从 MySQL 数据库中获取表的元数据，然后生成相应的 DataX 配置文件，用于将数据从 MySQL 迁移到 HDFS。<br> 2、安装python mysql驱动<br> 由于需要适用python访问mysql数据库，故需要安装驱动，命令如下</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ sudo yum install <span class="token operator">-</span>y MySQL<span class="token operator">-</span>python
+</code></pre> 
+<p>3、python脚本使用说明</p> 
+<pre><code class="prism language-sql">python gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d <span class="token keyword">database</span> <span class="token operator">-</span>t <span class="token keyword">table</span>
+</code></pre> 
+<p>这样虽然能调用python脚本生成指定表的datax的json配置文件，但是我的表很多，总不能每个表都执行吧<br> 4、创建gen_import_config.sh脚本</p> 
+<pre><code class="prism language-sql"><span class="token comment">#!/bin/bash</span>
+
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t activity_info
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t activity_rule
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_category1
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_category2
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_category3
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_dic
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_province
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_region
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t base_trademark
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t cart_info
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t coupon_info
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t sku_attr_value
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t sku_info
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t sku_sale_attr_value
+python <span class="token operator">~</span><span class="token operator">/</span>bin<span class="token operator">/</span>gen_import_config<span class="token punctuation">.</span>py <span class="token operator">-</span>d gmall <span class="token operator">-</span>t spu_info
+
+</code></pre> 
+<p>5、为gen_import_config.sh脚本赋予执行权限</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ chmod <span class="token operator">+</span>x gen_import_config<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>6、执行gen_import_config.sh脚本生成配置文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ gen_import_config<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>7、观察配置文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ ll <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>
+总用量 <span class="token number">60</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  957 10月 15 22:17 gmall.activity_info.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu 1049 10月 15 22:17 gmall.activity_rule.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  651 10月 15 22:17 gmall.base_category1.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  711 10月 15 22:17 gmall.base_category2.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  711 10月 15 22:17 gmall.base_category3.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  835 10月 15 22:17 gmall.base_dic.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  865 10月 15 22:17 gmall.base_province.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  659 10月 15 22:17 gmall.base_region.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  709 10月 15 22:17 gmall.base_trademark.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu 1301 10月 15 22:17 gmall.cart_info.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu 1545 10月 15 22:17 gmall.coupon_info.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  867 10月 15 22:17 gmall.sku_attr_value.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu 1121 10月 15 22:17 gmall.sku_info.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  985 10月 15 22:17 gmall.sku_sale_attr_value.json</span>
+<span class="token operator">-</span>rw<span class="token operator">-</span>rw<span class="token operator">-</span>r<span class="token comment">-- 1 atguigu atguigu  811 10月 15 22:17 gmall.spu_info.json</span>
+
+</code></pre> 
+<p>8、测试脚本生成的datax配置文件<br> 我们以activity_Info为例，测试用脚本生成的配置文件是否可用<br> 1）在hdfs上创建目标路径<br> 由于datax同步任务要求目标路径提前存在，故需要手动创建路径，当前activity_info表的目标路径应为/origin_data/gmall/db/activity_info_full/2020-06-14</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ hadoop fs <span class="token operator">-</span>mkdir <span class="token operator">-</span>f <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_info_full<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span>
+</code></pre> 
+<p>2）执行datax同步命令</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ python <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>bin<span class="token operator">/</span>datax<span class="token punctuation">.</span>py <span class="token operator">-</span>p<span class="token string">"-Dtargetdir=/origin_data/gmall/db/activity_info_full/2020-06-14"</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>activity_info<span class="token punctuation">.</span>json
+</code></pre> 
+<p>3）观察同步结果<br> 观察hdfs目标路径/origin_data/gmall/db/activity_info/2020-06-14下的文件内容</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> datax<span class="token punctuation">]</span>$ hadoop fs <span class="token operator">-</span>cat <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_info_full<span class="token operator">/</span><span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span><span class="token operator">/</span><span class="token operator">*</span> <span class="token operator">|</span> zcat
+<span class="token number">2022</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">02</span> <span class="token number">14</span>:<span class="token number">05</span>:<span class="token number">05</span><span class="token punctuation">,</span><span class="token number">527</span> INFO sasl<span class="token punctuation">.</span>SaslDataTransferClient: SASL encryption trust <span class="token keyword">check</span>: localHostTrusted <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">,</span> remoteHostTrusted <span class="token operator">=</span> <span class="token boolean">false</span>
+<span class="token number">1</span>       联想专场        <span class="token number">3101</span>    联想满减        <span class="token number">2020</span><span class="token operator">-</span><span class="token number">10</span><span class="token operator">-</span><span class="token number">21</span> <span class="token number">18</span>:<span class="token number">49</span>:<span class="token number">12</span>     <span class="token number">2020</span><span class="token operator">-</span><span class="token number">10</span><span class="token operator">-</span><span class="token number">31</span> <span class="token number">18</span>:<span class="token number">49</span>:<span class="token number">15</span>
+<span class="token number">2</span>       Apple品牌日     <span class="token number">3101</span>    Apple品牌日     <span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">10</span> <span class="token number">00</span>:<span class="token number">00</span>:<span class="token number">00</span>     <span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">12</span> <span class="token number">00</span>:<span class="token number">00</span>:<span class="token number">00</span>
+<span class="token number">3</span>       女神节  <span class="token number">3102</span>    满件打折        <span class="token number">2020</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">08</span> <span class="token number">00</span>:<span class="token number">00</span>:<span class="token number">00</span>     <span class="token number">2020</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">09</span> <span class="token number">00</span>:<span class="token number">00</span>:<span class="token number">00</span>
+
+</code></pre> 
+<p>9、全量表数据同步脚本<br> 1）为方便使用以及后续的任务调度，此处编写一个全量表数据同步脚本mysql_to_hdfs_full.sh</p> 
+<pre><code class="prism language-sql"><span class="token comment">#!/bin/bash</span>
+<span class="token comment"># 定义datax的根目录</span>
+DATAX_HOME<span class="token operator">=</span><span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax
+<span class="token comment"># 如果传入日期则do_date等于传入的日期，否则等于前一天日期</span>
+<span class="token keyword">if</span> <span class="token punctuation">[</span> <span class="token operator">-</span>n <span class="token string">"$2"</span> <span class="token punctuation">]</span> <span class="token punctuation">;</span><span class="token keyword">then</span>
+    do_date<span class="token operator">=</span>$<span class="token number">2</span>
+<span class="token keyword">else</span>
+    do_date<span class="token operator">=</span><span class="token identifier"><span class="token punctuation">`</span>date -d "-1 day" +%F<span class="token punctuation">`</span></span>
+fi
+<span class="token comment">#处理目标路径，此处的处理逻辑是，如果目标路径不存在，则创建；若存在，则清空，目的是保证同步任务可重复执行</span>
+handle_targetdir<span class="token punctuation">(</span><span class="token punctuation">)</span> {
+  hadoop fs <span class="token operator">-</span>test <span class="token operator">-</span>e $<span class="token number">1</span>
+  <span class="token keyword">if</span> <span class="token punctuation">[</span><span class="token punctuation">[</span> $? <span class="token operator">-</span>eq <span class="token number">1</span> <span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+    echo <span class="token string">"路径$1不存在，正在创建......"</span>
+    hadoop fs <span class="token operator">-</span>mkdir <span class="token operator">-</span>p $<span class="token number">1</span>
+  <span class="token keyword">else</span>
+    echo <span class="token string">"路径$1已经存在"</span>
+    fs_count<span class="token operator">=</span>$<span class="token punctuation">(</span>hadoop fs <span class="token operator">-</span>count $<span class="token number">1</span><span class="token punctuation">)</span>
+    content_size<span class="token operator">=</span>$<span class="token punctuation">(</span>echo $fs_count <span class="token operator">|</span> awk <span class="token string">'{print $3}'</span><span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token punctuation">[</span><span class="token punctuation">[</span> $content_size <span class="token operator">-</span>eq <span class="token number">0</span> <span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token keyword">then</span>
+      echo <span class="token string">"路径$1为空"</span>
+    <span class="token keyword">else</span>
+      echo <span class="token string">"路径$1不为空，正在清空......"</span>
+      hadoop fs <span class="token operator">-</span>rm <span class="token operator">-</span>r <span class="token operator">-</span>f $<span class="token number">1</span><span class="token operator">/</span><span class="token operator">*</span>
+    fi
+  fi
+}
+<span class="token comment">#数据同步</span>
+import_data<span class="token punctuation">(</span><span class="token punctuation">)</span> {
+  datax_config<span class="token operator">=</span>$<span class="token number">1</span>
+  target_dir<span class="token operator">=</span>$<span class="token number">2</span>
+  handle_targetdir $target_dir
+  python $DATAX_HOME<span class="token operator">/</span>bin<span class="token operator">/</span>datax<span class="token punctuation">.</span>py <span class="token operator">-</span>p<span class="token string">"-Dtargetdir=$target_dir"</span> $datax_config
+}
+<span class="token comment"># 根据传入的表名，处理不同的表</span>
+<span class="token keyword">case</span> $<span class="token number">1</span> <span class="token operator">in</span>
+<span class="token string">"activity_info"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>activity_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"activity_rule"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>activity_rule<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_rule_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_category1"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category1<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category1_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_category2"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category2<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category2_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_category3"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category3<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category3_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_dic"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_dic<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_dic_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_province"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_province<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_province_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_region"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_region<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_region_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"base_trademark"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_trademark<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_trademark_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"cart_info"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>cart_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>cart_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"coupon_info"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>coupon_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>coupon_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"sku_attr_value"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_attr_value<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_attr_value_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"sku_info"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"sku_sale_attr_value"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_sale_attr_value<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_sale_attr_value_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"spu_info"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>spu_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>spu_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"all"</span><span class="token punctuation">)</span>
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>activity_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_info_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>activity_rule<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>activity_rule_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category1<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category1_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category2<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category2_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_category3<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_category3_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_dic<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_dic_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_province<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_province_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_region<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_region_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>base_trademark<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>base_trademark_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>cart_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>cart_info_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>coupon_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>coupon_info_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_attr_value<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_attr_value_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_info_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>sku_sale_attr_value<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>sku_sale_attr_value_full<span class="token operator">/</span>$do_date
+  import_data <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>datax<span class="token operator">/</span>job<span class="token operator">/</span><span class="token keyword">import</span><span class="token operator">/</span>gmall<span class="token punctuation">.</span>spu_info<span class="token punctuation">.</span>json <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span>spu_info_full<span class="token operator">/</span>$do_date
+  <span class="token punctuation">;</span><span class="token punctuation">;</span>
+esac
+
+</code></pre> 
+<p>这个脚本的目的是使得数据同步的过程自动化和标准化。它允许用户指定特定的表或一组表来进行数据同步，同时处理日期和目标路径的逻辑，确保数据同步的准确性和可重复性。<br> 2）为mysql_to_hdfs_full.sh脚本增加执行权限</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ chmod <span class="token operator">+</span>x mysql_to_hdfs_full<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>3）测试同步脚本</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ mysql_to_hdfs_full<span class="token punctuation">.</span>sh <span class="token keyword">all</span> <span class="token number">2020</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">14</span>
+</code></pre> 
+<p>4）检查同步结果<br> 查看hdfs目标路径是否出现了全量表数据，全量表共15张<br> 全量表同步逻辑比较简单，只需要每日执行全量表数据同步脚本mysql_to_hdfs_full.sh即可</p> 
+<h3><a id="24__957"></a>2.4 增量表数据同步</h3> 
+<h4><a id="241__958"></a>2.4.1 数据通道</h4> 
+<p>增量表数据同步数据通道如下所示：<br> <img src="https://images2.imgbox.com/16/43/Vs2d0HKE_o.png" alt="在这里插入图片描述"></p> 
+<p>注：<br> 1、目标路径中表明需包含后缀inc，表示该表为锃亮同步<br> 2、目标路径中包含一层日期，用以对不同天的数据进行区分</p> 
+<h4><a id="243_flume_965"></a>2.4.3 flume配置</h4> 
+<p>1、需求：此处flume需要将maxwell采集kafka topic中的业务变更数据传输到hdfs<br> 2、需求分析<br> 1）flume需要用到的组件是：kafkasource和hdfssink，channel选择filechannel<br> 2）kafkasource需要订阅kafka中1个topic：topic_db<br> 3）hdfssink需要将不同数据写到不同的路径，路径中还用该包含一层日期，用于分区每天的数据<br> <img src="https://images2.imgbox.com/37/dc/6kdJj9KS_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="244__972"></a>2.4.4 配置示意图</h4> 
+<p><img src="https://images2.imgbox.com/90/70/UPh88q37_o.png" alt="在这里插入图片描述"><br> 采用kafka topic中的业务变更数据到hdfs的flume，我们部署在hadoop104</p> 
+<h4><a id="245_flume_975"></a>2.4.5 flume配置</h4> 
+<p>1、编写flume配置文件kafka_to_hdfs_db.conf</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop104</span> job<span class="token punctuation">]</span>$ vim kafka_to_hdfs_db<span class="token punctuation">.</span>conf
+<span class="token comment"># agent</span>
+a1<span class="token punctuation">.</span>sources <span class="token operator">=</span> r1
+a1<span class="token punctuation">.</span>channels <span class="token operator">=</span> c1
+a1<span class="token punctuation">.</span>sinks <span class="token operator">=</span> k1
+
+<span class="token comment"># sources</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>source<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>KafkaSource
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>batchSize <span class="token operator">=</span> <span class="token number">5000</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>batchDurationMillis <span class="token operator">=</span> <span class="token number">2000</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>bootstrap<span class="token punctuation">.</span>servers <span class="token operator">=</span> hadoop102:<span class="token number">9092</span><span class="token punctuation">,</span>hadoop103:<span class="token number">9092</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>topics <span class="token operator">=</span> topic_db
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>consumer<span class="token punctuation">.</span><span class="token keyword">group</span><span class="token punctuation">.</span>id <span class="token operator">=</span> flume
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>setTopicHeader <span class="token operator">=</span> <span class="token boolean">true</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>topicHeader <span class="token operator">=</span> topic
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>interceptors <span class="token operator">=</span> i1
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>interceptors<span class="token punctuation">.</span>i1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>gmall<span class="token punctuation">.</span>flume<span class="token punctuation">.</span>interceptor<span class="token punctuation">.</span>db<span class="token punctuation">.</span>TimestampAndTableNameInterceptor $Builder
+
+
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> <span class="token keyword">file</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>checkpointDir <span class="token operator">=</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>flume<span class="token operator">/</span><span class="token keyword">checkpoint</span><span class="token operator">/</span>behavior2
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>dataDirs <span class="token operator">=</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>flume<span class="token operator">/</span><span class="token keyword">data</span><span class="token operator">/</span>behavior2<span class="token operator">/</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>maxFileSize <span class="token operator">=</span> <span class="token number">2146435071</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>capacity <span class="token operator">=</span> <span class="token number">1000000</span>
+a1<span class="token punctuation">.</span>channels<span class="token punctuation">.</span>c1<span class="token punctuation">.</span>keep<span class="token operator">-</span>alive <span class="token operator">=</span> <span class="token number">6</span>
+
+<span class="token comment">## sink1</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span><span class="token keyword">type</span> <span class="token operator">=</span> hdfs
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>path <span class="token operator">=</span> <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db<span class="token operator">/</span><span class="token operator">%</span>{tableName}_inc<span class="token operator">/</span><span class="token operator">%</span>Y<span class="token operator">-</span><span class="token operator">%</span>m<span class="token operator">-</span><span class="token operator">%</span>d
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>filePrefix <span class="token operator">=</span> db
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>round <span class="token operator">=</span> <span class="token boolean">false</span>
+
+
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollInterval <span class="token operator">=</span> <span class="token number">10</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollSize <span class="token operator">=</span> <span class="token number">134217728</span>
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>rollCount <span class="token operator">=</span> <span class="token number">0</span>
+
+
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>fileType <span class="token operator">=</span> CompressedStream
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>hdfs<span class="token punctuation">.</span>codeC <span class="token operator">=</span> gzip
+
+<span class="token comment">## bind</span>
+a1<span class="token punctuation">.</span>sources<span class="token punctuation">.</span>r1<span class="token punctuation">.</span>channels <span class="token operator">=</span> c1
+a1<span class="token punctuation">.</span>sinks<span class="token punctuation">.</span>k1<span class="token punctuation">.</span>channel<span class="token operator">=</span> c1
+
+</code></pre> 
+<p>这个配置文件的作用是从 Kafka 主题 topic_db 中读取数据，经过处理后（如添加时间戳和表名），暂存到文件系统中，并最终将数据以压缩格式写入到 HDFS 的指定路径。</p> 
+<h4><a id="246_flume_1026"></a>2.4.6 配置flume拦截器</h4> 
+<p>项目的pom.xml文件配置</p> 
+<pre><code class="prism language-sql"><span class="token operator">&lt;</span>dependencies<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>dependency<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>groupId<span class="token operator">&gt;</span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>flume<span class="token operator">&lt;</span><span class="token operator">/</span>groupId<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>artifactId<span class="token operator">&gt;</span>flume<span class="token operator">-</span>ng<span class="token operator">-</span>core<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>version<span class="token operator">&gt;</span><span class="token number">1.9</span><span class="token number">.0</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>scope<span class="token operator">&gt;</span>provided<span class="token operator">&lt;</span><span class="token operator">/</span>scope<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>dependency<span class="token operator">&gt;</span>
+
+    <span class="token operator">&lt;</span>dependency<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>groupId<span class="token operator">&gt;</span>com<span class="token punctuation">.</span>alibaba<span class="token operator">&lt;</span><span class="token operator">/</span>groupId<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>artifactId<span class="token operator">&gt;</span>fastjson<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>version<span class="token operator">&gt;</span><span class="token number">1.2</span><span class="token number">.62</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>dependency<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>dependencies<span class="token operator">&gt;</span>
+
+<span class="token operator">&lt;</span>build<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>plugins<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>plugin<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>artifactId<span class="token operator">&gt;</span>maven<span class="token operator">-</span>compiler<span class="token operator">-</span>plugin<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>version<span class="token operator">&gt;</span><span class="token number">2.3</span><span class="token number">.2</span><span class="token operator">&lt;</span><span class="token operator">/</span>version<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>configuration<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>source<span class="token operator">&gt;</span><span class="token number">1.8</span><span class="token operator">&lt;</span><span class="token operator">/</span>source<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>target<span class="token operator">&gt;</span><span class="token number">1.8</span><span class="token operator">&lt;</span><span class="token operator">/</span>target<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span><span class="token operator">/</span>configuration<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token operator">/</span>plugin<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>plugin<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>artifactId<span class="token operator">&gt;</span>maven<span class="token operator">-</span>assembly<span class="token operator">-</span>plugin<span class="token operator">&lt;</span><span class="token operator">/</span>artifactId<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>configuration<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>descriptorRefs<span class="token operator">&gt;</span>
+                    <span class="token operator">&lt;</span>descriptorRef<span class="token operator">&gt;</span>jar<span class="token operator">-</span><span class="token keyword">with</span><span class="token operator">-</span>dependencies<span class="token operator">&lt;</span><span class="token operator">/</span>descriptorRef<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span><span class="token operator">/</span>descriptorRefs<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span><span class="token operator">/</span>configuration<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span>executions<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>execution<span class="token operator">&gt;</span>
+                    <span class="token operator">&lt;</span>id<span class="token operator">&gt;</span>make<span class="token operator">-</span>assembly<span class="token operator">&lt;</span><span class="token operator">/</span>id<span class="token operator">&gt;</span>
+                    <span class="token operator">&lt;</span>phase<span class="token operator">&gt;</span>package<span class="token operator">&lt;</span><span class="token operator">/</span>phase<span class="token operator">&gt;</span>
+                    <span class="token operator">&lt;</span>goals<span class="token operator">&gt;</span>
+                        <span class="token operator">&lt;</span>goal<span class="token operator">&gt;</span>single<span class="token operator">&lt;</span><span class="token operator">/</span>goal<span class="token operator">&gt;</span>
+                    <span class="token operator">&lt;</span><span class="token operator">/</span>goals<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span><span class="token operator">/</span>execution<span class="token operator">&gt;</span>
+            <span class="token operator">&lt;</span><span class="token operator">/</span>executions<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token operator">/</span>plugin<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>plugins<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>build<span class="token operator">&gt;</span>
+
+</code></pre> 
+<p>创建com.atguigu.gmall.flume.interceptor.db包，并在该包下创建timestampandtablenameinterceptor类</p> 
+<pre><code class="prism language-sql"><span class="token keyword">public</span> class TimestampAndTableNameInterceptor implements Interceptor {
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> void initialize<span class="token punctuation">(</span><span class="token punctuation">)</span> {    }
+
+    <span class="token comment">/**
+     * 拦截单个事件
+     * @param event
+     * @return
+     */</span>
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> Event intercept<span class="token punctuation">(</span>Event event<span class="token punctuation">)</span> {
+        <span class="token comment">// 1. 获取事件header</span>
+        Map<span class="token operator">&lt;</span>String<span class="token punctuation">,</span> String<span class="token operator">&gt;</span> headers <span class="token operator">=</span> event<span class="token punctuation">.</span>getHeaders<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 2. 获取解析body</span>
+        String body <span class="token operator">=</span> new String<span class="token punctuation">(</span>event<span class="token punctuation">.</span>getBody<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> StandardCharsets<span class="token punctuation">.</span>UTF_8<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 3. 使用fastjson，将body字符串转化为JSONObject对象</span>
+        JSONObject jsonObject <span class="token operator">=</span> JSONObject<span class="token punctuation">.</span>parseObject<span class="token punctuation">(</span>body<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 4. 获取数据中的时间戳</span>
+        Long ts <span class="token operator">=</span> jsonObject<span class="token punctuation">.</span>getLong<span class="token punctuation">(</span><span class="token string">"ts"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 5. Maxwell输出的数据的ts字段时间单位是秒，HDFSSink要求的时间单位是毫秒</span>
+        String timeMills <span class="token operator">=</span> String<span class="token punctuation">.</span>valueOf<span class="token punctuation">(</span>ts <span class="token operator">*</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 6. 获取body数据中的table的值</span>
+        String tableName <span class="token operator">=</span> jsonObject<span class="token punctuation">.</span>getString<span class="token punctuation">(</span><span class="token string">"table"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 7. 将时间戳添加到事件头部</span>
+        headers<span class="token punctuation">.</span>put<span class="token punctuation">(</span><span class="token string">"timestamp"</span><span class="token punctuation">,</span>timeMills<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 8. 将table的名字插入到事件头部</span>
+        headers<span class="token punctuation">.</span>put<span class="token punctuation">(</span><span class="token string">"tableName"</span><span class="token punctuation">,</span> tableName<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> event<span class="token punctuation">;</span>
+    }
+
+    <span class="token comment">/**
+     * 拦截批量事件
+     * @param events
+     * @return
+     */</span>
+    <span class="token variable">@Override</span>
+    <span class="token keyword">public</span> List<span class="token operator">&lt;</span>Event<span class="token operator">&gt;</span> intercept<span class="token punctuation">(</span>List<span class="token operator">&lt;</span>Event<span class="token operator">&gt;</span> events<span class="token punctuation">)</span> {
+        <span class="token keyword">for</span> <span class="token punctuation">(</span>Event event : events<span class="token punctuation">)</span> {
+            intercept<span class="token punctuation">(</span>event<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        }
+        <span class="token keyword">return</span> events<span class="token punctuation">;</span>
+    }
+
+    <span class="token variable">@Override</span>
+<span class="token keyword">public</span> void <span class="token keyword">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> {    }
+
+<span class="token keyword">public</span> static class Builder implements Interceptor<span class="token punctuation">.</span>Builder{
+        <span class="token variable">@Override</span>
+        <span class="token keyword">public</span> Interceptor build<span class="token punctuation">(</span><span class="token punctuation">)</span> {
+            <span class="token keyword">return</span> new TimestampAndTableNameInterceptor <span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        }
+
+        <span class="token variable">@Override</span>
+        <span class="token keyword">public</span> void configure<span class="token punctuation">(</span>Context context<span class="token punctuation">)</span> {
+
+        }
+    }
+}
+
+</code></pre> 
+<p>这个拦截器主要用于处理从源（如 Kafka）接收的事件，特别是处理 JSON 格式的消息体。<br> 它从每个事件的 JSON 消息体中提取特定的信息（时间戳和表名）并将这些信息添加到事件的 header 中，这对于后续的事件处理（如根据时间戳或表名路由事件）非常有用。<br> 打包，并将带有依赖的jar包放到flume的lib目录下<br> <img src="https://images2.imgbox.com/2a/aa/GzzTjNFS_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="247__1144"></a>2.4.7 通道测试</h4> 
+<p>1、启动zookeeper集群、kafka集群<br> 2、启动hadoop104上的flume，采集kafka_topic中的业务变更数据到hdfs</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> flume<span class="token punctuation">]</span>$ bin<span class="token operator">/</span>flume<span class="token operator">-</span>ng agent <span class="token operator">-</span>n a1 <span class="token operator">-</span>c conf<span class="token operator">/</span> <span class="token operator">-</span>f job<span class="token operator">/</span>kafka_to_hdfs_db<span class="token punctuation">.</span>conf <span class="token operator">-</span>Dflume<span class="token punctuation">.</span>root<span class="token punctuation">.</span>logger<span class="token operator">=</span>INFO<span class="token punctuation">,</span>console
+</code></pre> 
+<p>3、生成模拟数据</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> db_log<span class="token punctuation">]</span>$ java <span class="token operator">-</span>jar gmall2020<span class="token operator">-</span>mock<span class="token operator">-</span>db<span class="token operator">-</span><span class="token number">2021</span><span class="token operator">-</span><span class="token number">11</span><span class="token operator">-</span><span class="token number">14.</span>jar
+</code></pre> 
+<p>4、观察hdfs上的目标路径是否有增量表的数据出现</p> 
+<h4><a id="248__1159"></a>2.4.8 数据目标路径的日期说明</h4> 
+<p>仔细观察，会发现目标路径中的日期，并非模拟数据的业务日期，而是当前日期。这是由于maxwell输出的json字符串中的ts字段的值，是数据的变动日期。而真实场景下，数据的业务日期与变动日期应当是一致的。<br> <img src="https://images2.imgbox.com/e7/e3/DJ1YsNyA_o.png" alt="在这里插入图片描述"></p> 
+<p>这张图展示了一个数据流的架构，说明了如何从 MySQL 数据库通过 Maxwell 和 Kafka 将数据流式传输到 HDFS，同时使用 Flume 作为传输介质。Maxwell 作为 MySQL 的 binlog 复制器，捕获 MySQL 数据库的更改（如插入、更新和删除操作）并将这些更改作为消息发布到 Kafka 队列中。然后，Flume 从 Kafka 中读取这些消息，并将它们传输到 HDFS。</p> 
+<p>此处为了模拟真实环境，对maxwell源码进行了改动，增加了一个参数mock_date，该参数的作用就是指定maxwell输出json字符串的ts时间戳的日期，接下来进行测试。<br> 1、修改maxwell配置文件config.properties，增加mock_date参数，如下<br> 该日期需和/opt/module/db_log/application.properties中的mock.date参数保持一致<br> mock_date=2020-06-14<br> 注：该参数仅供学习使用，修改该参数后重启maxwell才能生效。<br> 2、重启maxwell</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ maxwell<span class="token punctuation">.</span>sh restart
+</code></pre> 
+<p>3、重新生成模拟数据</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ cd <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>db_log<span class="token operator">/</span>
+<span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> db_log<span class="token punctuation">]</span>$ java <span class="token operator">-</span>jar gmall2020<span class="token operator">-</span>mock<span class="token operator">-</span>db<span class="token operator">-</span><span class="token number">2021</span><span class="token operator">-</span><span class="token number">11</span><span class="token operator">-</span><span class="token number">14.</span>jar 
+
+</code></pre> 
+<p>4、观察hdfs目标路径日期是否正常</p> 
+<h4><a id="249_flume_1185"></a>2.4.9 编写业务数据变更flume采集启动停止脚本</h4> 
+<p>为方便使用，编写一个启动关闭业务数据变更采集的flume脚本<br> 1、再用户目录下的bin目录下编写脚本f3.sh</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ vim f3<span class="token punctuation">.</span>sh
+<span class="token comment">#!/bin/bash</span>
+
+<span class="token keyword">case</span> $<span class="token number">1</span> <span class="token operator">in</span>
+<span class="token string">"start"</span><span class="token punctuation">)</span>
+        echo <span class="token string">" --------启动 hadoop104 业务数据flume-------"</span>
+        ssh hadoop104 <span class="token string">"nohup /opt/module/flume/bin/flume-ng agent -n a1 -c /opt/module/flume/conf -f /opt/module/flume/job/kafka_to_hdfs_db.conf &gt;/dev/null 2&gt;&amp;1 &amp;"</span>
+<span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"stop"</span><span class="token punctuation">)</span>
+
+        echo <span class="token string">" --------停止 hadoop104 业务数据flume-------"</span>
+        ssh hadoop104 <span class="token string">"ps -ef | grep kafka_to_hdfs_db.conf | grep -v grep |awk '{print \$2}' | xargs -n1 kill"</span>
+<span class="token punctuation">;</span><span class="token punctuation">;</span>
+esac
+
+</code></pre> 
+<p>这个脚本是一个Bash脚本，用于初始化数据库中的所有增量表。它的主要功能是使用Maxwell工具来导入特定表的数据到Kafka中。Maxwell 是一个 MySQL binlog 到 Kafka 的转换器，它可以捕获数据库的更改并将这些更改作为消息发送到 Kafka。<br> 2、增加脚本权限</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ chmod <span class="token operator">+</span>x f3<span class="token punctuation">.</span>sh
+</code></pre> 
+<h4><a id="2411__1212"></a>2.4.11 测试同步脚本</h4> 
+<p>1、清理历史数据<br> 为方便查看结果，现在将hdfs上之前同步的增量表数据删除</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> <span class="token operator">~</span><span class="token punctuation">]</span>$ hadoop fs <span class="token operator">-</span>ls <span class="token operator">/</span>origin_data<span class="token operator">/</span>gmall<span class="token operator">/</span>db <span class="token operator">|</span> grep _inc <span class="token operator">|</span> awk <span class="token string">'{print $8}'</span> <span class="token operator">|</span> xargs hadoop fs <span class="token operator">-</span>rm <span class="token operator">-</span>r <span class="token operator">-</span>f
+</code></pre> 
+<p>2、执行同步脚本</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ mysql_to_kafka_inc_init<span class="token punctuation">.</span>sh <span class="token keyword">all</span>
+</code></pre> 
+<p>3、检查同步结果<br> 观察hdfs上是否重新出现增量表数据</p> 
+<h3><a id="25__1228"></a>2.5 采用通道启动/停止脚本</h3> 
+<p>在/home/atguigu/bin目录下创建脚本cluster.sh</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> bin<span class="token punctuation">]</span>$ vim <span class="token operator">/</span>home<span class="token operator">/</span>atguigu<span class="token operator">/</span>bin<span class="token operator">/</span>cluster<span class="token punctuation">.</span>sh
+<span class="token comment">#!/bin/bash</span>
+
+<span class="token keyword">case</span> $<span class="token number">1</span> <span class="token operator">in</span>
+<span class="token string">"start"</span><span class="token punctuation">)</span>{
+        echo <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span> 启动 集群 <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span>
+
+        <span class="token comment">#启动 Zookeeper集群</span>
+        zk<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动 Hadoop集群</span>
+        hdp<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动 Kafka采集集群</span>
+        kf<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动采集 Flume</span>
+        f1<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动日志消费 Flume</span>
+        f2<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动业务消费 Flume</span>
+        f3<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        <span class="token comment">#启动 maxwell</span>
+        mxw<span class="token punctuation">.</span>sh <span class="token keyword">start</span>
+
+        }<span class="token punctuation">;</span><span class="token punctuation">;</span>
+<span class="token string">"stop"</span><span class="token punctuation">)</span>{
+        echo <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span> 停止 集群 <span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span><span class="token operator">=</span>
+
+        <span class="token comment">#停止 Maxwell</span>
+        mxw<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 业务消费Flume</span>
+        f3<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 日志消费Flume</span>
+        f2<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 日志采集Flume</span>
+        f1<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 Kafka采集集群</span>
+        kf<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 Hadoop集群</span>
+        hdp<span class="token punctuation">.</span>sh stop
+
+        <span class="token comment">#停止 Zookeeper集群</span>
+        zk<span class="token punctuation">.</span>sh stop
+
+}<span class="token punctuation">;</span><span class="token punctuation">;</span>
+esac
+
+</code></pre> 
+<p>脚本编辑后，赋予脚本执行权限chmod+x cluster.sh</p> 
+<h2><a id="_4__1291"></a>第 4 章：数仓准备</h2> 
+<h3><a id="41_hive_1292"></a>4.1 hive安装</h3> 
+<p>1、把apache-hive~bin.tar.gz上传到linux的/opt/software目录下<br> 2、将/opt/software/目录下的apache-hive~bin.tar.gz到/opt/module/目录下面</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> software<span class="token punctuation">]</span>$ tar <span class="token operator">-</span>zxvf apache<span class="token operator">-</span>hive<span class="token operator">-</span><span class="token number">3.1</span><span class="token number">.2</span><span class="token operator">-</span>bin<span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz <span class="token operator">-</span>C <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>
+</code></pre> 
+<p>3、修改解压后的目录名称为hive</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ mv apache<span class="token operator">-</span>hive<span class="token operator">-</span><span class="token number">3.1</span><span class="token number">.2</span><span class="token operator">-</span>bin<span class="token operator">/</span> <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>hive
+</code></pre> 
+<p>4、修改/etc/profile.d/my_env.sh文件，将Hive的/bin目录添加到环境变量</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ sudo vim <span class="token operator">/</span>etc<span class="token operator">/</span>profile<span class="token punctuation">.</span>d<span class="token operator">/</span>my_env<span class="token punctuation">.</span>sh
+……
+<span class="token comment">#HIVE_HOME</span>
+export HIVE_HOME<span class="token operator">=</span><span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>hive
+export PATH<span class="token operator">=</span>$PATH:$HIVE_HOME<span class="token operator">/</span>bin
+<span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ source <span class="token operator">/</span>etc<span class="token operator">/</span>profile
+
+</code></pre> 
+<p>5、在hive根目录下，使用/bin目录中的schematool命令初始化hive自带的derby元数据库</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ bin<span class="token operator">/</span>schematool <span class="token operator">-</span>dbType derby <span class="token operator">-</span>initSchema
+</code></pre> 
+<p>6、执行上述初始化元数据库时，会发现存在jar包冲突问题，现象如下</p> 
+<pre><code class="prism language-sql">SLF4J: Class path <span class="token keyword">contains</span> multiple SLF4J bindings<span class="token punctuation">.</span>
+SLF4J: Found binding <span class="token operator">in</span> <span class="token punctuation">[</span>jar:<span class="token keyword">file</span>:<span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>hive<span class="token operator">/</span>lib<span class="token operator">/</span>log4j<span class="token operator">-</span>slf4j<span class="token operator">-</span>impl<span class="token operator">-</span><span class="token number">2.10</span><span class="token number">.0</span><span class="token punctuation">.</span>jar<span class="token operator">!</span><span class="token operator">/</span>org<span class="token operator">/</span>slf4j<span class="token operator">/</span>impl<span class="token operator">/</span>StaticLoggerBinder<span class="token punctuation">.</span>class<span class="token punctuation">]</span>
+SLF4J: Found binding <span class="token operator">in</span> <span class="token punctuation">[</span>jar:<span class="token keyword">file</span>:<span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>hadoop<span class="token operator">-</span><span class="token number">3.1</span><span class="token number">.3</span><span class="token operator">/</span><span class="token keyword">share</span><span class="token operator">/</span>hadoop<span class="token operator">/</span>common<span class="token operator">/</span>lib<span class="token operator">/</span>slf4j<span class="token operator">-</span>log4j12<span class="token operator">-</span><span class="token number">1.7</span><span class="token number">.25</span><span class="token punctuation">.</span>jar<span class="token operator">!</span><span class="token operator">/</span>org<span class="token operator">/</span>slf4j<span class="token operator">/</span>impl<span class="token operator">/</span>StaticLoggerBinder<span class="token punctuation">.</span>class<span class="token punctuation">]</span>
+SLF4J: See http:<span class="token comment">//www.slf4j.org/codes.html#multiple_bindings for an explanation.</span>
+SLF4J: Actual binding <span class="token operator">is</span> <span class="token keyword">of</span> <span class="token keyword">type</span> <span class="token punctuation">[</span>org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>logging<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span>Log4jLoggerFactory<span class="token punctuation">]</span>
+Metastore connection URL:        jdbc:derby:<span class="token punctuation">;</span>databaseName<span class="token operator">=</span>metastore_db<span class="token punctuation">;</span><span class="token keyword">create</span><span class="token operator">=</span><span class="token boolean">true</span>
+Metastore Connection Driver :    org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>derby<span class="token punctuation">.</span>jdbc<span class="token punctuation">.</span>EmbeddedDriver
+Metastore connection <span class="token keyword">User</span>:       APP
+<span class="token keyword">Starting</span> metastore <span class="token keyword">schema</span> initialization <span class="token keyword">to</span> <span class="token number">3.1</span><span class="token number">.0</span>
+Initialization script hive<span class="token operator">-</span><span class="token keyword">schema</span><span class="token operator">-</span><span class="token number">3.1</span><span class="token number">.0</span><span class="token punctuation">.</span>derby<span class="token punctuation">.</span><span class="token keyword">sql</span>
+
+</code></pre> 
+<p>解决jar冲突问题，只需要将hive的/lib目录下的log4j-slf4j-impl-2.10.0.jar重命名即可</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ mv lib<span class="token operator">/</span>log4j<span class="token operator">-</span>slf4j<span class="token operator">-</span>impl<span class="token operator">-</span><span class="token number">2.10</span><span class="token number">.0</span><span class="token punctuation">.</span>jar lib<span class="token operator">/</span>log4j<span class="token operator">-</span>slf4j<span class="token operator">-</span>impl<span class="token operator">-</span><span class="token number">2.10</span><span class="token number">.0</span><span class="token punctuation">.</span>back
+</code></pre> 
+<h3><a id="42_hivemysql_1345"></a>4.2 将hive元数据配置到mysql</h3> 
+<h4><a id="421__1346"></a>4.2.1 拷贝驱动</h4> 
+<p>将mysql的jdbc驱动拷贝到hive的lib目录下</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> software<span class="token punctuation">]</span>$ cp mysql<span class="token operator">-</span>connector<span class="token operator">-</span>java<span class="token operator">-</span><span class="token number">5.1</span><span class="token number">.37</span><span class="token punctuation">.</span>jar <span class="token operator">/</span>opt<span class="token operator">/</span>module<span class="token operator">/</span>hive<span class="token operator">/</span>lib
+</code></pre> 
+<h4><a id="422_metastoremysql_1353"></a>4.2.2 配置metastore到mysql</h4> 
+<p>在$hive_home/conf目录下新建hive-site.xml文件</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ vim conf<span class="token operator">/</span>hive<span class="token operator">-</span>site<span class="token punctuation">.</span>xml
+添加如下内容
+<span class="token operator">&lt;</span>?xml version<span class="token operator">=</span><span class="token string">"1.0"</span>?<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span>?xml<span class="token operator">-</span>stylesheet <span class="token keyword">type</span><span class="token operator">=</span><span class="token string">"text/xsl"</span> href<span class="token operator">=</span><span class="token string">"configuration.xsl"</span>?<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span>configuration<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- jdbc连接的URL --&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>javax<span class="token punctuation">.</span>jdo<span class="token punctuation">.</span><span class="token keyword">option</span><span class="token punctuation">.</span>ConnectionURL<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span>jdbc:mysql:<span class="token comment">//hadoop102:3306/metastore?useSSL=false&lt;/value&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- jdbc连接的Driver--&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>javax<span class="token punctuation">.</span>jdo<span class="token punctuation">.</span><span class="token keyword">option</span><span class="token punctuation">.</span>ConnectionDriverName<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span>com<span class="token punctuation">.</span>mysql<span class="token punctuation">.</span>jdbc<span class="token punctuation">.</span>Driver<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- jdbc连接的username--&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>javax<span class="token punctuation">.</span>jdo<span class="token punctuation">.</span><span class="token keyword">option</span><span class="token punctuation">.</span>ConnectionUserName<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span>root<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- jdbc连接的password --&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>javax<span class="token punctuation">.</span>jdo<span class="token punctuation">.</span><span class="token keyword">option</span><span class="token punctuation">.</span>ConnectionPassword<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span>你的密码<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- Hive默认在HDFS的工作目录 --&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hive<span class="token punctuation">.</span>metastore<span class="token punctuation">.</span>warehouse<span class="token punctuation">.</span>dir<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span><span class="token operator">/</span><span class="token keyword">user</span><span class="token operator">/</span>hive<span class="token operator">/</span>warehouse<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+   <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- Hive元数据存储的验证 --&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hive<span class="token punctuation">.</span>metastore<span class="token punctuation">.</span><span class="token keyword">schema</span><span class="token punctuation">.</span>verification<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span><span class="token boolean">false</span><span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">!</span><span class="token comment">-- 元数据存储授权  --&gt;</span>
+    <span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hive<span class="token punctuation">.</span>metastore<span class="token punctuation">.</span>event<span class="token punctuation">.</span>db<span class="token punctuation">.</span>notification<span class="token punctuation">.</span>api<span class="token punctuation">.</span>auth<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span><span class="token boolean">false</span><span class="token operator">&lt;</span><span class="token operator">/</span><span class="token keyword">value</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>configuration<span class="token operator">&gt;</span>
+
+</code></pre> 
+<p>这个配置文件的主要作用是设置 Hive 与其元数据存储（通常是一个 RDBMS，如 MySQL）的连接配置，定义 Hive 在 HDFS 中的存储位置，以及配置一些与元数据和安全性相关的选项。</p> 
+<h4><a id="423_hive_1401"></a>4.2.3 hive初始化元数据库</h4> 
+<p>1、登录mysql</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> module<span class="token punctuation">]</span>$ mysql <span class="token operator">-</span>uroot <span class="token operator">-</span>p你的密码
+</code></pre> 
+<p>2、新建hive元数据库</p> 
+<pre><code class="prism language-sql">mysql<span class="token operator">&gt;</span> <span class="token keyword">create</span> <span class="token keyword">database</span> metastore<span class="token punctuation">;</span>
+mysql<span class="token operator">&gt;</span> quit<span class="token punctuation">;</span>
+
+</code></pre> 
+<p>3、初始化hive元数据库</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ bin<span class="token operator">/</span>schematool <span class="token operator">-</span>initSchema <span class="token operator">-</span>dbType mysql <span class="token operator">-</span>verbose
+</code></pre> 
+<h4><a id="424_hive_1422"></a>4.2.4 启动hive</h4> 
+<p>1、启动hive客户端</p> 
+<pre><code class="prism language-sql"><span class="token punctuation">[</span>atguigu<span class="token variable">@hadoop102</span> hive<span class="token punctuation">]</span>$ bin<span class="token operator">/</span>hive
+</code></pre> 
+<p>2、查看一下数据库</p> 
+<pre><code class="prism language-sql">hive <span class="token punctuation">(</span><span class="token keyword">default</span><span class="token punctuation">)</span><span class="token operator">&gt;</span> <span class="token keyword">show</span> <span class="token keyword">databases</span><span class="token punctuation">;</span>
+OK
+database_name
+<span class="token keyword">default</span>
+
+</code></pre> 
+<h4><a id="425__1438"></a>4.2.5 修改元数据库字符集</h4> 
+<p>hive元数据库的字符集默认为latin1，由于其不支持中文字符，故若建表语句中包含中文注释，会出现乱码现象。如需要解决乱码问题，需做一下修改。<br> 1、修改hive元数据库中存储注释的字符的字符集为utf-8<br> 1）字段注释</p> 
+<pre><code class="prism language-sql">mysql<span class="token operator">&gt;</span> <span class="token keyword">alter</span> <span class="token keyword">table</span> metastore<span class="token punctuation">.</span>COLUMNS_V2 <span class="token keyword">modify</span> <span class="token keyword">column</span> <span class="token keyword">COMMENT</span> <span class="token keyword">varchar</span><span class="token punctuation">(</span><span class="token number">256</span><span class="token punctuation">)</span> <span class="token keyword">character</span> <span class="token keyword">set</span> utf8<span class="token punctuation">;</span>
+</code></pre> 
+<p>2）表注释</p> 
+<pre><code class="prism language-sql">mysql<span class="token operator">&gt;</span> <span class="token keyword">alter</span> <span class="token keyword">table</span> metastore<span class="token punctuation">.</span>TABLE_PARAMS <span class="token keyword">modify</span> <span class="token keyword">column</span> PARAM_VALUE <span class="token keyword">mediumtext</span> <span class="token keyword">character</span> <span class="token keyword">set</span> utf8<span class="token punctuation">;</span>
+</code></pre> 
+<p>2、修改hive-site.xml中jdbc url，如下</p> 
+<pre><code class="prism language-sql"><span class="token operator">&lt;</span>property<span class="token operator">&gt;</span>
+     <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>javax<span class="token punctuation">.</span>jdo<span class="token punctuation">.</span><span class="token keyword">option</span><span class="token punctuation">.</span>ConnectionURL<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token keyword">value</span><span class="token operator">&gt;</span>jdbc:mysql:<span class="token comment">//hadoop102:3306/metastore?useSSL=false&amp;amp;useUnicode=true&amp;amp;characterEncoding=UTF-8&lt;/value&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span>property<span class="token operator">&gt;</span>
+
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a2f9d31e9d028c64daadf495e08d88b6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Zookeeper的性能测试与评估实战</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/40d10598314e39fe5e2fd92acc7ddf8c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">AGI和AIGC傻傻分不清楚，一篇文章带你get</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

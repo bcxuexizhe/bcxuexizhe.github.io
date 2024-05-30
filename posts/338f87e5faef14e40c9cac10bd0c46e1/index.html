@@ -1,0 +1,703 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>引领位置服务驱动：腾讯地图 WebService 服务端 API 实用指南 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/338f87e5faef14e40c9cac10bd0c46e1/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="引领位置服务驱动：腾讯地图 WebService 服务端 API 实用指南">
+  <meta property="og:description" content="🔭 嗨，您好 👋 我是 vnjohn，在互联网企业担任 Java 开发，CSDN 优质创作者
+📖 推荐专栏：Spring、MySQL、Nacos、Java，后续其他专栏会持续优化更新迭代
+🌲文章所在专栏：业务设计
+🤔 我当前正在学习微服务领域、云原生领域、消息中间件等架构、原理知识
+💬 向我询问任何您想要的东西，ID：vnjohn
+🔥觉得博主文章写的还 OK，能够帮助到您的，感谢三连支持博客🙏
+😄 代词: vnjohn
+⚡ 有趣的事实：音乐、跑步、电影、游戏
+目录
+简介配置管理配额申请步骤 地理位置解析基础代码配置腾讯 API 配置信息基础地图结构定义公用数据结构抽象请求工具类 IP 定位接口地址解析接口逆地址解析接口关键字输入提示接口 总结 简介 在工作中，一旦涉及到地理位置经纬度的解析，通过经纬度解析所在的详细地址，通过 IP 解析所在的经纬度再解析所在的详细地址，常用的地图 API 有百度、腾讯等第三方可以用于集成在项目中使用，本文我们会以腾讯地图 API 实现地理位置信息解析，提供源码以及应用的场景
+腾讯地图 API 官方文档：WebService API｜腾讯位置服务
+腾讯地图 WebService API 是基于 HTTPS/HTTP 协议的数据接口
+开发者可以使用任何客户端、服务器和开发语言，按照腾讯地图 WebService API 规范，按需构建 HTTPS 请求，并获取结果数据（目前支持JSON/JSONP方式返回）
+配置管理 配额 针对个人开发者和企业开发者，提供的服务 API 调用量有明显的差别，以下图来自官方文档
+从上图可知，普通的接口 API 能够让我们自由的调用，根据不同的身份来区分对应的可用额度，个人开发者 -&gt; 企业开发者 -&gt; 商业授权开发者
+除了：路线规划｜距离矩阵：货车｜智能地址解析这些复杂的地理位置信息采集，其他啊的接口都有可限的使用额度
+申请步骤 前往腾讯位置服务注册页，通过手机号&#43;邮箱认证号个人开发者身份，随即登录至控制台">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-10-25T01:21:02+08:00">
+    <meta property="article:modified_time" content="2023-10-25T01:21:02+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">引领位置服务驱动：腾讯地图 WebService 服务端 API 实用指南</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-github-gist">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/da/c8/0q9u12Ec_o.gif" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>🔭 嗨，您好 👋 我是 vnjohn，在互联网企业担任 Java 开发，CSDN 优质创作者<br> 📖 推荐专栏：Spring、MySQL、Nacos、Java，后续其他专栏会持续优化更新迭代<br> 🌲文章所在专栏：业务设计<br> 🤔 我当前正在学习微服务领域、云原生领域、消息中间件等架构、原理知识<br> 💬 向我询问任何您想要的东西，ID：vnjohn<br> 🔥觉得博主文章写的还 OK，能够帮助到您的，感谢三连支持博客🙏<br> 😄 代词: vnjohn<br> ⚡ 有趣的事实：音乐、跑步、电影、游戏</p> 
+</blockquote> 
+<p><strong>目录</strong><br> </p> 
+<div class="toc"> 
+ <h4> </h4> 
+ <ul><li><a href="#_13" rel="nofollow">简介</a></li><li><a href="#_21" rel="nofollow">配置管理</a></li><li><ul><li><a href="#_22" rel="nofollow">配额</a></li><li><a href="#_30" rel="nofollow">申请步骤</a></li></ul> 
+  </li><li><a href="#_66" rel="nofollow">地理位置解析</a></li><li><ul><li><a href="#_69" rel="nofollow">基础代码配置</a></li><li><ul><li><a href="#_API__71" rel="nofollow">腾讯 API 配置信息</a></li><li><a href="#_93" rel="nofollow">基础地图结构定义</a></li><li><a href="#_130" rel="nofollow">公用数据结构抽象</a></li><li><a href="#_155" rel="nofollow">请求工具类</a></li></ul> 
+   </li><li><a href="#IP__325" rel="nofollow">IP 定位接口</a></li><li><a href="#_392" rel="nofollow">地址解析接口</a></li><li><a href="#_458" rel="nofollow">逆地址解析接口</a></li><li><a href="#_537" rel="nofollow">关键字输入提示接口</a></li></ul> 
+  </li><li><a href="#_603" rel="nofollow">总结</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_13"></a>简介</h2> 
+<p>在工作中，一旦涉及到地理位置经纬度的解析，通过经纬度解析所在的详细地址，通过 IP 解析所在的经纬度再解析所在的详细地址，常用的地图 API 有百度、腾讯等第三方可以用于集成在项目中使用，本文我们会以腾讯地图 API 实现地理位置信息解析，提供源码以及应用的场景</p> 
+<p>腾讯地图 API 官方文档：<a href="https://lbs.qq.com/service/webService/webServiceGuide/webServiceOverview" rel="nofollow">WebService API｜腾讯位置服务</a></p> 
+<blockquote> 
+ <p>腾讯地图 WebService API 是基于 HTTPS/HTTP 协议的数据接口<br> 开发者可以使用任何客户端、服务器和开发语言，按照腾讯地图 WebService API 规范，按需构建 HTTPS 请求，并获取结果数据（目前支持JSON/JSONP方式返回）</p> 
+</blockquote> 
+<h2><a id="_21"></a>配置管理</h2> 
+<h3><a id="_22"></a>配额</h3> 
+<p>针对个人开发者和企业开发者，提供的服务 API 调用量有明显的差别，以下图来自官方文档</p> 
+<p><img src="https://images2.imgbox.com/87/78/AuSDOQLY_o.png" alt="在这里插入图片描述"></p> 
+<p>从上图可知，普通的接口 API 能够让我们自由的调用，根据不同的身份来区分对应的可用额度，个人开发者 -&gt; 企业开发者 -&gt; 商业授权开发者</p> 
+<blockquote> 
+ <p>除了：路线规划｜距离矩阵：货车｜智能地址解析这些复杂的地理位置信息采集，其他啊的接口都有可限的使用额度</p> 
+</blockquote> 
+<h3><a id="_30"></a>申请步骤</h3> 
+<p>前往<a href="https://lbs.qq.com/login/register/index.html" rel="nofollow">腾讯位置服务注册页</a>，通过手机号+邮箱认证号个人开发者身份，随即登录至控制台</p> 
+<p>1、创建应用</p> 
+<p><img src="https://images2.imgbox.com/af/ed/HyHYWYqq_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>应用是最大的承载能力，一个应用下可以添加多个对应的 Key，而应用下所属的 Key 才是我们服务端调用 API 必须要的能力</p> 
+</blockquote> 
+<p>2、创建 Key</p> 
+<p><img src="https://images2.imgbox.com/a7/a6/6h0s9oAL_o.png" alt="在这里插入图片描述"></p> 
+<p>启用产品：WebServiceAPI、SDK、微信小程序</p> 
+<blockquote> 
+ <p>WebServiceAPI 产品是用于服务端调用的能力，有三种可配置能力：域名白名单、授权 IP、签名检验<br><br> 1、域名白名单：当在调用腾讯地图 API 时传入当前所要服务的域名，请求的域名在域名白名单内，才能完成服务的请求<br> 2、授权 IP：当在调用腾讯地图 API 时传入当前所要请求的 IP 地址，请求的 IP 在「授权IP」内，才能完成服务的请求<br> 3、签名校验：当采用这种方式时，腾讯地图 API 会为我们分配一个 Secret key 值，同时会为我们提供具体的签名校验方式，让我们能够快速接入<br><br> 一般在工作中较多采用的是第一种、第二种方式，第一种、第二种没有那么大的复杂性不需要额外的技术成本去接入但安全性不高，第三种方式会增加接入的复杂性要额外的技术知识去实现但安全性较高</p> 
+</blockquote> 
+<p>WebServiceAPI 如何使用的官方文档：<a href="https://lbs.qq.com/faq/serverFaq/webServiceKey" rel="nofollow">WebServiceAPI 配置</a></p> 
+<blockquote> 
+ <p>「SDK」产品是用于安卓端、IOS 端使用的能力，当 App 应用需要使用到腾讯地图的地图、导航服务时，需要配置好该产品的能力，它的配置方式则与 WebServiceAPI 不同，它要配置的是安卓应用或 IOS 应用打包以后生成的包名称，可支持配置多个，每行配一个，多个进行隔行分开</p> 
+</blockquote> 
+<blockquote> 
+ <p>「微信小程序」产品是用于在微信小程序端使用的能力，当小程序内需要用到腾讯地图的某些功能时，例如：路线规划，那么使用它是非常好的选择</p> 
+</blockquote> 
+<p>3、当创建 Key 完成以后，会生成一个随机的密钥字符</p> 
+<p><img src="https://images2.imgbox.com/9e/41/eXcW1if7_o.png" alt="在这里插入图片描述"></p> 
+<p>4、点击详情，可查看具体分配的接口 API 调用额度信息</p> 
+<p><img src="https://images2.imgbox.com/8a/5e/LvPfmvwv_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><mark>当您是个人开发者时，默认只会给你一个 Key 的可用额度，再申请其他的 Key 是无法获取额度的</mark></p> 
+</blockquote> 
+<h2><a id="_66"></a>地理位置解析</h2> 
+<p>当应用和 Key 配置好以后，下面我们就通过官方文档 API 来进行以下几种 API 具体的实现</p> 
+<h3><a id="_69"></a>基础代码配置</h3> 
+<h4><a id="_API__71"></a>腾讯 API 配置信息</h4> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 腾讯地图 API 配置信息
+ *
+ * @author vnjohn
+ * @since 2023/10/25
+ */</span>
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentMapConfig</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@Value</span><span class="token punctuation">(</span><span class="token string">"${tencent.map.key}"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> tencentMapKey<span class="token punctuation">;</span>
+
+    <span class="token keyword">protected</span> <span class="token keyword">static</span> <span class="token class-name">String</span> <span class="token constant">PARSE_IP</span> <span class="token operator">=</span> <span class="token string">"https://apis.map.qq.com/ws/location/v1/ip?key=%s&amp;ip=%s"</span><span class="token punctuation">;</span>
+    <span class="token keyword">protected</span> <span class="token keyword">static</span> <span class="token class-name">String</span> <span class="token constant">PARSE_ADDRESS</span> <span class="token operator">=</span> <span class="token string">"https://apis.map.qq.com/ws/geocoder/v1/?key=%s&amp;address=%s"</span><span class="token punctuation">;</span>
+    <span class="token keyword">protected</span> <span class="token keyword">static</span> <span class="token class-name">String</span> <span class="token constant">PARSE_INVERSE_ADDRESS</span> <span class="token operator">=</span> <span class="token string">"https://apis.map.qq.com/ws/geocoder/v1/?key=%s&amp;location=%s,%s&amp;get_poi=0"</span><span class="token punctuation">;</span>
+    <span class="token keyword">protected</span> <span class="token keyword">static</span> <span class="token class-name">String</span> <span class="token constant">PLACE_TIPS</span> <span class="token operator">=</span> <span class="token string">"https://apis.map.qq.com/ws/place/v1/suggestion?key=%s&amp;keyword=%s&amp;page_index=%s&amp;page_size=%s&amp;location=%s,%s"</span><span class="token punctuation">;</span>
+	<span class="token comment">// .......</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>调用 API 接口所需的 Key 信息以及其他 API 完整的 URL 地址，单独放在一个类进行存储</p> 
+<blockquote> 
+ <p>一般我们会放在 Nacos 中进行存储，当发生 URL 参数变更时，可以结合 Nacos 动态刷新机制一起使用</p> 
+</blockquote> 
+<h4><a id="_93"></a>基础地图结构定义</h4> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">/**
+     * 状态码，0为正常，其它为异常
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">Integer</span> status<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 状态说明
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> message<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 查询结果总数量
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">Integer</span> count<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 返回数据 &gt; 数组
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">T</span> data<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 返回数据 &gt; 对象
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">T</span> result<span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>因为在腾讯位置服务提供的 API 接口中，不同的接口可能它返回的结构不一样，有的返回是数组，有的返回是对象，所以在我们对接使用这一侧，就必须对不同的数据结构做一层适配，故而之采用泛型的结构来接收处理</p> 
+<h4><a id="_130"></a>公用数据结构抽象</h4> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 腾讯地图「经纬度」
+ *
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentLocation</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">/**
+     * 经度
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">Double</span> lng<span class="token punctuation">;</span>
+
+    <span class="token comment">/**
+     * 纬度
+     */</span>
+    <span class="token keyword">private</span> <span class="token class-name">Double</span> lat<span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>在接收 API 接口返回的结果时，这一块的结构可以在多个地方同时运用到，故将它抽象出来作为一个单独的类</p> 
+<h4><a id="_155"></a>请求工具类</h4> 
+<p>在简介中介绍到了「腾讯地图 WebService API 是基于 HTTPS/HTTP 协议的数据接口」那么我们就调用这部分数据接口时，就需要一个 HTTPS、HTTP 工具来进行调用，从而拿到具体的返回结果，在这里我们采用了 Spring 提供的客户端请求类：org.springframework.web.client.RestTemplate，如下的源码就是基于它进行再次封装，我们只需要关心具体的结果即可，在再次封装中我会适配好 HTTP、HTTPS 协议实现，如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 远程调用 URL 工具类
+ *
+ * @author vnjohn
+ * @date 2022/1/7
+ */</span>
+<span class="token annotation punctuation">@Slf4j</span>
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">RestTemplateUtils</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">RestTemplate</span> restTemplate <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">RestTemplate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@PostConstruct</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">initial</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        restTemplate<span class="token punctuation">.</span><span class="token function">getMessageConverters</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">WxHttpMessageConverter</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        restTemplate<span class="token punctuation">.</span><span class="token function">setRequestFactory</span><span class="token punctuation">(</span><span class="token function">clientHttpRequestFactory</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        restTemplate<span class="token punctuation">.</span><span class="token function">setErrorHandler</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">DefaultResponseErrorHandler</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 添加对 HTTPS 的支持.
+     *
+     * @return
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">HttpComponentsClientHttpRequestFactory</span> <span class="token function">clientHttpRequestFactory</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token class-name">HttpClientBuilder</span> httpClientBuilder <span class="token operator">=</span> <span class="token class-name">HttpClientBuilder</span><span class="token punctuation">.</span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">SSLContext</span> sslContext <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SSLContextBuilder</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">loadTrustMaterial</span><span class="token punctuation">(</span><span class="token keyword">null</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">(</span><span class="token class-name">TrustStrategy</span><span class="token punctuation">)</span> <span class="token punctuation">(</span>arg0<span class="token punctuation">,</span> arg1<span class="token punctuation">)</span> <span class="token operator">-&gt;</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            httpClientBuilder<span class="token punctuation">.</span><span class="token function">setSSLContext</span><span class="token punctuation">(</span>sslContext<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">HostnameVerifier</span> hostnameVerifier <span class="token operator">=</span> <span class="token class-name">NoopHostnameVerifier</span><span class="token punctuation">.</span><span class="token constant">INSTANCE</span><span class="token punctuation">;</span>
+            <span class="token class-name">SSLConnectionSocketFactory</span> sslConnectionSocketFactory <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">SSLConnectionSocketFactory</span><span class="token punctuation">(</span>sslContext<span class="token punctuation">,</span>
+                    hostnameVerifier<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">Registry</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ConnectionSocketFactory</span><span class="token punctuation">&gt;</span></span> socketFactoryRegistry <span class="token operator">=</span> <span class="token class-name">RegistryBuilder</span><span class="token punctuation">.</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ConnectionSocketFactory</span><span class="token punctuation">&gt;</span></span><span class="token function">create</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                                                                                     <span class="token punctuation">.</span><span class="token function">register</span><span class="token punctuation">(</span><span class="token string">"http"</span><span class="token punctuation">,</span> <span class="token class-name">PlainConnectionSocketFactory</span><span class="token punctuation">.</span><span class="token function">getSocketFactory</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+                                                                                     <span class="token punctuation">.</span><span class="token function">register</span><span class="token punctuation">(</span><span class="token string">"https"</span><span class="token punctuation">,</span> sslConnectionSocketFactory<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">PoolingHttpClientConnectionManager</span> poolingHttpClientConnectionManager <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">PoolingHttpClientConnectionManager</span><span class="token punctuation">(</span>
+                    socketFactoryRegistry<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            poolingHttpClientConnectionManager<span class="token punctuation">.</span><span class="token function">setMaxTotal</span><span class="token punctuation">(</span><span class="token number">2700</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            poolingHttpClientConnectionManager<span class="token punctuation">.</span><span class="token function">setDefaultMaxPerRoute</span><span class="token punctuation">(</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            httpClientBuilder<span class="token punctuation">.</span><span class="token function">setConnectionManager</span><span class="token punctuation">(</span>poolingHttpClientConnectionManager<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            httpClientBuilder<span class="token punctuation">.</span><span class="token function">setRetryHandler</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">DefaultHttpRequestRetryHandler</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">HttpClient</span> httpClient <span class="token operator">=</span> httpClientBuilder<span class="token punctuation">.</span><span class="token function">build</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token class-name">HttpComponentsClientHttpRequestFactory</span> clientHttpRequestFactory <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpComponentsClientHttpRequestFactory</span><span class="token punctuation">(</span>
+                    httpClient<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            clientHttpRequestFactory<span class="token punctuation">.</span><span class="token function">setConnectTimeout</span><span class="token punctuation">(</span><span class="token number">20000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            clientHttpRequestFactory<span class="token punctuation">.</span><span class="token function">setReadTimeout</span><span class="token punctuation">(</span><span class="token number">30000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            clientHttpRequestFactory<span class="token punctuation">.</span><span class="token function">setConnectionRequestTimeout</span><span class="token punctuation">(</span><span class="token number">20000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">return</span> clientHttpRequestFactory<span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">KeyManagementException</span> <span class="token operator">|</span> <span class="token class-name">NoSuchAlgorithmException</span> <span class="token operator">|</span> <span class="token class-name">KeyStoreException</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"===&gt; init http client pool error!!!"</span><span class="token punctuation">,</span> e<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// ----------------------------------GET-------------------------------------------------------</span>
+
+    <span class="token comment">/**
+     * GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param responseType 返回对象类型
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> restTemplate<span class="token punctuation">.</span><span class="token function">getForEntity</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> responseType<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，按顺序依次对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> restTemplate<span class="token punctuation">.</span><span class="token function">getForEntity</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，与Map中的key对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">&gt;</span></span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> restTemplate<span class="token punctuation">.</span><span class="token function">getForEntity</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 带请求头的GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param headers      请求头参数
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，按顺序依次对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> headers<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">HttpHeaders</span> httpHeaders <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpHeaders</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        httpHeaders<span class="token punctuation">.</span><span class="token function">setAll</span><span class="token punctuation">(</span>headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token function">get</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> httpHeaders<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 带请求头的GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param headers      请求头参数
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，按顺序依次对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">HttpHeaders</span> headers<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">HttpEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">&gt;</span></span> requestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token function">exchange</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token class-name">HttpMethod</span><span class="token punctuation">.</span><span class="token constant">GET</span><span class="token punctuation">,</span> requestEntity<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 带请求头的GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param headers      请求头参数
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，与Map中的key对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> headers<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">&gt;</span></span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">HttpHeaders</span> httpHeaders <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpHeaders</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        httpHeaders<span class="token punctuation">.</span><span class="token function">setAll</span><span class="token punctuation">(</span>headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token function">get</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> httpHeaders<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 带请求头的GET请求调用方式
+     *
+     * @param url          请求URL
+     * @param headers      请求头参数
+     * @param responseType 返回对象类型
+     * @param uriVariables URL中的变量，与Map中的key对应
+     * @return ResponseEntity 响应对象封装类
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">get</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">HttpHeaders</span> headers<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">,</span> <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">&gt;</span></span> uriVariables<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">HttpEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token operator">?</span><span class="token punctuation">&gt;</span></span> requestEntity <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HttpEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>headers<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token function">exchange</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token class-name">HttpMethod</span><span class="token punctuation">.</span><span class="token constant">GET</span><span class="token punctuation">,</span> requestEntity<span class="token punctuation">,</span> responseType<span class="token punctuation">,</span> uriVariables<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// ----------------------------------POST-------------------------------------------------------</span>
+
+    <span class="token comment">/**
+     * POST请求调用方式
+     *
+     * @param url          请求URL
+     * @param responseType 返回对象类型
+     * @return
+     */</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> <span class="token function">post</span><span class="token punctuation">(</span><span class="token class-name">String</span> url<span class="token punctuation">,</span> <span class="token class-name">Class</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">T</span><span class="token punctuation">&gt;</span></span> responseType<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> restTemplate<span class="token punctuation">.</span><span class="token function">postForEntity</span><span class="token punctuation">(</span>url<span class="token punctuation">,</span> <span class="token class-name">HttpEntity</span><span class="token punctuation">.</span><span class="token constant">EMPTY</span><span class="token punctuation">,</span> responseType<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+	<span class="token comment">// ......................</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>若想要关于该工具类的全部源码及依赖，可以私信博主或底下留言进行获取～</p> 
+<h3><a id="IP__325"></a>IP 定位接口</h3> 
+<p>IP 定位，官方文档介绍：<a href="https://lbs.qq.com/service/webService/webServiceGuide/webServiceIp" rel="nofollow">IP 定位</a></p> 
+<p>IP 定位返回结构如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentParseIpResponse</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"ip 信息"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> ip<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"所在定位"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">TencentLocation</span> location<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"ad_info"</span><span class="token punctuation">)</span>
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"定位行政区划信息"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">AdInfoComponent</span> adInfoComponent<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Data</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">AdInfoComponent</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"国家"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> nation<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"省"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> province<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"市"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> city<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"区"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> district<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>IP 定位接口如何调用的方法如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 通过传入的 IP 解析所在经纬度「IP定位」
+ *
+ * @param ip IP
+ * @return 解析地址后所得信息
+ */</span>
+<span class="token keyword">public</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseIpResponse</span><span class="token punctuation">&gt;</span></span> <span class="token function">parseIp</span><span class="token punctuation">(</span><span class="token class-name">String</span> ip<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseIpResponse</span><span class="token punctuation">&gt;</span></span> tencentMapResult <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 拼接请求参数</span>
+    <span class="token class-name">String</span> parseIpRequestUrl <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">TencentMapConfig</span><span class="token punctuation">.</span><span class="token constant">PARSE_IP</span><span class="token punctuation">,</span> tencentMapKey<span class="token punctuation">,</span> ip<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentMapResult</span><span class="token punctuation">&gt;</span></span> parseIpResult <span class="token operator">=</span> <span class="token class-name">RestTemplateUtils</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>parseIpRequestUrl<span class="token punctuation">,</span> <span class="token class-name">TencentMapResult</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// RestTemplate 请求未处理成功</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getStatusCodeValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">EXTERNAL_SUCCESS_CODE</span> <span class="token operator">||</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">isNull</span><span class="token punctuation">(</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"RestTemplate 请求腾讯地图 parseIpResult 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">ZERO</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"调用腾讯地图 parseIpResult API 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token class-name">Object</span> data <span class="token operator">=</span> parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getResult</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">BeanUtils</span><span class="token punctuation">.</span><span class="token function">copyProperties</span><span class="token punctuation">(</span>parseIpResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> tencentMapResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">TencentParseIpResponse</span> parseIpResponse <span class="token operator">=</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">jsonStrToObj</span><span class="token punctuation">(</span><span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">TencentParseIpResponse</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    tencentMapResult<span class="token punctuation">.</span><span class="token function">setResult</span><span class="token punctuation">(</span>parseIpResponse<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_392"></a>地址解析接口</h3> 
+<p>地址解析，官方文档介绍：<a href="https://lbs.qq.com/service/webService/webServiceGuide/webServiceGeocoder" rel="nofollow">地址解析</a></p> 
+<p>地址解析返回结构如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentParseAddressResponse</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"提示文字"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> title<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"所在定位"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">TencentLocation</span> location<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"address_components"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">AddressComponent</span> addressComponent<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Data</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">AddressComponent</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"省"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> province<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"市"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> city<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"区"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> district<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"街道"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> street<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>地址解析接口如何调用｜处理的方法如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 通过传入的地址解析所在经纬度「地址解析」
+ *
+ * @param address 地址信息
+ * @return 解析地址后所得信息
+ */</span>
+<span class="token keyword">public</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseAddressResponse</span><span class="token punctuation">&gt;</span></span> <span class="token function">parseAddress</span><span class="token punctuation">(</span><span class="token class-name">String</span> address<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseAddressResponse</span><span class="token punctuation">&gt;</span></span> tencentMapResult <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 拼接请求参数</span>
+    <span class="token class-name">String</span> parseAddressRequestUrl <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">TencentMapConfig</span><span class="token punctuation">.</span><span class="token constant">PARSE_ADDRESS</span><span class="token punctuation">,</span> tencentMapKey<span class="token punctuation">,</span> address<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentMapResult</span><span class="token punctuation">&gt;</span></span> parseAddressResult <span class="token operator">=</span> <span class="token class-name">RestTemplateUtils</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>parseAddressRequestUrl<span class="token punctuation">,</span> <span class="token class-name">TencentMapResult</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// RestTemplate 请求未处理成功</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getStatusCodeValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">EXTERNAL_SUCCESS_CODE</span> <span class="token operator">||</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">isNull</span><span class="token punctuation">(</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"RestTemplate 请求腾讯地图 parseAddressResult 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">ZERO</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"调用腾讯地图 parseAddressResult API 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token class-name">Object</span> data <span class="token operator">=</span> parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getResult</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">BeanUtils</span><span class="token punctuation">.</span><span class="token function">copyProperties</span><span class="token punctuation">(</span>parseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> tencentMapResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">TencentParseAddressResponse</span> parseAddressResponse <span class="token operator">=</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">jsonStrToObj</span><span class="token punctuation">(</span><span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">TencentParseAddressResponse</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    tencentMapResult<span class="token punctuation">.</span><span class="token function">setResult</span><span class="token punctuation">(</span>parseAddressResponse<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_458"></a>逆地址解析接口</h3> 
+<p>逆地址解析，官方文档介绍：<a href="https://lbs.qq.com/service/webService/webServiceGuide/webServiceGcoder" rel="nofollow">地址解析</a></p> 
+<p>逆地址解析返回结构如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentParseInverseAddressResponse</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"详细地址信息"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> address<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"所在定位"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">TencentLocation</span> location<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"address_components"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">AddressComponent</span> addressComponent<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@JsonProperty</span><span class="token punctuation">(</span><span class="token string">"formatted_addresses"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">FormattedAddress</span> formattedAddress<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Data</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">FormattedAddress</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"推荐使用的地址描述，描述精确性较高"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> recommend<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"粗略位置描述"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> rough<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Data</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">class</span> <span class="token class-name">AddressComponent</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"省"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> province<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"市"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> city<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"区"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> district<span class="token punctuation">;</span>
+
+        <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"街道"</span><span class="token punctuation">)</span>
+        <span class="token keyword">private</span> <span class="token class-name">String</span> street<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>逆地址解析接口如何调用｜处理的方法如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 通过经纬度解析当前所在地址信息「逆地址解析」
+ *
+ * @param lng 经度
+ * @param lat 纬度
+ * @return 解析好的地址信息
+ */</span>
+<span class="token keyword">public</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseInverseAddressResponse</span><span class="token punctuation">&gt;</span></span> <span class="token function">parseInverseAddress</span><span class="token punctuation">(</span><span class="token class-name">Double</span> lng<span class="token punctuation">,</span> <span class="token class-name">Double</span> lat<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentParseInverseAddressResponse</span><span class="token punctuation">&gt;</span></span> tencentMapResult <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 拼接请求参数</span>
+    <span class="token class-name">String</span> parseInverseAddressRequestUrl <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">TencentMapConfig</span><span class="token punctuation">.</span><span class="token constant">PARSE_INVERSE_ADDRESS</span><span class="token punctuation">,</span> tencentMapKey<span class="token punctuation">,</span> lat<span class="token punctuation">,</span> lng<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentMapResult</span><span class="token punctuation">&gt;</span></span> parseInverseAddressResult <span class="token operator">=</span> <span class="token class-name">RestTemplateUtils</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>parseInverseAddressRequestUrl<span class="token punctuation">,</span> <span class="token class-name">TencentMapResult</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// RestTemplate 请求未处理成功</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getStatusCodeValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">EXTERNAL_SUCCESS_CODE</span> <span class="token operator">||</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">isNull</span><span class="token punctuation">(</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"RestTemplate 请求腾讯地图 parseInverseAddress 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">ZERO</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"调用腾讯地图 parseInverseAddress API 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token class-name">Object</span> data <span class="token operator">=</span> parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getResult</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">BeanUtils</span><span class="token punctuation">.</span><span class="token function">copyProperties</span><span class="token punctuation">(</span>parseInverseAddressResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> tencentMapResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">TencentParseInverseAddressResponse</span> parseInverseAddressResponse <span class="token operator">=</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">jsonStrToObj</span><span class="token punctuation">(</span><span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">TencentParseInverseAddressResponse</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    tencentMapResult<span class="token punctuation">.</span><span class="token function">setResult</span><span class="token punctuation">(</span>parseInverseAddressResponse<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_537"></a>关键字输入提示接口</h3> 
+<p>关键字输入提示，官方文档介绍：<a href="https://lbs.qq.com/service/webService/webServiceGuide/webServiceSuggestion" rel="nofollow">关键字输入提示</a></p> 
+<p>关键字输入提示返回结构如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 关键字输入提示响应内容
+ *
+ * @author vnjohn
+ * @since 2023/7/23
+ */</span>
+<span class="token annotation punctuation">@Data</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">TencentPlaceTipsResponse</span> <span class="token keyword">implements</span> <span class="token class-name">Serializable</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token keyword">long</span> serialVersionUID <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">3155685021522526885L</span><span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"提示文字"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> title<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"地址"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> address<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"省"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> province<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"市"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> city<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"区"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">String</span> district<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@ApiModelProperty</span><span class="token punctuation">(</span><span class="token string">"所在定位"</span><span class="token punctuation">)</span>
+    <span class="token keyword">private</span> <span class="token class-name">TencentLocation</span> location<span class="token punctuation">;</span>
+
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>关键字输入提示接口如何调用｜处理的方法如下：</p> 
+<pre><code class="prism language-java"><span class="token comment">/**
+ * 关键字输入提示，获取可见提示内容
+ *
+ * @param keyword 关键字
+ * @param page    页码
+ * @param size    条数
+ */</span>
+<span class="token keyword">public</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">List</span><span class="token punctuation">&lt;</span><span class="token class-name">TencentPlaceTipsResponse</span><span class="token punctuation">&gt;</span><span class="token punctuation">&gt;</span></span> <span class="token function">placeTips</span><span class="token punctuation">(</span><span class="token class-name">String</span> keyword<span class="token punctuation">,</span> <span class="token class-name">Double</span> lng<span class="token punctuation">,</span> <span class="token class-name">Double</span> lat<span class="token punctuation">,</span> <span class="token class-name">Integer</span> page<span class="token punctuation">,</span> <span class="token class-name">Integer</span> size<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">List</span><span class="token punctuation">&lt;</span><span class="token class-name">TencentPlaceTipsResponse</span><span class="token punctuation">&gt;</span><span class="token punctuation">&gt;</span></span> tencentMapResult <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">TencentMapResult</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 拼接请求参数</span>
+    <span class="token class-name">String</span> placeTipsRequestUrl <span class="token operator">=</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token function">format</span><span class="token punctuation">(</span><span class="token class-name">TencentMapConfig</span><span class="token punctuation">.</span><span class="token constant">PLACE_TIPS</span><span class="token punctuation">,</span> tencentMapKey<span class="token punctuation">,</span> keyword<span class="token punctuation">,</span> page<span class="token punctuation">,</span> size<span class="token punctuation">,</span> lat<span class="token punctuation">,</span> lng<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">ResponseEntity</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentMapResult</span><span class="token punctuation">&gt;</span></span> placeTipsResult <span class="token operator">=</span> <span class="token class-name">RestTemplateUtils</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>placeTipsRequestUrl<span class="token punctuation">,</span> <span class="token class-name">TencentMapResult</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// RestTemplate 请求未处理成功</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getStatusCodeValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">!=</span> <span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">EXTERNAL_SUCCESS_CODE</span> <span class="token operator">||</span> <span class="token class-name">Objects</span><span class="token punctuation">.</span><span class="token function">isNull</span><span class="token punctuation">(</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"RestTemplate 请求腾讯地图 placeTips 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getStatus</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span><span class="token class-name">CommonConstant</span><span class="token punctuation">.</span><span class="token constant">ZERO</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        log<span class="token punctuation">.</span><span class="token function">error</span><span class="token punctuation">(</span><span class="token string">"调用腾讯地图 placeTips API 失败，{}"</span><span class="token punctuation">,</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token class-name">Object</span> data <span class="token operator">=</span> placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getData</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">BeanUtils</span><span class="token punctuation">.</span><span class="token function">copyProperties</span><span class="token punctuation">(</span>placeTipsResult<span class="token punctuation">.</span><span class="token function">getBody</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">,</span> tencentMapResult<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">TencentPlaceTipsResponse</span><span class="token punctuation">&gt;</span></span> tencentPlaceTipsList <span class="token operator">=</span> <span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">jsonStrToList</span><span class="token punctuation">(</span><span class="token class-name">JsonUtils</span><span class="token punctuation">.</span><span class="token function">objToJsonStr</span><span class="token punctuation">(</span>data<span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token class-name">TencentPlaceTipsResponse</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    tencentMapResult<span class="token punctuation">.</span><span class="token function">setData</span><span class="token punctuation">(</span>tencentPlaceTipsList<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> tencentMapResult<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h2><a id="_603"></a>总结</h2> 
+<p>该篇博文简单了介绍地理位置解析在我们实际开发中的应用，在配置管理中告知了如何一步步进行注册以及配置相关的产品信息，在地理位置解析中将博主自身运用地理位置服务时，所实现的部分相关源码告知大家如何运用封装及抽象的特性将你的代码构建的更好更优，最后，通过实际工作中经常会运用到四种接口来作了一层层的剥离及代码实战，希望能够得到你的支持+喜欢，再次感谢您能支持此文章！</p> 
+<blockquote> 
+ <p>🌟🌟🌟愿你我都能够在寒冬中相互取暖，互相成长，只有不断积累、沉淀自己，后面有机会自然能破冰而行！</p> 
+</blockquote> 
+<p>博文放在 <strong>业务设计</strong> 专栏里，欢迎订阅，会持续更新！</p> 
+<p>如果觉得博文不错，关注我 <strong>vnjohn</strong>，后续会有更多实战、源码、架构干货分享！</p> 
+<p>推荐专栏：Spring、MySQL，订阅一波不再迷路</p> 
+<p>大家的「关注❤️ + 点赞👍 + 收藏⭐」就是我创作的最大动力！谢谢大家的支持，我们下文见！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d13e42fb4876c05be67474feeb49fced/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据结构：阶段测试(查漏补缺)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/bfa1ede8ee9c44e7b9ede4f9e3b36094/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">前端（二十三）——轮询和长轮询</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【C/C&#43;&#43;】动态内存管理（C：malloc，realloc，calloc，free || C&#43;&#43;：new，delete） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/30b8477ab13c67045d28fb683f1637a4/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【C/C&#43;&#43;】动态内存管理（C：malloc，realloc，calloc，free || C&#43;&#43;：new，delete）">
+  <meta property="og:description" content="🔥个人主页： Forcible Bug Maker
+🔥专栏： C&#43;&#43; | | C语言
+目录 前言C/C&#43;&#43;内存分布C语言中的动态内存管理：malloc/realloc/realloc/free`malloc``realloc``calloc``free` C&#43;&#43;中的动态内存管理：new/deletenew和delete操作内置类型new和delete操作自定义类型operator new与operator delete函数new和delete的实现原理定位new表达式(placement-new) 结语 前言 本篇博客主要内容：C&#43;&#43;和C语言的动态内存管理方式，机制以及两者之间的区别。
+在学习C语言的过程中，也曾涉及过动态内存管理，我们可以使用malloc，realloc，calloc等函数来动态管理堆中空间资源。而在C&#43;&#43;中，有了新的动态内存管理方式，那就是new和delete关键字。忽然发现之前似乎并没有讲C语言的几个动态内存管理函数，所以标题是 【C/C&#43;&#43;】动态内存管理 ，不过不止如此，本次还会介绍new，delete关键字的底层，并区分一下C和C&#43;&#43;内存管理之间的不同。
+C/C&#43;&#43;内存分布 在开始讲解之前，想通过一道题引入今天的内容。
+#include&lt;iostream&gt; using namespace std; int globalVar = 1; static int staticGlobalVar = 1; void Test() { static int staticVar = 1; int localVar = 1; int num1[10] = { 1, 2, 3, 4 }; char char2[] = &#34;abcd&#34;; const char* pChar3 = &#34;abcd&#34;; int* ptr1 = (int*)malloc(sizeof(int) * 4); int* ptr2 = (int*)calloc(4, sizeof(int)); int* ptr3 = (int*)realloc(ptr2, sizeof(int) * 4); free(ptr1); free(ptr3); } 数据段就是我们常说的静态区，代码段就是我们所说的常量区。而动态内存管理，主要管理的是堆区中的内存空间。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T20:19:53+08:00">
+    <meta property="article:modified_time" content="2024-05-22T20:19:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【C/C&#43;&#43;】动态内存管理（C：malloc，realloc，calloc，free || C&#43;&#43;：new，delete）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/a6/9b/53RgOTYK_o.png" alt="在这里插入图片描述"></p> 
+<p>🔥<font color="SandyBrown"><strong>个人主页：</strong> <a href="https://blog.csdn.net/2303_79329831?spm=1000.2115.3001.5343"><font color="LightSeaGreen"><strong>Forcible Bug Maker</strong></font></a><br> 🔥<strong>专栏：</strong> <a href="https://blog.csdn.net/2303_79329831/category_12597496.html?spm=1001.2014.3001.5482"><font color="LightSeaGreen"><strong>C++</strong></font></a> | | <a href="https://blog.csdn.net/2303_79329831/category_12598443.html?spm=1001.2014.3001.5482"><font color="LightSeaGreen"><strong>C语言</strong></font></a><br> </font></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#_5" rel="nofollow">前言</a></li><li><a href="#CC_9" rel="nofollow">C/C++内存分布</a></li><li><a href="#Cmallocreallocreallocfree_77" rel="nofollow">C语言中的动态内存管理：malloc/realloc/realloc/free</a></li><li><ul><li><a href="#malloc_79" rel="nofollow">`malloc`</a></li><li><a href="#realloc_97" rel="nofollow">`realloc`</a></li><li><a href="#calloc_130" rel="nofollow">`calloc`</a></li><li><a href="#free_152" rel="nofollow">`free`</a></li></ul> 
+  </li><li><a href="#Cnewdelete_173" rel="nofollow">C++中的动态内存管理：new/delete</a></li><li><ul><li><a href="#newdelete_181" rel="nofollow">new和delete操作内置类型</a></li><li><a href="#newdelete_216" rel="nofollow">new和delete操作自定义类型</a></li><li><a href="#operator_newoperator_delete_263" rel="nofollow">operator new与operator delete函数</a></li><li><a href="#newdelete_315" rel="nofollow">new和delete的实现原理</a></li><li><a href="#newplacementnew_334" rel="nofollow">定位new表达式(placement-new)</a></li></ul> 
+  </li><li><a href="#_403" rel="nofollow">结语</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_5"></a>前言</h2> 
+<blockquote> 
+ <p>本篇博客主要内容：<strong>C++和C语言的动态内存管理方式，机制以及两者之间的区别。</strong></p> 
+</blockquote> 
+<p>在学习C语言的过程中，也曾涉及过动态内存管理，我们可以使用<code>malloc</code>，<code>realloc</code>，<code>calloc</code>等函数来动态管理堆中空间资源。而在C++中，有了新的动态内存管理方式，那就是<code>new</code>和<code>delete</code>关键字。忽然发现之前似乎并没有讲C语言的几个动态内存管理函数，所以标题是 <strong>【C/C++】动态内存管理</strong> ，不过不止如此，本次还会介绍new，delete关键字的底层，并区分一下C和C++内存管理之间的不同。</p> 
+<h2><a id="CC_9"></a>C/C++内存分布</h2> 
+<p>在开始讲解之前，想通过一道题引入今天的内容。</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;iostream&gt;</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+<span class="token keyword">int</span> globalVar <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">static</span> <span class="token keyword">int</span> staticGlobalVar <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">Test</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">static</span> <span class="token keyword">int</span> staticVar <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span> localVar <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span> num1<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+	<span class="token keyword">char</span> char2<span class="token punctuation">[</span><span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token string">"abcd"</span><span class="token punctuation">;</span>
+	<span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> pChar3 <span class="token operator">=</span> <span class="token string">"abcd"</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> ptr1 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> ptr2 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">calloc</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> ptr3 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">realloc</span><span class="token punctuation">(</span>ptr2<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>ptr1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>ptr3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>数据段就是我们常说的<strong>静态区</strong>，代码段就是我们所说的<strong>常量区</strong>。而动态内存管理，主要管理的是<strong>堆区中的内存空间</strong>。</p> 
+<blockquote> 
+ <p><strong>选择题：</strong><br> 选项: A.栈 B.堆 C.数据段(静态区) D.代码段(常量区)<br> ①g/lobalVar在哪里？②____ staticGlobalVar在哪里？___<br> ③//staticVar在哪里？___ ④localVar在哪里？____<br> ⑤num1 在哪里？____</p> 
+</blockquote> 
+<ol><li><code>globalVal</code>是全局变量，存储在<strong>数据段(静态区)</strong>。</li><li><code>staticGlobalVal</code>是静态全局变量，同时是静态的，因此它同样存储在<strong>数据段(静态区)</strong>。</li><li><code>staticVar</code>是静态局部变量，存储在<strong>数据段(静态区)</strong>，其生命周期贯穿整个程序的执行。</li><li><code>localVar</code>是局部变量，存储在<strong>栈</strong>上。</li><li><code>num1</code>是局部变量，本质是数组指针（存储着数组首元素地址）存储在<strong>栈</strong>上。</li></ol> 
+<blockquote> 
+ <p><strong>选择题：</strong><br> ①char2在哪里？____ ②<em>char2在哪里？____<br> ③pChar3在哪里？___ _④</em>pChar3在哪里？_____<br> ⑤ptr1在哪里？____ ⑥*ptr1在哪里？____</p> 
+</blockquote> 
+<ol><li><code>char2</code>和<code>num1</code>性质是一样的，为局部变量，是数组首元素地址，存储在<strong>栈</strong>上。</li><li><code>*char2</code>是栈帧中直接开辟空间存储的数据，在<strong>栈</strong>上。</li><li><code>pChar3</code>是局部指针变量，存储在<strong>栈</strong>上。</li><li><code>*pChar3</code>指向的内容（为<strong>常量字符串</strong>"abcd"）存储在<strong>代码段(常量区)</strong>。</li><li><code>ptr1</code>是局部指针变量，存储在栈上。</li><li><code>*ptr1</code>指向的内存空间是通过<strong>malloc</strong>动态开辟的，存储在<strong>堆</strong>上。</li></ol> 
+<blockquote> 
+ <ul><li><code>*char2</code><strong>（局部字符数组）</strong><br> 当声明一个局部字符数组并用一个字符串字面量初始化的时候，如<code>char char2[] = "abcd";</code>或<code>char char2[5] = "abcd";</code>时，编译器在栈上会为数组分配内存，然后将字符串字面量的内容（包括结尾的**\0**）复制到这块内存中。因此char2指向的内容存储在栈上。</li><li><code>*pChar</code><strong>（字符串字面量指针）</strong><br> 当你使用指针去指向一个字符串常量（“abcd”）时，由于字符串常量是存储在<strong>代码段(常量区)</strong> 的，所以必须用const修饰才能接收到常量内容的地址（这样规定的原因是为了防止你对常/量做出修改，此时的"abcd"就跟数字1，2，3等等常量的性质是一样的）。故<code>const char* pChar3 = "abcd";</code>中，尽管pChar是一个指针，存储在栈中，但其却指向的字符串却存储在常量区。</li></ul> 
+</blockquote> 
+<blockquote> 
+ <p><code>*char2</code>不在常量区，因为<strong>char2</strong>是局部字符数组，其内容直接存储在栈上。<br> <code>*pChar3</code>在常量区，是因为它指向的是一个字符串字面量（“abcd”），字符串字面量存储在程序的常量区，这部分内存只能读，不能改动。</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/07/cf/eN50VihR_o.png" alt="在这里插入图片描述"></p> 
+<p>内存主要可以分为几个部分：<code>栈（Stack）</code>、<code>堆（Heap）</code>、<code>数据段（Data Segment）</code>和<code>代码段（Code Segment）</code>。而我们的数据通常也存储在这些地方。</p> 
+<blockquote> 
+ <ol><li><code>栈（Stack）</code>：<br> 自动变量（包括局部变量和函数参数）通常分配在栈上。当函数被调用时，它的参数和局部变量会在栈上分配空间。当函数返回时，这些空间会被自动释放。<br> 栈内存分配和释放由编译器自动处理，不需要程序员手动管理。</li><li><code>堆（Heap）</code>：<br> 通过malloc、calloc、realloc等函数分配的内存位于堆上。堆用于动态内存分配，程序员需要手动管理内存的分配和释放。<br> 堆上的内存可以在程序的运行期间随时分配和释放，适用于需要动态创建和销毁的对象。</li><li><code>静态存储区</code>：<br> 全局变量和静态变量（无论是在函数内部还是外部声明的静态变量）存储在全局/静态存储区。<br> 这些变量在程序的整个生命周期中都存在，不会被自动释放。它们的初始化发生在程序启动时，释放则发生在程序结束时。</li><li><code>常量区</code>：<br> 存储常量字符串和字面量的地方。这些常量在程序的生命周期内都是固定的，不会被修改。</li></ol> 
+</blockquote> 
+<h2><a id="Cmallocreallocreallocfree_77"></a>C语言中的动态内存管理：malloc/realloc/realloc/free</h2> 
+<p>C语言里，关于动态内存的管理，是依靠一套标准的<strong>库函数</strong>完成的，它们包括<code>malloc</code>，<code>realloc</code>，<code>calloc</code>和<code>free</code>。这些函数允许在程序中随时开辟，分配和调整<strong>堆</strong>中的内存，都统一放在头文件<code>&lt;stdlib.h&gt;</code>中。下面是关于这些函数的基本用法以及它们之间的区别：</p> 
+<h3><a id="malloc_79"></a><code>malloc</code></h3> 
+<ul><li><strong>头文件：</strong> <code>&lt;stdlib.h&gt;</code></li><li><strong>函数声明：</strong> <code>void* malloc(size_t size);</code></li><li><strong>功能：</strong> 在堆中开辟指定字节数的未初始化内存，并返回一个指向新开辟内存的指针。如果分配失败，则返回空指针<code>NULL</code>。</li><li><strong>示例：</strong></li></ul> 
+<pre><code class="prism language-c"><span class="token comment">// 为代码开辟了大小能存放四个整型数据的空间</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 这个ptr指针，指向内存空间首元素地址</span>
+<span class="token operator">*</span>ptr <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%d "</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/82/f5/BL9zXToA_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="realloc_97"></a><code>realloc</code></h3> 
+<ul><li><strong>头文件：</strong> <code>&lt;stdlib.h&gt;</code></li><li><strong>函数声明：</strong> <code>void* realloc(void* ptr,size_t size);</code></li><li><strong>功能：</strong> 调整之前调用malloc或calloc分配的内存块（<strong>传入的ptr为针指向此内存块的指针，如果ptr为NULL，那么realloc的功能就等同于malloc</strong>）。如果新的大小大于原始大小，可能会移动内存块到新的位置以提供足够的空间（移动过程<strong>也会把内存块中的值相应的拷贝到新的空间</strong>）。</li><li><strong>示例：</strong></li></ul> 
+<pre><code class="prism language-c"><span class="token comment">// 为代码开辟了大小能存放四个整型数据的空间</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 这个ptr指针，指向内存空间首元素地址</span>
+<span class="token operator">*</span>ptr <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+<span class="token comment">//此时空间已经被放满</span>
+ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">realloc</span><span class="token punctuation">(</span>ptr<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">4</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">5</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">5</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%d "</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e8/53/LlLMl215_o.png" alt="在这里插入图片描述"><br> 在上面的示例代码中，使用realloc的方式是<strong>极其不安全且不被推荐的</strong>，当realloc开辟空间失败时，<strong>返回值NULL会让原本ptr指向的空间也丢失掉</strong>，所以使用realloc时，应该像下面这样。</p> 
+<pre><code class="prism language-c"><span class="token keyword">int</span><span class="token operator">*</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span><span class="token operator">*</span> tmp <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">realloc</span><span class="token punctuation">(</span>ptr<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 判断是否realloc成功</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>tmp <span class="token operator">==</span> <span class="token constant">NULL</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	<span class="token function">perror</span><span class="token punctuation">(</span><span class="token string">"realloc fail:"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">exit</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">// 此时将tmp赋值给ptr就是安全的</span>
+ptr <span class="token operator">=</span> tmp<span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="calloc_130"></a><code>calloc</code></h3> 
+<ul><li><strong>头文件：</strong> <code>&lt;stdlib.h&gt;</code></li><li><strong>函数声明：</strong> <code>void* calloc(size_t num,size_t size);</code></li><li><strong>功能：</strong> <strong>为指定数量的元素分配内存</strong>，<strong>每个元素的大小在第二个参数中指定</strong>，并<strong>自动初始化所有位为0</strong>。如果分配失败，返回<code>NULL</code>。</li><li><strong>示例：</strong></li></ul> 
+<pre><code class="prism language-c"><span class="token comment">// 为代码开辟了大小能存放四个整型数据的空间</span>
+<span class="token comment">// 同时初始化所有位为0</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">calloc</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%d "</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// 这个ptr指针，指向内存空间首元素地址,</span>
+<span class="token operator">*</span>ptr <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">3</span><span class="token punctuation">;</span>
+<span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> <span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token number">4</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"%d "</span><span class="token punctuation">,</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"\n"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/95/61/OIjJUrxl_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="free_152"></a><code>free</code></h3> 
+<ul><li><strong>头文件：</strong> <code>&lt;stdlib.h&gt;</code></li><li><strong>函数声明：</strong> <code>void free(void ptr);</code></li><li><strong>功能：</strong> 释放之前通过<code>malloc</code>，<code>calloc</code>或<code>realloc</code>分配的内存。一但内存被释放，被释放那块内存就不能再被访问了。</li><li><strong>示例：</strong></li></ul> 
+<pre><code class="prism language-c"><span class="token keyword">int</span><span class="token operator">*</span> ptr1 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span><span class="token operator">*</span> ptr2 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr2 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">realloc</span><span class="token punctuation">(</span>ptr2<span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">int</span><span class="token operator">*</span> ptr3 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">calloc</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span> <span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token function">free</span><span class="token punctuation">(</span>ptr1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">free</span><span class="token punctuation">(</span>ptr2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token function">free</span><span class="token punctuation">(</span>ptr3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>注：</strong><br> 在你开辟使用完堆中内存但忘记free释放时，编译器不会报错，但是<strong>被开辟的这块空间会一直存在于堆中，无法再次被开辟使用，导致内存泄露</strong>。内存泄露在大型项目中是个严重的暗病，不会立即显示，但是非常可能会在项目运行时冷不丁让空间开辟失败导致程序崩溃。<br> 同时，<code>不要</code>尝试去<strong>释放</strong><code>未经分配的内存块</code>或者<code>多次释放同一个内存块</code>，可能会导致未定义的行为，因此，每个分配的内存块<code>至多free一次</code>。</p> 
+<h2><a id="Cnewdelete_173"></a>C++中的动态内存管理：new/delete</h2> 
+<p>C语言内存管理方式在C++中可以继续使用，但<strong>有些地方就无能为力，而且使用起来比较麻烦，因此C++又提出了自己的内存管理方式</strong>：通过<code>new</code>和<code>delete</code>操作符进行动态内存管理。</p> 
+<ul><li><strong>new：</strong><br> <strong>用于在运行时动态的分配内存并返回该内存的指针</strong>。它可以与数据类型一起使用，以指定要分配的内存大小和类型。例如，<code>int* p = new int;</code>这行代码会分配一个足以存储int类型数据的内存块，并将返回的地址赋值给指针p。</li><li><strong>delete：</strong><br> <strong>用于释放由new分配的内存</strong>。在C++中，必须显示释放不再需要的内存，以防止内存泄漏。delete运算符接受一个指针作为参数，并释放该指针指向的内存。例如，<code>delete p;</code>这行代码会释放之前由new为p分配的内存。</li></ul> 
+<p>接下来，我们详细讲讲new和delete的用法。</p> 
+<h3><a id="newdelete_181"></a>new和delete操作内置类型</h3> 
+<p><img src="https://images2.imgbox.com/e6/66/B1L2i6K4_o.png" alt="在这里插入图片描述"><br> <strong>申请和释放单个元素的空间，使用new和delete操作符，申请和释放连续的空间，使用new[]和delete[]。</strong><br> 下面可以来看一组代码案例：</p> 
+<pre><code class="prism language-cpp"><span class="token comment">// 动态申请一个int类型的空间</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">;</span>
+cout <span class="token operator">&lt;&lt;</span> <span class="token operator">*</span>ptr1 <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+<span class="token comment">// 动态申请一个int类型的空间并初始化为10</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+cout <span class="token operator">&lt;&lt;</span> <span class="token operator">*</span>ptr2 <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+<span class="token comment">// 动态申请10个int类型的空间</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr3 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr3 <span class="token operator">+</span> i<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+<span class="token comment">// 动态申请10个int类型的空间，并初始化</span>
+<span class="token keyword">int</span><span class="token operator">*</span> ptr4 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">[</span><span class="token number">3</span><span class="token punctuation">]</span> <span class="token punctuation">{<!-- --></span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token operator">*</span><span class="token punctuation">(</span>ptr4 <span class="token operator">+</span> i<span class="token punctuation">)</span> <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+<span class="token keyword">delete</span> ptr1<span class="token punctuation">;</span>
+<span class="token keyword">delete</span> ptr2<span class="token punctuation">;</span>
+<span class="token comment">// 释放数组空间delete之后指针之前要加[]</span>
+<span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> ptr3<span class="token punctuation">;</span>
+<span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> ptr4<span class="token punctuation">;</span>
+</code></pre> 
+<p>以下是此段代码运行结果：<br> <img src="https://images2.imgbox.com/8e/ea/UkNpDV5X_o.png" alt="在这里插入图片描述"><br> 可以看出，<strong>单纯的new不会自动给内置类型初始化</strong>。所以，<strong>如果需要特定的值，需要像ptr2那样给动态申请的空间初始化</strong>。<br> 通过ptr3和ptr4的对比，会发现，<strong>new同样不会对动态开辟的数组进行初始化</strong>，但是可以<strong>通过ptr4初始化数组的方式，此时，未被赋值的类型会自动初始化成0</strong>。</p> 
+<h3><a id="newdelete_216"></a>new和delete操作自定义类型</h3> 
+<p>单纯拿new和delete对内置类型的操作来说，其实与C语言想必并没有什么太大的优势。但是C++中多了类这一个新的内容之后，new和delete就大有用武之地了。<strong>在申请自定义类型的空间时，new会调用构造函数，delete会调用析构函数，而malloc与free不会。</strong> 自动调用构造和析构的作用可不小，当你的自定义类型有一个指针指向某一块资源的时候，就非常有必要了。<strong>自动调用构造和析构可以帮助你在动态内存管理的过程中自动开辟和释放指对象中的针指向的资源，很大程度上避免了空指针和内存泄露等问题。</strong><br> 下面可以看一段代码案例帮助理解：</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;iostream&gt;</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">A</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">A</span><span class="token punctuation">(</span><span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+		<span class="token operator">:</span> <span class="token function">_a</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"A():"</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~A():"</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _a<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token comment">// new/delete 和 malloc/free最大区别是 new/delete对于【自定义类型】</span>
+	<span class="token comment">// 除了开空间还会调用构造函数和析构函数</span>
+	A<span class="token operator">*</span> p1 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	A<span class="token operator">*</span> p2 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token function">A</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">delete</span> p2<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	
+	<span class="token comment">// 内置类型是几乎是一样的</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> p3 <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">int</span><span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span><span class="token keyword">int</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// C</span>
+	<span class="token keyword">int</span><span class="token operator">*</span> p4 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token keyword">int</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p3<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">delete</span> p4<span class="token punctuation">;</span>
+
+	A<span class="token operator">*</span> p5 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	A<span class="token operator">*</span> p6 <span class="token operator">=</span> <span class="token keyword">new</span> A<span class="token punctuation">[</span><span class="token number">10</span><span class="token punctuation">]</span><span class="token punctuation">;</span><span class="token comment">// 自动调用10次构造和析构</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p5<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">delete</span><span class="token punctuation">[</span><span class="token punctuation">]</span> p6<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/11/88/SHoPMlu5_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><strong>注：new和delete需要匹配使用，不要和C语言中的动态内存管理函数交叉，否则运行的结果是未定义的。</strong></p> 
+</blockquote> 
+<h3><a id="operator_newoperator_delete_263"></a>operator new与operator delete函数</h3> 
+<p><code>new</code>和<code>delete</code>是用户进行<strong>动态内存申请和释放的操作符</strong>，<code>operator new</code> 和<code>operator delete</code>是系统提供的<strong>全局函数</strong>，<strong>new在底层调用operator new</strong>全局函数来申请空间，<strong>delete在底层通过operator delete全局函数</strong>来释放空间。</p> 
+<p>我们可以简单来看一下，operator new与operator delete的全局定义：</p> 
+<pre><code class="prism language-cpp"><span class="token comment">/*
+operator new：该函数实际通过malloc来申请空间，当malloc申请空间成功时直接返回；申请空间
+失败，尝试执行空 间不足应对措施，如果改应对措施用户设置了，则继续申请，否
+则抛异常。
+*/</span>
+<span class="token keyword">void</span><span class="token operator">*</span> __CRTDECL <span class="token keyword">operator</span> <span class="token keyword">new</span><span class="token punctuation">(</span>size_t size<span class="token punctuation">)</span> <span class="token function">_THROW1</span><span class="token punctuation">(</span>_STD bad_alloc<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token comment">// try to allocate size bytes</span>
+	<span class="token keyword">void</span><span class="token operator">*</span> p<span class="token punctuation">;</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>p <span class="token operator">=</span> <span class="token function">malloc</span><span class="token punctuation">(</span>size<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">_callnewh</span><span class="token punctuation">(</span>size<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span>
+		<span class="token punctuation">{<!-- --></span>
+			<span class="token comment">// report no memory</span>
+			<span class="token comment">// 如果申请内存失败了，这里会抛出bad_alloc 类型异常</span>
+			<span class="token keyword">static</span> <span class="token keyword">const</span> std<span class="token double-colon punctuation">::</span>bad_alloc nomem<span class="token punctuation">;</span>
+			<span class="token function">_RAISE</span><span class="token punctuation">(</span>nomem<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+	<span class="token keyword">return</span> <span class="token punctuation">(</span>p<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">/*
+operator delete: 该函数最终是通过free来释放空间的
+*/</span>
+<span class="token keyword">void</span> <span class="token keyword">operator</span> <span class="token keyword">delete</span><span class="token punctuation">(</span><span class="token keyword">void</span><span class="token operator">*</span> pUserData<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	_CrtMemBlockHeader<span class="token operator">*</span> pHead<span class="token punctuation">;</span>
+	<span class="token function">RTCCALLBACK</span><span class="token punctuation">(</span>_RTC_Free_hook<span class="token punctuation">,</span> <span class="token punctuation">(</span>pUserData<span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>pUserData <span class="token operator">==</span> <span class="token constant">NULL</span><span class="token punctuation">)</span>
+		<span class="token keyword">return</span><span class="token punctuation">;</span>
+	<span class="token function">_mlock</span><span class="token punctuation">(</span>_HEAP_LOCK<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">/* block other threads */</span>
+	__TRY
+		<span class="token comment">/* get a pointer to memory block header */</span>
+		pHead <span class="token operator">=</span> <span class="token function">pHdr</span><span class="token punctuation">(</span>pUserData<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">/* verify block type */</span>
+	<span class="token function">_ASSERTE</span><span class="token punctuation">(</span><span class="token function">_BLOCK_TYPE_IS_VALID</span><span class="token punctuation">(</span>pHead<span class="token operator">-&gt;</span>nBlockUse<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">_free_dbg</span><span class="token punctuation">(</span>pUserData<span class="token punctuation">,</span> pHead<span class="token operator">-&gt;</span>nBlockUse<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	__FINALLY
+		<span class="token function">_munlock</span><span class="token punctuation">(</span>_HEAP_LOCK<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">/* release other threads */</span>
+	__END_TRY_FINALLY
+		<span class="token keyword">return</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+<span class="token comment">/*
+free的实现
+*/</span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">free</span><span class="token expression"><span class="token punctuation">(</span>p<span class="token punctuation">)</span> <span class="token function">_free_dbg</span><span class="token punctuation">(</span>p<span class="token punctuation">,</span> _NORMAL_BLOCK<span class="token punctuation">)</span></span></span>
+</code></pre> 
+<p>通过上述两个全局函数的实现知道，<strong>operator new 实际也是通过malloc来申请空间</strong>，如果malloc申请空间成功就直接返回，否则执行用户提供的空间不足应对措施，如果用户提供该措施就继续申请，<strong>否则就抛异常</strong>。<strong>operator delete 最终是通过free来释放空间的</strong>。</p> 
+<h3><a id="newdelete_315"></a>new和delete的实现原理</h3> 
+<p>本质上说，<strong>new实际上就是operator new的一个封装，而operator new又是malloc的一个封装；delete实际上就是operator delete的一个封装，而operator delete又是free的一个封装</strong>。<br> <img src="https://images2.imgbox.com/f1/a6/MhhKeFAE_o.png" alt="在这里插入图片描述"></p> 
+<ul><li><strong>内置类型：</strong><br> 如果申请的是内置类型的空间，new和malloc，delete和free基本类似，不同的地方是：new/delete申请和释放的是单个元素的空间，new[]和delete[]申请的是连续空间，而且new在申请空间失败时会抛异常，malloc会返回NULL。</li><li><strong>自定义类型：</strong> 
+  <ul><li><code>new的原理</code> 
+    <ol><li>调用operator new函数申请空间</li><li>在申请的空间上执行构造函数，完成对象的构造</li></ol> </li><li><code>delete的原理</code> 
+    <ol><li>在空间上执行析构函数，完成对象中资源的清理工作</li><li>调用operator delete函数释放对象的空间</li></ol> </li><li><code>new T[N]的原理</code> 
+    <ol><li>调用operator new[]函数，在operator new[]中实际调用operator new函数完成N个对象空间的申请</li><li>在申请的空间上执行N次构造函数</li></ol> </li><li><code>delete[]的原理</code> 
+    <ol><li>在释放的对象空间上执行N次析构函数，完成N个对象中资源的清理</li><li>调用operator delete[]释放空间，实际在operator delete[]中调用operator delete来释放空间</li></ol> </li></ul> </li></ul> 
+<h3><a id="newplacementnew_334"></a>定位new表达式(placement-new)</h3> 
+<p>定位new表达式是在<strong>已分配的原始内存空间中调用构造函数初始化一个对象。</strong></p> 
+<blockquote> 
+ <p><strong>使用格式：</strong><br> <strong>new (place_address) type</strong> 或<strong>new(place_address)type(initializer-list)</strong><br> <strong>place_address必须是一个指针，initializer-list是类型的初始化列表。</strong></p> 
+</blockquote> 
+<blockquote> 
+ <p><strong>定位new表达式在实际中一般是配合内存池使用。因为内存池分配出的内存没有初始化，所以如果是自定义类型的对象，需要使用new的定义表达式进行显示调构造函数进行初始化。</strong></p> 
+</blockquote> 
+<p>下面看一组代码案例：</p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span><span class="token string">&lt;iostream&gt;</span></span>
+<span class="token keyword">using</span> <span class="token keyword">namespace</span> std<span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">A</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">A</span><span class="token punctuation">(</span><span class="token keyword">int</span> a <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+		<span class="token operator">:</span> <span class="token function">_a</span><span class="token punctuation">(</span>a<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"A():"</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~A():"</span> <span class="token operator">&lt;&lt;</span> <span class="token keyword">this</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">int</span> _a<span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">// 定位new/replacement new使用演示</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token comment">// p1现在指向的只不过是与A对象相同大小的一段空间，还不能算是一个对象，因为构造函数没有执行</span>
+	A<span class="token operator">*</span> p1 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">new</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span>A<span class="token punctuation">;</span> <span class="token comment">// 注意：如果A类的构造函数有参数时，此处需要传参</span>
+	p1<span class="token operator">-&gt;</span><span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	
+	A<span class="token operator">*</span> p2 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token keyword">operator</span> <span class="token keyword">new</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">new</span><span class="token punctuation">(</span>p2<span class="token punctuation">)</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	p2<span class="token operator">-&gt;</span><span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">operator</span> <span class="token keyword">delete</span><span class="token punctuation">(</span>p2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+	<span class="token comment">// 当你想创建多个对象，可以考虑使用循环</span>
+	A<span class="token operator">*</span> p3 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token keyword">operator</span> <span class="token keyword">new</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+		<span class="token keyword">new</span><span class="token punctuation">(</span>p3 <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span>p3 <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token operator">-&gt;</span>_a <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+		<span class="token punctuation">(</span>p3 <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+
+	<span class="token comment">// 要创建多个对象时，也可以这样使用定位new，编译器支持</span>
+	A<span class="token operator">*</span> p4 <span class="token operator">=</span> <span class="token punctuation">(</span>A<span class="token operator">*</span><span class="token punctuation">)</span><span class="token function">malloc</span><span class="token punctuation">(</span><span class="token keyword">sizeof</span><span class="token punctuation">(</span>A<span class="token punctuation">)</span> <span class="token operator">*</span> <span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">new</span><span class="token punctuation">(</span>p4<span class="token punctuation">)</span>A<span class="token punctuation">[</span><span class="token number">4</span><span class="token punctuation">]</span> <span class="token punctuation">{<!-- --></span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token punctuation">(</span>p4 <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token operator">-&gt;</span>_a <span class="token operator">&lt;&lt;</span> <span class="token string">" "</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+		<span class="token punctuation">(</span>p4 <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token operator">-&gt;</span><span class="token operator">~</span><span class="token function">A</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">free</span><span class="token punctuation">(</span>p4<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>运行结果如图：<br> <img src="https://images2.imgbox.com/ea/34/IuGUmfCU_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_403"></a>结语</h2> 
+<p><strong>本篇博客详细讲解了C和C++中动态内存管理的方式，在C语言中，可以使用，malloc，realloc，calloc和free这四个函数进行动态内存管理；在C++中虽然也支持使用C中的四个函数，但新增的new和delete关键字能自动调用自定义类型的拷贝构造函数和析构函数，且开辟或释放失败后不再返回空指针，而是抛异常。我们同样讲到了operator new和operator delete这两个全局函数，它们通过封装能得到我们的new和delete。最后提到了定位new，可以支持给已经开辟的自定义类型空间进行构造或赋值。</strong> 关于内存管理的内容还不止于此，在后期的C++11的内容中，会讲到智能指针，内存泄露问题的规避管理等等知识。<br> 博主后续还会产出更多有意思的内容，感谢大家的支持！♥</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/af5c2436390ed33e8b232d244977cfbb/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">AI大模型探索之路-基础篇5：GLM-4解锁国产大模型的全能智慧与创新应用</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9fe3a85dc02c0e3a33692b110058c61b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">JVM-调优之-如何使用arthas-观察jvm-cpu-内存-垃圾回收等信息</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

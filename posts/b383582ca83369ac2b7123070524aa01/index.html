@@ -1,0 +1,227 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android抓包工具—Fiddler详解 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b383582ca83369ac2b7123070524aa01/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android抓包工具—Fiddler详解">
+  <meta property="og:description" content="前言 平时和其他大佬交流时，总会出现这么些话，“抓个包看看就知道哪出问题了”，“抓流量啊，payload都在里面”，“这数据流怎么这么奇怪”。
+👉这里出现的名词，其实都是差不多的意思啊，这都跟抓包这个词有关，说到抓包呢我们今天就先来了解一下抓包的一些基础定义跟抓包工具Fiddler的使用跟安装吧。
+本篇文章，博主只想使用通俗易懂的话语，让大家明白以下内容：
+什么是抓包哪些场景需要用到抓包Fiddler抓包的原理怎样使用Fiddler进行移动端抓包
+同时，在这我也准备了一份软件测试视频教程（含接口、自动化、性能等），需要的可以直接在下方观看，或者直接关注VX公众号：互联网杂货铺，免费领取
+软件测试视频教程观看处：（Fiddler抓包视频教程从P104开始）
+2023最新【软件测试面试300问】面试八股文教程，涵盖自动化测试/接口测试/性能测试/测试开发等内容
+抓包 包 (Packet) 是TCP/IP协议通信传输中的数据单位，一般也称“数据包”。
+我们平常测试过程中所说的数据包其实就是接口请求的数据，在HTTP请求中，包括请求头信息、请求内容、响应头信息、响应内容。
+什么是抓包 用特定的工具获取客户端与服务端之间发送和返回的数据包。目的是分析数据包的协议、内容等，从而判断接口的设计是否符合要求，比如抓包某次请求的请求参数与响应参数，查看参数是否正确。
+哪些场景下需要抓包 对于初学者或者没有接触过接口测试的同学而言，可能不太明白做接口测试或者接口自动化测试为什么一定要学会对接口数据进行抓包。
+那么在哪些场景下需要抓包获取请求数据呢？
+重现bug，需要截取数据定位问题时；判断问题是前端bug还是后端bug时；做接口测试，但开发没有提供接口文档时，需要抓包才能获取接口信息；某个功能场景或者某些功能场景我们不知道调用了哪些接口，或者不知道接口调用的先后顺序时；需要修改返回参数时（用于mock或者别的场景） 在实际测试过程中，用的最多的场景是1、2、3、4。
+Fiddler 抓包工具有很多种，如Wireshark、Fiddler、Charlse、Tcpdump、浏览器工具(F12)等，但在软件测试工作中抓包对象一般是HTTP协议的接口，所以最多的是浏览器工具、Fiddler/Charlse。
+Fiddler特点简单归纳如下：
+Fiddler能抓取客户端和服务器之间的HTTP/HTTPS请求，可以对接口请求设置断点，甚至修改输入输出数据Fiddler只能抓取HTTP/HTTPS协议Fiddler除能对PC端浏览器抓包外，还支持对移动端进行抓包 Fiddler抓包原理 通常，我们使用浏览器浏览网页，或者使用手机上的APP，交互可以使用以下简化的流程图表示：
+客户端(PC端或移动端) 向服务端通过发送HTTP请求进行数据交互，而我们的需求是，抓取这个交互过程中的数据。
+我们只需要在客户端与服务端之间加上一个中介，让它们之间交互的数据都通过这个中介，中介记录这些通过自身的数据，就能获取到客户端与服务端之间具体的交互数据了。
+Fiddler便可以充当这个中介角色，交互流程如下：
+启动Fiddler其实就是启动了一台代理web服务器(Proxy)，代理地址为127.0.0.1，端口为8888。只要HTTP请求通过127.0.0.1:8888 (即Fiddler) 进行代理发送与接收，Fiddler就会记录经过自身的HTTP请求数据，便抓取到了HTTP请求的相关数据。
+而怎样才能使得HTTP请求都通过127.0.0.1:8888进行代理？Fiddler启动时IE浏览器的代理会自动设置127.0.0.1:8888为代理地址，Chrome、Firefox需要在浏览器中手动修改，移动端则需要在手机里设置。
+安装 进入官网下载，地址为：https://www.telerik.com/download/fiddler
+需填写内容可填写如下，Windows系统点击【Download for Windows】，点击后会跳转页面并开始下载 (没有的话可以多尝试两次) ，如果没有下载可根据跳转页面提示进行点击。
+下载后得到安装文件FiddlerSetup.exe，一路傻瓜式安装即可。目前下载的版本为Progress Telerik Fiddler Classic。
+安装完成后，打开Fiddler，主界面如下：
+如图所示，切换至Inspectors可查看对应请求的请求参数和返回参数请求参数、返回参数不同内容及格式的展示，可以切换图中对应展示窗口顶部的Tab按钮，如Headers、WebForms、Raw、Json等。会话窗口图标说明见文章末说明。 接下来介绍怎样使用Fiddler进行手机移动端抓包。
+Fiddler移动端抓包 我们先来屡一下移动端抓包的大概思路：
+Fiddler需要设置允许远程计算机连接，即允许手机移动端抓包；设置手机代理网络代理，使手机通过Fiddler代理发送HTTP请求 (即Fiddler充当数据发送接收的中介)；https请求抓包设置（如果只抓取http请求，以上两步设置就可以了，但实际工作中经常需要抓取https请求数据）。 按照如上思路我们开始进行具体设置。
+第一步：允许远程计算机连接 设置步骤：Tools--&gt;Options--&gt;Connections--&gt;勾选Allow remote computers to connect--&gt;再点击OK，其他默认即可，如下图所示：
+勾选后如果有弹窗确认页面，点击【确定】即可。顺便说一下，上图勾选页面中的8888为默认的端口号，在第二步设置时需要使用。
+第二步，设置手机网络代理 首先，需要先获取到安装Fiddler的电脑的IPv4地址，在cmd中输入ipconfig，如下图所示：
+然后，在手机上找到对应的WLAN网络，进行该网络代理的设置，以荣耀V20手机为例，操作步骤如下图所示：
+手机系统设置--&gt;WLAN--&gt;修改网络--&gt;高级选项--&gt;代理--&gt;选择手动--&gt;主机名填入上一步IPv4--&gt;端口填入默认的8888--&gt;保存
+注意：
+手机必须与电脑连接的是同一个网络，即连同一个WIFI或手机直接连电脑的热点，再对这个网络进行代理设置，否则无法抓取数据。第2步选择修改网络时，手机型号不同可能需要不一样的操作才能进入到修改网络页面。 到这一步，重启Fiddler后，便可以对手机上的http请求进行抓包了。如果不能抓取的话，可以在手机里重新保存上图中的代理设置，再进行请求。到这一步后，手机上打开APP操作，抓包的http请求，如下图所示：
+可以看到，这里面只抓取了http请求，如果要对https请求进行抓包，则还需要进行下面的操作。
+第三步，允许捕获HTTPS连接 设置步骤：Tools--&gt;Options--&gt;HTTPS--&gt;勾选Decrypt HTTPS traffic--&gt;再勾选Ignore server certificate errors--&gt;点击OK">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-15T16:17:54+08:00">
+    <meta property="article:modified_time" content="2023-11-15T16:17:54+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android抓包工具—Fiddler详解</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h3 style="background-color:transparent;">前言</h3> 
+<p>平时和其他大佬交流时，总会出现这么些话，“抓个包看看就知道哪出问题了”，“抓流量啊，payload都在里面”，“这数据流怎么这么奇怪”。</p> 
+<p>👉这里出现的名词，其实都是差不多的意思啊，这都跟抓包这个词有关，说到抓包呢我们今天就先来了解一下抓包的一些基础定义跟抓包工具Fiddler的使用跟安装吧。</p> 
+<p class="img-center"><img alt="" height="450" src="https://images2.imgbox.com/97/17/sn2rc2gd_o.png" width="720"></p> 
+<p>本篇文章，博主只想使用通俗易懂的话语，让大家明白以下内容：</p> 
+<p>什么是抓包哪些场景需要用到抓包Fiddler抓包的原理怎样使用Fiddler进行移动端抓包</p> 
+<p><strong>同时，在这我也准备了一份软件测试视频教程（含接口、自动化、性能等），需要的可以直接在下方观看</strong>，或者直接<strong>关注VX公众号：互联网杂货铺</strong>，免费领取</p> 
+<p><strong>软件测试视频教程观看处：（Fiddler抓包视频教程从P104开始）</strong></p> 
+<div class="csdn-video-box"> 
+ <iframe id="smtwykbr-1700036193302" frameborder="0" src="https://player.bilibili.com/player.html?aid=224279074" allowfullscreen="true" data-mediaembed="bilibili"></iframe> 
+ <p>2023最新【软件测试面试300问】面试八股文教程，涵盖自动化测试/接口测试/性能测试/测试开发等内容</p> 
+</div> 
+<h3>抓包</h3> 
+<p>包 (Packet) 是TCP/IP协议通信传输中的数据单位，一般也称“数据包”。</p> 
+<p>我们平常测试过程中所说的数据包其实就是接口请求的数据，在HTTP请求中，包括请求头信息、请求内容、响应头信息、响应内容。</p> 
+<h3>什么是抓包</h3> 
+<p>用特定的工具获取客户端与服务端之间发送和返回的数据包。目的是分析数据包的协议、内容等，从而判断接口的设计是否符合要求，比如抓包某次请求的请求参数与响应参数，查看参数是否正确。</p> 
+<h3>哪些场景下需要抓包</h3> 
+<p>对于初学者或者没有接触过接口测试的同学而言，可能不太明白做接口测试或者接口自动化测试为什么一定要学会对接口数据进行抓包。</p> 
+<p>那么在哪些场景下需要抓包获取请求数据呢？</p> 
+<ol><li>重现bug，需要截取数据定位问题时；</li><li>判断问题是前端bug还是后端bug时；</li><li>做接口测试，但开发没有提供接口文档时，需要抓包才能获取接口信息；</li><li>某个功能场景或者某些功能场景我们不知道调用了哪些接口，或者不知道接口调用的先后顺序时；</li><li>需要修改返回参数时（用于mock或者别的场景）</li></ol> 
+<p>在实际测试过程中，用的最多的场景是1、2、3、4。</p> 
+<h3>Fiddler</h3> 
+<p>抓包工具有很多种，如Wireshark、Fiddler、Charlse、Tcpdump、浏览器工具(F12)等，但在软件测试工作中抓包对象一般是HTTP协议的接口，所以最多的是浏览器工具、Fiddler/Charlse。</p> 
+<p><strong>Fiddler特点简单归纳如下：</strong></p> 
+<ol><li>Fiddler能抓取客户端和服务器之间的HTTP/HTTPS请求，可以对接口请求设置断点，甚至修改输入输出数据</li><li>Fiddler只能抓取HTTP/HTTPS协议</li><li>Fiddler除能对PC端浏览器抓包外，还支持对移动端进行抓包</li></ol> 
+<p class="img-center"><img alt="" height="383" src="https://images2.imgbox.com/27/74/U3ang5mP_o.png" width="900"></p> 
+<h3>Fiddler抓包原理</h3> 
+<p>通常，我们使用浏览器浏览网页，或者使用手机上的APP，交互可以使用以下简化的流程图表示：</p> 
+<p class="img-center"><img alt="" height="242" src="https://images2.imgbox.com/9c/d9/BNQxy9bB_o.png" width="1200"></p> 
+<p>客户端(PC端或移动端) 向服务端通过发送HTTP请求进行数据交互，而我们的需求是，抓取这个交互过程中的数据。</p> 
+<p>我们只需要在客户端与服务端之间加上一个中介，让它们之间交互的数据都通过这个中介，中介记录这些通过自身的数据，就能获取到客户端与服务端之间具体的交互数据了。</p> 
+<p><strong>Fiddler便可以充当这个中介角色，交互流程如下：</strong></p> 
+<p class="img-center"><img alt="" height="106" src="https://images2.imgbox.com/b9/84/dv59pE4T_o.png" width="720"></p> 
+<p>启动Fiddler其实就是启动了一台代理web服务器(Proxy)，代理地址为127.0.0.1，端口为8888。只要HTTP请求通过127.0.0.1:8888 (即Fiddler) 进行代理发送与接收，Fiddler就会记录经过自身的HTTP请求数据，便抓取到了HTTP请求的相关数据。</p> 
+<p>而怎样才能使得HTTP请求都通过127.0.0.1:8888进行代理？Fiddler启动时IE浏览器的代理会自动设置127.0.0.1:8888为代理地址，Chrome、Firefox需要在浏览器中手动修改，移动端则需要在手机里设置。</p> 
+<h3>安装</h3> 
+<p>进入官网下载，地址为：https://www.telerik.com/download/fiddler</p> 
+<p>需填写内容可填写如下，Windows系统点击【Download for Windows】，点击后会跳转页面并开始下载 (没有的话可以多尝试两次) ，如果没有下载可根据跳转页面提示进行点击。</p> 
+<p class="img-center"><img alt="" height="379" src="https://images2.imgbox.com/36/45/JvucOEVa_o.png" width="720"></p> 
+<p>下载后得到安装文件FiddlerSetup.exe，一路傻瓜式安装即可。目前下载的版本为Progress Telerik Fiddler Classic。</p> 
+<p><strong>安装完成后，打开Fiddler，主界面如下：</strong></p> 
+<p class="img-center"><img alt="" height="358" src="https://images2.imgbox.com/b7/25/DY478u4c_o.png" width="720"></p> 
+<ul><li>如图所示，切换至Inspectors可查看对应请求的请求参数和返回参数</li><li>请求参数、返回参数不同内容及格式的展示，可以切换图中对应展示窗口顶部的Tab按钮，如Headers、WebForms、Raw、Json等。</li><li>会话窗口图标说明见文章末说明。</li></ul> 
+<p>接下来介绍怎样使用Fiddler进行手机移动端抓包。</p> 
+<p class="img-center"><img alt="" height="716" src="https://images2.imgbox.com/b8/56/KI0ob2xL_o.png" width="1146"></p> 
+<h3>Fiddler移动端抓包</h3> 
+<p><strong>我们先来屡一下移动端抓包的大概思路：</strong></p> 
+<ol><li>Fiddler需要设置允许远程计算机连接，即允许手机移动端抓包；</li><li>设置手机代理网络代理，使手机通过Fiddler代理发送HTTP请求 (即Fiddler充当数据发送接收的中介)；</li><li>https请求抓包设置（如果只抓取http请求，以上两步设置就可以了，但实际工作中经常需要抓取https请求数据）。</li></ol> 
+<p>按照如上思路我们开始进行具体设置。</p> 
+<h4>第一步：允许远程计算机连接</h4> 
+<p>设置步骤：Tools--&gt;Options--&gt;Connections--&gt;勾选Allow remote computers to connect--&gt;再点击OK，其他默认即可，如下图所示：</p> 
+<p class="img-center"><img alt="" height="334" src="https://images2.imgbox.com/69/43/usfRGMKR_o.png" width="720"></p> 
+<p>勾选后如果有弹窗确认页面，点击【确定】即可。顺便说一下，上图勾选页面中的8888为默认的端口号，在第二步设置时需要使用。</p> 
+<h4>第二步，设置手机网络代理</h4> 
+<p>首先，需要先获取到安装Fiddler的电脑的IPv4地址，在cmd中输入ipconfig，如下图所示：</p> 
+<p class="img-center"><img alt="" height="243" src="https://images2.imgbox.com/3c/fd/yYjOQlvV_o.png" width="1200"></p> 
+<p>然后，在手机上找到对应的WLAN网络，进行该网络代理的设置，以荣耀V20手机为例，操作步骤如下图所示：</p> 
+<p>手机系统设置--&gt;WLAN--&gt;修改网络--&gt;高级选项--&gt;代理--&gt;选择手动--&gt;主机名填入上一步IPv4--&gt;端口填入默认的8888--&gt;保存</p> 
+<p class="img-center"><img alt="" height="390" src="https://images2.imgbox.com/1b/68/rAkFYtd6_o.png" width="720"></p> 
+<p>注意：</p> 
+<ul><li>手机必须与电脑连接的是同一个网络，即连同一个WIFI或手机直接连电脑的热点，再对这个网络进行代理设置，否则无法抓取数据。</li><li>第2步选择修改网络时，手机型号不同可能需要不一样的操作才能进入到修改网络页面。</li></ul> 
+<p>到这一步，重启Fiddler后，便可以对手机上的http请求进行抓包了。如果不能抓取的话，可以在手机里重新保存上图中的代理设置，再进行请求。到这一步后，手机上打开APP操作，抓包的http请求，如下图所示：</p> 
+<p class="img-center"><img alt="" height="333" src="https://images2.imgbox.com/1a/b1/sBKE5M0I_o.png" width="720"></p> 
+<p>可以看到，这里面只抓取了http请求，如果要对https请求进行抓包，则还需要进行下面的操作。</p> 
+<h4>第三步，允许捕获HTTPS连接</h4> 
+<p>设置步骤：Tools--&gt;Options--&gt;HTTPS--&gt;勾选Decrypt HTTPS traffic--&gt;再勾选Ignore server certificate errors--&gt;点击OK</p> 
+<p class="img-center"><img alt="" height="334" src="https://images2.imgbox.com/0d/a0/ilCQE3Hg_o.png" width="720"></p> 
+<p>注意，保存设置后需要重启Fiddler才会生效。</p> 
+<h4>第四步，手机安装证书</h4> 
+<p><strong>步骤如下：</strong></p> 
+<ol><li>在手机上选择任意浏览器，输入第二步中的设置的代理地址，host为即Fiddler安装电脑的IPv4地址，端口号即为默认的8888</li><li>在1打开的网页中点击FiddlerRoot certificate下载证书</li></ol> 
+<p class="img-center"><img alt="" height="335" src="https://images2.imgbox.com/64/51/Dp71vrrq_o.png" width="720"></p> 
+<p>Android手机到这一步就可以了，苹果手机还需要在手机设置里去信任下载的证书，信任证书的操作步骤这里不做过多说明。</p> 
+<p>完成这两步后，我们即可以抓取手机发出的http请求，又可以抓取手机发出的https请求。在手机上打开今日头条APP，验证如下：</p> 
+<p class="img-center"><img alt="" height="386" src="https://images2.imgbox.com/b6/b5/BhSxXtr9_o.png" width="720"></p> 
+<p>至此，Fiddler移动端抓包设置便完成。</p> 
+<p>附上会话窗口图标说明，如下：</p> 
+<p class="img-center"><img alt="" height="550" src="https://images2.imgbox.com/87/5c/2KTj8HQx_o.png" width="720"></p> 
+<p class="img-center"><img alt="" height="198" src="https://images2.imgbox.com/51/43/dBG86bFg_o.png" width="720"></p> 
+<p>补充：</p> 
+<p>如果有需要抓包工具跟教学视频的小伙伴，记得关注<strong>VX公众号：互联网杂货铺</strong>，免费领取</p> 
+<h3 style="background-color:transparent;">写在最后</h3> 
+<p><strong>PS：这里分享一套软件测试的自学教程合集。</strong>对于在测试行业发展的小伙伴们来说应该会很有帮助。除了基础入门的资源，博主也收集不少进阶自动化的资源，从理论到实战，知行合一才能真正的掌握。<strong>全套内容已经打包到网盘，内容总量接近500个G</strong>。如需要软件测试学习资料，<strong>关注公众号（互联网杂货铺）</strong>，后台回复1，整理不易，给个关注点个赞吧，谢谢各位大佬！</p> 
+<p class="img-center"><img alt="" src="https://images2.imgbox.com/0b/e7/DUPMcrxb_o.png"></p> 
+<p>这些资料，对于做【软件测试】的朋友来说应该是最全面最完整的备战仓库，这个仓库也陪伴我走过了最艰难的路程，希望也能帮助到你！凡事要趁早，特别是技术行业，一定要提升技术功底。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/8d0c7e3bf43a8477f8920ee6802160c9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Android】配置Gradle打包apk的环境</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/291e6e1ef953b6e31fd4c61f16cdd28a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Node.js脚手架安装配置、Vue环境搭建以及创建Vue项目 (包括配置环境变量)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,178 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>《MySQL怎样运行的》-从一条记录说起-InnoDB记录存储结构 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d3a0cdb3f4e00a1ba1508cd35fd0263e/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="《MySQL怎样运行的》-从一条记录说起-InnoDB记录存储结构">
+  <meta property="og:description" content="我们都知道MySQL是用来存储数据的，那你有没有的疑问，他是怎么存储的，它实际上是在使用储存引擎，那如果有人问你MySQL的储存引擎有哪些你该怎么说呢，主要是有InnoDB，MyISAM还有MEMORY，后面两种在这里没有过多叙述，我们就来细说一下InnoDB这个储存引擎，我们知道数据存储在硬盘和磁盘里，如果我们想要在数据库里面拿出来，那我们还需不需要和云盘和磁盘打交道，但是这样太慢了，所以InnoDB就创建了页，将数据划分为若干个页，用页来磁盘与内存之间交互的基本单位。页的大小一般为16kb。
+InnoDB行列式 他有很多种格式，COMPACT，REDUNDANT，DYNAMIC，COMPRESSED
+我们今天来详细说一种COMPACT格式，虽然说各有不同，但是在原理上是大致相同的
+上图就是COMPACT格式，他有变长字段长度列表，NULL值列表，记录头信息，还有记录的真实数据
+1.记录的额外信息 也就是变长字段长度列表，和NULL值列表，记录头信息
+变长字段长度列表 我们知道在MySQL中存在一些能够变长的数据类型，比如VARCHAR(),VARBINARY()等等，我们把拥有这些数据类型的列称之为变长字段。但是这些数据类型的字节数是不固定的，所以变长字段要存储的字节数也是不确定的，所以我们在这个变长字段长度列表中，还要存储这些数据类型的字节数，以防止突如其来的东西把MySQL给搞蒙
+所以我们要存储两种东西
+a.是真正的数据内容
+b.是该数据所占据的字节数
+另外该数据所占据的字节数是存放在变长字段长度列表的头部，各变长字段的真是数据的字节数排放的顺序是按逆序排放，逆序排放，逆序排放，重要的事情说三遍~
+另外我其实还有个疑问就是，在这个变长字段长度列表中用多少字节来记录这些数据所占据的字节数？
+其实是1字节或者2字节~ 听我给你解释~
+下面我们需要用几个字母来表示含义W，M，L：
+1.我们字符集用来表示一个字符需要的字节为W
+2.我们在VARCHAR()最多存储的字符一共有M个，所有字节数为W*M
+3.但是实际上存储的字符串是L个字节
+如果W*M&lt;=255，则用一个字节来表示
+若W*M&gt;255分为两种情况
+L&lt;=127则用1个字节
+L&gt;127则用2个字节
+NULL值列表 对于这个部分，大家可能看见就知道他是用来干啥的，其实就是存放NULL的列
+但是这个地方也是有些同学的难点所在~
+其实就是在存放NULL值是是会有一个二进制位的值
+如果该值位1是，就代表该列的值为NULL
+如果该值为0是，就代表该列的值不为NULL
+占1个字节，但是当表中的所有列都定义为NOT NULL时就会没有NULL值列表，会节省1个字节空间
+记录头信息 它是由固定的五个字节组成的，40个二进制位，不同的位有不同的意义
+这一部分说实话有点多，说几个比较重要的
+delete_mask: 删除标志位，很重要。若此标志位为1，代表这条记录已经被删除了。min_mask: B&#43;树非叶子节点中，索引记录的中最小记录。后面讲到索引的时候再说。n_owned: 分组里面包含的记录总数，分组后面再说。heap_no: 后面再说。record_type: 很重要，记录的类型（0-普通用户记录，1-索引记录，2-Infimum, 3-Supremum）next_record: 指针，指向下一条记录，很重要。 然后就是
+MySQL为每个记录默认添加的列 row_id：这个列并不是必备的，占用空间为6个字节，行ID，唯一标识一条记录
+trx_id：这个列是必备的，占用空间为6个字节，事务ID
+roll_pointer：这个列是必备的，占用空间为7个字节，回滚指针
+这就是这一章的内容并不是很难，下一个我们来说一下第五章InnoDB数据页结构~">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-21T14:25:16+08:00">
+    <meta property="article:modified_time" content="2024-05-21T14:25:16+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">《MySQL怎样运行的》-从一条记录说起-InnoDB记录存储结构</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>我们都知道MySQL是用来存储数据的，那你有没有的疑问，他是怎么存储的，它实际上是在使用储存引擎，那如果有人问你MySQL的储存引擎有哪些你该怎么说呢，主要是有InnoDB，MyISAM还有MEMORY，后面两种在这里没有过多叙述，我们就来细说一下InnoDB这个储存引擎，我们知道数据存储在硬盘和磁盘里，如果我们想要在数据库里面拿出来，那我们还需不需要和云盘和磁盘打交道，但是这样太慢了，所以InnoDB就创建了页，将数据划分为若干个页，用页来磁盘与内存之间交互的基本单位。页的大小一般为16kb。</p> 
+<h4>InnoDB行列式</h4> 
+<p>他有很多种格式，COMPACT，REDUNDANT，DYNAMIC，COMPRESSED</p> 
+<p>我们今天来详细说一种COMPACT格式，虽然说各有不同，但是在原理上是大致相同的</p> 
+<p><img alt="" height="162" src="https://images2.imgbox.com/2e/b8/TdTzRBNJ_o.png" width="1200">上图就是COMPACT格式，他有变长字段长度列表，NULL值列表，记录头信息，还有记录的真实数据</p> 
+<h6>1.记录的额外信息</h6> 
+<p>也就是变长字段长度列表，和NULL值列表，记录头信息</p> 
+<h6>变长字段长度列表</h6> 
+<p>我们知道在MySQL中存在一些能够变长的数据类型，比如VARCHAR(),VARBINARY()等等，我们把拥有这些数据类型的列称之为变长字段。但是这些数据类型的字节数是不固定的，所以变长字段要存储的字节数也是不确定的，所以我们在这个变长字段长度列表中，还要存储这些数据类型的字节数，以防止突如其来的东西把MySQL给搞蒙</p> 
+<p>所以我们要存储两种东西</p> 
+<p>a.是真正的数据内容</p> 
+<p>b.是该数据所占据的字节数</p> 
+<p>另外该数据所占据的字节数是存放在变长字段长度列表的头部，各变长字段的真是数据的字节数排放的顺序是按逆序排放，逆序排放，逆序排放，重要的事情说三遍~</p> 
+<p>另外我其实还有个疑问就是，在这个变长字段长度列表中用多少字节来记录这些数据所占据的字节数？</p> 
+<p>其实是1字节或者2字节~ 听我给你解释~</p> 
+<p>下面我们需要用几个字母来表示含义W，M，L：</p> 
+<p>1.我们字符集用来表示一个字符需要的字节为W</p> 
+<p>2.我们在VARCHAR()最多存储的字符一共有M个，所有字节数为W*M</p> 
+<p>3.但是实际上存储的字符串是L个字节</p> 
+<p>如果W*M&lt;=255，则用一个字节来表示</p> 
+<p>若W*M&gt;255分为两种情况</p> 
+<p>        L&lt;=127则用1个字节</p> 
+<p>        L&gt;127则用2个字节</p> 
+<h6>NULL值列表</h6> 
+<p>对于这个部分，大家可能看见就知道他是用来干啥的，其实就是存放NULL的列</p> 
+<p>但是这个地方也是有些同学的难点所在~</p> 
+<p>其实就是在存放NULL值是是会有一个二进制位的值</p> 
+<p>如果该值位1是，就代表该列的值为NULL</p> 
+<p>如果该值为0是，就代表该列的值不为NULL</p> 
+<p>占1个字节，但是当表中的所有列都定义为NOT NULL时就会没有NULL值列表，会节省1个字节空间</p> 
+<h6>记录头信息</h6> 
+<p>它是由固定的五个字节组成的，40个二进制位，不同的位有不同的意义</p> 
+<p>这一部分说实话有点多，说几个比较重要的</p> 
+<ul><li><strong>delete_mask</strong>: 删除标志位，很重要。若此标志位为1，代表这条记录已经被删除了。</li><li>min_mask: B+树非叶子节点中，索引记录的中最小记录。后面讲到索引的时候再说。</li><li><strong>n_owned</strong>: 分组里面包含的记录总数，分组后面再说。</li><li>heap_no: 后面再说。</li><li><strong>record_type</strong>: 很重要，记录的类型（<strong>0-普通用户记录，1-索引记录，2-Infimum, 3-Supremum</strong>）</li><li><strong>next_record</strong>: 指针，指向下一条记录，很重要。</li></ul> 
+<p>然后就是</p> 
+<h6>MySQL为每个记录默认添加的列</h6> 
+<p>row_id：这个列并不是必备的，占用空间为6个字节，行ID，唯一标识一条记录</p> 
+<p>trx_id：这个列是必备的，占用空间为6个字节，事务ID</p> 
+<p>roll_pointer：这个列是必备的，占用空间为7个字节，回滚指针</p> 
+<p></p> 
+<p>这就是这一章的内容并不是很难，下一个我们来说一下第五章InnoDB数据页结构~</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/0fa6ff9fc5ac9b156499520a553b4375/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">字节携港大南大升级 LLaVA-NeXT：借 LLaMA-3 和 Qwen-1.5 脱胎换骨，轻松追平 GPT-4V</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ec72d79da53985df989eb2a251804bc6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【OpenCV】图形绘制与填充</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

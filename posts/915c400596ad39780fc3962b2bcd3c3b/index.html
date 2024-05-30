@@ -1,0 +1,437 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Linux环境搭建Hadoop及完全分布式集群 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/915c400596ad39780fc3962b2bcd3c3b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Linux环境搭建Hadoop及完全分布式集群">
+  <meta property="og:description" content="Hadoop Hadoop是一个开源的分布式计算框架，旨在处理大规模数据集和进行并行计算。核心包括两个组件：HFDS、MapReduce。
+配置方案 各虚拟机的用户名分别为test0、test1、test2，主机名为hadoop100、hadoop101、hadoop102
+虚拟机的分配如下：
+hadoop100：NameNode &#43; ResourceManagerhadoop101：DataNode &#43; NodeManagerhadoop102：SecondaryNameNode 其中Master为hadoop100，这个配置方案可以提供集群的基本功能，Master节点负责管理整个文件系统的元数据和资源调度，而Worker节点负责存储数据和执行任务。
+各节点的作用：
+NameNode：负责管理整个分布式文件系统的命名空间和文件元数据。它是HDFS的主节点，负责存储文件系统的元数据信息，并处理客户端的文件操作请求。将一台虚拟机作为NameNode节点可以提供高可靠性和容错性。SecondaryNameNode：主要负责协助NameNode进行元数据备份和检查点操作。它定期从NameNode获取编辑日志，并创建检查点，从而减少NameNode对元数据的负担和故障恢复时间。请注意，SecondaryNameNode并不是NameNode的备份，无法自动接管NameNode的角色。HDFS DataNode：负责存储和管理实际的数据块。它接收并处理从NameNode分配的数据块写入请求，并执行数据块的读取和复制操作。HDFS DataNode节点存储实际的数据块和后续读写操作。 安装Hadoop 上传压缩包，并解压
+tar zxvf hadoop-3.3.6.tar.gz 打开环境变量注册表
+vim /etc/profile 配置环境变量
+export HADOOP_HOME=/opt/hadoop export PATH=$PATH:$HADOOP_HOME/bin export PATH=$PATH:$HADOOP_HOME/sbin 配置生效
+source /etc/profile 进入Hadoop的安装目录，编辑/etc/hadoop/hadoop-env.sh文件，设置JAVA_HOME为您的JDK安装路径
+export JAVA_HOME=/opt/dev/jdk1.8.0_151 检查是否安装完成，使用命令查看hfs中的根目录
+hadoop fs -ls / 由于Hadoop单机模式是一种用于开发和测试的模式，它并不需要进行集群和分布式环境的设置。在Hadoop单机模式下，默认情况下，Hadoop会使用当前用户的身份进行操作，而无需输入密码。
+配置Hadoop分布式集群 前提条件：
+三台Linux系统虚拟机（可使用VMWare软件进行克隆）定义为hadoop100、hadoop101、hadoop102所有虚拟机都需要联通网络虚拟机之间区别主机名三台虚拟机都拥有相同路径版本的 JDK 和 Hadoop 设置主机名 首先分别打开三台虚拟机，分别使用下列指令将主机名修改。
+由于NetworkManager服务的配置问题，直接使用hostname指令设置主机名在重启后会失效，需要每次开机重启，若想永久修改主机名生效，则修改/etc/hostname文件
+vi /etc/hostname 下述的hadoop100是指新的主机名。同理修改其他的虚拟机主机名
+hadoop100 分别检查虚拟机网络，当有数据返回时则无问题
+ping www.baidu.com 编辑主机名列表文件
+vi /etc/hosts 在文件加入，指定IP地址对应的hostname
+192.168.10.128 badoop100 192.168.10.130 hadoop101 192.168.10.131 hadoop102 重启生效">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-02T09:00:53+08:00">
+    <meta property="article:modified_time" content="2024-04-02T09:00:53+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Linux环境搭建Hadoop及完全分布式集群</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="Hadoop_1"></a>Hadoop</h3> 
+<p>Hadoop是一个开源的分布式计算框架，旨在处理大规模数据集和进行并行计算。核心包括两个组件：HFDS、MapReduce。</p> 
+<h4><a id="_5"></a>配置方案</h4> 
+<p>各虚拟机的用户名分别为test0、test1、test2，主机名为hadoop100、hadoop101、hadoop102</p> 
+<p>虚拟机的分配如下：</p> 
+<ul><li>hadoop100：NameNode + ResourceManager</li><li>hadoop101：DataNode + NodeManager</li><li>hadoop102：SecondaryNameNode</li></ul> 
+<p>其中Master为hadoop100，这个配置方案可以提供集群的基本功能，Master节点负责管理整个文件系统的元数据和资源调度，而Worker节点负责存储数据和执行任务。</p> 
+<p>各节点的作用：</p> 
+<ol><li>NameNode：负责管理整个分布式文件系统的命名空间和文件元数据。它是HDFS的主节点，负责存储文件系统的元数据信息，并处理客户端的文件操作请求。将一台虚拟机作为NameNode节点可以提供高可靠性和容错性。</li><li>SecondaryNameNode：主要负责协助NameNode进行元数据备份和检查点操作。它定期从NameNode获取编辑日志，并创建检查点，从而减少NameNode对元数据的负担和故障恢复时间。请注意，SecondaryNameNode并不是NameNode的备份，无法自动接管NameNode的角色。</li><li>HDFS DataNode：负责存储和管理实际的数据块。它接收并处理从NameNode分配的数据块写入请求，并执行数据块的读取和复制操作。HDFS DataNode节点存储实际的数据块和后续读写操作。</li></ol> 
+<h4><a id="Hadoop_23"></a>安装Hadoop</h4> 
+<p>上传压缩包，并解压</p> 
+<pre><code>tar zxvf hadoop-3.3.6.tar.gz
+</code></pre> 
+<p>打开环境变量注册表</p> 
+<pre><code>vim /etc/profile
+</code></pre> 
+<p>配置环境变量</p> 
+<pre><code>export HADOOP_HOME=/opt/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin
+export PATH=$PATH:$HADOOP_HOME/sbin
+</code></pre> 
+<p>配置生效</p> 
+<pre><code>source /etc/profile
+</code></pre> 
+<p>进入<code>Hadoop</code>的安装目录，编辑<code>/etc/hadoop/hadoop-env.sh</code>文件，设置<code>JAVA_HOME</code>为您的<code>JDK</code>安装路径</p> 
+<pre><code>export JAVA_HOME=/opt/dev/jdk1.8.0_151
+</code></pre> 
+<p>检查是否安装完成，使用命令查看hfs中的根目录</p> 
+<pre><code>hadoop fs -ls /
+</code></pre> 
+<p>由于Hadoop单机模式是一种用于开发和测试的模式，它并不需要进行集群和分布式环境的设置。在Hadoop单机模式下，默认情况下，Hadoop会使用当前用户的身份进行操作，而无需输入密码。</p> 
+<h4><a id="Hadoop_65"></a>配置Hadoop分布式集群</h4> 
+<p>前提条件：</p> 
+<ol><li>三台Linux系统虚拟机（可使用VMWare软件进行克隆）定义为hadoop100、hadoop101、hadoop102</li><li>所有虚拟机都需要联通网络</li><li>虚拟机之间区别主机名</li><li>三台虚拟机都拥有相同路径版本的 JDK 和 Hadoop</li></ol> 
+<h5><a id="_74"></a>设置主机名</h5> 
+<p>首先分别打开三台虚拟机，分别使用下列指令将主机名修改。</p> 
+<p>由于NetworkManager服务的配置问题，直接使用hostname指令设置主机名在重启后会失效，需要每次开机重启，若想永久修改主机名生效，则修改/etc/hostname文件</p> 
+<pre><code>vi /etc/hostname
+</code></pre> 
+<p>下述的hadoop100是指新的主机名。同理修改其他的虚拟机主机名</p> 
+<pre><code>hadoop100
+</code></pre> 
+<p>分别检查虚拟机网络，当有数据返回时则无问题</p> 
+<pre><code>ping www.baidu.com
+</code></pre> 
+<p>编辑主机名列表文件</p> 
+<pre><code>vi /etc/hosts
+</code></pre> 
+<p>在文件加入，指定IP地址对应的hostname</p> 
+<pre><code>192.168.10.128 badoop100
+192.168.10.130 hadoop101
+192.168.10.131 hadoop102
+</code></pre> 
+<p>重启生效</p> 
+<pre><code>reboot
+</code></pre> 
+<p>在主机验证</p> 
+<pre><code>ping hadoop101
+</code></pre> 
+<h5><a id="_JDK__Hadoop_124"></a>分发 JDK 和 Hadoop</h5> 
+<p>如果没有安装JDK和Hadoop，则可先在某一台虚拟机上安装完毕：</p> 
+<pre><code>tar -zxvf /opt/jdk1.8.0_151.tar.gz
+</code></pre> 
+<p>然后在该虚拟机上通过下列的集群分发脚本将 JDK和Hadoop分别分发到其他的虚拟机中，后续要输入yes和当前将要连接的hadoop101的密码：</p> 
+<pre><code># 将当前JDK发送到test1用户下主机名为hadoop101的/opt/dev/jdk1.8.0_151路径
+scp -r /opt/dev/jdk1.8.0_151 test1@hadoop101:/opt/dev/jdk1.8.0_151  
+</code></pre> 
+<pre><code># 将Hadoop发送到test2用户下主机名为hadoop102的/opt/dev/jdk1.8.0_151路径
+scp -r /opt/hadoop/bin/hadoop test1@hadoop102:/opt/hadoop/bin/hadoop
+</code></pre> 
+<p>记得配置环境变量，查看环境变量profile文件</p> 
+<pre><code>vim /etc/profile
+</code></pre> 
+<p>目标虚拟机都要设置环境变量</p> 
+<pre><code>export JAVA_HOME=/opt/dev/jdk1.8.0_151
+export CLASSPATH=.:$JAVA_HOME/lib:$JAVA_HOME/bin
+export PATH=$PATH:$JAVA_HOME/bin
+
+export HADOOP_HOME=/opt/hadoop
+export PATH=$PATH:$HADOOP_HOME/bin
+export PATH=$PATH:$HADOOP_HOME/sbin
+</code></pre> 
+<p>让配置文件生效</p> 
+<pre><code>source /etc/profile
+</code></pre> 
+<p>输入java指令检验Java是否安装成功</p> 
+<pre><code>java -version
+</code></pre> 
+<p>输入hadoop指令查看是否安装成功</p> 
+<pre><code>hadoop
+</code></pre> 
+<h5><a id="_185"></a>设置免密登录</h5> 
+<p>配置SSHD：如果免密登录不生效或出现连接错误，可能是由于目标节点的SSH服务器配置不正确。在目标节点上，编辑<code>/etc/ssh/sshd_config</code>文件，确保以下设置：</p> 
+<pre><code>sudo vim /etc/ssh/sshd_config
+</code></pre> 
+<pre><code>PubKeyAuthentication yes
+PasswordAuthentication no  # 如果需要使用finalshell，那么可以不写这个
+</code></pre> 
+<p>重启ssh服务：</p> 
+<pre><code>sudo service ssh restart
+</code></pre> 
+<p>分别在三个虚拟机中的<code>~/.ssh</code>目录下生成id_rsa和id_rsa.pub文件，分别对应着私钥和公钥：</p> 
+<pre><code>ssh-keygen -t rsa -P ""
+</code></pre> 
+<p>追加到新文件</p> 
+<pre><code>cat ~/.ssh/id_rsa.pub &gt;&gt; ~/.ssh/authorized_keys
+</code></pre> 
+<p>修改id_rsa.pub文件的权限</p> 
+<pre><code>chmod 644 ~/.ssh/authorized_keys
+</code></pre> 
+<p>将主节点的公钥文件分发到集群中的各个节点上，使得节点可以进行免密登录。运行以下命令，其中test1、test2是目标节点的登录用户名，hadoop101、hadoop102是节点主机名：</p> 
+<pre><code>ssh-copy-id -i ~/.ssh/id_rsa.pub test1@hadoop101
+ssh-copy-id -i ~/.ssh/id_rsa.pub test2@hadoop102
+</code></pre> 
+<p>输入完成后，输入目标机的密码，将主节点的公钥添加到从节点的<code>~/.ssh/authorized_keys</code>文件中。</p> 
+<p>远程登录目标机，测试是否成功共享密钥，如果可以成功登录且不用输入密码，则表示免密登录已经配置成功：</p> 
+<pre><code>ssh test1@hadoop101
+ssh test2@hadoop102
+</code></pre> 
+<h5><a id="hadoopenvsh_240"></a>配置hadoop-env.sh</h5> 
+<p>打开文件</p> 
+<pre><code>vi etc/hadoop/hadoop-env.sh
+</code></pre> 
+<p>修改文件</p> 
+<pre><code>export JAVA_HOME=/opt/dev/jdk1.8.0_381
+</code></pre> 
+<h5><a id="coresitexml_256"></a>配置core-site.xml</h5> 
+<p>打开文件</p> 
+<pre><code>vi etc/hadoop/core-site.xml
+</code></pre> 
+<p>修改文件：</p> 
+<p>fs.defaultFS：该参数是配置指定HDFS的通信地址。</p> 
+<p>hadoop.tmp.dir：该参数配置的是Hadoop临时目录</p> 
+<pre><code>&lt;configuration&gt;
+ &lt;property&gt;
+     &lt;name&gt;fs.defaultFS&lt;/name&gt;
+     &lt;value&gt;hdfs://hadoop100:9000&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+     &lt;name&gt;hadoop.tmp.dir&lt;/name&gt;
+     &lt;value&gt;/opt/hadoopTmp/&lt;/value&gt;
+ &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre> 
+<h5><a id="hdfssitexml_285"></a>配置hdfs-site.xml</h5> 
+<p>打开文件</p> 
+<pre><code>vi  etc/hadoop/hdfs-site.xml
+</code></pre> 
+<p>修改文件：</p> 
+<p>dfs.namenode.http-address：该参数是配置NameNode的http访问地址和端口号。因为在集群规划中指定hadoop100设为NameNode的服务器，故设置为hadoop100:9870。</p> 
+<p>dfs.namenode.secondary.http-address：该参数是配置SecondaryNameNode的http访问地址和端口号。在集群规划中指定hadoop102设为SecondaryNameNode的服务器，故设置为hadoop102:50090。</p> 
+<p>dfs.replication：该参数是配置HDFS副本数量，建议不超过从节点数。</p> 
+<p>dfs.namenode.name.dir：该参数是设置NameNode存放的路径。</p> 
+<p>dfs.datanode.data.dir：该参数是设置DataNode存放的路径。</p> 
+<pre><code>&lt;configuration&gt;
+ &lt;property&gt;
+      &lt;name&gt;dfs.namenode.http-address&lt;/name&gt;
+      &lt;value&gt;hadoop100:9870&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+      &lt;name&gt;dfs.namenode.secondary.http-address&lt;/name&gt;
+      &lt;value&gt;hadoop102:50090&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+      &lt;name&gt;dfs.replication&lt;/name&gt;
+      &lt;value&gt;2&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+      &lt;name&gt;dfs.namenode.name.dir&lt;/name&gt;
+      &lt;value&gt;/opt/hadoopTmp/dfs/name&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+      &lt;name&gt;dfs.datanode.data.dir&lt;/name&gt;
+      &lt;value&gt;/opt/hadoopTmp/dfs/data&lt;/value&gt;
+ &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre> 
+<h5><a id="yarnsitexml_332"></a>配置yarn-site.xml</h5> 
+<p>打开文件</p> 
+<pre><code>vi etc/hadoop/yarn-site.xml
+</code></pre> 
+<p>修改文件：</p> 
+<p>参数说明：</p> 
+<p>yarn.resourcemanager.hostsname：该参数是指定ResourceManager运行在那个节点上。</p> 
+<p>yarn.resourcemanager.webapp.address：该参数是指定ResourceManager服务器的web地址和端口。</p> 
+<p>yarn.nodemanager,aux-services：该参数是指定启动时加载server的方式。</p> 
+<p>yarn.nodemanager.aux-services.mapreduce.shuffle.class：该参数是指定使用mapreduce_shuffle中的类。</p> 
+<p>yarn.log-aggregation-enable：该参数是配置是否启用日志聚集功能。</p> 
+<p>yarn.log-aggregation.retain-seconds：该参数是配置聚集的日志在HDFS上保存的最长时间。</p> 
+<p>yarn.nodemanager.remote-app-log-dir：该参数是指定日志聚合目录。</p> 
+<pre><code>&lt;configuration&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.resourcemanager.hostsname&lt;/name&gt;
+    &lt;value&gt;hadoop100&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.resourcemanager.webapp.address&lt;/name&gt;
+    &lt;value&gt;hadoop100:8088&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.nodemanager.aux-services&lt;/name&gt;
+    &lt;value&gt;mapreduce_shuffle&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.nodemanager.aux-services.mapreduce.shuffle.class&lt;/name&gt;
+    &lt;value&gt;org.apache.hadoop.mapred.ShuffleHandler&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.log-aggregation-enable&lt;/name&gt;
+    &lt;value&gt;true&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.log-aggregation.retain-seconds&lt;/name&gt;
+    &lt;value&gt;106800&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+    &lt;name&gt;yarn.nodemanager.remote-app-log-dir&lt;/name&gt;
+    &lt;value&gt;/user/hadoopcontainer/logs&lt;/value&gt;
+ &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre> 
+<h5><a id="mapredsitexml_393"></a>配置mapred-site.xml</h5> 
+<p>打开文件</p> 
+<pre><code> vi etc/hadoop/mapred-site.xml
+</code></pre> 
+<p>修改文件参数说明：</p> 
+<p>mapreduce.framework.name：该参数是指定MapReduce框架运行在YARN上。</p> 
+<p>mapreduce.jobhistory.address：该参数是设置MapReduce的历史服务器安装的位置及端口号。</p> 
+<p>mapreduce.jobhistory.webapp.address：该参数是设置历史服务器的web页面地址和端口。</p> 
+<p>mapreduce.jobhistory.intermediate-done-dir：该参数是设置存放日志文件的临时目录。</p> 
+<p>mapreduce.jobhistory.done-dir：该参数是设置存放运行日志文件的最终目录。</p> 
+<pre><code>&lt;configuration&gt;
+ &lt;property&gt;
+     &lt;name&gt;mapreduce.framework.name&lt;/name&gt;
+     &lt;value&gt;yarn&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+     &lt;name&gt;mapreduce.jobhistory.address&lt;/name&gt;
+     &lt;value&gt;hadoop102:10020&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+     &lt;name&gt;mapreduce.jobhistory.webapp.address&lt;/name&gt;
+     &lt;value&gt;hadoop102:19888&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+     &lt;name&gt;mapreduce.jobhistory.intermediate-done-dir&lt;/name&gt;
+     &lt;value&gt;${hadoop.tmp.dir}/mr-history/tmp&lt;/value&gt;
+ &lt;/property&gt;
+ &lt;property&gt;
+     &lt;name&gt;mapreduce.jobhistory.done-dir&lt;/name&gt;
+     &lt;value&gt;${hadoop.tmp.dir}/mr-history/done&lt;/value&gt;
+ &lt;/property&gt;
+&lt;/configuration&gt;
+</code></pre> 
+<h5><a id="_438"></a>开放防火墙端口</h5> 
+<pre><code>sudo ufw allow 9000     # 开放HDFS默认端口
+sudo ufw allow 9870     # 开放NameNode的http访问地址和端口
+sudo ufw allow 8088     # 开放master资源管理器WEb默认端口
+sudo ufw allow 50090    # 开放SecondaryNameNode的服务器端口
+sudo ufw allow 50020    # 开放DataNode通信端口
+sudo ufw allow 8088    # 开放资源管理器的WEB通信端口
+sudo ufw allow 10020    # 开放MapReduce通信端口
+sudo ufw allow 19888    # 开放历史服务器通信端口
+</code></pre> 
+<h5><a id="_453"></a>配置主次节点</h5> 
+<p>PS：hadoop3以后slaves改为workers，打开文件：</p> 
+<pre><code>vim etc/hadoop/slaves
+vim etc/hadoop/workers
+</code></pre> 
+<p>添加所有子节点的主机名：</p> 
+<pre><code>hadoop101
+hadoop102
+</code></pre> 
+<h5><a id="_469"></a>分发配置文件</h5> 
+<p>在其他节点查看下当前存放hadoop目录是否具有权限写入，否则后续分发将失败</p> 
+<pre><code>ls -ld /opt/hadoop
+</code></pre> 
+<p>如果没有权限，则输入下列指令开放hadoop目录的写入权限</p> 
+<pre><code>sudo chmod -R 777 /opt/hadoop
+</code></pre> 
+<p>将上述配置好的hadoop相关文件分发到其他虚拟机：</p> 
+<pre><code>scp -r /opt/hadoop/* test1@hadoop101:/opt/hadoop/
+scp -r /opt/hadoop/* test2@hadoop102:/opt/hadoop/
+</code></pre> 
+<h5><a id="_490"></a>启动集群</h5> 
+<p>在主节点输入格式化命令：</p> 
+<pre><code>hdfs namenode -format
+</code></pre> 
+<p>启动集群</p> 
+<pre><code>start-all.sh
+</code></pre> 
+<p>停止集群</p> 
+<pre><code>stop-all.sh
+</code></pre> 
+<p>验证是否成功</p> 
+<pre><code>jps
+</code></pre> 
+<p>当看到下列内容表示成功：</p> 
+<p>Master： NameNode、DataNode、ResourceManager、NodeManager</p> 
+<p>slave1： SecondaryNameNode、DataNode、NodeManager</p> 
+<p>slave2： DataNode、NodeManager</p> 
+<h5><a id="Web_526"></a>Web端访问</h5> 
+<p>关闭防火墙：</p> 
+<pre><code>service iptables stopservice iptables stop
+</code></pre> 
+<p>访问HDFS：ip地址:9870；</p> 
+<p>访问YARN：ip地址:8088；</p> 
+<h4><a id="_540"></a>版本注意事项</h4> 
+<ol><li> <p>Hadoop3版本后，NameNode、Secondary NameNode, DataNode的端口出现了变化。</p> 
+  <table><thead><tr><th></th><th>2版本端口号</th><th>3版本端口号</th></tr></thead><tbody><tr><td>namenode</td><td>8020</td><td>9820</td></tr><tr><td>namenode htttp web</td><td>50070</td><td>9870</td></tr><tr><td>namenode https web</td><td>50470</td><td>9871</td></tr><tr><td>secondnamenode https web</td><td>50091</td><td>9869</td></tr><tr><td>secondnamenode https web</td><td>50091</td><td>9869</td></tr><tr><td>secondnamenode http web</td><td>50090</td><td>9868</td></tr><tr><td>datanode ipc</td><td>50020</td><td>9867</td></tr><tr><td>datanode</td><td>50010</td><td>9866</td></tr><tr><td>datanode http web</td><td>50075</td><td>9864</td></tr><tr><td>datanode https web</td><td>50475</td><td>9865</td></tr></tbody></table></li><li> <p>Hadoop3版本之前的主从节点文件为slaves，3之后为workers</p> </li></ol>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/650b51db913edec82066639326cabe00/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">运行kafka出现ModuleNotFoundError: No module named ‘kafka.vendor.six.moves‘</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/3190312bd8d84bc4639f17b7a4362697/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">CVPR 2024 | 图像超分、图像恢复汇总！用AIGC扩散模型diffusion来解决图像low-level任务的思路...</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,525 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Eureka（服务注册和发现）——Eureka的简介和原理 &amp; Eureka的使用和分析 &amp; 心跳续约策略，服务的下线和剔除，自我保护 &amp; Eureka集群的搭建 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/cf5f0a4947de51211ed777cc7b64f034/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Eureka（服务注册和发现）——Eureka的简介和原理 &amp; Eureka的使用和分析 &amp; 心跳续约策略，服务的下线和剔除，自我保护 &amp; Eureka集群的搭建">
+  <meta property="og:description" content="前言 Eureka：服务注册与发现组件，用于实现服务的自动注册与发现，Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提供服务端与客户端，服务端即是Eureka服务注册中心，客户端完成微服务向Eureka服务的注册与发现。服务端和客户端均采用Java语言编写。
+Eureka作为初代的服务注册和发现组件，其基本思想和原理对于后来的Nacos有深远的影响，在nacos中也能隐约看到其身影。
+本篇博客介绍Eureka的简介和原理，结合实际使用阐述Eureka的使用并进行分析，此外，介绍了心跳续约策略，服务的下线和剔除以及自我保护，还有Eureka集群的搭建方式。
+git代码仓库：https://gitee.com/pet365/spring-cloud-eureka
+目录 前言引出Eureka初识有趣故事Eureka是啥？Eureka简介原理 Eureka使用Hello案例注册中心Eureka引入依赖eureka的配置文件配置说明： 主启动类浏览器访问查看日志 搭建生产者Provider引入依赖配置yml文件主启动类@EnableEurekaClient和@EnableDiscoveryClient区别 查看日志 搭建消费者consumer引入依赖配置等雷同在生产端提供controller在消费端调用生产者 心跳和续约策略常见概念Renew 服务续约（心跳机制）Fetch Registries 获取注册列表信息 服务的下线和剔除Cancel 服务下线Eviction 服务剔除自我保护 Eureka集群搭建1.启动第一个2.再启动一个3.访问集群4.客户端注册5.注册效果 总结 引出 1.Eureka的简介和原理；
+2.结合实际使用阐述Eureka的使用并进行分析；
+3.介绍了心跳续约策略，服务的下线和剔除以及自我保护；
+4.Eureka集群的搭建方式，高可用；
+Eureka初识 Eureka架构中的三个核心角色：
+服务注册中心
+Eureka的服务端应用，提供服务注册和发现功能，就是刚刚我们建立的eureka-server。
+服务提供者
+提供服务的应用，可以是SpringBoot应用，也可以是其它任意技术实现，只要对外提供的是Rest风格服务即可。本例中就是我们实现的spring-provider。
+服务消费者
+消费应用从注册中心获取服务列表，从而得知每个服务方的信息，知道去哪里调用服务方。本例中
+就是我们实现的spring-consumer。
+有趣故事 Eureka的故事来源于人人追求真善美的古希腊，“Eureka”是希腊语，意思是“我发现了！”
+这个有魔力的单词是来源于阿基米德。在公元前200多年，他在洗澡时发现了证明王冠是否纯金的方法(黄金密度)，他激动地一边大喊“Eureka！”一边跳出澡盆奔去王宫，连衣服都忘了穿。后来人们用Eureka这个词来形容洞察浮现的瞬间。
+SMS、库存、积分服务器，服务迁移变更等需要修改相应的URL地址，怎么不修改URL地址？
+在微服务中，spring-provider对外提供服务，需要对外暴露自己的地址。而consumer（调用者）需要记录服务提供者的地址。将来地址出现变更，还需要及时更新。这在服务较少的时候并不觉得有什么，但是在现在日益复杂的互联网环境，一个项目肯定会拆分出十几，甚至数十个微服务。此时如果还人为管理地址，不仅开发困难，将来测试、发布上线都会非常麻烦
+这就好比是 网约车出现以前，人们出门叫车只能叫出租车。一些私家车想做出租却没有资格，被称为黑车。而很多人想要约车，但是无奈出租车太少，不方便。私家车很多却不敢拦（没有人告诉哪些车私家车可以拉人），而且满大街的车，谁知道哪个才是愿意载人的。一个想要，一个愿意给，就是缺少引子，缺乏管理啊。
+此时滴滴这样的网约车平台出现了，所有想载客的私家车全部到滴滴注册，记录你的车型（服务类型），身份信息（联系方式）。这样提供服务的私家车，在滴滴那里都能找到，一目了然。
+此时要叫车的人，只需要打开APP，输入你的目的地，选择车型（服务类型），滴滴自动安排一个符合需求的车到你面前，为你服务，完美！
+Eureka做什么？
+Eureka就好比是滴滴中心，负责管理、记录服务提供者的信息。服务调用者无需自己寻找服务，而是把自己的需求告诉Eureka，然后Eureka会把符合你需求的服务告诉你。
+同时，服务提供方与Eureka之间通过“心跳” 机制进行监控，当某个服务提供方出现问题，Eureka自然会把它从服务列表中剔除。
+这就实现了服务的自动注册、发现、状态监控。
+Eureka是啥？ Eureka简介 Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提供服务端与客户端，服务端即是Eureka服务注册中心，客户端完成微服务向Eureka服务的注册与发现。服务端和客户端均采用Java语言编写。
+一个消费者和一个生产者
+多个消费者与多个生产者
+下图显示了Eureka Server与Eureka Client的关系
+Eureka Server是服务端，负责管理各个微服务结点的信息和状态。在微服务上部署Eureka Client程序，远程访问Eureka Server将自己注册在Eureka Server。微服务需要调用另一个微服务时从Eureka Server中获取服务调用地址，进行远程调用。 原理 服务提供方启动后将注册到注册中心，提供IP, 名字，什么服务等信息，服务调用方作为客户端注册到注册中心后，拉取注册中心的服务列表，在通过负载均衡调用对应的服务提供方。注册中心可以建立集群，生成多台eureka，注册中心为了监测各个服务的心跳，将在每30S 向所注册的服务发起请求判断服务是否挂掉，如果挂掉90S后将会将服务从注册中心剔除。一个服务可以监测多台服务实例，从而可实现均衡负载。 Eureka使用Hello案例 注册中心Eureka 引入依赖 &lt;dependency&gt; &lt;groupId&gt;org.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-10-12T11:21:15+08:00">
+    <meta property="article:modified_time" content="2023-10-12T11:21:15+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Eureka（服务注册和发现）——Eureka的简介和原理 &amp; Eureka的使用和分析 &amp; 心跳续约策略，服务的下线和剔除，自我保护 &amp; Eureka集群的搭建</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/5c/f0/plfwJ2ri_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_5"></a>前言</h2> 
+<p>Eureka：服务注册与发现组件，用于实现服务的自动注册与发现，Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提供服务端与客户端，服务端即是Eureka服务注册中心，客户端完成微服务向Eureka服务的注册与发现。服务端和客户端均采用Java语言编写。</p> 
+<p>Eureka作为初代的服务注册和发现组件，其基本思想和原理对于后来的Nacos有深远的影响，在nacos中也能隐约看到其身影。</p> 
+<p>本篇博客介绍Eureka的简介和原理，结合实际使用阐述Eureka的使用并进行分析，此外，介绍了心跳续约策略，服务的下线和剔除以及自我保护，还有Eureka集群的搭建方式。</p> 
+<p>git代码仓库：<a href="https://gitee.com/pet365/spring-cloud-eureka" rel="nofollow">https://gitee.com/pet365/spring-cloud-eureka</a></p> 
+<p><img src="https://images2.imgbox.com/f8/b1/wDgmbqxP_o.png" alt="在这里插入图片描述"></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#_5" rel="nofollow">前言</a></li><li><a href="#_24" rel="nofollow">引出</a></li><li><a href="#Eureka_34" rel="nofollow">Eureka初识</a></li><li><ul><li><a href="#_61" rel="nofollow">有趣故事</a></li><li><a href="#Eureka_109" rel="nofollow">Eureka是啥？</a></li><li><ul><li><a href="#Eureka_113" rel="nofollow">Eureka简介</a></li><li><a href="#_144" rel="nofollow">原理</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#EurekaHello_153" rel="nofollow">Eureka使用Hello案例</a></li><li><ul><li><a href="#Eureka_155" rel="nofollow">注册中心Eureka</a></li><li><ul><li><a href="#_159" rel="nofollow">引入依赖</a></li><li><a href="#eureka_180" rel="nofollow">eureka的配置文件</a></li><li><ul><li><a href="#_222" rel="nofollow">配置说明：</a></li></ul> 
+    </li><li><a href="#_244" rel="nofollow">主启动类</a></li><li><a href="#_281" rel="nofollow">浏览器访问</a></li><li><a href="#_294" rel="nofollow">查看日志</a></li></ul> 
+   </li><li><a href="#Provider_309" rel="nofollow">搭建生产者Provider</a></li><li><ul><li><a href="#_311" rel="nofollow">引入依赖</a></li><li><a href="#yml_339" rel="nofollow">配置yml文件</a></li><li><a href="#_391" rel="nofollow">主启动类</a></li><li><ul><li><a href="#EnableEurekaClientEnableDiscoveryClient_428" rel="nofollow">@EnableEurekaClient和@EnableDiscoveryClient区别</a></li></ul> 
+    </li><li><a href="#_460" rel="nofollow">查看日志</a></li></ul> 
+   </li><li><a href="#consumer_520" rel="nofollow">搭建消费者consumer</a></li><li><ul><li><a href="#_526" rel="nofollow">引入依赖配置等雷同</a></li><li><a href="#controller_579" rel="nofollow">在生产端提供controller</a></li><li><a href="#_590" rel="nofollow">在消费端调用生产者</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_658" rel="nofollow">心跳和续约策略</a></li><li><ul><li><a href="#_681" rel="nofollow">常见概念</a></li><li><a href="#Renew__687" rel="nofollow">Renew 服务续约（心跳机制）</a></li><li><a href="#Fetch_Registries__701" rel="nofollow">Fetch Registries 获取注册列表信息</a></li></ul> 
+  </li><li><a href="#_709" rel="nofollow">服务的下线和剔除</a></li><li><ul><li><a href="#Cancel__713" rel="nofollow">Cancel 服务下线</a></li><li><a href="#Eviction__723" rel="nofollow">Eviction 服务剔除</a></li><li><a href="#_755" rel="nofollow">自我保护</a></li></ul> 
+  </li><li><a href="#Eureka_800" rel="nofollow">Eureka集群搭建</a></li><li><ul><li><a href="#1_815" rel="nofollow">1.启动第一个</a></li><li><a href="#2_830" rel="nofollow">2.再启动一个</a></li><li><a href="#3_844" rel="nofollow">3.访问集群</a></li><li><a href="#4_856" rel="nofollow">4.客户端注册</a></li><li><a href="#5_862" rel="nofollow">5.注册效果</a></li></ul> 
+  </li><li><a href="#_874" rel="nofollow">总结</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_24"></a>引出</h2> 
+<hr> 
+<p>1.Eureka的简介和原理；<br> 2.结合实际使用阐述Eureka的使用并进行分析；<br> 3.介绍了心跳续约策略，服务的下线和剔除以及自我保护；<br> 4.Eureka集群的搭建方式，高可用；</p> 
+<h2><a id="Eureka_34"></a>Eureka初识</h2> 
+<p><img src="https://images2.imgbox.com/ae/3e/gXZQiUmK_o.png" alt="在这里插入图片描述"></p> 
+<p>Eureka架构中的三个核心角色：</p> 
+<ul><li> <p>服务注册中心<br> Eureka的服务端应用，提供服务注册和发现功能，就是刚刚我们建立的eureka-server。</p> </li><li> <p>服务提供者<br> 提供服务的应用，可以是SpringBoot应用，也可以是其它任意技术实现，只要对外提供的是Rest风格服务即可。本例中就是我们实现的spring-provider。</p> </li><li> <p>服务消费者<br> 消费应用从注册中心获取服务列表，从而得知每个服务方的信息，知道去哪里调用服务方。本例中<br> 就是我们实现的spring-consumer。</p> </li></ul> 
+<h3><a id="_61"></a>有趣故事</h3> 
+<p>Eureka的故事来源于人人追求真善美的古希腊，“Eureka”是希腊语，意思是“我发现了！”</p> 
+<p>这个有魔力的单词是来源于阿基米德。在公元前200多年，他在洗澡时发现了证明王冠是否纯金的方法(黄金密度)，他激动地一边大喊“Eureka！”一边跳出澡盆奔去王宫，连衣服都忘了穿。后来人们用Eureka这个词来形容洞察浮现的瞬间。</p> 
+<p>SMS、库存、积分服务器，服务迁移变更等需要修改相应的URL地址，怎么不修改URL地址？</p> 
+<p>在微服务中，spring-provider对外提供服务，需要对外暴露自己的地址。而consumer（调用者）需要记录服务提供者的地址。将来地址出现变更，还需要及时更新。这在服务较少的时候并不觉得有什么，但是在现在日益复杂的互联网环境，一个项目肯定会拆分出十几，甚至数十个微服务。此时如果还人为管理地址，不仅开发困难，将来测试、发布上线都会非常麻烦</p> 
+<p>这就好比是 网约车出现以前，人们出门叫车只能叫出租车。一些私家车想做出租却没有资格，被称为黑车。而很多人想要约车，但是无奈出租车太少，不方便。私家车很多却不敢拦（没有人告诉哪些车私家车可以拉人），而且满大街的车，谁知道哪个才是愿意载人的。一个想要，一个愿意给，就是缺少引子，缺乏管理啊。</p> 
+<p>此时滴滴这样的网约车平台出现了，所有想载客的私家车全部到滴滴注册，记录你的车型（服务类型），身份信息（联系方式）。这样提供服务的私家车，在滴滴那里都能找到，一目了然。</p> 
+<p>此时要叫车的人，只需要打开APP，输入你的目的地，选择车型（服务类型），滴滴自动安排一个符合需求的车到你面前，为你服务，完美！</p> 
+<p>Eureka做什么？</p> 
+<p>Eureka就好比是滴滴中心，负责管理、记录服务提供者的信息。服务调用者无需自己寻找服务，而是把自己的需求告诉Eureka，然后Eureka会把符合你需求的服务告诉你。</p> 
+<p>同时，服务提供方与Eureka之间通过“心跳” 机制进行监控，当某个服务提供方出现问题，Eureka自然会把它从服务列表中剔除。</p> 
+<p>这就实现了服务的自动注册、发现、状态监控。</p> 
+<h3><a id="Eureka_109"></a>Eureka是啥？</h3> 
+<h4><a id="Eureka_113"></a>Eureka简介</h4> 
+<p><img src="https://images2.imgbox.com/57/63/zTPT8qiP_o.png" alt="在这里插入图片描述"></p> 
+<p>Spring Cloud Eureka 是对Netflix公司的Eureka的二次封装，它实现了服务治理的功能，Spring Cloud Eureka提供服务端与客户端，服务端即是Eureka服务注册中心，客户端完成微服务向Eureka服务的注册与发现。服务端和客户端均采用Java语言编写。</p> 
+<p><img src="https://images2.imgbox.com/49/05/Z0IHE3tJ_o.png" alt="在这里插入图片描述"></p> 
+<p>一个消费者和一个生产者</p> 
+<p><img src="https://images2.imgbox.com/13/4b/Wj9kyF4f_o.png" alt="在这里插入图片描述"></p> 
+<p>多个消费者与多个生产者</p> 
+<p><img src="https://images2.imgbox.com/3d/80/s6UscR76_o.png" alt="在这里插入图片描述"></p> 
+<p>下图显示了Eureka Server与Eureka Client的关系</p> 
+<p><img src="https://images2.imgbox.com/c4/50/ylW1hYoI_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>Eureka Server是服务端，负责管理各个微服务结点的信息和状态。</li><li>在微服务上部署Eureka Client程序，远程访问Eureka Server将自己注册在Eureka Server。</li><li>微服务需要调用另一个微服务时从Eureka Server中获取服务调用地址，进行远程调用。</li></ul> 
+<h4><a id="_144"></a>原理</h4> 
+<ul><li>服务提供方启动后将注册到注册中心，提供IP, 名字，什么服务等信息，</li><li>服务调用方作为客户端注册到注册中心后，拉取注册中心的服务列表，在通过负载均衡调用对应的服务提供方。</li><li>注册中心可以建立集群，生成多台eureka，注册中心为了监测各个服务的心跳，将在每30S 向所注册的服务发起请求判断</li><li>服务是否挂掉，如果挂掉90S后将会将服务从注册中心剔除。</li><li>一个服务可以监测多台服务实例，从而可实现均衡负载。</li></ul> 
+<h2><a id="EurekaHello_153"></a>Eureka使用Hello案例</h2> 
+<h3><a id="Eureka_155"></a>注册中心Eureka</h3> 
+<h4><a id="_159"></a>引入依赖</h4> 
+<pre><code class="prism language-xml">        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.cloud<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-cloud-starter-netflix-eureka-server<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<h4><a id="eureka_180"></a>eureka的配置文件</h4> 
+<p><img src="https://images2.imgbox.com/d3/fa/8Fxvd1ey_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-yml"><span class="token key atrule">server</span><span class="token punctuation">:</span>
+  <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">9001</span> <span class="token comment">#  eureka默认端口号为8761</span>
+<span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+  <span class="token key atrule">client</span><span class="token punctuation">:</span>
+    <span class="token comment"># EurekaServer的地址，现在是自己的地址，如果是集群，需要加上其它Server的地址</span>
+    <span class="token key atrule">service-url</span><span class="token punctuation">:</span>
+      <span class="token key atrule">defaultZone</span><span class="token punctuation">:</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span>$<span class="token punctuation">{<!-- --></span>server.port<span class="token punctuation">}</span>/eureka
+    <span class="token comment"># 不把自己注册到eureka服务列表</span>
+    <span class="token key atrule">register-with-eureka</span><span class="token punctuation">:</span> <span class="token boolean important">false</span>
+    <span class="token comment"># 拉取eureka服务信息</span>
+    <span class="token key atrule">fetch-registry</span><span class="token punctuation">:</span> <span class="token boolean important">false</span> <span class="token comment">#false表示自己就是注册中心，不需要从注册中心获取注册列表信息</span>
+  <span class="token key atrule">instance</span><span class="token punctuation">:</span>
+    <span class="token comment">#客户端在注册时使用自己的IP而不是主机名</span>
+    <span class="token key atrule">prefer-ip-address</span><span class="token punctuation">:</span> <span class="token boolean important">true</span>
+    <span class="token comment"># 实例id</span>
+    <span class="token key atrule">instance-id</span><span class="token punctuation">:</span> $<span class="token punctuation">{<!-- --></span>spring.cloud.ip<span class="token punctuation">-</span>address<span class="token punctuation">}</span><span class="token punctuation">:</span>$<span class="token punctuation">{<!-- --></span>spring.application.name<span class="token punctuation">}</span><span class="token punctuation">:</span>$<span class="token punctuation">{<!-- --></span>server.port<span class="token punctuation">}</span>
+
+<span class="token key atrule">logging</span><span class="token punctuation">:</span>
+  <span class="token key atrule">level</span><span class="token punctuation">:</span>
+    <span class="token key atrule">root</span><span class="token punctuation">:</span> debug
+</code></pre> 
+<h5><a id="_222"></a>配置说明：</h5> 
+<p>register-with-eureka: false false表示不向注册中心注册自己</p> 
+<p>fetch-registry: false false表示自己就是注册中心，不需要从注册中心获取注册列表信息</p> 
+<p>service-url 设置eureka server交互的地址查询服务和注册服务都需要用到这个地址（单机用）</p> 
+<p><img src="https://images2.imgbox.com/c1/cc/LWlgVpAc_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_244"></a>主启动类</h4> 
+<blockquote> 
+ <p>在eureka-server的主启动类上开启eureka服务**<a href="https://github.com/EnableEurekaServer">@EnableEurekaServer</a>**</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/4f/bc/OUOe4aIM_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>tianju<span class="token punctuation">.</span>eureka</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span></span><span class="token class-name">SpringApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>autoconfigure<span class="token punctuation">.</span></span><span class="token class-name">SpringBootApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>netflix<span class="token punctuation">.</span>eureka<span class="token punctuation">.</span>server<span class="token punctuation">.</span></span><span class="token class-name">EnableEurekaServer</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootApplication</span>
+<span class="token annotation punctuation">@EnableEurekaServer</span> <span class="token comment">// 声明当前springboot应用是一个eureka服务中心</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">EurekaApp</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">SpringApplication</span><span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">EurekaApp</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="_281"></a>浏览器访问</h4> 
+<p>启动eureka-server子项目，在浏览器上访问localhost:9001</p> 
+<p><img src="https://images2.imgbox.com/16/58/ndjKd8Ec_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_294"></a>查看日志</h4> 
+<p><img src="https://images2.imgbox.com/b9/4a/5rPH0ZP4_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="Provider_309"></a>搭建生产者Provider</h3> 
+<h4><a id="_311"></a>引入依赖</h4> 
+<p><img src="https://images2.imgbox.com/88/43/ysNwxfKG_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-xml">    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependencies</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.cloud<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-cloud-starter-netflix-eureka-client<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+
+<span class="token comment">&lt;!--        在provider的pom文件中添加监控依赖--&gt;</span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+            <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-boot-starter-actuator<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+        <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependencies</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<h4><a id="yml_339"></a>配置yml文件</h4> 
+<p><img src="https://images2.imgbox.com/49/cc/zKHn0tpx_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-yml"><span class="token key atrule">server</span><span class="token punctuation">:</span>
+  <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">10010</span>
+
+<span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+  <span class="token key atrule">client</span><span class="token punctuation">:</span> <span class="token comment">#客户端注册到eureka列表中</span>
+    <span class="token key atrule">service-url</span><span class="token punctuation">:</span>
+      <span class="token key atrule">defaultZone</span><span class="token punctuation">:</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span>9001/eureka
+  <span class="token key atrule">instance</span><span class="token punctuation">:</span>
+    <span class="token key atrule">prefer-ip-address</span><span class="token punctuation">:</span> <span class="token boolean important">true</span> <span class="token comment">#显示访问url 客户端在注册时使用自己的IP而不是主机名</span>
+<span class="token comment">#    # 实例id</span>
+<span class="token comment">#    instance-id: ${spring.cloud.ip-address}:${spring.application.name}:${server.port}</span>
+    <span class="token key atrule">instance-id</span><span class="token punctuation">:</span> provider<span class="token punctuation">-</span><span class="token number">10010</span>  <span class="token comment">#注册中心显示出来的微服务名称</span>
+
+<span class="token comment"># 应用名称</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">application</span><span class="token punctuation">:</span>
+    <span class="token key atrule">name</span><span class="token punctuation">:</span> springCloud<span class="token punctuation">-</span>provider
+
+<span class="token key atrule">info</span><span class="token punctuation">:</span>
+  <span class="token key atrule">app.name</span><span class="token punctuation">:</span> SpringCloud
+  <span class="token key atrule">company.name</span><span class="token punctuation">:</span> tianju
+  <span class="token key atrule">build.artifactId</span><span class="token punctuation">:</span> $project.artifactId$
+  <span class="token key atrule">build.version</span><span class="token punctuation">:</span> $project.version$
+</code></pre> 
+<p><img src="https://images2.imgbox.com/2b/19/PZtlYj9N_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_391"></a>主启动类</h4> 
+<p><img src="https://images2.imgbox.com/97/85/IjIqvOWC_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>tianju<span class="token punctuation">.</span>provider</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span></span><span class="token class-name">SpringApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>autoconfigure<span class="token punctuation">.</span></span><span class="token class-name">SpringBootApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>netflix<span class="token punctuation">.</span>eureka<span class="token punctuation">.</span></span><span class="token class-name">EnableEurekaClient</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootApplication</span>
+<span class="token annotation punctuation">@EnableEurekaClient</span> <span class="token comment">// 或 @EnableDiscoveryClient</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProviderApp</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">SpringApplication</span><span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">ProviderApp</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c3/5d/tJQjdo9X_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="EnableEurekaClientEnableDiscoveryClient_428"></a>@EnableEurekaClient和@EnableDiscoveryClient区别</h5> 
+<p>在使用Spring Cloud feign使用中在使用服务发现的时候提到了两种注解：<br> 一种为@EnableDiscoveryClient；<br> 一种为@EnableEurekaClient，用法上基本一致</p> 
+<p><img src="https://images2.imgbox.com/8a/0f/naH03gnE_o.png" alt="在这里插入图片描述"></p> 
+<p>spring cloud中discovery service有许多种实现（eureka、consul、zookeeper等等），</p> 
+<p>@EnableDiscoveryClient基于spring-cloud-commons；<br> @EnableEurekaClient基于spring-cloud-netflix。</p> 
+<p>其实用更简单的话来说，就是如果选用的注册中心是eureka，那么就推荐@EnableEurekaClient， 如果是其他的注册中心，那么推荐使用@EnableDiscoveryClient。</p> 
+<p>注解@EnableEurekaClient上有@EnableDiscoveryClient注解，可以说基本就是EnableEurekaClient有@EnableDiscoveryClient的功能，另外上面的注释中提到，其实@EnableEurekaClient注解就是一种方便使用eureka的注解而已，可以说使用其他的注册中心后，都可以使用@EnableDiscoveryClient注解，但是使用@EnableEurekaClient的情景，就是在服务采用eureka作为注册中心的时候，使用场景较为单一。</p> 
+<h4><a id="_460"></a>查看日志</h4> 
+<p><img src="https://images2.imgbox.com/30/93/I0DJvHzN_o.png" alt="在这里插入图片描述"></p> 
+<p>修改配置信息，变成了20s</p> 
+<blockquote> 
+ <p>lease-renewal-interval-in-seconds: 20 #心跳时间</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/63/d9/eaOtbbNj_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-yml"><span class="token key atrule">server</span><span class="token punctuation">:</span>
+  <span class="token key atrule">port</span><span class="token punctuation">:</span> <span class="token number">10010</span>
+
+<span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+  <span class="token key atrule">client</span><span class="token punctuation">:</span> <span class="token comment">#客户端注册到eureka列表中</span>
+    <span class="token key atrule">service-url</span><span class="token punctuation">:</span>
+      <span class="token key atrule">defaultZone</span><span class="token punctuation">:</span> http<span class="token punctuation">:</span>//127.0.0.1<span class="token punctuation">:</span>9001/eureka
+  <span class="token key atrule">instance</span><span class="token punctuation">:</span>
+    <span class="token key atrule">prefer-ip-address</span><span class="token punctuation">:</span> <span class="token boolean important">true</span> <span class="token comment">#显示访问url 客户端在注册时使用自己的IP而不是主机名</span>
+<span class="token comment">#    # 实例id</span>
+<span class="token comment">#    instance-id: ${spring.cloud.ip-address}:${spring.application.name}:${server.port}</span>
+    <span class="token key atrule">instance-id</span><span class="token punctuation">:</span> provider<span class="token punctuation">-</span><span class="token number">10010</span>  <span class="token comment">#注册中心显示出来的微服务名称</span>
+    <span class="token key atrule">lease-renewal-interval-in-seconds</span><span class="token punctuation">:</span> <span class="token number">20</span>   <span class="token comment">#心跳时间</span>
+    <span class="token key atrule">lease-expiration-duration-in-seconds</span><span class="token punctuation">:</span> <span class="token number">60</span> <span class="token comment">#下线时间</span>
+
+<span class="token comment"># 应用名称</span>
+<span class="token key atrule">spring</span><span class="token punctuation">:</span>
+  <span class="token key atrule">application</span><span class="token punctuation">:</span>
+    <span class="token key atrule">name</span><span class="token punctuation">:</span> springCloud<span class="token punctuation">-</span>provider
+
+<span class="token key atrule">info</span><span class="token punctuation">:</span>
+  <span class="token key atrule">app.name</span><span class="token punctuation">:</span> SpringCloud
+  <span class="token key atrule">company.name</span><span class="token punctuation">:</span> tianju
+  <span class="token key atrule">build.artifactId</span><span class="token punctuation">:</span> $project.artifactId$
+  <span class="token key atrule">build.version</span><span class="token punctuation">:</span> $project.version$
+</code></pre> 
+<h3><a id="consumer_520"></a>搭建消费者consumer</h3> 
+<h4><a id="_526"></a>引入依赖配置等雷同</h4> 
+<p><img src="https://images2.imgbox.com/d1/9d/s27vkGcx_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>注册到eureka</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/32/ca/GiqGkMKu_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>主启动类</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/ec/5a/zPRUsr4w_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>tianju<span class="token punctuation">.</span>consumer</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span></span><span class="token class-name">SpringApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>boot<span class="token punctuation">.</span>autoconfigure<span class="token punctuation">.</span></span><span class="token class-name">SpringBootApplication</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>client<span class="token punctuation">.</span>discovery<span class="token punctuation">.</span></span><span class="token class-name">EnableDiscoveryClient</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>netflix<span class="token punctuation">.</span>eureka<span class="token punctuation">.</span></span><span class="token class-name">EnableEurekaClient</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Bean</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">RestTemplate</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@SpringBootApplication</span>
+<span class="token annotation punctuation">@EnableDiscoveryClient</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ConsumerApp</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">SpringApplication</span><span class="token punctuation">.</span><span class="token function">run</span><span class="token punctuation">(</span><span class="token class-name">ConsumerApp</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">RestTemplate</span> <span class="token function">restTemplate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">RestTemplate</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="controller_579"></a>在生产端提供controller</h4> 
+<p><img src="https://images2.imgbox.com/36/9c/MLtUcGPX_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="_590"></a>在消费端调用生产者</h4> 
+<p><img src="https://images2.imgbox.com/74/ee/WN8rLweq_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>tianju<span class="token punctuation">.</span>consumer<span class="token punctuation">.</span>controller</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">com<span class="token punctuation">.</span>netflix<span class="token punctuation">.</span>appinfo<span class="token punctuation">.</span></span><span class="token class-name">InstanceInfo</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">lombok<span class="token punctuation">.</span>extern<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">Slf4j</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>beans<span class="token punctuation">.</span>factory<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Autowired</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">ServiceInstance</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>cloud<span class="token punctuation">.</span>client<span class="token punctuation">.</span>discovery<span class="token punctuation">.</span></span><span class="token class-name">DiscoveryClient</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">PathVariable</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">RequestMapping</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>bind<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">RestController</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>client<span class="token punctuation">.</span></span><span class="token class-name">RestTemplate</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">javax<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Resource</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">List</span></span><span class="token punctuation">;</span>
+
+<span class="token annotation punctuation">@RestController</span>
+<span class="token annotation punctuation">@RequestMapping</span><span class="token punctuation">(</span><span class="token string">"/consumer"</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Slf4j</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ConsumerController</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token annotation punctuation">@Resource</span>
+    <span class="token keyword">private</span> <span class="token class-name">DiscoveryClient</span> discoveryClient<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">RestTemplate</span> restTemplate<span class="token punctuation">;</span>
+
+    <span class="token annotation punctuation">@RequestMapping</span><span class="token punctuation">(</span><span class="token string">"/getId/{id}"</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">String</span> <span class="token function">getMsg</span><span class="token punctuation">(</span><span class="token annotation punctuation">@PathVariable</span><span class="token punctuation">(</span><span class="token string">"id"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> id<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">ServiceInstance</span><span class="token punctuation">&gt;</span></span> instances <span class="token operator">=</span> discoveryClient<span class="token punctuation">.</span><span class="token function">getInstances</span><span class="token punctuation">(</span><span class="token string">"springCloud-provider"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">ServiceInstance</span> instance <span class="token operator">=</span> instances<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> host <span class="token operator">=</span> instance<span class="token punctuation">.</span><span class="token function">getHost</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> port <span class="token operator">=</span> instance<span class="token punctuation">.</span><span class="token function">getPort</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"消费者拼出路径+端口："</span><span class="token operator">+</span> host<span class="token operator">+</span><span class="token string">":"</span><span class="token operator">+</span>port<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 获取ip和端口信息，拼接成服务地址</span>
+        <span class="token class-name">String</span> baseUrl <span class="token operator">=</span> <span class="token string">"http://"</span> <span class="token operator">+</span> instance<span class="token punctuation">.</span><span class="token function">getHost</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">":"</span> <span class="token operator">+</span>
+                instance<span class="token punctuation">.</span><span class="token function">getPort</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"/provider/get/"</span> <span class="token operator">+</span> id<span class="token punctuation">;</span>
+        <span class="token class-name">String</span> consumer <span class="token operator">=</span> restTemplate<span class="token punctuation">.</span><span class="token function">getForObject</span><span class="token punctuation">(</span>baseUrl<span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        log<span class="token punctuation">.</span><span class="token function">debug</span><span class="token punctuation">(</span><span class="token string">"采用restTemplate调用生产者："</span><span class="token operator">+</span>baseUrl<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token string">"消费者调用生产者获得消息："</span><span class="token operator">+</span>consumer<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/d1/ff/Nnsr6X24_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_658"></a>心跳和续约策略</h2> 
+<p>Eureka：就是服务注册中心（可以是一个集群），对外暴露自己的地址</p> 
+<ul><li>提供者：启动后向Eureka注册自己信息（地址，提供什么服务）</li><li>消费者：向Eureka订阅服务，Eureka会将对应服务的所有提供者地址列表发送给消费者，并且定期更新</li><li>心跳(续约)：提供者定期通过http方式向Eureka刷新自己的状态</li></ul> 
+<p><img src="https://images2.imgbox.com/30/f1/ZAm0gAdt_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_681"></a>常见概念</h3> 
+<p><strong>Register 服务注册</strong></p> 
+<p>当Eureka客户端向Eureka Server注册时，它提供自身的元数据，比如IP地址、端口，运行状况指示符URL，主页等。</p> 
+<h3><a id="Renew__687"></a>Renew 服务续约（心跳机制）</h3> 
+<p>Eureka客户会每隔30秒发送一次心跳来续约。通过续约来告知Eureka Server该Eureka客户仍然存在，没有出现问题。正常情况下，如果Eureka Server在90秒没有收到Eureka客户的续约，它会将实例从其注册表中删除。建议不要更改续约间隔。</p> 
+<ul><li>心跳机制是每隔30秒发送一个自定义的结构体(心跳包)，让对方知道自己还活着，以确保连接的有效性的机制。</li><li>心跳机制是每隔30秒发送一个固定信息给服务端，服务端收到后回复一个固定的信息。如果服务端90秒内没有收到客户端消息则视客户端断开。</li><li>发送方可以是客户端或服务端，根据实际情况，一般是客户端；因为一个服务端可能有很多客户端，服务端作为发送方的比较耗费性能。</li></ul> 
+<h3><a id="Fetch_Registries__701"></a>Fetch Registries 获取注册列表信息</h3> 
+<p>Eureka客户端从服务器获取注册表信息，并将其缓存在本地。客户端会使用该信息查找其他服务，从而进行远程调用。该注册列表信息定期（每30秒钟）更新一次。每次返回注册列表信息可能与Eureka客户端的缓存信息不同， Eureka客户端自动处理。如果由于某种原因导致注册列表信息不能及时匹配，Eureka客户端则会重新获取整个注册表信息。 Eureka服务器缓存注册列表信息，整个注册表以及每个应用程序的信息进行了压缩，压缩内容和没有压缩的内容完全相同。Eureka客户端和Eureka 服务器可以使用JSON / XML格式进行通讯。在默认的情况下Eureka客户端使用压缩JSON格式来获取注册列表的信息。</p> 
+<h2><a id="_709"></a>服务的下线和剔除</h2> 
+<h3><a id="Cancel__713"></a>Cancel 服务下线</h3> 
+<p>Eureka客户端在程序关闭时向Eureka服务器发送取消请求，发送请求后，该客户端实例信息将从服务器的实例注册表中删除，该下线请求不会自动完成，它需要调用以下内容：</p> 
+<p>DiscoveryManager.getInstance().shutdownComponent()；</p> 
+<p>服务进行正常关闭操作，会触发一个服务下线的REST请求给Eureka Server，告诉服务注册中心：“我要下线了”。服务中心接受到请求之后，将该服务置为下线状态。</p> 
+<h3><a id="Eviction__723"></a>Eviction 服务剔除</h3> 
+<p>在默认的情况下，当Eureka客户端连续90秒没有向Eureka服务器发送服务续约（心跳），Eureka服务器会将该服务实例从服务注册列表删除，即服务剔除。</p> 
+<p>有些时候，我们的服务提供方并不一定会正常下线，可能因为内存溢出、网络故障等原因导致服务无法正常工作。Eureka Server需要将这样的服务剔除出服务列表。因此它会开启一个定时任务，每隔60秒对所有失效的服务（超过90秒未响应）进行剔除。</p> 
+<p>可以通过eureka.server.eviction-interval-timer-in-ms 参数对其进行修改，单位是毫秒。</p> 
+<pre><code class="prism language-yml"><span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+	<span class="token key atrule">server</span><span class="token punctuation">:</span>
+		<span class="token comment"># 每隔多久（ms）触发一次服务剔除</span>
+		<span class="token key atrule">eviction-interval-timer-in-ms</span><span class="token punctuation">:</span> <span class="token number">10000</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/8f/23/n9QpE8eL_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_755"></a>自我保护</h3> 
+<p>我们关停一个服务，就会在Eureka面板看到一条警告：</p> 
+<p><img src="https://images2.imgbox.com/5b/f6/FzWGoQP9_o.png" alt="在这里插入图片描述"></p> 
+<p>这是触发了Eureka的自我保护机制。当一个服务未按时进行心跳续约时，Eureka会统计最近15分钟心跳失败的服务实例的比例是否超过了85%。在生产环境下，因为网络延迟等原因，心跳失败实例的比例很有可能超标，但是此时就把服务剔除列表并不妥当，因为服务可能没有宕机。</p> 
+<p>Eureka就会把当前实例的注册信息保护起来，不予剔除。生产环境下这很有效，保证了大多数服务依然可用。</p> 
+<p>但是这给我们的开发带来了麻烦， 因此开发阶段我们都会关闭自我保护模式：（eureka-server）</p> 
+<pre><code class="prism language-yml"><span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+	<span class="token key atrule">server</span><span class="token punctuation">:</span>
+		<span class="token key atrule">enable-self-preservation</span><span class="token punctuation">:</span> <span class="token boolean important">false</span> <span class="token comment"># 如果为true，表示要保护实例，不被剔除，false关闭自我保护模式,剔除实例</span>
+		<span class="token key atrule">eviction-interval-timer-in-ms</span><span class="token punctuation">:</span> <span class="token number">10000</span> <span class="token comment"># 扫描失效服务的间隔时间（缺省为60*1000ms）</span>
+</code></pre> 
+<p>如果保护实例不被剔除，而且配置了 eviction-interval-timer-in-ms: 10000，则eviction-intervaltimer-in-ms参数为准，实例还是会被剔除</p> 
+<pre><code class="prism language-yml"><span class="token key atrule">eureka</span><span class="token punctuation">:</span>
+	<span class="token key atrule">server</span><span class="token punctuation">:</span>
+		<span class="token key atrule">enable-self-preservation</span><span class="token punctuation">:</span> <span class="token boolean important">true</span> <span class="token comment"># 如果为true，表示要保护实例，不被剔除，false关闭自我保护模式,剔除实例</span>
+		<span class="token comment">#eviction-interval-timer-in-ms: 10000 # 扫描失效服务的间隔时间（缺省为60*1000ms）</span>
+</code></pre> 
+<h2><a id="Eureka_800"></a>Eureka集群搭建</h2> 
+<p>Eureka Server即服务的注册中心，在刚才的案例中，我们只有一个EurekaServer，事实上EurekaServer也可以是一个集群，形成高可用的Eureka中心。</p> 
+<p>多个Eureka Server之间也会互相注册为服务，当服务提供者注册到Eureka Server集群中的某个节点时，该节点会把服务的信息同步给集群中的每个节点，从而实现数据同步。</p> 
+<p>因此，无论客户端访问到Eureka Server集群中的任意一个节点，都可以获取到完整的服务列表信息。</p> 
+<blockquote> 
+ <p>允许多个实例</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/e7/9d/ClamkI8b_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="1_815"></a>1.启动第一个</h3> 
+<p>所谓的高可用注册中心，其实就是把EurekaServer自己也作为一个服务进行注册，这样多个EurekaServer之间就能互相发现对方，从而形成集群。因此我们做了以下修改：把service-url的值改成了另外一台EurekaServer的地址，而不是自己。</p> 
+<blockquote> 
+ <p>先启动一个</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/20/54/2n4lPP9d_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/76/57/axw3ocwD_o.png" alt="在这里插入图片描述"></p> 
+<p>启动报错，很正常。因为另一个服务没有启动</p> 
+<p><img src="https://images2.imgbox.com/8d/de/gAUITPxU_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="2_830"></a>2.再启动一个</h3> 
+<p>启动第二个eurekaServer，再次修改eureka-server的配置</p> 
+<blockquote> 
+ <p>再启动一个</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/bd/a4/ify0RiCV_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="3_844"></a>3.访问集群</h3> 
+<blockquote> 
+ <p>集群效果</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/ec/46/bOVlN08Z_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="4_856"></a>4.客户端注册</h3> 
+<p>因为EurekaServer不止一个，因此注册服务的时候，service-url参数需要变化：</p> 
+<p><img src="https://images2.imgbox.com/5e/15/vth2mCTw_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="5_862"></a>5.注册效果</h3> 
+<p><img src="https://images2.imgbox.com/f3/99/jya5BFZc_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/82/10/6Ja0rdil_o.png" alt="在这里插入图片描述"></p> 
+<hr> 
+<h2><a id="_874"></a>总结</h2> 
+<p>1.Eureka的简介和原理；<br> 2.结合实际使用阐述Eureka的使用并进行分析；<br> 3.介绍了心跳续约策略，服务的下线和剔除以及自我保护；<br> 4.Eureka集群的搭建方式，高可用；</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/16c9bdb6f7e7503bc9ff4cab595c3677/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">第十三章 DFS与BFS（保姆级教学！！超级详细的图示！！）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/97d527bed06cd1442f5157f90c5da949/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">文心一言API使用教程（python版）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

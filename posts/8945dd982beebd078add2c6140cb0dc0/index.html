@@ -1,0 +1,292 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>深度解析 Spring 源码：揭秘JDK动态代理的奥秘 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/8945dd982beebd078add2c6140cb0dc0/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="深度解析 Spring 源码：揭秘JDK动态代理的奥秘">
+  <meta property="og:description" content="文章目录 一、JDK动态代理简介1.1 JDK 动态代理的基本原理和使用场景1.2 Spring 如何利用动态代理实现 AOP 二、探究 Spring 中的动态代理实现2.1 深入 JdkDynamicAopProxy 类2.1.1 JdkDynamicAopProxy 类结构2.1.2 getProxy 方法的实现2.1.3 determineClassLoader 方法的实现2.1.4 newProxyInstance 方法的实现 2.2 理解 InvocationHandler 接口2.2.1 InvocationHandler 在 Spring 中的角色和使用方式2.2.2 invoke 方法的作用 2.3 解析拦截器链的处理2.3.1 深入研究 AopProxyChain 对象的构建和作用2.3.2 探讨拦截器链在 Spring AOP 中的执行顺序和机制 三、实践与应用通过对 Spring 源码的解析，学习如何编写自定义的 AOP 拦截器 一、JDK动态代理简介 1.1 JDK 动态代理的基本原理和使用场景 JDK动态代理是Java语言提供的一种实现动态代理的方式，其基本原理是利用反射机制在运行时动态生成代理类和代理对象。
+基本原理：
+接口定义：定义一个接口（或者是一组接口），用于描述需要被代理的行为。InvocationHandler接口：编写一个实现了InvocationHandler接口的类，该类负责实际的代理逻辑。InvocationHandler接口只有一个方法invoke(Object proxy, Method method, Object[] args)，当代理对象的方法被调用时，invoke方法会被调用，并在其中执行代理逻辑。Proxy类：使用Proxy类的newProxyInstance方法动态地创建代理对象。newProxyInstance方法接受三个参数：ClassLoader、一个接口数组和一个InvocationHandler对象。在运行时，Proxy类会动态生成一个实现了指定接口的代理类，并通过传入的InvocationHandler对象来调用实际的代理逻辑。代理对象调用：当调用代理对象的方法时，实际上是调用了InvocationHandler接口的invoke方法，该方法会根据被调用的方法和传入的参数执行相应的代理逻辑。 使用场景：
+日志记录：通过代理可以在方法执行前后记录日志，实现日志记录的功能。性能监控：可以在方法执行前后记录方法的执行时间，从而进行性能监控。事务管理：在方法执行前后开启和提交事务，实现事务管理的功能。权限控制：在方法执行前进行权限验证，实现权限控制的功能。远程调用：可以通过代理在调用远程对象的方法时添加网络通信的逻辑，实现远程调用的功能。 1.2 Spring 如何利用动态代理实现 AOP Spring AOP的实现基于代理模式和装饰器模式，在目标方法执行前后或异常抛出时，通过代理对象来执行额外的逻辑，如日志记录、事务管理、权限控制等。通过配置切面和通知，可以将这些额外逻辑统一地应用到多个目标类的方法中，从而实现横切关注点的分离和复用。
+在Spring AOP中，主要利用了JDK动态代理和CGLIB动态代理两种方式。
+JDK动态代理（本篇）： 当被代理的目标对象实现了接口时，Spring会使用JDK动态代理。Spring AOP利用java.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T17:41:55+08:00">
+    <meta property="article:modified_time" content="2024-05-22T17:41:55+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">深度解析 Spring 源码：揭秘JDK动态代理的奥秘</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/77/b9/qvTwbJ1u_o.gif" alt="在这里插入图片描述"></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#JDK_4" rel="nofollow">一、JDK动态代理简介</a></li><li><ul><li><a href="#11_JDK__6" rel="nofollow">1.1 JDK 动态代理的基本原理和使用场景</a></li><li><a href="#12_Spring__AOP_25" rel="nofollow">1.2 Spring 如何利用动态代理实现 AOP</a></li></ul> 
+   </li><li><a href="#_Spring__42" rel="nofollow">二、探究 Spring 中的动态代理实现</a></li><li><ul><li><a href="#21__JdkDynamicAopProxy__54" rel="nofollow">2.1 深入 JdkDynamicAopProxy 类</a></li><li><ul><li><a href="#211_JdkDynamicAopProxy__56" rel="nofollow">2.1.1 JdkDynamicAopProxy 类结构</a></li><li><a href="#212_getProxy__63" rel="nofollow">2.1.2 getProxy 方法的实现</a></li><li><a href="#213_determineClassLoader__70" rel="nofollow">2.1.3 determineClassLoader 方法的实现</a></li><li><a href="#214_newProxyInstance__77" rel="nofollow">2.1.4 newProxyInstance 方法的实现</a></li></ul> 
+    </li><li><a href="#22__InvocationHandler__84" rel="nofollow">2.2 理解 InvocationHandler 接口</a></li><li><ul><li><a href="#221_InvocationHandler__Spring__86" rel="nofollow">2.2.1 InvocationHandler 在 Spring 中的角色和使用方式</a></li><li><a href="#222_invoke__93" rel="nofollow">2.2.2 invoke 方法的作用</a></li></ul> 
+    </li><li><a href="#23__109" rel="nofollow">2.3 解析拦截器链的处理</a></li><li><ul><li><a href="#231__AopProxyChain__111" rel="nofollow">2.3.1 深入研究 AopProxyChain 对象的构建和作用</a></li><li><a href="#232__Spring_AOP__118" rel="nofollow">2.3.2 探讨拦截器链在 Spring AOP 中的执行顺序和机制</a></li></ul> 
+   </li></ul> 
+   </li><li><a href="#_125" rel="nofollow">三、实践与应用</a></li><li><ul><li><a href="#_Spring__AOP__127" rel="nofollow">通过对 Spring 源码的解析，学习如何编写自定义的 AOP 拦截器</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="JDK_4"></a>一、JDK动态代理简介</h3> 
+<h4><a id="11_JDK__6"></a>1.1 JDK 动态代理的基本原理和使用场景</h4> 
+<p>JDK动态代理是Java语言提供的一种实现动态代理的方式，其基本原理是利用反射机制在运行时动态生成代理类和代理对象。</p> 
+<p><strong>基本原理</strong>：</p> 
+<ol><li><strong>接口定义</strong>：定义一个接口（或者是一组接口），用于描述需要被代理的行为。</li><li><strong>InvocationHandler接口</strong>：编写一个实现了<code>InvocationHandler</code>接口的类，该类负责实际的代理逻辑。<code>InvocationHandler</code>接口只有一个方法<code>invoke(Object proxy, Method method, Object[] args)</code>，当代理对象的方法被调用时，<code>invoke</code>方法会被调用，并在其中执行代理逻辑。</li><li><strong>Proxy类</strong>：使用<code>Proxy</code>类的<code>newProxyInstance</code>方法动态地创建代理对象。<code>newProxyInstance</code>方法接受三个参数：ClassLoader、一个接口数组和一个<code>InvocationHandler</code>对象。在运行时，<code>Proxy</code>类会动态生成一个实现了指定接口的代理类，并通过传入的<code>InvocationHandler</code>对象来调用实际的代理逻辑。</li><li><strong>代理对象调用</strong>：当调用代理对象的方法时，实际上是调用了<code>InvocationHandler</code>接口的<code>invoke</code>方法，该方法会根据被调用的方法和传入的参数执行相应的代理逻辑。</li></ol> 
+<p><strong>使用场景</strong>：</p> 
+<ol><li><strong>日志记录</strong>：通过代理可以在方法执行前后记录日志，实现日志记录的功能。</li><li><strong>性能监控</strong>：可以在方法执行前后记录方法的执行时间，从而进行性能监控。</li><li><strong>事务管理</strong>：在方法执行前后开启和提交事务，实现事务管理的功能。</li><li><strong>权限控制</strong>：在方法执行前进行权限验证，实现权限控制的功能。</li><li><strong>远程调用</strong>：可以通过代理在调用远程对象的方法时添加网络通信的逻辑，实现远程调用的功能。</li></ol> 
+<h4><a id="12_Spring__AOP_25"></a>1.2 Spring 如何利用动态代理实现 AOP</h4> 
+<p>Spring AOP的实现基于<strong>代理模式</strong>和<strong>装饰器模式</strong>，在目标方法执行前后或异常抛出时，通过代理对象来执行额外的逻辑，如日志记录、事务管理、权限控制等。通过配置<strong>切面</strong>和<strong>通知</strong>，可以将这些额外逻辑统一地应用到多个目标类的方法中，从而实现横切关注点的分离和复用。</p> 
+<p>在Spring AOP中，主要利用了JDK动态代理和CGLIB动态代理两种方式。</p> 
+<ol><li><strong>JDK动态代理（本篇）</strong>： 
+  <ul><li>当被代理的目标对象实现了接口时，Spring会使用JDK动态代理。</li><li>Spring AOP利用<code>java.lang.reflect.Proxy</code>类来创建代理对象，该类要求被代理的类必须实现至少一个接口。</li><li>Spring在运行时动态生成了一个实现了相同接口的代理对象，代理对象中的方法会委托给<code>InvocationHandler</code>接口的实现类来执行增强逻辑。</li><li>JDK动态代理的优势在于它不需要引入额外的库，但缺点是被代理的类必须实现接口。</li></ul> </li><li><strong>CGLIB动态代理（下篇）</strong>： 
+  <ul><li>当被代理的目标对象没有实现接口时，Spring会使用CGLIB动态代理。</li><li>CGLIB是一个强大的，高性能的代码生成库，它通过在运行时生成字节码的方式来动态创建代理类。</li><li>Spring AOP利用CGLIB来生成被代理对象的子类，并在子类中重写需要增强的方法，将增强逻辑织入到重写的方法中。</li><li>CGLIB动态代理的优势在于它可以代理没有实现接口的类，但缺点是需要引入CGLIB库，并且生成的代理类会比较庞大。</li></ul> </li></ol> 
+<h3><a id="_Spring__42"></a>二、探究 Spring 中的动态代理实现</h3> 
+<blockquote> 
+ <p>本文主要结合动态代理的维度以及织入切面逻辑来分析源码，其它相关源码，读者感兴趣可自行去分析。</p> 
+</blockquote> 
+<p><strong>织入切面逻辑的过程</strong>：</p> 
+<ol><li>当 Spring 容器启动时，会解析配置中的切面和通知，并生成代理对象的定义。</li><li>当目标 bean 被注入到其他 bean 中时，Spring 会检查该 bean 是否需要进行代理。</li><li>如果需要代理，则根据配置选择使用 JDK 动态代理还是 CGLIB 动态代理来创建代理对象。</li><li>在代理对象中，对目标方法的调用会被重定向到拦截器链中，拦截器链中包含了需要织入的切面逻辑。</li><li>在方法执行前后，拦截器链会按照配置的顺序执行切面逻辑。</li></ol> 
+<h4><a id="21__JdkDynamicAopProxy__54"></a>2.1 深入 JdkDynamicAopProxy 类</h4> 
+<h5><a id="211_JdkDynamicAopProxy__56"></a>2.1.1 JdkDynamicAopProxy 类结构</h5> 
+<p><code>JdkDynamicAopProxy</code> 类的实现做一些准备工作，包括声明变量、初始化变量、定义静态成员等。</p> 
+<p><img src="https://images2.imgbox.com/97/c9/LZdCCKXP_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="212_getProxy__63"></a>2.1.2 getProxy 方法的实现</h5> 
+<p>在 <code>getProxy</code> 方法中，会创建 <code>Proxy.newProxyInstance</code>，并传入 <code>JdkDynamicAopProxy</code> 的实例作为 <code>InvocationHandler</code> 。</p> 
+<p><img src="https://images2.imgbox.com/c7/e7/CiMYcx7h_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="213_determineClassLoader__70"></a>2.1.3 determineClassLoader 方法的实现</h5> 
+<p>用于确定最终使用的类加载器，确保动态代理类能够正确加载所需的类。</p> 
+<p><img src="https://images2.imgbox.com/19/76/TyCICNOy_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="214_newProxyInstance__77"></a>2.1.4 newProxyInstance 方法的实现</h5> 
+<p>主要用于创建代理实例，其中包含了一些安全性检查和异常处理。</p> 
+<p><img src="https://images2.imgbox.com/20/ec/eHn8ly77_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="22__InvocationHandler__84"></a>2.2 理解 InvocationHandler 接口</h4> 
+<h5><a id="221_InvocationHandler__Spring__86"></a>2.2.1 InvocationHandler 在 Spring 中的角色和使用方式</h5> 
+<p><code>InvocationHandler</code>接口定义了一个用于处理代理对象方法调用的统一入口，当代理对象的方法被调用时，会触发<code>invoke</code>方法的执行，通过实现<code>invoke</code>方法来定义代理对象方法调用时的行为，例如添加日志、实现权限控制等。</p> 
+<p><img src="https://images2.imgbox.com/95/14/yDbcmzbD_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="222_invoke__93"></a>2.2.2 invoke 方法的作用</h5> 
+<blockquote> 
+ <p>在 <code>invoke</code> 方法中，会根据方法名和参数，调用对应的拦截器。</p> 
+ <p>invoke()的实现类较多，本文解读AopProxyChain实现类下的invoke方法。</p> 
+</blockquote> 
+<p>主要用于代理对象的调用处理程序的实现，用于处理代理对象的方法调用。<br> <img src="https://images2.imgbox.com/fa/15/0tHCwwdG_o.png" alt="在这里插入图片描述"></p> 
+<p>承接invoke方法实现，主要是根据拦截器链的情况来决定是直接调用目标方法还是通过拦截器链来调用，并在方法调用结束后进行相应的处理。</p> 
+<p><img src="https://images2.imgbox.com/05/10/AHY325Wh_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="23__109"></a>2.3 解析拦截器链的处理</h4> 
+<h5><a id="231__AopProxyChain__111"></a>2.3.1 深入研究 AopProxyChain 对象的构建和作用</h5> 
+<p>在 <code>invoke</code> 方法中，<code>JdkDynamicAopProxy</code> 会调用 <code>AopProxyChain</code> 对象的 <code>proceed</code> 方法。</p> 
+<p><img src="https://images2.imgbox.com/a3/bc/7pRihcjK_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="232__Spring_AOP__118"></a>2.3.2 探讨拦截器链在 Spring AOP 中的执行顺序和机制</h5> 
+<p><code>AopProxyChain</code> 封装了拦截器链，负责按照顺序执行拦截器的逻辑。</p> 
+<p><img src="https://images2.imgbox.com/a9/f0/8Rru3G1k_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_125"></a>三、实践与应用</h3> 
+<blockquote> 
+ <h4><a id="_Spring__AOP__127"></a>通过对 Spring 源码的解析，学习如何编写自定义的 AOP 拦截器</h4> 
+</blockquote> 
+<p><strong>编写自定义的 AOP 拦截器步骤</strong>：</p> 
+<ol><li><strong>编写自定义拦截器</strong>： 
+  <ul><li>创建一个类，实现 Spring 的 MethodInterceptor 接口，该接口定义了拦截器的核心方法 invoke。</li><li>在 invoke 方法中编写自定义的拦截逻辑，比如在目标方法执行前后执行一些操作，或者替换目标方法的执行等。</li></ul> </li><li><strong>配置拦截器</strong>： 
+  <ul><li>使用 Spring 的配置方式（XML、Java Config、注解）将自定义的拦截器配置到 Spring 容器中。</li><li>将拦截器与目标 bean 关联起来，可以通过切点表达式或其他方式指定在哪些方法上应用拦截器。</li></ul> </li><li><strong>测试</strong>： 
+  <ul><li>编写测试用例，验证自定义拦截器是否按照预期工作。</li><li>确保拦截器能够正确地拦截目标方法，并且执行自定义的拦截逻辑。</li></ul> </li><li><strong>调试和优化</strong>： 
+  <ul><li>如果遇到问题，可以通过调试来查找原因。</li><li>根据实际需求，对拦截器进行优化和调整，确保其性能和功能都符合预期。</li></ul> </li></ol> 
+<p><strong>使用注解形式配置的Demo</strong>：</p> 
+<ol><li>创建一个自定义的拦截器 <code>CustomInterceptor</code>，实现 <code>MethodInterceptor</code> 接口。</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">CustomInterceptor</span> <span class="token keyword">implements</span> <span class="token class-name">MethodInterceptor</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">Object</span> <span class="token function">invoke</span><span class="token punctuation">(</span><span class="token class-name">MethodInvocation</span> invocation<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Throwable</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 在目标方法执行前输出日志</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"Before invoking method: "</span> <span class="token operator">+</span> invocation<span class="token punctuation">.</span><span class="token function">getMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">// 执行目标方法</span>
+        <span class="token class-name">Object</span> result <span class="token operator">=</span> invocation<span class="token punctuation">.</span><span class="token function">proceed</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> 
+
+        <span class="token comment">// 在目标方法执行后输出日志</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"After invoking method: "</span> <span class="token operator">+</span> invocation<span class="token punctuation">.</span><span class="token function">getMethod</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token keyword">return</span> result<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="2"><li>创建一个注解 <code>CustomAnnotation</code>，用来标记需要被拦截的方法。</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Target</span><span class="token punctuation">(</span><span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">METHOD</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Retention</span><span class="token punctuation">(</span><span class="token class-name">RetentionPolicy</span><span class="token punctuation">.</span><span class="token constant">RUNTIME</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token annotation punctuation">@interface</span> <span class="token class-name">CustomAnnotation</span> <span class="token punctuation">{<!-- --></span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="3"><li>修改 <code>UserService</code> 和 <code>UserServiceImpl</code>，在需要拦截的方法上添加 <code>CustomAnnotation</code> 注解。</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">interface</span> <span class="token class-name">UserService</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@CustomAnnotation</span>
+    <span class="token keyword">void</span> <span class="token function">addUser</span><span class="token punctuation">(</span><span class="token class-name">String</span> username<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">UserServiceImpl</span> <span class="token keyword">implements</span> <span class="token class-name">UserService</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token annotation punctuation">@CustomAnnotation</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">addUser</span><span class="token punctuation">(</span><span class="token class-name">String</span> username<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"User added: "</span> <span class="token operator">+</span> username<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="4"><li>使用 Spring 的 Java Config 来配置拦截器和切面。</li></ol> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AppConfig</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token comment">/**
+     * 返回一个 UserService 实例
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">UserService</span> <span class="token function">userService</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">UserServiceImpl</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 返回一个 CustomInterceptor 的实例，即自定义的拦截器
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">CustomInterceptor</span> <span class="token function">customInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">CustomInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 返回一个 DefaultAdvisorAutoProxyCreator 实例，负责自动代理被 @AspectJ 注解标记的 Bean
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">DefaultAdvisorAutoProxyCreator</span> <span class="token function">advisorAutoProxyCreator</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">DefaultAdvisorAutoProxyCreator</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 返回一个 DefaultPointcutAdvisor 实例，将拦截器和切点绑定在一起
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">DefaultPointcutAdvisor</span> <span class="token function">defaultPointcutAdvisor</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">DefaultPointcutAdvisor</span> advisor <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultPointcutAdvisor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 将自定义的拦截器设置为 Advisor 的 advice，即在目标方法执行前后所执行的逻辑</span>
+        advisor<span class="token punctuation">.</span><span class="token function">setAdvice</span><span class="token punctuation">(</span><span class="token function">customInterceptor</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+       <span class="token comment">// 设置切点，即确定在哪些方法上应用拦截器的条件</span>
+        advisor<span class="token punctuation">.</span><span class="token function">setPointcut</span><span class="token punctuation">(</span><span class="token function">annotationMatchingPointcut</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> advisor<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">/**
+     * 返回一个 AnnotationMatchingPointcut 实例，切点用于匹配带有 CustomAnnotation 注解的方法
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">AnnotationMatchingPointcut</span> <span class="token function">annotationMatchingPointcut</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token class-name">AnnotationMatchingPointcut</span><span class="token punctuation">.</span><span class="token function">forMethodAnnotation</span><span class="token punctuation">(</span><span class="token class-name">CustomAnnotation</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ol start="5"><li>编写一个测试类来验证拦截器是否按预期工作。</li></ol> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Main</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">ApplicationContext</span> context <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">AnnotationConfigApplicationContext</span><span class="token punctuation">(</span><span class="token class-name">AppConfig</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">UserService</span> userService <span class="token operator">=</span> context<span class="token punctuation">.</span><span class="token function">getBean</span><span class="token punctuation">(</span><span class="token class-name">UserService</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 在执行 addUser 方法之前，拦截器执行了自定义的前置逻辑，并在方法执行完毕后执行了自定义的后置逻辑</span>
+        userService<span class="token punctuation">.</span><span class="token function">addUser</span><span class="token punctuation">(</span><span class="token string">"Alice"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 输出结果</span>
+<span class="token class-name">Before</span> invoking method<span class="token operator">:</span> addUser
+<span class="token class-name">User</span> added<span class="token operator">:</span> <span class="token class-name">Alice</span>
+<span class="token class-name">After</span> invoking method<span class="token operator">:</span> addUser
+</code></pre> 
+<p><code>前程万里，全要各人自去努力</code></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d5185b162c7a4188154fb3a41e81ab48/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">堆溢出bug定位调试修复</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/004517aca0732bad9a996d7035862afd/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Django--ApiView示例</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>万字长文！AIGC 时代数字图像水印的进展与实践 | 新程序员 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c22158fdd31f1bf01df03585b51a444c/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="万字长文！AIGC 时代数字图像水印的进展与实践 | 新程序员">
+  <meta property="og:description" content="【导读】数字水印是信息安全领域的新技术，用于保护数据的保密性和完整性。传统方法基于信号处理、信息论和密码学原理，分为空域和变换域方法。本文介绍了数字图像水印的发展与实践，包括定义和追求、传统数字水印方法、深度学习水印方法以及生成图像水印方法。文章还讨论了水印提取方案和未来发展趋势，如将水印信息隐藏在生成图像的风格特征中，利用深度学习模型的优势提高水印的不可感知性等。
+本文精选自《新程序员 007：大模型时代的开发者》，《新程序员 007》聚焦开发者成长，其间既有图灵奖得主 Joseph Sifakis、前 OpenAI 科学家 Joel Lehman 等高瞻远瞩，又有对于开发者们至关重要的成长路径、工程实践及趟坑经验等，欢迎大家点击订阅年卡。
+作者 | 王丙坤
+责编 | 王启隆
+出品 | 《新程序员》编辑部
+数字图像水印定义和追求
+无论是基于传统方法还是基于深度学习的数字水印技术，一个完整的数字水印系统的设计一般包括三部分：水印生成、水印嵌入和水印提取[1]。
+水印生成 水印信号可以通过多种方式生成，例如利用伪随机序列发生器或混沌系统，亦或是有意义的二值、灰度或彩色图像。通常为了携带更多的版权信息，人们倾向于使用二值图像或灰度图像来表示水印，例如产品序列号或 logo 等。对于有意义的水印序列，为了增强水印信息的安全性并提高其抵抗恶意攻击的能力，可以使用置乱技术对水印进行预处理，以消除水印信息之间的相关性。
+水印嵌入 水印嵌入是将水印信息嵌入到载体图像中的过程，它可以通过不同的技术和算法实现。在嵌入的过程中，水印信息被融合进载体图像的特定区域，使其在视觉上不易察觉。嵌入过程如图 1 所示。
+图 1 水印嵌入过程
+水印提取 水印提取是从载体图像中提取水印信息的过程，它涉及使用特定的算法来从图像中提取已嵌入的水印，这些算法会根据水印嵌入的方式采取相应的措施。水印提取过程如图 2 所示。
+图 2 水印提取过程
+追求：不可感知性/鲁棒性/容量 数字水印算法有多种评估标准，主要有以下几方面的追求：不可感知性/鲁棒性/容量。
+不可感知性 不可感知性指的是载体嵌入水印前后不会引起感知上的明显变化。当评估数字水印算法的不可感知性时，常用的指标是结构相似性指标（SSIM）和峰值信噪比（PSNR）。
+SSIM 衡量两幅图像之间的结构相似性，考虑了亮度、对比度和结构三个方面的相似度。其数学表达式为：
+而 PSNR（峰值信噪比）则用于衡量图像的质量损失程度，其数学表达式为：
+其中，MAX（极限值）是图像的最大可能像素值，MSE（均方误差）代表图像之间的均方误差。
+这两个指标常用来评估数字水印算法对图像质量的影响，一般来说，较高的 SSIM 和较高的 PSNR 值表示水印嵌入对图像质量的影响较小，即水印图像的不可感知性较好。
+鲁棒性 鲁棒性是指数字水印算法抵抗各种攻击的能力，例如 JPEG 压缩、旋转、剪切、添加噪声等。使用鲁棒性强的水印算法嵌入水印的图像在经历多种攻击后，在提取水印信息时依然有较高的提取成功率。评估鲁棒性常用的指标包括错误率、提取成功率等。
+容量 图像水印容量指的是在载体图像中可以隐藏的最大水印信息量。它的大小受多种因素影响，包括载体图像的统计特性、失真限度，以及水印嵌入和提取算法是否能够充分利用载体图像。不同的应用场景对水印容量有着不同的需求和限制。
+性能指标之间的关系 数字水印的鲁棒性、不可见性和容量之间存在一种相互制约的关系，这种关系可以通过图 3 进行展示。当三者中的任何一个参数被固定时，剩下的两个参数之间会存在矛盾。举例来说，若水印容量被设定为一定数值，为了提高水印的鲁棒性，可能需要增加水印的嵌入强度，而这样做必然会导致更大的图像失真。同理，若降低水印的嵌入强度以保证较好的图像质量，那么水印的鲁棒性就可能会降低。因此，在设计水印算法时，常常需要在水印鲁棒性、不可见性和容量之间取得一种平衡，根据实际应用需求进行权衡处理。
+图 3 水印性能指标之间的关系
+传统数字水印方法
+概述">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-28T11:52:43+08:00">
+    <meta property="article:modified_time" content="2024-02-28T11:52:43+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">万字长文！AIGC 时代数字图像水印的进展与实践 | 新程序员</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>【导读】数字水印是信息安全领域的新技术，用于保护数据的保密性和完整性。传统方法基于信号处理、信息论和密码学原理，分为空域和变换域方法。本文介绍了数字图像水印的发展与实践，包括定义和追求、传统数字水印方法、深度学习水印方法以及生成图像水印方法。文章还讨论了水印提取方案和未来发展趋势，如将水印信息隐藏在生成图像的风格特征中，利用深度学习模型的优势提高水印的不可感知性等。</p> 
+<p>本文精选自《<a href="https://mall.csdn.net/item/98796" title="新程序员">新程序员</a> 007：大模型时代的开发者》，《新程序员 007》聚焦开发者成长，其间既有图灵奖得主 Joseph Sifakis、前 OpenAI 科学家 Joel Lehman 等高瞻远瞩，又有对于开发者们至关重要的成长路径、工程实践及趟坑经验等，欢迎大家<a href="https://mp.weixin.qq.com/s/aTBa2WqRi0fK6K4PVbWwzA" rel="nofollow" title="点击订阅年卡">点击订阅年卡</a>。</p> 
+<p>作者 | 王丙坤</p> 
+<p>责编 | 王启隆</p> 
+<p>出品 | 《<a class="link-info" href="https://mall.csdn.net/item/98796" title="新程序员">新程序员</a>》编辑部</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="402" src="https://images2.imgbox.com/d7/2d/0n3FfLV5_o.png" width="1080"></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="96" src="https://images2.imgbox.com/63/51/J9noTgKq_o.png" width="120"></p> 
+<p style="text-align:center;"><strong>数字图像水印定义和追求</strong></p> 
+<p>无论是基于传统方法还是基于深度学习的数字水印技术，一个完整的数字水印系统的设计一般包括三部分：水印生成、水印嵌入和水印提取[1]。</p> 
+<h5><strong>水印生成</strong></h5> 
+<p>水印信号可以通过多种方式生成，例如利用伪随机序列发生器或混沌系统，亦或是有意义的二值、灰度或彩色图像。通常为了携带更多的版权信息，人们倾向于使用二值图像或灰度图像来表示水印，例如产品序列号或 logo 等。对于有意义的水印序列，为了增强水印信息的安全性并提高其抵抗恶意攻击的能力，可以使用置乱技术对水印进行预处理，以消除水印信息之间的相关性。</p> 
+<h5><strong>水印嵌入</strong></h5> 
+<p>水印嵌入是将水印信息嵌入到载体图像中的过程，它可以通过不同的技术和算法实现。在嵌入的过程中，水印信息被融合进载体图像的特定区域，使其在视觉上不易察觉。嵌入过程如图 1 所示。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="248" src="https://images2.imgbox.com/f7/ea/abnflU7V_o.png" width="997"></p> 
+<p style="text-align:center;">图 1 水印嵌入过程</p> 
+<h5><strong>水印提取</strong></h5> 
+<p>水印提取是从载体图像中提取水印信息的过程，它涉及使用特定的算法来从图像中提取已嵌入的水印，这些算法会根据水印嵌入的方式采取相应的措施。水印提取过程如图 2 所示。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="197" src="https://images2.imgbox.com/cd/1f/CwgWA1Rl_o.png" width="1080"></p> 
+<p style="text-align:center;">图 2 水印提取过程</p> 
+<h5><strong>追求：不可感知性/鲁棒性/容量</strong></h5> 
+<p>数字水印算法有多种评估标准，主要有以下几方面的追求：不可感知性/鲁棒性/容量。</p> 
+<h4><strong>不可感知性</strong></h4> 
+<p>不可感知性指的是载体嵌入水印前后不会引起感知上的明显变化。当评估数字水印算法的不可感知性时，常用的指标是结构相似性指标（SSIM）和峰值信噪比（PSNR）。</p> 
+<p>SSIM 衡量两幅图像之间的结构相似性，考虑了亮度、对比度和结构三个方面的相似度。其数学表达式为：</p> 
+<p class="img-center"><img alt="" height="137" src="https://images2.imgbox.com/a7/e4/KAqlRGiy_o.png" width="665"></p> 
+<p>而 PSNR（峰值信噪比）则用于衡量图像的质量损失程度，其数学表达式为：</p> 
+<p class="img-center"><img alt="" height="80" src="https://images2.imgbox.com/5e/cd/mwSMr3gk_o.png" width="677"></p> 
+<p>其中，MAX（极限值）是图像的最大可能像素值，MSE（均方误差）代表图像之间的均方误差。</p> 
+<p>这两个指标常用来评估数字水印算法对图像质量的影响，一般来说，较高的 SSIM 和较高的 PSNR 值表示水印嵌入对图像质量的影响较小，即水印图像的不可感知性较好。</p> 
+<h4><strong>鲁棒性</strong></h4> 
+<p>鲁棒性是指数字水印算法抵抗各种攻击的能力，例如 JPEG 压缩、旋转、剪切、添加噪声等。使用鲁棒性强的水印算法嵌入水印的图像在经历多种攻击后，在提取水印信息时依然有较高的提取成功率。评估鲁棒性常用的指标包括错误率、提取成功率等。</p> 
+<h4><strong>容量</strong></h4> 
+<p>图像水印容量指的是在载体图像中可以隐藏的最大水印信息量。它的大小受多种因素影响，包括载体图像的统计特性、失真限度，以及水印嵌入和提取算法是否能够充分利用载体图像。不同的应用场景对水印容量有着不同的需求和限制。</p> 
+<h4><strong>性能指标之间的关系</strong></h4> 
+<p>数字水印的鲁棒性、不可见性和容量之间存在一种相互制约的关系，这种关系可以通过图 3 进行展示。当三者中的任何一个参数被固定时，剩下的两个参数之间会存在矛盾。举例来说，若水印容量被设定为一定数值，为了提高水印的鲁棒性，可能需要增加水印的嵌入强度，而这样做必然会导致更大的图像失真。同理，若降低水印的嵌入强度以保证较好的图像质量，那么水印的鲁棒性就可能会降低。因此，在设计水印算法时，常常需要在水印鲁棒性、不可见性和容量之间取得一种平衡，根据实际应用需求进行权衡处理。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="493" src="https://images2.imgbox.com/ba/0b/iOcmKsjP_o.png" width="920"></p> 
+<p style="text-align:center;">图 3 水印性能指标之间的关系</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="96" src="https://images2.imgbox.com/b1/f1/sj31Ghne_o.png" width="120"></p> 
+<p style="text-align:center;"><strong>传统数字水印方法</strong></p> 
+<p><strong>概述</strong></p> 
+<p>传统数字水印方法通常基于信号处理、信息论和密码学的原理，通过手工设计的算法或规则实现水印嵌入和提取，分为空域和变换域方法。</p> 
+<p>空域方法直接在原始图像中嵌入水印，例如修改像素值或调整图像的特定属性来隐藏信息。</p> 
+<p>变换域方法则是在图像的变换域进行操作，比如在频域或小波域中嵌入水印。这些传统方法中的常用变换包括离散余弦变换（DCT）、离散小波变换（DWT）、离散傅里叶变换（DFT）、奇异值分解（SVD）等，它们各自有不同的优势和适用场景。</p> 
+<p><strong>典型算法：基于对称性的局部几何失真鲁棒水印</strong>[2]</p> 
+<p><strong>水印嵌入方案</strong></p> 
+<p>图 4 展示了基于对称性的水印嵌入过程的框架，可以分为三个主要步骤：水印单元生成，对称水印生成和水印嵌入。这些步骤的实现细节在下文阐述。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="1155" src="https://images2.imgbox.com/cc/43/3K9R7k8l_o.png" width="728"></p> 
+<p style="text-align:center;">图 4 基于对称性的水印嵌入过程的框架</p> 
+<p><strong>水印单元生成</strong></p> 
+<p>首先通过应用密钥，生成一个尺寸为 <img alt="" height="23" src="https://images2.imgbox.com/4f/49/pImsjBxi_o.png" width="31">，元素取自 <img alt="" height="32" src="https://images2.imgbox.com/17/b0/DiLFb9k0_o.png" width="77"> 的二维双极化随机矩阵<strong> r</strong>，其下标<img alt="" height="22" src="https://images2.imgbox.com/0e/3a/eyeIRG41_o.png" width="160"> 。然后 <strong>r</strong> 被双重上采样来得到随机扩频矩阵 <strong>R</strong>。（见图 5）</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="582" src="https://images2.imgbox.com/21/b0/EAOlNu63_o.png" width="1080"></p> 
+<p style="text-align:center;">图 5 使用随机扩频矩阵扩频生成水印单元</p> 
+<p><img alt="" height="374" src="https://images2.imgbox.com/70/a3/RQsyPaV6_o.png" width="676"></p> 
+<p>其中，<img alt="" height="28" src="https://images2.imgbox.com/8a/8b/Ap1X1TXa_o.png" width="46"> 表示水印单元矩阵的下标。掩膜操作是必要的，因为它可以带来以下好处：</p> 
+<p><strong>1. </strong><strong>提供基本的信息安全。</strong>即使水印方案的算法细节全部公开，潜在攻击者也无法在没有 K 的情况下准确提取出水印信息。</p> 
+<p><strong>2. </strong><strong>消除弱信息的影响。</strong>类似于密码学中的弱密钥，弱信息是指使水印同步过程表现出某些不良行为的信息类型。举例来说，对称的二维信息矩阵是一种弱信息。因为信息矩阵本身的对称性和翻转生成的对称性都会被检测到，会对水印同步过程造成干扰。水印单元 <strong>W</strong> 与掩膜矩阵<strong> K</strong> 的掩膜操作有利于避免弱信息对同步过程的干扰。由于扩频操作，<strong>K</strong> 的信息率是<strong> W </strong>的 ​<img alt="" height="28" src="https://images2.imgbox.com/25/e7/poxQ20LU_o.png" width="35"> 倍。信息率的差异使得掩膜后的水印单元 <img alt="" height="24" src="https://images2.imgbox.com/5f/0a/ybFQYZhL_o.png" width="39"> 的分布性质更依赖于 <strong>R </strong>而不是<strong> W</strong>，即掩膜后的水印单元 <img alt="" height="24" src="https://images2.imgbox.com/4f/c1/zD5eRIll_o.png" width="39"> 将更接近随机矩阵。结果，弱信息将不再影响所提出的基于对称性的同步过程，因此所提出的水印方案可以达到其理论的最大水印容量。</p> 
+<p><strong>3. </strong><strong>帮助判断水印单元的状态。</strong></p> 
+<p><strong>对称水印生成</strong></p> 
+<p>本文所提出的水印方案通过翻转掩膜后的水印单元来创建完整的对称水印。在该方案中，垂直翻转是指相对于水印单元的水平轴进行翻转，水平翻转是指沿垂直轴翻转。</p> 
+<p>图 6 展示了通过翻转水印单元来生成对称性的示例，其中使用符号“p”来表明水印单元的状态。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="298" src="https://images2.imgbox.com/48/b1/EkD09B04_o.png" width="1080"></p> 
+<p style="text-align:center;">图 6 通过翻转水印单元生成对称水印的示例</p> 
+<p>对称水印是根据以下的<strong>翻转规则</strong>生成的：</p> 
+<ul><li> <p><strong>翻转规则</strong>：下一个水平相邻的水印单元是通过将上一个单元水平翻转生成的，下一个垂直相邻的水印单元是通过将上一个单元垂直翻转生成的。对于特定的图像 <strong>I</strong>，<img alt="" height="24" src="https://images2.imgbox.com/7b/91/intIwJEj_o.png" width="39"> 会被反复翻转，直到 <strong>W</strong> 的尺寸不小于<strong> I </strong>的尺寸。然后本文将 <strong>W</strong> 裁剪为<strong> I </strong>的尺寸，以获取要嵌入的水印。</p> </li></ul> 
+<p>值得一提的是，翻转过程是自洽的。不同的翻转顺序将生成相同的对称水印<strong> W </strong>。对于这个 <strong>W</strong>，两个相邻水印单元的边线所在的轴是 <strong>W</strong> 的一条对称轴，而四个相邻水印单元的交界点是 <strong>W</strong> 的一个对称中心。</p> 
+<p><strong>空间域水印嵌入</strong></p> 
+<p>对称水印 <strong>W</strong> 通过加性嵌入的方式嵌入到载体图像<strong> I </strong>中。如果输入的载体图像是彩色的，则会先将其转换到 <img alt="" height="22" src="https://images2.imgbox.com/5d/37/HYlU6Z2X_o.png" width="80"> 空间，并以其中的亮度分量 <strong>Y</strong> 作为 <strong>I</strong> 。为了平衡鲁棒性和不可察觉性，自适应水印强度策略是一个常见的解决方案，例如 中提出的自适应嵌入策略。本文采用一种简单的策略，即在载体图像纹理复杂的区域嵌入更高强度的水印，而在纹理简单的区域嵌入较低强度的水印。载体图像的纹理复杂度可以通过<strong> I </strong>的局部方差来衡量。因此，自适应水印强度 <strong>S </strong>的定义如下：</p> 
+<p class="img-center"><img alt="" height="266" src="https://images2.imgbox.com/eb/81/znE59g8B_o.png" width="700"></p> 
+<p>值得一提的是，如果有必要，可以通过将对称水印 <strong>W</strong> 进行轻微的预失真来抵抗空域平均攻击和删除攻击。这种预失真不会对本文所提出的基于对称性的水印同步方案产生显著影响。最后，如果载体图像是彩色图像，本文将对 <img alt="" height="27" src="https://images2.imgbox.com/4c/c4/8XuKkeDi_o.png" width="28"> 应用 <img alt="" height="20" src="https://images2.imgbox.com/a8/f5/XQbNFu4E_o.png" width="73"> 到 <img alt="" height="22" src="https://images2.imgbox.com/95/93/2DItJDYS_o.png" width="52"> 转换以生成最终的水印图像。</p> 
+<p><strong>水印提取方案</strong></p> 
+<p>作为一种盲水印方案，本文所提出的水印提取过程不需要载体图像的先验知识。但是，密钥可以在编码器和解码器之间共享，因此提取器可以生成相同的随机扩频矩阵 <strong>R </strong>和掩膜矩阵 <strong>K</strong> 。水印提取过程如图 7 所示，可以分为四个主要步骤: 水印估计、水印同步、水印状态确定和水印解码。步骤细节将在下面进一步描述。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="790" src="https://images2.imgbox.com/05/c0/ATA42Vtl_o.png" width="1052"></p> 
+<p style="text-align:center;">图 7 水印提取方案的流程图</p> 
+<h4>水印估计</h4> 
+<p>首先，对于经历失真的嵌水印图像 <strong>J</strong>，所提出的水印方案首先估计其中的水印信号。本文将失真和噪声表示为 <strong>n</strong>，则经历了失真的嵌水印图像 <strong>J</strong> 可以表示为：</p> 
+<p class="img-center"><img alt="" height="46" src="https://images2.imgbox.com/cc/18/RxTrwqks_o.png" width="700"></p> 
+<p>为了简化推导过程，这里的 <img alt="" height="24" src="https://images2.imgbox.com/62/08/AVEGrCGU_o.png" width="64"> 与的 <img alt="" height="23" src="https://images2.imgbox.com/7c/14/t7XBhYwQ_o.png" width="104"> 等同。不失一般性的，本文假设<strong> n</strong> 是零均值白噪声。考虑到掩膜后的水印单元 <img alt="" height="20" src="https://images2.imgbox.com/ce/85/oXNCbQBJ_o.png" width="34"> 由零均值的随机扩频矩阵构成,因此近似于随机矩阵，而对称水印 <strong>W</strong> 由 <img alt="" height="20" src="https://images2.imgbox.com/55/e0/t90XkgyD_o.png" width="34"> 生成，因此，<strong>W</strong> 的分布类似于加性随机噪声，这与 <strong>n</strong> 的性质相同。因此，上式的后两项的均值都为 <strong>O</strong>，<strong>J</strong> 和 <strong>I</strong> 具有相同的局部均值 <img alt="" height="22" src="https://images2.imgbox.com/1a/40/DwW2v6SU_o.png" width="18">。上式以进一步表示为：</p> 
+<p class="img-center"><img alt="" height="46" src="https://images2.imgbox.com/ac/bb/4zMVbheV_o.png" width="682"></p> 
+<p class="img-center"><img alt="" height="653" src="https://images2.imgbox.com/69/ec/6arsNIFW_o.png" width="701"></p> 
+<p>其中右上角带有*的符号代表该频域变量的共轭。注意到两个变量的互相关可以通过它们的频域形式的共轭乘积进行计算，由于水印 <strong>W</strong>，残差信号 <img alt="" height="24" src="https://images2.imgbox.com/24/36/hYwlwAk6_o.png" width="19"> 和噪声 <strong>n</strong> 是相互独立的，它们的互相关的期望应该为零。因此, <strong>Z</strong> 的期望值为：</p> 
+<p class="img-center"><img alt="" height="175" src="https://images2.imgbox.com/6b/ea/pgzHH04s_o.png" width="681"></p> 
+<p>进而可以得到：</p> 
+<p class="img-center"><img alt="" height="143" src="https://images2.imgbox.com/37/02/a4BMDxbW_o.png" width="693"></p> 
+<p>其中 <img alt="" height="21" src="https://images2.imgbox.com/fe/27/qtizGxc5_o.png" width="72"> 和 <img alt="" height="19" src="https://images2.imgbox.com/2d/fb/YAMNc7Ci_o.png" width="30"> 是 <strong>W</strong>, <img alt="" height="21" src="https://images2.imgbox.com/cc/9d/OX0dx0zq_o.png" width="19"> 和 <strong>N </strong>的功率谱。然后，可以观察到上述均方误差是 <strong>H</strong> 的二次函数。为了找到最小误差值，本文对方程求导并将导数设为零。解这一方程来得到取得最小误差值的 <strong>H</strong>：</p> 
+<p class="img-center"><img alt="" height="112" src="https://images2.imgbox.com/67/04/cV9NPNzY_o.png" width="685"></p> 
+<p>其中 <img alt="" height="23" src="https://images2.imgbox.com/32/2d/MP0I0SjQ_o.png" width="29"> 是 <img alt="" height="22" src="https://images2.imgbox.com/92/a4/BSVTTw82_o.png" width="19"> 的功率谱。根据公式，可以发现 <strong>H </strong>的空间域形式 <img alt="" height="23" src="https://images2.imgbox.com/75/05/xYql53kw_o.png" width="49"> 是一个缩放后的脉冲响应，表示为：</p> 
+<p class="img-center"><img alt="" height="56" src="https://images2.imgbox.com/2c/73/I38OefYF_o.png" width="659"></p> 
+<p>其中 <img alt="" height="20" src="https://images2.imgbox.com/9f/2a/F5ZPYxxP_o.png" width="15"> 是单位脉冲。可以得到局部区域内的水印 <strong>W</strong> 的估计值可表示为：</p> 
+<p class="img-center"><img alt="" height="112" src="https://images2.imgbox.com/53/3c/Xnh5TL1a_o.png" width="661"></p> 
+<p>考虑到<strong> J</strong> 和 <strong>W</strong> 在局部区域都是零均值，它们的功率谱是它们的局部方差。因此<strong> W</strong> 的均方误差最小化估计可以通过以下方式计算：</p> 
+<p class="img-center"><img alt="" height="62" src="https://images2.imgbox.com/fb/78/At8Bdau9_o.png" width="658"></p> 
+<p>其中，<img alt="" height="23" src="https://images2.imgbox.com/97/46/FFk62XoI_o.png" width="35"> 和 <img alt="" height="24" src="https://images2.imgbox.com/c0/0f/g5UlWNU1_o.png" width="26"> 分别是 <strong>W</strong> 和 <img alt="" height="20" src="https://images2.imgbox.com/df/15/DftC6wXz_o.png" width="22"> 的局部方差。<img alt="" height="20" src="https://images2.imgbox.com/be/06/BsUQoO3y_o.png" width="22"> 的局部方差 <img alt="" height="26" src="https://images2.imgbox.com/40/62/l6SZpWIV_o.png" width="33"> 可以从失真后的嵌水印图像 <strong>J </strong>中估计得到。注意到<strong> W </strong>的分布类似于随机噪声，因此其局部方差 <img alt="" height="23" src="https://images2.imgbox.com/04/30/T0TNaTLm_o.png" width="27"> 取决于其嵌入强度 <strong>s</strong>，后者可以从 <strong>J</strong> 中估计得出。</p> 
+<h4>基于对称性的水印同步方法</h4> 
+<p>在解码水印信息之前，需要先同步掩膜的水印单元 <img alt="" height="20" src="https://images2.imgbox.com/22/04/CkUTUAsT_o.png" width="36"> 。为此，本文先计算水印估计值 <img alt="" height="27" src="https://images2.imgbox.com/4d/fb/WZqTvXIa_o.png" width="32"> 的对称性作为水印同步的参考，并在前文定义了对称水印的对称性，加以提出公式来计算对称性。同时，本文也已经通过讨论得出，该公式的计算复杂度会随着载体图像尺寸的上升迅速上升，因此一个计算复杂度更低的对称性计算方法将有效提高对称水印方案的可用性。</p> 
+<p>基于该方案，本文设计了一种对局部几何失真具有鲁棒性的数字水印方案。相比于现有的基于周期性的水印同步方案，所提出的水印同步方案具有更高的同步准确度和更简洁的同步流程，这使得对应的水印方案具有更强的几何失真鲁棒性和更大的信息容量。该方案通过翻转水印单元生成对称水印，并通过加性方式将其嵌入载体图像中。在水印提取过程中，本文通过最小化均方误差获得水印估计，然后使用自卷积函数快速计算水印的对称性。基于对称性将水印单元同步后，所提出的方案应用假设检验来确定水印单元的状态，最终提取出嵌入的水印信息。本文认为，基于对称性的水印同步方案有助于提升相关周期性水印方案的性能。</p> 
+<p>实验结果表明，在各种失真情况下，包括局部几何失真、全局几何失真、常见图像处理操作和组合失真，该水印方案都具有优秀的鲁棒性。考虑到跨媒介场景下的复杂失真组合，所提出的方案为在真实场景下设计鲁棒的实体图像水印方案奠定了基础。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="96" src="https://images2.imgbox.com/fc/4c/hA7Yf9lw_o.png" width="120"></p> 
+<p style="text-align:center;"><strong>深度学习水印方法</strong></p> 
+<p><strong>概述：E-N-D 框架</strong></p> 
+<p>深度学习水印算法是基于深度学习技术的新兴数字水印方法，与传统数字水印方法有所不同。传统方法基于信号处理、信息论和密码学，通过手工设计的算法实现水印的嵌入和提取，相比之下，深度学习水印算法利用神经网络等深度学习模型来处理水印信息。</p> 
+<p>现有的基于深度学习的水印方案主要使用的是 E-N-D 框架[3]。此类框架包含编码器（Encoder）、噪声层（Noise Layer）和解码器（Decoder）三个部分，如图 8 所示。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="246" src="https://images2.imgbox.com/ed/af/96bWi5UT_o.png" width="1053"></p> 
+<p style="text-align:center;">图 8 深度学习水印的 E-N-D 框架[4]</p> 
+<p>编码器学习将水印消息嵌入到载体图像中，噪声层使带水印的图像失真，模拟真实信道中的失真过程，解码器则尝试从失真的图像中提取水印信息。在训练过程中，这三个组件共同进行联合训练，而在实际使用阶段，噪声层部分被真实的信道代替，仅使用编码器和解码器进行水印嵌入和提取。</p> 
+<p>E-N-D 框架的设计允许模型通过不同的噪声层学习适应各种失真情况，从而增强了水印算法对不同干扰的鲁棒性。</p> 
+<p><strong>典型算法 1：基于条件可逆神经网络的深度学习图像隐式水印</strong>[5]</p> 
+<p><strong>实现方法（见图 9）</strong></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="416" src="https://images2.imgbox.com/76/d6/qHGmNZAe_o.png" width="1080"></p> 
+<p style="text-align:center;">图 9 基于条件可逆神经网络的深度学习图像隐式水印</p> 
+<p>利用可逆神经网络对于复杂高维密度建模的优秀性能，将基于流的归一化可逆神经网络与水印的嵌入提取过程相结合，实现了高效的水印提取和图像恢复，具体实现方法如下。</p> 
+<p><strong>扩散与提取（DEM）</strong></p> 
+<p>对于前向嵌入过程，DEM 接受原始图像与水印信息作为输入，其中水印信息经过如下变换扩散到与图像相同的维度上，与经过 Haar 变换的原始图像一同输入到可逆网络模块。由于这部分的数据处理均为可逆，所以在水印提取过程中即可方便的经过逆运算重新得到输入。</p> 
+<p class="img-center"><img alt="" height="35" src="https://images2.imgbox.com/22/95/ooGTUwUv_o.png" width="656"></p> 
+<p><strong>可逆网络（IM）</strong></p> 
+<p>该模块接受连接后的原始图像和水印信息为输入，在可逆网络中的耦合层通过加性仿射变换将水印信息映射到符合在图像中嵌入水印要求的分布，以达到鲁棒嵌入和不可感知的目的。</p> 
+<p class="img-center"><img alt="" height="70" src="https://images2.imgbox.com/1f/8b/WwhPs05r_o.png" width="662"></p> 
+<p><strong>融合和分离（FSM）</strong></p> 
+<p>可逆网络的输出可以分为两部分，舍弃输出的图像部分，仅保留映射后的水印信息，并将后者添加到原始图像中，得到最终的水印图像。同样的，该部分的可逆性允许从水印图像中恢复水印信息与图像。</p> 
+<p class="img-center"><img alt="" height="40" src="https://images2.imgbox.com/25/48/dNOy7GQE_o.png" width="656"></p> 
+<p><strong>噪声层与不可逆提取</strong></p> 
+<p>作为鲁棒水印的硬性要求，生成的水印图像在经过经过若干噪声层后对其水印信息应该保持良好的提取率，以上可逆网络中水印的嵌入和提取具有确定性的映射关系，这使得在没有或有加性噪声的场景中水印提取精度得到良好的结果。然而，当受到有损压缩或复杂的非加性噪声时，可逆网络的前向和后向共享同一组参数，解码器的参数会随着编码器的更新而更新，这限制了解码器的能力应对复杂的噪音。</p> 
+<p>因此，框架中引入了一个额外的解码器，以增强对有损压缩噪声的鲁棒性。不可逆模块使用 SENet 作为主干来提取水印信息，并且额外训练了一个特定噪声选择模块（NSM），由此判断水印图像是否经过了有损压缩的噪声层，最终决定选择由可逆或不可逆网络提取出的水印消息为准。</p> 
+<p><strong>实验结果</strong></p> 
+<p>主要从水印提取的鲁棒性与图像的不可感知性两方面体现该方法的水印嵌入效果。其中，鲁棒性由比特错误率（BER）评估，图像的不可感知性由峰值信噪比（PSNR）与结构相似度（SSIM）评估（如表 1 所示）：</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="685" src="https://images2.imgbox.com/2c/54/FZROYs9w_o.png" width="814"></p> 
+<p style="text-align:center;">表 1 实验结果分析其一</p> 
+<p>PSNR1 与 PSNR2 分别代表着水印图像与原始图像和其加噪后结果之间的区分度，前者数值较为接近原始图像的峰值信噪比，这表明水印嵌入过程具有良好的不可感知性。</p> 
+<p>Acc 代表着水印提取的准确率，数值上 Acc=1-BER，与未经过噪声层训练的嵌入过程的提取率 Pre 有着显著提升。</p> 
+<p>右侧的 combined 栏表明该方法对于多层噪声依旧具有良好的鲁棒性，实现了水印的有效提取。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="419" src="https://images2.imgbox.com/b1/fa/Vm5lac01_o.png" width="660"></p> 
+<p style="text-align:center;">表 2 实验结果分析其二</p> 
+<p>如表 2 和表 3 所示，与其余的优秀方法进行比较，CIN 方法不仅有着最高的 PSNR，而且在鲁棒性方面也取得了 SOTA 的结果，在不同的数据集上保持了稳定的鲁棒性。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="481" src="https://images2.imgbox.com/f2/57/CEvuDf0U_o.png" width="698"></p> 
+<p style="text-align:center;">表 3 实验结果分析其三</p> 
+<h5><strong>典型算法 2：基于 mini-bactch 的深度学习图像隐式水印框架</strong>[6]</h5> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="267" src="https://images2.imgbox.com/a4/cb/jrZjqmiy_o.png" width="1080"></p> 
+<p style="text-align:center;">图 10 MBRS 水印结构框图</p> 
+<p>如上图 10 所示，在端到端的基于深度学习的水印方案中, 使用 Encoder-Noise Layer-Decoder 的三层结构。首先使用 Encoder (嵌入器) 将水印嵌入到图像中，在这个过程中需要保证含水印图像 <img alt="" height="22" src="https://images2.imgbox.com/04/fe/RsVW0slE_o.png" width="28">与载体图像 <img alt="" height="21" src="https://images2.imgbox.com/7f/27/bBLWhlNh_o.png" width="26"> 在视觉上不可区分。接着将得到的含水印图像 <img alt="" height="24" src="https://images2.imgbox.com/7c/6c/vSXozxEq_o.png" width="27"> 输入Noise Layer (失真层)，向含水印图像 <img alt="" height="24" src="https://images2.imgbox.com/da/67/hCX4rEzL_o.png" width="27"> 添加失真得到失真图像 <img alt="" height="26" src="https://images2.imgbox.com/d1/eb/9wo8Vvx3_o.png" width="25">，为提取器训练提供失真样本。最后Decoder (提取器) 负责从失真图像 <img alt="" height="26" src="https://images2.imgbox.com/36/b6/JAZ9veLP_o.png" width="25"> 中提取出水印，保证提取出的水印 <img alt="" height="21" src="https://images2.imgbox.com/9e/83/pyKyBsHg_o.png" width="40"> 与嵌入的水印 <img alt="" height="15" src="https://images2.imgbox.com/62/82/FTDBlwiM_o.png" width="23"> 的一致性。</p> 
+<p>在上述过程中，透明性和鲁棒性是直接影响性能的两个方面。实现透明性的关键是在保证鲁棒性的前提下嵌入尽可能少的水印信号，换言之，嵌入器需仅嵌入解码器需要的信号。因此，核心问题是嵌入器与解码器能否高效耦合。实现鲁棒性的关键是噪声层的设计，噪声层中的失真决定了算法的鲁棒性。为了实现训练，一般要求噪声层可导，因此，对不可导失真（例如 JPEG 压缩）的噪声层设计是重要的难点问题。</p> 
+<p>然而，在端到端的结构中，对 JPEG 图像进行水印的嵌入时，JPEG 压缩是信道传输中的常见失真，因此，MBRS 的方法旨在训练一个抗 JPEG 压缩的基于深度学习的鲁棒水印方案。在学习 JPEG 压缩失真的过程中首要面对的挑战是 JPEG 压缩中存在不可导的量化过程，使得如果直接使用真实 JPEG 作为噪声层训练，产生的梯度不可回传，不能有效优化网络。在以往的工作中，尝试使用模拟 JPEG 信息代替真实 JPEG 信息保证梯度下降更新，但是模拟 JPEG 无法保证完全学习真实 JPEG 信息，因此在 MBRS 方法中希望引入真实 JPEG 信息而又可以正常反向传播计算梯度。</p> 
+<p>为了解决模拟 JPEG 损失和真实 JPEG 不可导失真的矛盾，MBRS 方法提出使用 mini-batch 的策略，在每一个训练的小 batch 里随机从无失真（Identity），真实 JPEG 和模拟 JPEG 中选择一种作为噪声层，优化器选择带动量的 Adam 优化器，这样真实 JPEG 虽然不可回传梯度，但另两种失真却能通过优化器的特性保证大体的梯度回传方向。除了在噪声层使用 mini-batch 策略实现真实 JPEG 信息的学习，编码器和解码器阶段都采用基于 SE-Net 的框架。</p> 
+<p><strong>算法整体流程如下</strong>：首先将待嵌入的水印消息通过预处理卷积层上采样到与图像隐藏层相同的大小，经过级联卷积后输出含水印图像。含水印图像传入噪声层中，在噪声层中采用上述 mini-batch 的策略随机在每一个 batch 中选择噪声层，以更好的鲁棒性训练。最后将选择好的带噪声失真的含水印图像输入解码器。</p> 
+<p>上述方法在大小为 128 X 128 X 3 的 MS COCO 图像数据中嵌入 64 bits 水印信息，经过与 HiDDEN 和 TSDL 方法的对比实验，使用 mini-batch 的训练策略能有效地提升算法对于 JPEG 压缩的鲁棒性，在保持最高的含水印图像的 PSNR 值的前提下，实现了最低提取错误率。同时，对于其他失真，MBRS 方法提出的嵌入提取网络经过训练也得到了最好的鲁棒性结果。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="96" src="https://images2.imgbox.com/14/15/LOJ02wB8_o.png" width="120"></p> 
+<p style="text-align:center;"><strong>生成图像水印方法</strong></p> 
+<p><strong>概述</strong></p> 
+<p>近两年生成模型的陆续发布和开源降低了用户利用 AIGC 造假的门槛，Facebook 等主流的 UGC 内容平台上已经充斥着大量 AI 生成的多媒体信息。这些平台都有识别和追溯这些信息真实性的迫切需求。因此，最近提出了生成图像水印方法，将水印生成和水印嵌入过程合并到图像生成过程中。生成图像水印的嵌入不是发生在图像生成之后而是发生在图像生成过程中，这意味着实际样本并不带有经典加法意义上的水印，而是隐藏在图像分布中的水印。这类方法为内容平台追踪和验证信息真实性提供了一种新的可能性。</p> 
+<p><strong>典型算法 1：针对扩散模型的鲁棒和不可见的树环水印</strong>[7]</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="613" src="https://images2.imgbox.com/e0/4f/thAxZddO_o.png" width="1080"></p> 
+<p style="text-align:center;">图 11 树环水印框架</p> 
+<p>与现有的在采样后对图像进行事后修改的方法不同，树环水印（见上图 11）会微妙地影响整个采样过程，从而产生人类看不见的模型指纹。水印将一个模式嵌入到用于采样的初始噪声向量中。这些模式是在傅里叶空间中构造的，因此它们对卷积、裁剪、膨胀、翻转和旋转是不变的。在图像生成后，通过反扩散过程提取噪声向量来检测水印信号，然后对嵌入的信号进行检查。</p> 
+<p>由于直接将密钥输入高斯阵列可能会在生成的图像中产生明显的图案，该方法将密钥输入起始噪声矢量的傅立叶变换中。首先选择一个二元掩码<strong> M</strong>，并对密钥 <img alt="" height="24" src="https://images2.imgbox.com/d6/12/JN8qKff0_o.png" width="87"> 进行采样，则初始噪声矢量 <img alt="" height="20" src="https://images2.imgbox.com/e6/fa/3cdaVCAu_o.png" width="81"> 可以在傅立叶空间中描述为：</p> 
+<p class="img-center"><img alt="" height="56" src="https://images2.imgbox.com/ff/90/t36rIXn9_o.png" width="661"></p> 
+<p>在检测时，给定图像 <img alt="" height="27" src="https://images2.imgbox.com/18/e2/5B0bZgqx_o.png" width="26">，模型所有者可以通过 DDIM 反演过程得到一个近似的初始噪声向量 <img alt="" height="25" src="https://images2.imgbox.com/8f/d8/2R5hREyU_o.png" width="158"> 。最后的度量计算为在水印区域 <strong>M</strong> 的傅里叶空间中噪声矢量与密钥之间的 <img alt="" height="23" src="https://images2.imgbox.com/57/7c/t1SQXUpR_o.png" width="22"> 距离，即：</p> 
+<p class="img-center"><img alt="" height="58" src="https://images2.imgbox.com/fb/fd/jSL5FADt_o.png" width="663"></p> 
+<p>如果该值低于预设阈值 <img alt="" height="18" src="https://images2.imgbox.com/3a/b3/d3C8B95B_o.png" width="17"> ，则检测到水印。 </p> 
+<p>对于树环密钥的构造，该方法选择傅里叶空间中以低频模式为圆心，以 <img alt="" height="19" src="https://images2.imgbox.com/ca/41/3tr01ckw_o.png" width="20"> 为半径的圆形区域作为密钥区域。密钥在统计上应与高斯噪声相似，以避免非高斯密钥可能会导致的分布偏移，从而影响扩散模型的性能。该方法选择了零数组，从高斯分布中提取的固定密钥 <img alt="" height="19" src="https://images2.imgbox.com/74/c6/mtmCk76n_o.png" width="22"> 和多个恒定值圆环组成的图案三种不同类型的密钥方案，并对比了它们的性能。 </p> 
+<p>上述方法在 ImageNet 扩散模型和 Stable Diffusion 生成模型上与 DwtDct，DwtDctSvd 和 RivaGAN 几种基线方法进行比较，达到了最好的平均性能。同时，对于 6 种常见的噪声攻击 (75 度旋转、25% JPEG 压缩、  随机裁剪和缩放、8 X 8 滤波器大小的高斯模糊、 <img alt="" height="20" src="https://images2.imgbox.com/78/78/VF5XvqBu_o.png" width="65"> 的高斯噪声以及亮度系数在 0 和 6 之间均匀采样的色彩抖动），该方法也表现出较强的鲁棒性。</p> 
+<p><strong>典型算法 2：针对 Stable Diffusion 的高效水印算法 Stable Signature</strong>[8]</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="651" src="https://images2.imgbox.com/42/23/hy0Syw4T_o.png" width="721"></p> 
+<p style="text-align:center;">图 12 Stable Signature 的方法框架</p> 
+<p>该方法提出了一种主动防御策略。上图 12 的红色部分是模型发布者 Alice，蓝色部分是用户 Bob。可以看到，仅仅通过微调 LDM 的 VAE 解码器，即可在生成图像中高效嵌入特定的二进制签名，同时保证生成图像的质量。预训练好的水印提取器恢复图像中隐藏的水印，通过一个统计测试可以用于检测和溯源，根据实际假阳率的要求来控制检测的阈值。</p> 
+<ul><li> <p><strong>检测场景</strong>：假设给某位用户 Bob 的模型签名 <img alt="" height="17" src="https://images2.imgbox.com/86/48/Fk6F5H52_o.png" width="28"> 是一个 <img alt="" height="21" src="https://images2.imgbox.com/9e/38/s961mUHX_o.png" width="22"> 位的二进制序列，如果 Alice 利用水印提取器解码的签名 <img alt="" height="22" src="https://images2.imgbox.com/b5/42/xGX8iFAe_o.png" width="30"> 和原来的 <img alt="" height="21" src="https://images2.imgbox.com/07/e0/152zYVj4_o.png" width="21"> 有 <img alt="" height="21" src="https://images2.imgbox.com/b8/ed/kFIBuVfE_o.png" width="20"> 位以上匹配，则认为这张图片是 Alice 模型生成的。这里给出两个假设，备择假设 <img alt="" height="22" src="https://images2.imgbox.com/91/ac/UbOyzdRr_o.png" width="32"> 说图片是 Alice 模型生成的，原假设 <img alt="" height="22" src="https://images2.imgbox.com/bd/34/qhBPx4yk_o.png" width="28"> 说不是。如果不是 Alice 模型生成的，可以认为其解码的签名每一位都是独立同分布的 Bernoul1i 随机变量，这样匹配位数服从二项分布。可以推导出假阳率 FPR 的计算公式为，在 <img alt="" height="22" src="https://images2.imgbox.com/60/fa/gNva4iIH_o.png" width="28"> 条件下匹配位数大于阈值 <img alt="" height="17" src="https://images2.imgbox.com/5e/82/SaguTItZ_o.png" width="20"> 的概率，也就是二项分布的累积分布函数。FPR 可以使用不完全 beta 函数写出闭式解。</p> </li><li> <p><strong>溯源场景</strong>：假设 <img alt="" height="20" src="https://images2.imgbox.com/2a/92/OERIG5En_o.png" width="22"> 位用户 Bob 的模型有不同的嵌入签名，需要进行 <img alt="" height="20" src="https://images2.imgbox.com/37/a6/akIICztX_o.png" width="22"> 次检测的假设检验，如果全部拒绝，那么图片不是由他们任何人生成的，否则把图片归属为匹配位数最多的用户。 <img alt="" height="20" src="https://images2.imgbox.com/5a/56/KcQPw1Bf_o.png" width="22"> 次测试的假阳性更多，所以全局 FPR 更高，在真实场景一般是给定要求的 FPR ，反过来确定阈值  。</p> </li></ul> 
+<p>Stable Signature 的训练分为两个阶段。</p> 
+<ul><li> <p><strong>第一阶段是预训练一个水印提取网络</strong>。首先使用经典水印算法 HiDDeN 模型编码一张图片和 <img alt="" height="19" src="https://images2.imgbox.com/7b/25/2xEDjjIp_o.png" width="22"> 位二进制消息 <img alt="" height="20" src="https://images2.imgbox.com/0e/c3/gK7nwyVl_o.png" width="24">，经过常规的图像变换，然后解码出消息 <img alt="" height="22" src="https://images2.imgbox.com/1e/f2/T1plBSEB_o.png" width="31"> 。由于在后续嵌入水印的微调过程中不需要水印编码器，在这个阶段只需要优化消息重构损失，不需要优化原有的感知损失和对抗网络。此外，由于一般图像的解码消息比特间相互关联且高度有偏，违背了前面的独立同分布假设，还需要通过一个 PCA 白化变换来去偏和去相关。</p> </li><li> <p><strong>第二阶段是对给定的签名 </strong><strong>，微调 LDM 的 VAE 解码器</strong>。在这个阶段，水印提取器是冻结的，并且同上个阶段一样优化消息重构损失。为了保持图像的生成质量，在这个阶段还需要使用一个 Watson-VGG 感知损失来控制解码器与原解码器输出图像的失真程度，该方法使用平衡系数 <img alt="" height="21" src="https://images2.imgbox.com/90/25/o1WKMXMt_o.png" width="20"> 来平衡两部分损失。这一阶段的微调过程非常高效，训练小于 500 张图片只需要单卡 1 分钟的时间。该方法在 LDM 等多种生成模型上和 DwtDct, SSL Watermark, HiDDeN 等多种基线水印方法进行了比较，结果表明该方法的鲁棒性和不可见性与基线方法是可比的。</p> </li></ul> 
+<p>上述方法水印模型生成的图像 PSNR 约为 30 dB，SSIM 约为 0.9，接近于原始生成模型生成图像的结果，这表明该方法给原始模型添加水印对后对生成图像的质量影响较小。同时该方法生成的水印图像在 JPEG 压缩、裁剪、添加噪声等变换后，水印提取的比特精度总是高于 0.9 (除图像修复任务外)，这表明了该方法具有较好的鲁棒性。</p> 
+<p></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="96" src="https://images2.imgbox.com/2b/2c/Yk4mNjOu_o.png" width="120"></p> 
+<p style="text-align:center;"><strong>总结与展望</strong></p> 
+<p>随着 AIGC 时代的发展，数字媒体安全领域对于可证安全的需求日益突出。未来的发展趋势之一是在可证安全隐写技术的基础上研究和设计可证性能无损水印技术，即在保持图像质量不受影响的情况下，实现水印的可靠提取和验证，为数字内容的真实性和完整性提供更强的保障。考虑到水印技术的不断进步，嵌入方式逐渐朝向更为隐蔽和智能化的方向发展。将水印信息巧妙隐藏在生成图像的风格特征中，而非传统的直接修改图像像素的风格水印，也可能成为未来发展的趋势之一。</p> 
+<p>此外，传统数字水印和深度学习水印技术结合的多重水印技术可能能够克服传统水印算法在面对复杂攻击时的局限性。融合传统水印的泛化性和深度水印的针对性，可以满足不同应用场景下的需求。这种技术的发展可能是数字媒体安全领域未来的一个重要方向，为数字内容的保护提供更为可靠和多元化的解决方案。</p> 
+<p><em>参考文献</em></p> 
+<p><em>[1] 冯柳平编著.数字版权保护技术及其应用[M].北京：电子工业,2013</em></p> 
+<p><em>[2] Z. Ma, W. Zhang, H. Fang, X. Dong, L. Geng and N. Yu, "Local Geometric Distortions Resilient Watermarking Scheme Based on Symmetry," in IEEE Transactions on Circuits and Systems for Video Technology, vol. 31, no. 12, pp. 4826-4839, Dec. 2021, doi: 10.1109/TCSVT.2021.3055255.</em></p> 
+<p><em>[3] Zhu J, Kaplan R, Johnson J, et al. Hidden: Hiding data with deep networks[C]//Proceedings of the European conference on computer vision (ECCV). 2018: 657-672.</em></p> 
+<p><em>[4] Han Fang, Yupeng Qiu, Kejiang Chen, Jiyi Zhang, Weiming Zhang, and Ee-Chien Chang. 2023. Flow-based robust watermarking with invertible noise layer for black-box distortions. In Proceedings of the Thirty-Seventh AAAI Conference on Artificial Intelligence and Thirty-Fifth Conference on Innovative Applications of Artificial Intelligence and Thirteenth Symposium on Educational Advances in Artificial Intelligence (AAAI'23/IAAI'23/EAAI'23), Vol. 37. AAAI Press, Article 564, 5054–5061. https://doi.org/10.1609/aaai.v37i4.25633</em></p> 
+<p><em>[5] Ma R, Guo M, Hou Y, et al. Towards Blind Watermarking: Combining Invertible and Non-invertible Mechanisms[C]//Proceedings of the 30th ACM International Conference on Multimedia. 2022: 1532-1542.</em></p> 
+<p><em>[6] Jia Z, Fang H, Zhang W. Mbrs: Enhancing robustness of dnn-based watermarking by mini-batch of real and simulated jpeg compression[C]//Proceedings of the 29th ACM international conference on multimedia. 2021: 41-49.</em></p> 
+<p><em>[7] Wen Y, Kirchenbauer J, Geiping J, et al. Tree-Ring Watermarks: Fingerprints for Diffusion Images that are Invisible and Robust[J]. arXiv preprint arXiv:2305.20030, 2023.</em></p> 
+<p><em>[8] Fernandez P, Couairon G, Jégou H, et al. The stable signature: Rooting watermarks in latent diffusion models[J]. arXiv preprint arXiv:2303.15435, 2023.</em></p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="150" src="https://images2.imgbox.com/85/09/P8K7QWzq_o.gif" width="750"></p> 
+<p>4 月 25 ~ 26 日，由 CSDN 和高端 IT 咨询和教育平台 Boolan 联合主办的「<strong>全球机器学习技术大会</strong>」将在上海环球港凯悦酒店举行，特邀近 50 位技术领袖和行业应用专家，与 1000+ 来自电商、金融、汽车、智能制造、通信、工业互联网、医疗、教育等众多行业的精英参会听众，共同探讨人工智能领域的前沿发展和行业最佳实践。<strong>欢迎所有开发者朋友访问官网 http://ml-summit.org 或扫描下方海报中的二维码</strong>，进一步了解详情。</p> 
+<p></p> 
+<p class="img-center"><img alt="图片" height="1200" src="https://images2.imgbox.com/a9/74/gRvFuxCd_o.png" width="1080"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/156a57621116bdc5e18f6f9cfc414bdd/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【前端】代码警告处理Parsing error: Unexpected token ＜eslint或Parsing error: Unexpected token =eslint</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/a0440ab042533fe2e4561f3c009e8b53/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">vite打包解决前端发版后浏览器缓存问题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>IP 分片过程及偏移量计算 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/fb35fb2587f6550b61882aee3bc1d5ad/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="IP 分片过程及偏移量计算">
+  <meta property="og:description" content="IP 报头中与分片相关的三个字段 1、 标识符（ ldentifier )：16 bit
+该字段与 Flags 和 Fragment Offest 字段联合使用， 对较大的上层数据包进行分段（ fragment ） 操作。
+路由器将一个包拆分后，所有拆分开的小包被标记相同的值，以便目的端设备能够区分哪个包属于被拆分开的包的一部分。
+2、 标记（ Flags ）：3 bit
+该字段第 1 位不使用。
+第 2 位是 DF（ Don’t Fragment ) 位，DF 位设为 1 时表明路由器不能对该上层数据包分段。如果一个上层数据包无法在不分段的情况下进行转发，则路由器会丢弃该上层数据包并返回一个 ICMP 错误信息。
+第 3 位是 MF（ More Fragments ) 位，当路由器对一个上层数据包分段，则路由器会在除了最后一个分段的 IP 报文头中将 MF 位设为 1。
+3、 片偏移（ Fragment Offset )：13 bit
+表示该 IP 报文在该组分片中的位置，接收端靠此来组装还原 IP 报文。
+数据报分片举例 举例 1 举例 2 IPv4 vs IPv6 分段扩展头 在 IPv4 中，中间路由器对于超过接口 MTU 的数据包可以进行再分段处理，数据包在转发过程中可能被多次分段，会降低数据包的转发效率。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-28T20:01:16+08:00">
+    <meta property="article:modified_time" content="2024-05-28T20:01:16+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">IP 分片过程及偏移量计算</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="IP__0"></a>IP 报头中与分片相关的三个字段</h2> 
+<p><img src="https://images2.imgbox.com/f2/4e/RwZ8IhWd_o.jpg" alt="在这里插入图片描述"></p> 
+<p><strong>1、 标识符（ ldentifier )：16 bit</strong></p> 
+<p>该字段与 <code>Flags</code> 和 <code>Fragment Offest</code> 字段联合使用， 对较大的上层数据包进行分段（ <strong>fragment</strong> ） 操作。</p> 
+<p>路由器将一个包拆分后，<code>所有拆分开的小包被标记相同的值</code>，以便目的端设备能够区分哪个包属于被拆分开的包的一部分。</p> 
+<p><strong>2、 标记（ Flags ）：3 bit</strong></p> 
+<p>该字段第 1 位不使用。</p> 
+<p>第 2 位是 <strong>DF（ Don’t Fragment )</strong> 位，DF 位设为 1 时表明路由器不能对该上层数据包分段。如果一个上层数据包无法在不分段的情况下进行转发，则路由器会丢弃该上层数据包并返回一个 <code> ICMP</code> 错误信息。</p> 
+<p>第 3 位是 <strong>MF（ More Fragments )</strong> 位，当路由器对一个上层数据包分段，则路由器会在除了最后一个分段的 IP 报文头中将 MF 位设为 1。</p> 
+<p><strong>3、 片偏移（ Fragment Offset )：13 bit</strong></p> 
+<p>表示该 IP 报文在该组分片中的位置，接收端靠此来组装还原 IP 报文。</p> 
+<p><img src="https://images2.imgbox.com/27/27/7kAK3bmu_o.jpg" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/00/f3/BauwcBdT_o.jpg" alt="在这里插入图片描述"></p> 
+<h2><a id="_23"></a>数据报分片举例</h2> 
+<h3><a id="_1_24"></a>举例 1</h3> 
+<p><img src="https://images2.imgbox.com/9f/f4/YtN3kwoG_o.jpg" alt="在这里插入图片描述"></p> 
+<h3><a id="_2_26"></a>举例 2</h3> 
+<p><img src="https://images2.imgbox.com/48/ba/qF6k5c20_o.jpg" alt="在这里插入图片描述"></p> 
+<h2><a id="IPv4__vs__IPv6__29"></a>IPv4 vs IPv6 分段扩展头</h2> 
+<p>在 IPv4 中，中间路由器对于超过接口 MTU 的数据包可以进行再分段处理，数据包在转发过程中可能被多次分段，会降低数据包的转发效率。</p> 
+<p>而在 IPv6 中，只有源端数据包发送方才能对数据包进行分段处理。如果源端需要发送的数据包 PMTU 超过中间路由器转发的数据包接口的 MTU 值，数据包将被丢弃，同时该路由会向源端发送一个 <code>ICMPv6</code> 的错误信息报文。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/25507d30d624b72beccd45e9c2f67ec7/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">外包干了3天，技术退步明显.......</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/6350fe7fc1bbb6ec71f4cf9197026eb4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python 开心消消乐</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

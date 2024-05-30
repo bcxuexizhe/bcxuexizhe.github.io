@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>详解各种LLM系列｜LLaMA 2模型架构、 预训练、SFT内容详解 (PART1) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3036bb1b97d0c02e5c46df28bef06e16/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="详解各种LLM系列｜LLaMA 2模型架构、 预训练、SFT内容详解 (PART1)">
+  <meta property="og:description" content="作者 | Sunnyyyyy 整理 | NewBeeNLP https://zhuanlan.zhihu.com/p/670002922
+大家好，这里是 NewBeeNLP。之前我们分享了详解各种LLM系列｜LLaMA 1 模型架构、预训练、部署优化特点总结
+今天来看看Llama 2，是Meta在LLaMA基础上升级的一系列从 7B到 70B 参数的大语言模型。Llama2 在各个榜单上精度全面超过 LLaMA1，Llama 2 作为开源界表现最好的模型之一，目前被广泛使用。
+为了更深入地理解Llama 2的技术特点，特地在此整理了Llama 2模型架构、 预训练、SFT、RLHF内容详解，也从安全性角度进行了分析。
+话不多说，直接上干货啦
+一、LLaMA 2简介 论文：https://arxiv.org/abs/2307.09288
+Github：GitHub \- facebookresearch/llama: Inference code for LLaMA models[1]
+Meta 在原本的LLaMA 1的基础上，增加了预训练使用的token数量；同时，修改了模型的架构，引入了Group Query Attention（GQA）。
+并且，在Llama 2的基础上，Meta同时发布了 Llama 2-Chat。其通过应用监督微调来创建 Llama 2-Chat 的初始版本。随后，使用带有人类反馈 (RLHF) 方法的强化学习迭代地改进模型，过程中使用了拒绝采样和近端策略优化 (PPO)。
+Llama 2-Chat的训练主要流程如下：
+Llama 2-Chat的训练主要流程 二、模型架构 2.1 主要架构 Llama 2采用LLaMA 1的大部分预训练设置和模型架构，包括：
+Tokenzier: 和LLaMA 1一样的 tokenizer，使用 SentencePiece 实现的 BPE 算法。与LLaMA 1一样，将所有数字拆分为单个数字并使用字节来分解未知的 UTF-8 字符。总词汇量为 32k个 token。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-27T11:05:45+08:00">
+    <meta property="article:modified_time" content="2024-03-27T11:05:45+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">详解各种LLM系列｜LLaMA 2模型架构、 预训练、SFT内容详解 (PART1)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <div id="js_content"> 
+ <p style="text-align:justify;"><img src="https://images2.imgbox.com/25/86/dSVm13BA_o.jpg" alt="f6f068fed0b8838ccff4c6e52a297091.jpeg"><br></p> 
+ <blockquote> 
+  <p>作者 | Sunnyyyyy  </p> 
+  <p>整理 | NewBeeNLP </p> 
+  <p>https://zhuanlan.zhihu.com/p/670002922</p> 
+ </blockquote> 
+ <p style="text-align:justify;">大家好，这里是 NewBeeNLP。之前我们分享了<a href="" rel="nofollow"><strong>详解各种LLM系列｜LLaMA 1 模型架构、预训练、部署优化特点总结</strong></a></p> 
+ <p style="text-align:justify;">今天来看看Llama 2，是Meta在LLaMA基础上升级的一系列从 7B到 70B 参数的大语言模型。Llama2 在各个榜单上精度全面超过 LLaMA1，Llama 2 作为开源界表现最好的模型之一，目前被广泛使用。</p> 
+ <p style="text-align:justify;">为了更深入地理解Llama 2的技术特点，特地在此整理了Llama 2模型架构、 预训练、SFT、RLHF内容详解，也从安全性角度进行了分析。</p> 
+ <p style="text-align:justify;">话不多说，直接上干货啦</p> 
+ <p style="text-align:justify;"><img src="https://images2.imgbox.com/6b/a9/rBS5SfSu_o.jpg" alt="e56ccdf5c1a196b8eca0d8102449a432.jpeg"></p> 
+ <h3>一、LLaMA 2简介</h3> 
+ <blockquote> 
+   
+  <ul><li><p>论文：https://arxiv.org/abs/2307.09288</p></li><li><p>Github：GitHub \- facebookresearch/llama: Inference code for LLaMA models<sup>[1]</sup></p></li></ul> 
+   
+ </blockquote> 
+ <p style="text-align:justify;">Meta 在原本的LLaMA 1的基础上，增加了预训练使用的token数量；同时，修改了模型的架构，引入了Group Query Attention（GQA）。</p> 
+ <p style="text-align:justify;">并且，在Llama 2的基础上，Meta同时发布了 Llama 2-Chat。其通过应用监督微调来创建 Llama 2-Chat 的初始版本。随后，使用带有人类反馈 (RLHF) 方法的强化学习迭代地改进模型，过程中使用了拒绝采样和近端策略优化 (PPO)。</p> 
+ <p style="text-align:justify;">Llama 2-Chat的训练主要流程如下：</p> 
+ <img src="https://images2.imgbox.com/fb/28/H7ei7nAc_o.png" alt="a95ad3d6697de70cc9cf0e1bd5276e7b.png"> 
+ <figcaption>
+   Llama 2-Chat的训练主要流程 
+ </figcaption> 
+ <h3>二、模型架构</h3> 
+ <h4>2.1 主要架构</h4> 
+ <p style="text-align:justify;">Llama 2采用LLaMA 1的大部分预训练设置和模型架构，包括：</p> 
+ <ol><li><p style="text-align:justify;"><strong> Tokenzier: </strong> 和LLaMA 1一样的 tokenizer，使用 SentencePiece 实现的 BPE 算法。与LLaMA 1一样，将所有数字拆分为单个数字并使用字节来分解未知的 UTF-8 字符。总词汇量为 32k个 token。<br>（关于BPE，可参考BPE 算法原理及使用指南【深入浅出】 - 知乎<sup>[2]</sup>）</p></li><li><p style="text-align:justify;"><strong> Pre-normalization </strong>：为了提高训练稳定性，LLaMa 对每个 Transformer 子层的输入进行归一化，而不是对输出进行归一化。LLaMa 使用了 RMSNorm 归一化函数。<br>（关于Pre-norm vs Post-norm，可参考为什么Pre Norm的效果不如Post Norm？- 科学空间|Scientific Spaces<sup>[3]</sup>）</p></li><li><p style="text-align:justify;"><strong> SwiGLU 激活函数：</strong> LLaMa 使用 SwiGLU 激活函数替换 ReLU 以提高性能，维度从 4d 变为 \frac{2}{3}4d 。SwiGLU是一种激活函数，它是GLU的一种变体， 它可以提高transformer模型的性能。SwiGLU的优点是它可以动态地调整信息流的门控程度，根据输入的不同而变化，而且SwiGLU比ReLU更<code>平滑</code>，可以带来<code>更好的优化</code>和<code>更快的收敛</code>。<br>（关于SwiGLU激活函数，可参考激活函数总结（八）：基于Gate mechanism机制的激活函数补充\(GLU、SwiGLU、GTU、Bilinear、ReGLU、GEGLU\)\_glu激活-CSDN博客<sup>[4]</sup>）</p></li><li><p style="text-align:justify;"><strong> Rotary Embeddings：</strong>LLaMa 没有使用之前的绝对位置编码，而是使用了旋转位置编码（RoPE），可以提升模型的外推性。它的基本思想是通过一个旋转矩阵来调整每个单词或标记的嵌入向量，使得它们的内积只与它们的相对位置有关。旋转嵌入不需要预先定义或学习位置嵌入向量，而是在网络的每一层动态地添加位置信息。旋转嵌入有一些优点，比如可以处理任意长度的序列，可以提高模型的泛化能力，可以减少计算量，可以适用于线性Attention等。<br>(关于 RoPE 的具体细节，可参考十分钟读懂旋转编码（RoPE） - 知乎<sup>[5]</sup>）</p></li></ol> 
+ <h4>2.2 Group Query Attention (GQA)</h4> 
+ <p style="text-align:justify;">Llama 2与 LLaMA 1 的主要架构差异包括上下文长度和分组查询注意力 (GQA) 的增加，如下图：</p> 
+ <img src="https://images2.imgbox.com/04/8a/G71I19Xc_o.png" alt="778bf3daca094fc4ad5b42c9c6124a52.png"> 
+ <figcaption>
+   Llama 2与 LLaMA 1 的主要架构差异 
+ </figcaption> 
+ <p style="text-align:justify;"><strong> GQA:</strong></p> 
+ <p style="text-align:justify;">自回归解码的标准做法是使用KV Cache，即缓存序列中先前token 的键 (K) 和值 (V) 对，以加快后续token的注意力计算。然而，随着上下文窗口或者批量大小的增加，多头注意力（MHA）模型中与KV Cache大小相关的内存成本会显著增加。对于大模型，KV Cache会成为推理时显存应用的一个瓶颈。</p> 
+ <p style="text-align:justify;">对于上述这种情况，有两种主流解决方案：</p> 
+ <p style="text-align:justify;">Multi Query Attention (MQA): 如下图所示，MQA在所有的query之间共享同一份键 (K) 和值 (V) 对</p> 
+ <p style="text-align:justify;">Group Query Attention (GQA): 如下图所示，GQA在不同的n (1&lt;=n&lt;=No. of heads)个query之间共享一份键 (K) 和值 (V) 对</p> 
+ <img src="https://images2.imgbox.com/3b/bc/LMZxVSxV_o.png" alt="4c16067fc65184f92ec1cbc0b9f5f8b6.png"> 
+ <figcaption>
+   MHA vs GQA vs MQA 
+ </figcaption> 
+ <p style="text-align:justify;">虽然仅使用单个键值头的多查询注意力 (MQA) 大大加快了解码器推理。然而，MQA 可能会导致质量下降。而查询注意力 (GQA)，这是一种多查询注意力的泛化，它使用中间（多个，少于查询头的数量）键值头的数量。实验表明，经过预训练的 GQA 实现了接近多头注意力的质量，速度与 MQA 相当。</p> 
+ <p style="text-align:justify;">（关于MQA，可参考https://zhuanlan.zhihu.com/p/634236135<sup>[6]</sup>；</p> 
+ <p style="text-align:justify;">关于GQA，可参考\[LLM\] Group query attention 加速推理 \- 知乎<sup>[7]</sup>；</p> 
+ <p style="text-align:justify;">关于KV Cache，可参考大模型推理加速：看图学KV Cache \- 知乎<sup>[8]</sup>）</p> 
+ <h3>三、预训练</h3> 
+ <h4>3.1 预训练数据</h4> 
+ <ul><li><p>训练语料库包括来自公开可用来源的新混合数据，不包括来自 Meta 产品或服务的数据。努力从已知包含大量关于私人的个人信息的某些站点中删除敏感数据。</p></li><li><p>在 2 万亿个数据上进行训练，因为这提供了良好的性能-成本权衡</p></li><li><p><strong> 对大多数事实源数据进行过采样，以增加知识和抑制幻觉</strong></p></li></ul> 
+ <h4>3.2 预训练过程及结果</h4> 
+ <h5>3.2.1 预训练超参数</h5> 
+ <ul><li><p>采用 Llama 1 的大部分预训练设置和模型架构</p></li><li><p>优化器：AdamW optimizer， \beta_{1} =0.9， \beta_{2} =0.95</p></li><li><p>学习率：余弦学习率，2000 step 的 warmup，最后 decay 到峰值学习率的 10%</p></li><li><p>weight decay：0.1</p></li><li><p>gradient clipping：1.0</p></li></ul> 
+ <h5>3.2.2 预训练的训练损失</h5> 
+ <p style="text-align:justify;">训练 loss 曲线如下所示，<strong> 即便训练了 2T 的 token 也暂时没有看到饱和现象 </strong>：</p> 
+ <img src="https://images2.imgbox.com/96/1e/5VTOCxkC_o.png" alt="83af9eafd84ae7307fd2444e78eafb5b.png"> 
+ <h5>3.2.3 Llama 2预训练模型评估</h5> 
+ <ul><li><p>与开源模型在各个任务上的表现的比较：</p></li></ul> 
+ <img src="https://images2.imgbox.com/0d/0e/afAgHIYv_o.png" alt="085ff755f16956fafdec4a0887ce081d.png"> 
+ <p style="text-align:justify;">除了代码基准测试之外，Llama 2 7B和30B模型在所有类别上都优于相应大小的MPT模型。Llama 2 7B和34B在所有类别的基准测试中都优于Falcon 7B和40B。此外，<strong> Llama 2 70B模型优于所有开源模型。</strong></p> 
+ <ul><li><p>与闭源模型在各个任务上的表现的比较：</p></li></ul> 
+ <img src="https://images2.imgbox.com/e1/70/YHap7n4v_o.png" alt="695647eb8d5f6ed4987ab736f9dd3549.png"> 
+ <h3>四、Supervised Fine-tuning (SFT)</h3> 
+ <h4>4.1 SFT数据</h4> 
+ <p style="text-align:justify;">为了引导，研究团队从公开可用的指令调优数据开始SFT阶段，但后来发现其中许多数据的多样性和质量都不够，特别是在将LLM与对话式指令结合起来方面。</p> 
+ <ul><li><p>高质量SFT数据收集：使用来自基于供应商的注释的更少但更高质量的示例，SFT的结果得到了显著改善。</p></li><li><p>Quality&gt; Quantity: 只通过几千个高质量的数据训练的模型效果就优于大规模开源 数据SFT 训练的模型，这与 Lima 的发现类似：<strong> 有限的干净指令调优数据足以达到高水平的质量 </strong>。在总共收集了 27,540 个注释后停止标注 SFT 数据。</p></li><li><p>标注偏置的引入：研究团队同时还观察到不同的注释平台和供应商可能导致明显不同的下游模型性能，这突显了即使使用供应商来获取注释时也需要进行数据检查的重要性。为了验证数据质量，研究团队仔细检查了一组180个样例，将人工提供的注释与模型生成的样本进行手工审查。令人惊讶的是，我们发现<strong> 从结果SFT模型中采样的输出往往可以与人类标注者手写的SFT数据相竞争 </strong>，这表明我们可以重新设置优先级，并将更多的注释工作投入到基于偏好的RLHF注释中。</p></li></ul> 
+ <h4>4.2 SFT训练过程及结果</h4> 
+ <ul><li><p>余弦学习率，初始学习率 2e-5，weight decay=0.1，batch_size=64，seq_len=4096</p></li><li><p>对于微调过程，每个样本由一个提示（prompt）和一个答案（answer）组成。为了确保模型的序列长度得到正确填充，将训练集中的所有提示和答案连接在一起。使用一个特殊的 token 将提示和答案分隔开。<br>prompt &lt;sep&gt; answer &lt;eos&gt; prompt &lt;sep&gt; answer</p></li><li><p>采用自回归目标（autoregressive objective）并将用户提示（prompt）中的标记损失设为零，只用在答案（answer）标记上的loss进行反向传播。</p></li><li><p>对模型进行2个 epoch 的微调</p></li></ul> 
+ <p>一起交流</p> 
+ <p style="text-align:left;">想和你一起学习进步！『<strong>NewBeeNLP』</strong>目前已经建立了多个不同方向交流群（<strong>机器学习 / 深度学习 / 自然语言处理 / 搜索推荐 / 图网络 / 面试交流 / </strong>等），名额有限，赶紧添加下方微信加入一起讨论交流吧！（注意一定o要<strong>备注信息</strong>才能通过）</p> 
+ <p style="text-align:center;"><img src="https://images2.imgbox.com/08/76/uu7uw3BI_o.jpg" alt="4519bcdadacbc7f149e18370bf5684a0.jpeg"></p> 
+ <h4>本文参考资料</h4> 
+ <p>[1]</p> 
+ <p style="text-align:justify;">GitHub - facebookresearch/llama: Inference code for LLaMA models: https://github.com/facebookresearch/llama</p> 
+ [2] 
+ <p style="text-align:justify;">BPE 算法原理及使用指南【深入浅出】 - 知乎: https://zhuanlan.zhihu.com/p/448147465</p> 
+ [3] 
+ <p style="text-align:justify;">为什么Pre Norm的效果不如Post Norm？- 科学空间|Scientific Spaces: https://kexue.fm/archives/9009</p> 
+ [4] 
+ <p style="text-align:justify;">激活函数总结（八）：基于Gate mechanism机制的激活函数补充(GLU、SwiGLU、GTU、Bilinear、ReGLU、GEGLU)_glu激活-CSDN博客: https://blog.csdn.net/qq_36758270/article/details/132174106</p> 
+ [5] 
+ <p style="text-align:justify;">十分钟读懂旋转编码（RoPE） - 知乎: https://zhuanlan.zhihu.com/p/647109286</p> 
+ [6] 
+ <p style="text-align:justify;">https://zhuanlan.zhihu.com/p/634236135: https://zhuanlan.zhihu.com/p/634236135</p> 
+ [7] 
+ <p style="text-align:justify;">[LLM] Group query attention 加速推理 - 知乎: https://zhuanlan.zhihu.com/p/645865956</p> 
+ [8] 
+ <p style="text-align:justify;">大模型推理加速：看图学KV Cache - 知乎: https://zhuanlan.zhihu.com/p/662498827</p> 
+ <p style="text-align:center;"><img height="792" width="1068" src="https://images2.imgbox.com/b6/ac/5mRvd7ds_o.gif" alt="2bd532a2dc2decca6722dc456f4050be.gif"></p> 
+</div>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/bcde8d252e080978b5073e2e07d25ac5/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【大模型部署】小白教学,离线本地部署AI： chatglm3&#43;one-api&#43;fastGPT----Linux环境部署CPU运行---带资源包</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c840d70a6f77fc69efd73e5729b7dac2/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【前端】Layui的表格常用功能，表单提交事件，表格下拉按钮点击事件，表格外的按钮点击事件</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

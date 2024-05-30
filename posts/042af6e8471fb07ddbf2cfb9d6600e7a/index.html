@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【c&#43;&#43;】继承学习(二)：探索 C&#43;&#43; 中派生类的默认机制与静态成员共享 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/042af6e8471fb07ddbf2cfb9d6600e7a/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【c&#43;&#43;】继承学习(二)：探索 C&#43;&#43; 中派生类的默认机制与静态成员共享">
+  <meta property="og:description" content="🔥个人主页：Quitecoder
+🔥专栏：c&#43;&#43;笔记仓
+目录 `1.派生类的默认成员函数``2.继承与友元``3.继承与静态成员` 朋友们大家好，本篇文章我们来学习继承的第二部分
+1.派生类的默认成员函数 来看下面的类：
+class Person { public: Person(const char* name = &#34;jason&#34;) : _name(name) { cout &lt;&lt; &#34;Person()&#34; &lt;&lt; endl; } Person(const Person&amp; p) : _name(p._name) { cout &lt;&lt; &#34;Person(const Person&amp; p)&#34; &lt;&lt; endl; } Person&amp; operator=(const Person&amp; p) { cout &lt;&lt; &#34;Person operator=(const Person&amp; p)&#34; &lt;&lt; endl; if (this != &amp;p) _name = p._name; return *this; } ~Person() { cout &lt;&lt; &#34;~Person()&#34; &lt;&lt; endl; } protected: string _name; // 姓名 }; class Student : public Person { public: protected: int _num; //学号 }; Student对象生成的默认构造函数，对内置类型不做处理，对自定义类型调用它的默认构造函数，规则和以前一样">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-09T09:48:10+08:00">
+    <meta property="article:modified_time" content="2024-05-09T09:48:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【c&#43;&#43;】继承学习(二)：探索 C&#43;&#43; 中派生类的默认机制与静态成员共享</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atelier-sulphurpool-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/37/73/0IZFMeup_o.png" alt="Alt" width="300" height="170"></p> 
+<p><font color="peru" size="4"><b>🔥个人主页</b>：<a href="https://blog.csdn.net/arf_dog?type=blog"><font color="#33CCCC" size="4"><b>Quitecoder</b></font></a></font></p> 
+<p><font color="peru" size="4">🔥<strong>专栏</strong></font>：<a href="https://blog.csdn.net/arf_dog/category_12614029.html?spm=1001.2014.3001.5482"><font color="#33CCCC" size="4"><b>c++笔记仓</b></font></a></p> 
+<p><img src="https://images2.imgbox.com/c9/87/zdukiYNM_o.gif" alt="Alt"></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#1_15" rel="nofollow">`1.派生类的默认成员函数`</a></li><li><a href="#2_232" rel="nofollow">`2.继承与友元`</a></li><li><a href="#3_281" rel="nofollow">`3.继承与静态成员`</a></li></ul> 
+</div> 
+<p></p> 
+<blockquote> 
+ <p>朋友们大家好，本篇文章我们来学习<strong>继承</strong>的第二部分</p> 
+</blockquote> 
+<h2><a id="1_15"></a><code>1.派生类的默认成员函数</code></h2> 
+<p><img src="https://images2.imgbox.com/f0/0a/YAxmkwA6_o.png" alt="在这里插入图片描述"><br> 来看下面的类：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">Person</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> name <span class="token operator">=</span> <span class="token string">"jason"</span><span class="token punctuation">)</span>
+		<span class="token operator">:</span> <span class="token function">_name</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+	<span class="token function">Person</span><span class="token punctuation">(</span><span class="token keyword">const</span> Person<span class="token operator">&amp;</span> p<span class="token punctuation">)</span>
+		<span class="token operator">:</span> <span class="token function">_name</span><span class="token punctuation">(</span>p<span class="token punctuation">.</span>_name<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Person(const Person&amp; p)"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+	Person<span class="token operator">&amp;</span> <span class="token keyword">operator</span><span class="token operator">=</span><span class="token punctuation">(</span><span class="token keyword">const</span> Person<span class="token operator">&amp;</span> p<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Person operator=(const Person&amp; p)"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">!=</span> <span class="token operator">&amp;</span>p<span class="token punctuation">)</span>
+			_name <span class="token operator">=</span> p<span class="token punctuation">.</span>_name<span class="token punctuation">;</span>
+
+		<span class="token keyword">return</span> <span class="token operator">*</span><span class="token keyword">this</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+	<span class="token operator">~</span><span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	string _name<span class="token punctuation">;</span> <span class="token comment">// 姓名</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _num<span class="token punctuation">;</span> <span class="token comment">//学号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<ol><li><strong>Student对象生成的默认构造函数，对内置类型不做处理，对自定义类型调用它的默认构造函数</strong>，规则和以前一样<br> <img src="https://images2.imgbox.com/62/a5/mSBqdvh7_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/91/85/2AERoPHi_o.png" alt="在这里插入图片描述"></li></ol> 
+<p><mark>派生类里面，把父类成员当做一个整体</mark></p> 
+<p><font color="red">派生类的构造函数必须调用基类的构造函数初始化基类的那一部分成员。如果基类没有默认的构造函数，则必须在派生类构造函数的初始化列表阶段显示调用</font></p> 
+<p>比如的父类的构造函数修改成这种：</p> 
+<pre><code class="prism language-cpp"><span class="token function">Person</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> name<span class="token punctuation">)</span>
+	<span class="token operator">:</span> <span class="token function">_name</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>现在父类没有默认构造，会编译报错</p> 
+<p><img src="https://images2.imgbox.com/8c/33/YWkv7OnM_o.png" alt="在这里插入图片描述"></p> 
+<p>这时候需要子类来完成构造函数：</p> 
+<pre><code class="prism language-cpp"><span class="token function">Student</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> name<span class="token punctuation">,</span> <span class="token keyword">int</span> num<span class="token punctuation">)</span>
+	<span class="token operator">:</span> <span class="token function">Person</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+	<span class="token punctuation">,</span> <span class="token function">_num</span><span class="token punctuation">(</span>num<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这段代码功能：</p> 
+<p><strong>基类初始化</strong>:<br> <code> Person(name)</code> 调用了基类 <code>Person</code> 的构造函数，并传递了 <code>name</code> 参数，这确保了 <code>Person</code> 类的成员 <code>_name</code> 被正确初始化。写成 <code>Person(name)</code> 就是指示编译器使用 <code>Person</code> 类的接受 <code>const char*</code> 参数的构造函数。如果不这样做，基类成员 <code>_name</code> 在 <code>Student</code> 对象构建过程中不会被初始化。</p> 
+<p><font color="red" size="5">注意</font></p> 
+<p>这里<strong>不能</strong>这样初始化:</p> 
+<pre><code class="prism language-cpp"><span class="token function">Student</span><span class="token punctuation">(</span><span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> name<span class="token punctuation">,</span> <span class="token keyword">int</span> num<span class="token punctuation">)</span>
+	<span class="token operator">:</span> <span class="token function">_name</span><span class="token punctuation">(</span>name<span class="token punctuation">)</span>
+	<span class="token punctuation">,</span> <span class="token function">_num</span><span class="token punctuation">(</span>num<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>父类成员需要当做一个整体的一个自定义类型的成员，不能单独对它的成员处理</strong></p> 
+<p><code>_name</code> 是基类 <code>Person</code> 的一部分，派生类 <code>Student</code> 没有直接的权限去初始化它。应该使用基类构造函数来初始化</p> 
+<blockquote> 
+ <p><strong>确保基类的构造函数被调用是继承中非常重要的一部分，因为只有基类的构造函数知道如何正确初始化基类定义的成员。上面的修改确保当创建Student 类的对象时，它会首先调用 Person 类的构造函数初始化 _name，然后初始化派生类 Student 的 _num 成员</strong></p> 
+</blockquote> 
+<p>派生类这里分成了两个部分：父类和自己，<strong>父类的调用父类构造函数初始化</strong></p> 
+<blockquote> 
+ <p><strong>成员变量的初始化顺序是根据它们在类定义中出现的顺序，而不是初始化列表中的顺序。因此，基类的构造函数总是首先被调用，再是派生类中定义的成员变量</strong></p> 
+</blockquote> 
+<ol start="2"><li><mark>派生类的拷贝构造函数必须调用基类的拷贝构造完成基类的拷贝初始化</mark>，<strong>一般情况下默认生成的就够用，如果涉及到深拷贝，就需要自己显示实现</strong></li></ol> 
+<pre><code class="prism language-cpp"><span class="token function">Student</span><span class="token punctuation">(</span><span class="token keyword">const</span> Student<span class="token operator">&amp;</span> s<span class="token punctuation">)</span>
+   <span class="token operator">:</span> <span class="token function">Person</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span>
+   <span class="token punctuation">,</span> <span class="token function">_num</span><span class="token punctuation">(</span>s<span class="token punctuation">.</span>_num<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+   cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Student(const Student&amp; s)"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/4a/4b/tv8PNNDS_o.png" alt="在这里插入图片描述"></p> 
+<ol start="3"><li><mark>派生类的<code>operator=</code>必须要调用基类的<code>operator=</code>完成基类的复制</mark></li></ol> 
+<pre><code class="prism language-cpp">Student<span class="token operator">&amp;</span> <span class="token keyword">operator</span> <span class="token operator">=</span> <span class="token punctuation">(</span><span class="token keyword">const</span> Student<span class="token operator">&amp;</span> s<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"Student&amp; operator= (const Student&amp; s)"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token keyword">this</span> <span class="token operator">!=</span> <span class="token operator">&amp;</span>s<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		Person<span class="token double-colon punctuation">::</span><span class="token keyword">operator</span> <span class="token operator">=</span><span class="token punctuation">(</span>s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		_num <span class="token operator">=</span> s<span class="token punctuation">.</span>_num<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">return</span> <span class="token operator">*</span><span class="token keyword">this</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这里同名函数<strong>构成了隐藏</strong></p> 
+<ol start="4"><li><mark>派生类的析构函数会在被调用完成后自动调用基类的析构函数清理基类成员</mark>。因为这样才能保证派生类对象<mark>先清理派生类成员再清理基类成员的顺序</mark></li></ol> 
+<pre><code class="prism language-cpp"><span class="token operator">~</span><span class="token function">Student</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>上面的函数我们都进行了显示调用，但是析构函数不可以<br> <img src="https://images2.imgbox.com/dc/28/qdaFkZ5Q_o.png" alt="在这里插入图片描述"><br> <mark>对于单个子类对象</mark>，当 <code>Student</code> 的析构函数被调用并完成执行后，<code>Person</code> 的析构函数将随即被自动而且默认地调用。这样的设计可以防止基类成员被重复释放或者提前释放，从而导致潜在的错误和资源泄漏</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+
+	<span class="token operator">~</span><span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Person()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	string _name<span class="token punctuation">;</span> <span class="token comment">// 姓名</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token operator">~</span><span class="token function">Student</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _num<span class="token punctuation">;</span> <span class="token comment">//学号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Person p1<span class="token punctuation">;</span>
+	Student s1<span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span> 
+</code></pre> 
+<p><img src="https://images2.imgbox.com/03/33/ujPojH4B_o.png" alt="在这里插入图片描述"><br> 它们将按照创建的相反顺序被销毁。也就是说，首先 <code>s1</code> 被销毁，然后是 <code>p1</code>。</p> 
+<p><strong>析构 <code>s1</code> 时</strong>会发生以下情况：</p> 
+<ol><li><code>Student</code> 类的析构函数 <code>~Student()</code> 首先被调用，这时会打印出 <code>"~Student()"</code>。</li><li><mark>继承层次中，派生类的析构函数完成后，会自动调用基类的析构函数</mark>。所以接着 <code>Person</code> 类的析构函数 <code>~Person()</code> 会被调用，打印出 <code>"~Person()"</code>。</li></ol> 
+<p>接下来，<strong>销毁 <code>p1</code></strong> 时：</p> 
+<ol><li>由于 <code>p1</code> 的类型是 <code>Person</code>，只有 <code>Person</code> 类的析构函数 <code>~Person()</code> 被调用，再次打印出 <code>"~Person()"</code></li></ol> 
+<p>所以，应该总共有以下输出：</p> 
+<pre><code>~Student()
+~Person()
+~Person()
+</code></pre> 
+<ol start="5"><li> <p><mark><font color="green">派生类对象初始化：先调用基类构造再调派生类构造</font></mark></p> </li><li> <p><mark><font color="green">派生类对象析构清理：先调用派生类析构再调基类的析构。</font></mark></p> </li><li> <p>因为后续一些场景析构函数需要构成重写，重写的条件之一是函数名相同。那么编译器会对析构函数名进行特殊处理，处理成<code>destrutor()</code>，所以父类析构函数不加<code>virtual</code>的情况下，<strong>子类析构函数和父类析构函数构成隐藏关系</strong></p> </li></ol> 
+<p>所以我们想显示调用就需要这样写：</p> 
+<pre><code class="prism language-cpp"><span class="token operator">~</span><span class="token function">Student</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token class-name">Person</span><span class="token double-colon punctuation">::</span><span class="token operator">~</span><span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">"~Student()"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>但是这里会导致一个问题，析构多调用了一次</strong>，就是因为析构函数<strong>先调用子类再调用父类的，子类析构函数结束后会自动调用父类析构</strong></p> 
+<h2><a id="2_232"></a><code>2.继承与友元</code></h2> 
+<p><mark>友元关系不能继承，基类友元不能访问子类私有和保护成员</mark></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">friend</span> <span class="token keyword">void</span> <span class="token function">Display</span><span class="token punctuation">(</span><span class="token keyword">const</span> Person<span class="token operator">&amp;</span> p<span class="token punctuation">,</span> <span class="token keyword">const</span> Student<span class="token operator">&amp;</span> s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	string _name<span class="token punctuation">;</span> <span class="token comment">// 姓名</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _stuNum<span class="token punctuation">;</span> <span class="token comment">// 学号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">Display</span><span class="token punctuation">(</span><span class="token keyword">const</span> Person<span class="token operator">&amp;</span> p<span class="token punctuation">,</span> <span class="token keyword">const</span> Student<span class="token operator">&amp;</span> s<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	cout <span class="token operator">&lt;&lt;</span> p<span class="token punctuation">.</span>_name <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> s<span class="token punctuation">.</span>_stuNum <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这里会编译错误：</p> 
+<p><img src="https://images2.imgbox.com/03/c9/JugZ40IP_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><strong>基类将某些函数或类声明为友元，这个友元关系不会自动传递给从派生）。派生类需要自己明确声明哪些函数或类是它的友元</strong></p> 
+</blockquote> 
+<p><strong>如何解决编译错误</strong>:</p> 
+<p>要解决 <code>Display</code> 函数不能访问 <code>Student</code> 类的 <code>_stuNum</code> 成员的问题，可以在 <code>Student</code> 类中也声明 <code>Display</code> 为友元：</p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+    <span class="token keyword">friend</span> <span class="token keyword">void</span> <span class="token function">Display</span><span class="token punctuation">(</span><span class="token keyword">const</span> Person<span class="token operator">&amp;</span> p<span class="token punctuation">,</span> <span class="token keyword">const</span> Student<span class="token operator">&amp;</span> s<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+    <span class="token keyword">int</span> _stuNum<span class="token punctuation">;</span> <span class="token comment">// 学号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>现在，<code>Display</code> 函数是 <code>Person</code> 和 <code>Student</code> 两个类的友元，可以访问两个类的保护成员</strong></p> 
+<h2><a id="3_281"></a><code>3.继承与静态成员</code></h2> 
+<p><mark>基类定义了static静态成员，则整个继承体系里面只有一个这样的成员。无论派生出多少个子类，都只有一个static成员实例</mark></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">Person</span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token function">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> <span class="token operator">++</span>_count<span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	string _name<span class="token punctuation">;</span> <span class="token comment">// 姓名</span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+	<span class="token keyword">static</span> <span class="token keyword">int</span> _count<span class="token punctuation">;</span> <span class="token comment">// 统计人的个数。</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">int</span> Person<span class="token double-colon punctuation">::</span>_count <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Student</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Person</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	<span class="token keyword">int</span> _stuNum<span class="token punctuation">;</span> <span class="token comment">// 学号</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token keyword">class</span> <span class="token class-name">Graduate</span> <span class="token operator">:</span> <span class="token base-clause"><span class="token keyword">public</span> <span class="token class-name">Student</span></span>
+<span class="token punctuation">{<!-- --></span>
+<span class="token keyword">protected</span><span class="token operator">:</span>
+	string _seminarCourse<span class="token punctuation">;</span> <span class="token comment">// 研究科目</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">void</span> <span class="token function">TestPerson</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Student s1<span class="token punctuation">;</span>
+	Student s2<span class="token punctuation">;</span>
+	Student s3<span class="token punctuation">;</span>
+	Graduate s4<span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">" 人数 :"</span> <span class="token operator">&lt;&lt;</span> Person<span class="token double-colon punctuation">::</span>_count <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+	Student<span class="token double-colon punctuation">::</span>_count <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+	cout <span class="token operator">&lt;&lt;</span> <span class="token string">" 人数 :"</span> <span class="token operator">&lt;&lt;</span> Person<span class="token double-colon punctuation">::</span>_count <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>静态成员是与类本身关联的，而不是与类的单个实例相关联。静态成员变量在所有实例中共享，而静态成员函数可以在没有类实例的情况下直接通过类名调用。当静态成员被继承时，派生类共享同一个静态成员副本，因为静态成员是属于类的，不属于类的任何具体对象</strong>。</p> 
+<p>在上面代码中，<code>Person</code> 类有一个静态成员 <code>_count</code>，它被用来统计该类的实例数量。每当创建一个 <code>Person</code> 类的实例或者它的派生类的实例时，构造函数都会递增 <code>_count</code>，因此 <code>Student</code> 和 <code>Graduate</code> 的示例也会递增 <code>_count</code>。</p> 
+<p>分析：</p> 
+<ol><li> <p><code>Person::_count</code> 是静态成员变量，并且初始化为 0。它统计 <code>Person</code> 及其派生类 <code>Student</code> 和 <code>Graduate</code> 的对象个数。</p> </li><li> <p><code>Student</code> 类继承自 <code>Person</code>，没有定义新的静态成员变量，因此它共享 <code>Person</code> 类的静态成员 <code>_count</code>。</p> </li><li> <p><code>Graduate</code> 类继承自 <code>Student</code>，也没有定义新的静态成员变量，因此它同样共享 <code>Person</code> 类的静态成员 <code>_count</code>。</p> </li></ol> 
+<pre><code class="prism language-cpp"><span class="token keyword">void</span> <span class="token function">TestPerson</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    Student s1<span class="token punctuation">;</span> <span class="token comment">// 在构造时, Person::_count 变为 1</span>
+    Student s2<span class="token punctuation">;</span> <span class="token comment">// Person::_count 变为 2</span>
+    Student s3<span class="token punctuation">;</span> <span class="token comment">// Person::_count 变为 3</span>
+    Graduate s4<span class="token punctuation">;</span> <span class="token comment">// Person::_count 变为 4</span>
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">" 人数 :"</span> <span class="token operator">&lt;&lt;</span> Person<span class="token double-colon punctuation">::</span>_count <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token comment">// 输出 " 人数 :4"</span>
+
+    Student<span class="token double-colon punctuation">::</span>_count <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> <span class="token comment">// 重置 Person::_count 为 0</span>
+
+    cout <span class="token operator">&lt;&lt;</span> <span class="token string">" 人数 :"</span> <span class="token operator">&lt;&lt;</span> Person<span class="token double-colon punctuation">::</span>_count <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span> <span class="token comment">// 输出 " 人数 :0"</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>在 <code>TestPerson</code> 函数中创建了三个 <code>Student</code> 对象和一个 <code>Graduate</code> 对象，每次构造函数调用都会递增 <code>_count</code>，因此打印 <code>_count</code> 的结果为 4。</p> 
+<p>然后，将静态成员 <code>_count</code> 通过 <code>Student</code> 类重置为 0。<strong>注意，这里使用 <code>Student::_count</code> 访问的实际上还是 <code>Person</code> 类的静态成员 <code>_count</code>，因为 <code>Student</code> 并没有重新定义它。这表明无论通过类 <code>Person</code> 还是它的任何派生类访问静态成员 <code>_count</code>，结果都是相同的</strong>。因此，第二次打印 <code>_count</code> 的结果是 0</p> 
+<blockquote> 
+ <p><strong>静态成员的继承性质：静态成员在基类及其派生类之间是共享的，而不是每个派生类都有独立的静态成员副本。因此，无论是在基类还是派生类中访问静态成员，访问的都是同一个数据。在设计类层次结构时，这一点非常重要，因为静态成员的行为可能会影响整个类族</strong></p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/7cc35c35d5d43323459eee592a25ed42/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">大数据Hadoop之——部署hadoop&#43;hive&#43;Mysql环境（Linux）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/1ebcbca8df42fc0f2d47d44052469a8e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">第十三届蓝桥杯决赛（国赛）真题 Java C 组【原卷】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

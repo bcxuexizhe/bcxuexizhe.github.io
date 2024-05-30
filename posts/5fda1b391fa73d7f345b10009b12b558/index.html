@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>uniapp 安卓、IOS、H5、微信小程序实现PDF在线预览 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/5fda1b391fa73d7f345b10009b12b558/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="uniapp 安卓、IOS、H5、微信小程序实现PDF在线预览">
+  <meta property="og:description" content="在使用uniapp开发移动端时，微信开发者工具里webview能正常打开后端接口返回的pdf文件流。正式发布后，在配置了业务域名和服务器域名的前提下，预览pdf文件却只能看到白屏，因此我猜测微信小程序不能通过webview读取文件流。这个想法有问题的话请大家给与指正。
+后来我通过uniapp api将文件下载在临时目录，再调用api打开，实现了微信小程序的预览。但在安卓端会调用安装的WPS打开，如果用户没有安装pdf阅读器，则无法打开，造成了不好的用户体验。因此，手机端我用pdf.js实现在线预览。
+苹果IOS直接使用webview预览pdf。
+h5我刚开始的时候使用webview无法预览。报错： no enabled plugin supports this MIME type。所以h5也使用pdf.js实现在线预览，但是我遇到cors跨域问题。后来采用blob实现了在线预览。
+后端的api接口如下：
+/** * @功能：pdf预览 */ @IgnoreAuth @RequestMapping(&#34;/pdf/preview/**&#34;) public void pdfPreviewIframe(HttpServletRequest request, HttpServletResponse response) { String imgPath = extractPathFromPattern(request); // 其余处理略 InputStream inputStream = null; OutputStream outputStream = null; try { inputStream = MinioUtil.getMinioFile(imgPath); outputStream = response.getOutputStream(); response.setContentType(&#34;application/pdf; charset=UTF-8&#34;); byte[] buf = new byte[1024]; int len; while ((len = inputStream.read(buf)) &gt; 0) { outputStream.write(buf, 0, len); } response.flushBuffer(); } catch (Exception e) { log.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-29T16:09:21+08:00">
+    <meta property="article:modified_time" content="2024-02-29T16:09:21+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">uniapp 安卓、IOS、H5、微信小程序实现PDF在线预览</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>    在使用uniapp开发移动端时，微信开发者工具里webview能正常打开后端接口返回的pdf文件流。正式发布后，在配置了业务域名和服务器域名的前提下，预览pdf文件却只能看到白屏，因此我猜测微信小程序不能通过webview读取文件流。这个想法有问题的话请大家给与指正。</p> 
+<p>    后来我通过uniapp api将文件下载在临时目录，再调用api打开，实现了微信小程序的预览。但在安卓端会调用安装的WPS打开，如果用户没有安装pdf阅读器，则无法打开，造成了不好的用户体验。因此，手机端我用pdf.js实现在线预览。</p> 
+<p>    苹果IOS直接使用webview预览pdf。</p> 
+<p>    h5我刚开始的时候使用webview无法预览。报错： no enabled plugin supports this MIME type。所以h5也使用pdf.js实现在线预览，但是我遇到cors跨域问题。后来采用blob实现了在线预览。</p> 
+<p>后端的api接口如下：</p> 
+<pre><code class="language-java">/**
+     * @功能：pdf预览
+     */
+    @IgnoreAuth
+    @RequestMapping("/pdf/preview/**")
+    public void pdfPreviewIframe(HttpServletRequest request, HttpServletResponse response) {
+        String imgPath = extractPathFromPattern(request);
+        // 其余处理略
+        InputStream inputStream = null;
+        OutputStream outputStream = null;
+        try {
+            inputStream = MinioUtil.getMinioFile(imgPath);
+            outputStream = response.getOutputStream();
+            response.setContentType("application/pdf; charset=UTF-8");
+            byte[] buf = new byte[1024];
+            int len;
+            while ((len = inputStream.read(buf)) &gt; 0) {
+                outputStream.write(buf, 0, len);
+            }
+            response.flushBuffer();
+        } catch (Exception e) {
+            log.error("预览文件失败" + e.getMessage());
+        } finally {
+            if (inputStream != null) {
+                try {
+                    inputStream.close();
+                } catch (IOException e) {
+                    log.error(e.getMessage(), e);
+                }
+            }
+            if (outputStream != null) {
+                try {
+                    outputStream.close();
+                } catch (IOException e) {
+                    log.info("imgPath：{}", imgPath);
+                    log.error(e.getMessage(), e);
+                }
+            }
+        }
+    }</code></pre> 
+<p>一、下载pdf.js</p> 
+<p><a class="link-info" href="http://mozilla.github.io/pdf.js/getting_started" rel="nofollow" title="http://mozilla.github.io/pdf.js/getting_started">http://mozilla.github.io/pdf.js/getting_started</a></p> 
+<p>二、解压文件并引入到项目</p> 
+<p>说明：网上很多案例说，在项目目录下创建hybrid文件夹，把解压后的文件全部放到里面的方式我试了后行不通。</p> 
+<p>查阅了官方文档，发现是我肤浅了。</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/29/3d/0we8Cps1_o.png"></p> 
+<p>必须严格按照上面说是的目录才行。 </p> 
+<p>在static目录下新建pdfview目录，将解压后的文件拷贝到该目录下。如下图所示：</p> 
+<p><img alt="" height="293" src="https://images2.imgbox.com/5b/06/eCYjenoa_o.png" width="474"></p> 
+<p>注释viewer.mjs代码，pdf.js不支持加载跨域文件，会报 “file origin does not match viewer’”错误：</p> 
+<p><img alt="" height="713" src="https://images2.imgbox.com/9f/44/2vH4YhN7_o.png" width="1200"></p> 
+<p>三、 webview内预览pdf</p> 
+<pre><code class="language-html">&lt;template&gt;
+	&lt;view&gt;
+		&lt;web-view :src="fileUrl"&gt;&lt;/web-view&gt;
+	&lt;/view&gt;
+&lt;/template&gt;
+
+&lt;script&gt;
+	export default {
+		data() {
+			return {
+				fileUrl: "",
+				pdfViewUrl: '/static/pdfview/web/viewer.html'
+			}
+		},
+		onLoad(options) {
+			this.fileUrl = decodeURI(options.fileUrl)
+			if (!!options.isPdfView) {
+				this.fileUrl = this.pdfViewUrl + '?file=' + encodeURI(this.fileUrl)
+			}
+		},
+		methods: {
+
+		}
+	}
+&lt;/script&gt;
+
+&lt;style&gt;
+
+&lt;/style&gt;</code></pre> 
+<p> 四、安卓、微信小程序分别预览</p> 
+<pre><code class="language-TypeScript">            //h5预览pdf
+			h5PdfView(item) {
+				uni.showLoading({
+					title: '加载中...'
+				})
+				uni.request({
+					url: this.baseFileURL + '/pdf/preview/' + item.resourceId,
+					method: 'POST',
+					responseType: 'arraybuffer'
+				}).then(res =&gt; {
+					uni.hideLoading()
+					
+					let pdfData = res.data
+					let blob = new Blob([pdfData], {
+						type: 'application/pdf;charset=UTF-8'
+					})
+					pdfData = window.URL.createObjectURL(blob)
+					this.h5PdfUrl = encodeURIComponent(pdfData)
+					uni.navigateTo({
+						url: '/subpages/webview/webview?fileUrl=' + this.h5PdfUrl + "&amp;isPdfView=true",
+					})
+				})
+			},
+
+			//pdf预览
+			pdfView(item) {
+				item.fileUrl = this.baseFileURL + '/pdf/preview/' + item.resourceId
+
+				// #ifdef APP-PLUS
+				switch (uni.getSystemInfoSync().platform) {
+					case "android":
+						console.log("android")
+						uni.navigateTo({
+							url: '/subpages/webview/webview?fileUrl=' + encodeURI(item.fileUrl) +
+								"&amp;isPdfView=true",
+						})
+						break;
+					case "ios":
+						console.log("ios")
+						uni.navigateTo({
+							url: '/subpages/webview/webview?fileUrl=' + encodeURI(item.fileUrl),
+						})
+						break;
+				}
+				// #endif
+
+				// #ifdef H5
+				this.h5PdfView(item)
+				// #endif 
+
+				//  #ifdef MP-WEIXIN
+				let fileName = item.resourceId.substring(item.resourceId.lastIndexOf('/') + 1);
+				uni.downloadFile({
+					url: item.fileUrl, //文件地址
+					filePath: wx.env.USER_DATA_PATH + '/' + fileName,
+					success: function(res) {
+						const filePath = res.filePath || res.tempFilePath;
+						uni.openDocument({
+							filePath: filePath,
+							showMenu: false,
+							success: function(res) {}
+						});
+					}
+				});
+				// #endif
+			}</code></pre> 
+<p>五：预览效果</p> 
+<p class="img-center"><img alt="" height="823" src="https://images2.imgbox.com/39/42/G2DlbZAS_o.jpg" width="380"></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/1ed69b1e2d93b6e2664c9031255873d8/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Amazon CodeWhisperer——AI助力编程</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b59157f99cd69ca2c0cd474a04a7d6c7/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">图数据库Neo4j——Neo4j简介、数据结构 &amp; Docker版本的部署安装 &amp; Cypher语句的入门</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

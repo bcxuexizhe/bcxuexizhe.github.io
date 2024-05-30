@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Spring中@Autowired注解作用在方法上和属性上说明 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/c1a92a21cd56fe1d50606dc25f6e3e8d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Spring中@Autowired注解作用在方法上和属性上说明">
+  <meta property="og:description" content="文章目录 @Autowired注解作用在方法上@Autowired注解作用在属性上@Autowired注解的使用和注入规则1.使用在变量域上面2.@Autowired注解使用在构造器上面 @Autowired表示一个属性是否需要进行依赖注入，可以使用在属性、普通方法上、构造方法上。注解中的required属性默认是true，如果没有对象可以注入到属性，则会报出异常；
+@Autowired加在某个属性上，spring会从ioc容器中找到bean对象注入到属性上，如果找到多个该类型的Bean对象，则再根据属性的名字从多个Bean对象中确认一个；
+@Autowired写在set()方法上，在spring会根据方法的参数类型从ioc容器中找到该类型的Bean对象注入到方法的行参中，并且自动反射调用该方法(被@Autowired修饰的方法一定会执行)，所以一般使用在set方法中、普通方法不用；
+@Autowired使用在构造方法中：根据构造方法的形参、形参名，从ioc容器中找到该类型的Bean对象，注入到构造方法的形参中，并且执行该方法；
+//构造方法 @Autowired public Bean03(Bean04 bean04) { System.out.println(&#34;11111111111111&#34;); } //属性上 @Autowired Bean04 bean04; //set方法 @Autowired public void setBean04(Bean04 bean) { this.bean04 = bean; } //普通方法 @Autowired public void commonMethod(Bean04 bean04){ System.out.println(&#34;普通方法的执行&#34;); } @Autowired使用在构造方法上的细节
+在同一个类上有多个构造方法上使用了@Autowired，默认情况下会报错；
+解决方法：可以把@Autowired的属性required设置成为false，此时spring会自己选择使用哪一种构造方法；
+spring在上述情况下的选择规则：
+1.会优先考虑参数多的
+（先ByType找到多个该类型的bean，再ByName进行注入）
+2.如果多个类型的bean按照ByName无法注入，则去考虑参数少的进行注入，依次类推；
+3.在参数个数相同、ByName,也可以注入的情况下，按照构造方法的书写顺序进行选择；
+@Autowired注解作用在方法上 （1）该方法如果有参数，会使用autowired的方式在容器中查找是否有该参数
+（2）会执行该方法
+所以如果把@Autowired放在setter方法上，就等于给对象的属性赋值
+@Autowired注解作用在属性上 即为在容器中创建对象时给该项属性注入值，效果同@Autowired在setter方法。
+@Autowired注解的使用和注入规则 作为一个Spring开发者对@Autowired注解必定是非常了解了, 顾名思义自动装配，应该是Spring会自动将我们标记为@Autowired的元素装配好，与其猜测不如看看它的定义：
+@Target({ElementType.CONSTRUCTOR, ElementType.METHOD, ElementType.PARAMETER, ElementType.FIELD, ElementType.ANNOTATION_TYPE}) @Retention(RetentionPolicy.RUNTIME) @Documented public @interface Autowired { boolean required() default true; } 很明显这个注解可以用到构造器，变量域，方法，注解类型和方法参数上。文档上这样描述：将一个构造器，变量域，setter方法，config方法标记为被Spring DI 工具自动装配。换句话说，在Spring创建bean的过程中，会为这个bean中标有@Autowired注解的构造器，变量域，方法和方法参数中自动注入我们需要的已经在Spring IOC容器里面的bean，，而无需我们手动完成，并且注入的bean都是单实例，也就是在两个bean中都依赖第三个bean，那么这两个bean中注入的第三个bean会是同一个bean（JVM中指向的地址相同）。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-13T22:10:09+08:00">
+    <meta property="article:modified_time" content="2023-12-13T22:10:09+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Spring中@Autowired注解作用在方法上和属性上说明</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#Autowired_49" rel="nofollow">@Autowired注解作用在方法上</a></li><li><a href="#Autowired_61" rel="nofollow">@Autowired注解作用在属性上</a></li><li><a href="#Autowired_67" rel="nofollow">@Autowired注解的使用和注入规则</a></li><li><ul><li><a href="#1_96" rel="nofollow">1.使用在变量域上面</a></li><li><a href="#2Autowired_273" rel="nofollow">2.@Autowired注解使用在构造器上面</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<p>@Autowired表示一个属性是否需要进行依赖注入，可以使用在属性、普通方法上、构造方法上。注解中的required属性默认是true，如果没有对象可以注入到属性，则会报出异常；</p> 
+<p>@Autowired加在某个属性上，spring会从ioc容器中找到bean对象注入到属性上，如果找到多个该类型的Bean对象，则再根据属性的名字从多个Bean对象中确认一个；</p> 
+<p>@Autowired写在set()方法上，在spring会根据方法的参数类型从ioc容器中找到该类型的Bean对象注入到方法的行参中，并且自动反射调用该方法(被@Autowired修饰的方法一定会执行)，所以一般使用在set方法中、普通方法不用；</p> 
+<p>@Autowired使用在构造方法中：根据构造方法的形参、形参名，从ioc容器中找到该类型的Bean对象，注入到构造方法的形参中，并且执行该方法；</p> 
+<pre><code class="prism language-java">  <span class="token comment">//构造方法</span>
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">public</span> <span class="token class-name">Bean03</span><span class="token punctuation">(</span><span class="token class-name">Bean04</span> bean04<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"11111111111111"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">//属性上</span>
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token class-name">Bean04</span> bean04<span class="token punctuation">;</span>
+  
+    <span class="token comment">//set方法</span>
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setBean04</span><span class="token punctuation">(</span><span class="token class-name">Bean04</span> bean<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>bean04 <span class="token operator">=</span> bean<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token comment">//普通方法</span>
+   <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">commonMethod</span><span class="token punctuation">(</span><span class="token class-name">Bean04</span> bean04<span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"普通方法的执行"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<p>@Autowired使用在构造方法上的细节</p> 
+<p>在同一个类上有多个构造方法上使用了@Autowired，默认情况下会报错；</p> 
+<p>解决方法：可以把@Autowired的属性required设置成为false，此时spring会自己选择使用哪一种构造方法；</p> 
+<p>spring在上述情况下的选择规则：</p> 
+<p>1.会优先考虑参数多的</p> 
+<p>（先ByType找到多个该类型的bean，再ByName进行注入）</p> 
+<p>2.如果多个类型的bean按照ByName无法注入，则去考虑参数少的进行注入，依次类推；</p> 
+<p>3.在参数个数相同、ByName,也可以注入的情况下，按照构造方法的书写顺序进行选择；</p> 
+<h3><a id="Autowired_49"></a>@Autowired注解作用在方法上</h3> 
+<p>（1）该方法如果有参数，会使用autowired的方式在容器中查找是否有该参数</p> 
+<p>（2）会执行该方法</p> 
+<p><img src="https://images2.imgbox.com/a1/55/1HBJ7n11_o.png" alt="在这里插入图片描述"></p> 
+<p>所以如果把@Autowired放在setter方法上，就等于给对象的属性赋值</p> 
+<h3><a id="Autowired_61"></a>@Autowired注解作用在属性上</h3> 
+<p>即为在容器中创建对象时给该项属性注入值，效果同@Autowired在setter方法。</p> 
+<h3><a id="Autowired_67"></a>@Autowired注解的使用和注入规则</h3> 
+<p>作为一个Spring开发者对@Autowired注解必定是非常了解了, 顾名思义自动装配，应该是Spring会自动将我们标记为@Autowired的元素装配好，与其猜测不如看看它的定义：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Target</span><span class="token punctuation">(</span><span class="token punctuation">{<!-- --></span><span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">CONSTRUCTOR</span><span class="token punctuation">,</span> <span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">METHOD</span><span class="token punctuation">,</span> <span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">PARAMETER</span><span class="token punctuation">,</span> <span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">FIELD</span><span class="token punctuation">,</span> <span class="token class-name">ElementType</span><span class="token punctuation">.</span><span class="token constant">ANNOTATION_TYPE</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Retention</span><span class="token punctuation">(</span><span class="token class-name">RetentionPolicy</span><span class="token punctuation">.</span><span class="token constant">RUNTIME</span><span class="token punctuation">)</span>
+<span class="token annotation punctuation">@Documented</span>
+<span class="token keyword">public</span> <span class="token annotation punctuation">@interface</span> <span class="token class-name">Autowired</span> <span class="token punctuation">{<!-- --></span>
+  
+  <span class="token keyword">boolean</span> <span class="token function">required</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token keyword">default</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+  
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>很明显这个注解可以用到<strong>构造器，变量域，方法，注解类型和方法参数</strong>上。文档上这样描述：将一个构造器，变量域，setter方法，config方法标记为被Spring DI 工具自动装配。换句话说，在Spring创建bean的过程中，会为这个bean中标有@Autowired注解的构造器，变量域，方法和方法参数中自动注入我们需要的已经在Spring IOC容器里面的bean，，而无需我们手动完成，并且注入的bean都是单实例，也就是在两个bean中都依赖第三个bean，那么这两个bean中注入的第三个bean会是同一个bean（JVM中指向的地址相同）。</p> 
+<p>在@Autowired注解里面有一个required属性，该属性默认为true，当为true时，表示去Spring IOC中查找相应的bean，如果找不到，则会报错，如果为false时，表示去Spring IOC中查找相应的bean，如果找不到，则直接忽略，不再进行注入。</p> 
+<p>@Autowired注解的注入规则：默认按照类型进行注入，如果IOC容器中存在两个及以上的相同类型的bean时，根据bean的名称进行注入，如果没有指定名称的bean，则会报错。</p> 
+<p>可以使用@Qualifier(“wheel”)来使用指定id的bean，也可以在注入bean时，添加@Primary注解，优先添加一个bean，其规则如下：</p> 
+<p>如果指定添加了@Qualifier(“wheel”)则按照指定的bean id进行添加(优先级最高）,找不到则直接报错。如果没有添加@Qualifier而添加了@Primary注解，则首先添加标注了@Primary注解的bean。当即存在@Qualifier注解也存在@Primary注解注解，则按照@Qualifier指定的bean id注入，找不到直接报错。</p> 
+<p>下面让我们来看一下@Autowired的用法：</p> 
+<h4><a id="1_96"></a>1.使用在变量域上面</h4> 
+<p>这个相信大家都已经清楚了，Spring会帮我们注入我们想要的bean，看下面的例子：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Wheel</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Car</span> <span class="token punctuation">{<!-- --></span>
+  
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">Wheel</span> wheel2<span class="token punctuation">;</span>
+  
+    <span class="token keyword">public</span> <span class="token class-name">Wheel</span> <span class="token function">getWheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> wheel2<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setWheel</span><span class="token punctuation">(</span><span class="token class-name">Wheel</span> wheel2<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>wheel2 <span class="token operator">=</span> wheel2<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@ComponentScan</span><span class="token punctuation">(</span><span class="token punctuation">{<!-- --></span><span class="token string">"it.cast.circularDependency"</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AutowiredConfig</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>下面进行测试，打印的结果显示可以拿到Wheel类，说明@Autowired注解在IOC容器中只有一个类型的bean时，按照类型进行注入。</p> 
+<pre><code class="prism language-java">    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token class-name">AutowiredConfigTest</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">AnnotationConfigApplicationContext</span> context <span class="token operator">=</span>
+                <span class="token keyword">new</span> <span class="token class-name">AnnotationConfigApplicationContext</span><span class="token punctuation">(</span><span class="token class-name">AutowiredConfig</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+        <span class="token class-name">Car</span> bean <span class="token operator">=</span> context<span class="token punctuation">.</span><span class="token function">getBean</span><span class="token punctuation">(</span><span class="token class-name">Car</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>bean<span class="token punctuation">.</span><span class="token function">getWheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+<span class="token comment">//打印结果：</span>
+<span class="token comment">//   it.cast.circularDependency.Wheel@3eb25e1a</span>
+</code></pre> 
+<p>下面看一下当IOC容器中有两个Wheel类型的bean时的情况，改造Wheel类，增加一个属性标识用于记录向Car类中注入的哪个Wheel的bean，在AutowiredConfig配置类中添加一个bean，bean的名称默认为方法名，也就是wheel1。</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Wheel</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> num <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>   <span class="token comment">//通过包扫描的方式注入的bean的num值为2</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getNum</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> num<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setNum</span><span class="token punctuation">(</span><span class="token keyword">int</span> num<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>num <span class="token operator">=</span> num<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Car</span> <span class="token punctuation">{<!-- --></span>
+  
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">Wheel</span> wheel3<span class="token punctuation">;</span><span class="token comment">//将变量名改成wheel3，IOC容器中Wheel类型的bean的名称只有wheel和wheel1</span>
+  
+    <span class="token keyword">public</span> <span class="token class-name">Wheel</span> <span class="token function">getWheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> wheel3<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setWheel</span><span class="token punctuation">(</span><span class="token class-name">Wheel</span> wheel3<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>wheel3 <span class="token operator">=</span> wheel3<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+  
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token annotation punctuation">@ComponentScan</span><span class="token punctuation">(</span><span class="token punctuation">{<!-- --></span><span class="token string">"it.cast.circularDependency"</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AutowiredConfig</span> <span class="token punctuation">{<!-- --></span>
+  
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">Wheel</span> <span class="token function">wheel1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span> 
+        <span class="token class-name">Wheel</span> wheel <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Wheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//通过配置类注入bean的方式num值为0</span>
+        wheel<span class="token punctuation">.</span><span class="token function">setNum</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> wheel<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>这时在Spring IOC中有两个Wheel类型的bean了，Car在注入Wheel类型的bean时，会根据变量名wheel3去找，也就是说会去找类型为Wheel，名称为wheel3的bean，显然是找不到的，也就会报错。</p> 
+<blockquote> 
+ <p>Exception encountered during context initialization - cancelling refresh attempt:<br> org.springframework.beans.factory.UnsatisfiedDependencyException:<br> Error creating bean with name ‘car’:<br> Unsatisfied dependency expressed through field ‘wheel3’;<br> nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException:<br> No qualifying bean of type ‘it.cast.circularDependency.Wheel’ available:<br> expected single matching bean but found 2: wheel,wheel1</p> 
+ <p>org.springframework.beans.factory.UnsatisfiedDependencyException:<br> Error creating bean with name ‘car’: Unsatisfied dependency expressed through field ‘wheel3’;<br> nested exception is org.springframework.beans.factory.NoUniqueBeanDefinitionException:<br> No qualifying bean of type ‘it.cast.circularDependency.Wheel’ available:<br> expected single matching bean but found 2: wheel,wheel1</p> 
+</blockquote> 
+<p>上面为报错的日志打印，大致意思说的在创建名称为car的bean时，不能为变量域wheel3完成属性注入，因为找到了两个bean，分别是wheel和wheel1。</p> 
+<p>如果我们把Car中的wheel3换成wheel就可以完成注入了，而且注入的bean是通过包扫描注入IOC的bean：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Wheel</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token keyword">int</span> num <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>   <span class="token comment">//通过包扫描的方式注入的bean的num值为2</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">getNum</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> num<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setNum</span><span class="token punctuation">(</span><span class="token keyword">int</span> num<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>num <span class="token operator">=</span> num<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Car</span> <span class="token punctuation">{<!-- --></span>
+  
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">private</span> <span class="token class-name">Wheel</span> wheel<span class="token punctuation">;</span><span class="token comment">//将变量名改成wheel1，IOC容器中Wheel类型的bean的名称只有wheel和wheel1</span>
+  
+    <span class="token keyword">public</span> <span class="token class-name">Wheel</span> <span class="token function">getWheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> wheel<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">setWheel</span><span class="token punctuation">(</span><span class="token class-name">Wheel</span> wheel3<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>wheel <span class="token operator">=</span> wheel<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+  
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token annotation punctuation">@ComponentScan</span><span class="token punctuation">(</span><span class="token punctuation">{<!-- --></span><span class="token string">"it.cast.circularDependency"</span><span class="token punctuation">}</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">AutowiredConfig</span> <span class="token punctuation">{<!-- --></span>
+  
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">Wheel</span> <span class="token function">wheel1</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span> 
+        <span class="token class-name">Wheel</span> wheel <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Wheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//通过配置类注入bean的方式num值为0</span>
+        wheel<span class="token punctuation">.</span><span class="token function">setNum</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> wheel<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>在测试类中打印num值看看注入的是哪个bean：</p> 
+<pre><code class="prism language-java">    <span class="token annotation punctuation">@Test</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token class-name">AutowiredConfigTest</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">AnnotationConfigApplicationContext</span> context <span class="token operator">=</span>
+                <span class="token keyword">new</span> <span class="token class-name">AnnotationConfigApplicationContext</span><span class="token punctuation">(</span><span class="token class-name">AutowiredConfig</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  
+        <span class="token class-name">Car</span> bean <span class="token operator">=</span> context<span class="token punctuation">.</span><span class="token function">getBean</span><span class="token punctuation">(</span><span class="token class-name">Car</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>bean<span class="token punctuation">.</span><span class="token function">getWheel</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getNum</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+   <span class="token comment">//打印结果：</span>
+   <span class="token comment">//    2</span>
+</code></pre> 
+<p>那么就验证了上面所说的注入规则：默认按照类型进行注入，如果IOC容器中存在两个及以上的相同类型的bean时，根据bean的名称进行注入，如果没有指定名称的bean，则会报错。</p> 
+<p>@Autowired注解使用在变量域中还可以解决循环依赖的问题，循环依赖问题就是A对象中注入了B对象，B对象中注入了A对象，循环依赖在面试Spring这一块的知识应该经常会被问题，关于循环依赖的问题，在后面的博客中会更新。</p> 
+<h4><a id="2Autowired_273"></a>2.@Autowired注解使用在构造器上面</h4> 
+<p><strong>@Autowired使用在构造器上面有几条需要特别注意的点：</strong></p> 
+<p>1.@Autowired标注在构造器上面不能解决循环依赖构造的问题</p> 
+<p>2.@Autowired可以标注在同一个类的多个构造器上面，但是required属性必须都为false，当required有一个为true时，不允许其他构造器标有@Autowired注解，即使required属性为false也不行。</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">A</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token class-name">B</span> b<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">C</span> c<span class="token punctuation">;</span>
+  
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">public</span> <span class="token class-name">A</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">,</span> <span class="token class-name">C</span> c<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"b="</span> <span class="token operator">+</span> b <span class="token operator">+</span> <span class="token string">", c="</span> <span class="token operator">+</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>c <span class="token operator">=</span> c<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token punctuation">{<!-- --></span>
+<span class="token punctuation">}</span>
+  
+<span class="token comment">//打印结果：</span>
+<span class="token comment">//  b=it.cast.circularDependency.B@68e965f5, c=it.cast.circularDependency.C@6f27a732</span>
+</code></pre> 
+<p>@Autowired标注在构造器上面，在B创建的过程中，会去Spring IOC中拿到需要的注入的bean，完成B的创建，其实在只有一个构造器的情况中，@Autowired可以不加，因为Spring内部有自动推断构造器的能力，这个如果想了解自动推断构造器的同学可以自行百度。</p> 
+<p>下面看一个构造器循坏依赖的案例：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token class-name">B</span> b<span class="token punctuation">;</span>
+  
+    <span class="token keyword">public</span> <span class="token class-name">C</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token class-name">C</span> c<span class="token punctuation">;</span>
+  
+    <span class="token keyword">public</span> <span class="token class-name">B</span><span class="token punctuation">(</span><span class="token class-name">C</span> c<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>c <span class="token operator">=</span> c<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>Spring目前不能解决构造器的循环依赖，所以在项目中使用的时候要格外注意一下，错误日志：</p> 
+<blockquote> 
+ <p>org.springframework.beans.factory.UnsatisfiedDependencyException:<br> Error creating bean with name ‘a’ defined in file<br> [E:\IdeaProjects\javaBasis\spring\target\classes\it\cast\circularDependency\A.class]:<br> Unsatisfied dependency expressed through constructor parameter 0;<br> nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException:<br> Error creating bean with name ‘b’ defined in file<br> [E:\IdeaProjects\javaBasis\spring\target\classes\it\cast\circularDependency\B.class]:<br> Unsatisfied dependency expressed through constructor parameter 0;<br> nested exception is org.springframework.beans.factory.UnsatisfiedDependencyException:<br> Error creating bean with name ‘c’ defined in file<br> [E:\IdeaProjects\javaBasis\spring\target\classes\it\cast\circularDependency\C.class]:<br> Unsatisfied dependency expressed through constructor parameter 0;<br> nested exception is org.springframework.beans.factory.BeanCurrentlyInCreationException:<br> Error creating bean with name ‘b’:<br> Requested bean is currently in creation: Is there an unresolvable circular reference?</p> 
+</blockquote> 
+<p>下面看一下关于多个@Autowired标注的构造器的案例：</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">A</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token class-name">B</span> b<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">C</span> c<span class="token punctuation">;</span>
+  
+    <span class="token annotation punctuation">@Autowired</span><span class="token punctuation">(</span>required <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">A</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token annotation punctuation">@Autowired</span>
+    <span class="token keyword">public</span> <span class="token class-name">A</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">,</span> <span class="token class-name">C</span> c<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"b="</span> <span class="token operator">+</span> b <span class="token operator">+</span> <span class="token string">", c="</span> <span class="token operator">+</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>c <span class="token operator">=</span> c<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>上面已经说到，如果@Autowired注解的属性required为true时，不允许再出现其他构造器上面标有@Autowired注解（@Autowired注解的required默认为true，所以上面的会报错）</p> 
+<p>错误日志为：</p> 
+<blockquote> 
+ <p>org.springframework.beans.factory.BeanCreationException:<br> Error creating bean with name ‘a’: Invalid autowire-marked constructors:<br> [public it.cast.circularDependency.A(it.cast.circularDependency.B)].<br> Found constructor with ‘required’ Autowired annotation:<br> public it.cast.circularDependency.A(it.cast.circularDependency.B,it.cast.circularDependency.C)</p> 
+</blockquote> 
+<p>使用下面的写法就不会出现错误了，Spring支持多个构造器有@Autowired注解，但是required属性必须都是false</p> 
+<pre><code class="prism language-java"><span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">A</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">private</span> <span class="token class-name">B</span> b<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">C</span> c<span class="token punctuation">;</span>
+  
+    <span class="token annotation punctuation">@Autowired</span><span class="token punctuation">(</span>required <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span> 
+    <span class="token keyword">public</span> <span class="token class-name">A</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  
+    <span class="token annotation punctuation">@Autowired</span><span class="token punctuation">(</span>required <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">)</span>
+    <span class="token keyword">public</span> <span class="token class-name">A</span><span class="token punctuation">(</span><span class="token class-name">B</span> b<span class="token punctuation">,</span> <span class="token class-name">C</span> c<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"b="</span> <span class="token operator">+</span> b <span class="token operator">+</span> <span class="token string">", c="</span> <span class="token operator">+</span> c<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>b <span class="token operator">=</span> b<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>c <span class="token operator">=</span> c<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">B</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+  
+<span class="token annotation punctuation">@Component</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">C</span> <span class="token punctuation">{<!-- --></span>
+  
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>关于@Autowired标注在方法上就不多介绍，会首先拿到方法的参数列表，然后根据上面所说的注入规则去Spring IOC中找相应的bean。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/bd3ee9808db96e9b64466595e778a68b/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">人工智能技术的工程伦理问题 --以美团外卖大数据杀熟为例</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/30d40c164988b607fb7d7302c5f93467/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">python之tkinter库的grid布局</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

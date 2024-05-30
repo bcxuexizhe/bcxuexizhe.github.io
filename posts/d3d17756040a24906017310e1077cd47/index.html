@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>DS高阶：B树系列 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d3d17756040a24906017310e1077cd47/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="DS高阶：B树系列">
+  <meta property="og:description" content="一、常见的搜索结构 1、顺序查找 时间复杂度：O(N)
+2、二分查找 时间复杂度：O(logN)
+要求：（1）有序 （2）支持下标的随机访问
+3、二叉搜索树（BS树） 时间复杂度：O(logN)——&gt;O(N)
+若接近有序的数据插入到BS中，会导致退化成单支树，时间复杂度退化为O(N)
+4、平衡搜索树 （AVL树和RB树） 时间复杂度：O(logN)
+在BS的基础上，通过一些规则加以限制，通过旋转来限制高度,维持logN的时间复杂度
+5、哈希 时间复杂度：O(1)
+底层是散列表，要注意解决哈希冲突。综合效率优于平衡搜索树
+以上结构适合用于数据量相对不是很大，能够一次性存放在内存中（内查找），进行数据查找的场景。如果数据量很大，比如有100G数据，无法一次放进内存中，那就只能放在磁盘上了，如果放在磁盘上，有需要搜索某些数据，那么如果处理呢？那么我们可以考虑将存放关键字及其映射的数据的地址放到一个内存中的搜索树的节点中，那么要访问数据时，先取这个地址去磁盘访问数据。（B树系列 解决外查找的问题）
+根据上面的分析，我们知道B树系列是为了解决外查找的问题而生的，但是你可能会有这样的疑惑：虽然高度下降了，但是由于我的一个节点存储这多个关键字信息，那么我即使找到这个节点，不也是要遍历关键字信息，效率真的能提高么？？
+答：在磁盘中的搜索来说，定位的效率低，但是如果准确定位到了（节点），后面效率就会很高（顺序遍历节点中的关键字），这个跟磁盘的底层结构有关，具体可以参照下面的文献去理解。
+二、B树的概念 1970年，R.Bayer和E.mccreight提出了一种适合外查找的树，它是一种平衡的多叉树，称为B树(后面有一个B的改进版本B&#43;树、B*树，然后有些地方的B树写的的是B-树，注意不要误读成&#34;B减树&#34;)。一棵m阶(m&gt;2)的B树，是一棵平衡的M路平衡搜索树，可以是空树或者满足一下性质：
+（1）根节点至少有两个孩子
+（2）每个分支节点都包含k-1个关键字和k个孩子，其中 ceil(m/2) ≤ k ≤ m ceil是向上取整函数
+（3）每个叶子节点都包含k-1个关键字，其中 ceil(m/2) ≤ k ≤ m
+（4）所有的叶子节点都在同一层
+（5）每个节点中的关键字从小到大排列，节点当中k-1个元素正好是k个孩子包含的元素的值域划
+分
+（6）每个结点的结构为：（n，A0，K1，A1，K2，A2，… ，Kn，An）其中，Ki(1≤i≤n)为关键
+字，且Ki&lt;Ki&#43;1(1≤i≤n-1)。Ai(0≤i≤n)为指向子树根结点的指针。且Ai所指子树所有结点中的关键字均小于Ki&#43;1。
+（7）实际中M通常会设计得比较大（比如1024）
+以上规则可能还有点抽象，我们通过分析B树的插入来剖析具体的过程
+三、B树的插入过程分析 为了简单起见，假设M = 3. 即三叉树，每个节点中存储两个数据，两个数据可以将区间分割成三个部分，因此节点应该有三个孩子，为了后续实现简单期间，节点的结构如下：
+注意孩子比关键字多一个，并且为了防止越界的问题，我们多开一个空间
+用序列{53, 139, 75, 49, 145, 36, 50,47,101}构建B树的过程如下
+（1）插入53
+（2）插入139
+（3）插入75
+（4）进行分裂
+这里可以解释为什么ceil(m/2) ≤ k ≤ M 假设M是偶数 比如是10 那么后面5个给兄弟，中位数给父亲，自己还剩下4个，兄弟会多一个">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-13T20:36:40+08:00">
+    <meta property="article:modified_time" content="2024-05-13T20:36:40+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">DS高阶：B树系列</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 style="text-align:center;"><img alt="" height="293" src="https://images2.imgbox.com/7b/be/MMSYncEt_o.gif" width="572"></h2> 
+<h2>一、常见的搜索结构</h2> 
+<p>1、顺序查找     时间复杂度：O(N)</p> 
+<p>2、二分查找     时间复杂度：O(logN)</p> 
+<p>        要求：（1）有序 （2）支持下标的随机访问</p> 
+<p>3、二叉搜索树（BS树）       时间复杂度：O(logN)——&gt;O(N)</p> 
+<p>        若接近有序的数据插入到BS中，会导致退化成单支树，时间复杂度退化为O(N)</p> 
+<p>4、平衡搜索树 （AVL树和RB树）   时间复杂度：O(logN)</p> 
+<p>       在BS的基础上，通过一些规则加以限制，通过旋转来限制高度,维持logN的时间复杂度</p> 
+<p>5、哈希    时间复杂度：O(1)</p> 
+<p>        底层是散列表，要注意解决哈希冲突。综合效率优于平衡搜索树</p> 
+<p>        以上结构适合用于<span style="color:#fe2c24;"><strong>数据量相对不是很大，能够一次性存放在内存中（内查找）</strong></span>，进行数据查找的场景。如果数据量很大，比如有100G数据，无法一次放进内存中，那就只能放在磁盘上了，如果放在磁盘上，有需要搜索某些数据，那么如果处理呢？那么<span style="color:#fe2c24;"><strong>我们可以考虑将存放关键字及其映射的数据的地址放到一个内存中的搜索树的节点中，那么要访问数据时，先取这个地址去磁盘访问数据。（B树系列   解决外查找的问题）</strong></span><br><img alt="" height="742" src="https://images2.imgbox.com/3f/39/ya06wnPj_o.png" width="1200"></p> 
+<p>         根据上面的分析，我们知道B树系列是为了解决外查找的问题而生的，但是你可能会有这样的疑惑：<span style="color:#fe2c24;"><strong>虽然高度下降了，但是由于我的一个节点存储这多个关键字信息，那么我即使找到这个节点，不也是要遍历关键字信息，效率真的能提高么？？</strong></span></p> 
+<p><span style="color:#fe2c24;">        </span><span style="color:#0d0016;">答：在磁盘中的搜索来说，定位的效率低，但是如果准确定位到了（节点），后面效率就会很高（顺序遍历节点中的关键字），这个跟磁盘的底层结构有关，具体可以参照下面的文献去理解。</span></p> 
+<p><img alt="" height="1200" src="https://images2.imgbox.com/40/2f/LcFSVDBX_o.png" width="1200"></p> 
+<h2>二、B树的概念</h2> 
+<p>      1970年，R.Bayer和E.mccreight提出了一种适合外查找的树，它是一种<strong>平衡的多叉树</strong>，称为B树(后面有一个B的改进版本B+树、B*树，然后有些地方的B树写的的是B-树，注意不要误读成"B减树")。<span style="color:#fe2c24;"><strong>一棵m阶(m&gt;2)的B树，是一棵平衡的M路平衡搜索树</strong></span>，可以是空树或者满足一下性质：</p> 
+<p><span style="color:#fe2c24;"><strong>（1）根节点至少有两个孩子</strong></span></p> 
+<p>（2）<span style="color:#fe2c24;"><strong>每个分支节点都包含k-1个关键字和k个孩子，其中 ceil(m/2) ≤ k ≤ m</strong></span> ceil是向上取整函数</p> 
+<p>（3）<span style="color:#fe2c24;"><strong>每个叶子节点都包含k-1个关键字，其中 ceil(m/2) ≤ k ≤ m</strong></span></p> 
+<p><img alt="" height="294" src="https://images2.imgbox.com/96/fa/joIPGhaI_o.png" width="1091"></p> 
+<p>（4）<span style="color:#fe2c24;"><strong>所有的叶子节点都在同一层</strong></span></p> 
+<p>（5）每个节点中的关键字从小到大排列，节点当中<span style="color:#fe2c24;"><strong>k-1个元素正好是k个孩子包含的元素的值域划<br> 分</strong></span><br>  （6）每个结点的结构为：<span style="color:#fe2c24;"><strong>（n，A0，K1，A1，K2，A2，… ，Kn，An）</strong></span>其中，<span style="color:#fe2c24;">Ki(1≤i≤n)为关键<br> 字，且<strong>Ki&lt;Ki+1(1≤i≤n-1)</strong>。Ai(0≤i≤n)为指向子树根结点的指针。且Ai所指子树所有结点中的关键字均小于Ki+1。</span><br><img alt="" height="224" src="https://images2.imgbox.com/e5/94/8YCidRBO_o.png" width="1029"></p> 
+<p> （7）<span style="color:#fe2c24;"><strong>实际中M通常会设计得比较大（比如1024）</strong></span></p> 
+<p><span style="color:#0d0016;">以上规则可能还有点抽象，我们通过分析B树的插入来剖析具体的过程</span></p> 
+<h2><span style="color:#0d0016;">三、B树的插入过程分析</span></h2> 
+<p>       为了简单起见，假设M = 3. 即三叉树，每个节点中存储两个数据，两个数据可以将区间分割成三个部分，因此节点应该有三个孩子，为了后续实现简单期间，节点的结构如下：</p> 
+<p><span style="color:#fe2c24;"><strong>注意孩子比关键字多一个，并且为了防止越界的问题，我们多开一个空间</strong></span></p> 
+<p><img alt="" height="155" src="https://images2.imgbox.com/1c/fe/xscUHIV6_o.png" width="791"></p> 
+<p> <span style="color:#fe2c24;"><strong>用序列{53, 139, 75, 49, 145, 36, 50,47,101}构建B树的过程如下</strong></span></p> 
+<p><span style="color:#0d0016;">（1）插入53</span></p> 
+<p><img alt="" height="304" src="https://images2.imgbox.com/0b/35/N8EL3Ta7_o.png" width="1170">（2）插入139</p> 
+<p><img alt="" height="235" src="https://images2.imgbox.com/b9/74/UrFy0olO_o.png" width="1155"></p> 
+<p>（3）插入75</p> 
+<p><img alt="" height="256" src="https://images2.imgbox.com/fd/58/q0IhpL8I_o.png" width="1193">（4）进行分裂</p> 
+<p><img alt="" height="473" src="https://images2.imgbox.com/8b/f7/KFAf4DWp_o.png" width="1060"></p> 
+<p> 这里可以解释为什么<span style="color:#fe2c24;"><strong>ceil(m/2) ≤ k ≤ M  </strong></span></p> 
+<p><span style="color:#fe2c24;"><strong>假设M是偶数  比如是10  那么后面5个给兄弟，中位数给父亲，自己还剩下4个，兄弟会多一个</strong></span></p> 
+<p><span style="color:#fe2c24;"><strong>假设M是奇数  比如是11  那么后面5个给兄弟，中位数给父亲，自己还剩下5个，正好一样多</strong></span></p> 
+<p>（5）插入49 </p> 
+<p><img alt="" height="478" src="https://images2.imgbox.com/2e/45/afz6OrVa_o.png" width="1200"></p> 
+<p> 分析以下，当B树有多个叶子节点的时候，如何去选取我们要插入的叶子节点。</p> 
+<p>答：<span style="color:#fe2c24;"><strong>B树的逻辑是 左-根-左-根-左-根……-右，我们先忽略掉后面这个右子树，把它抽象成一个节点对应一个左子树，在拓展兄弟的时候是向右拓展的，所以我们找的是要左（小）的找</strong></span>。  举个例子，49比75小，那么必然在75左孩子那边，此时可以直接往下走，但是如果139比75大，那么此时不能直接到下一层，而是先往后找，直到找到一个比自己大的节点（如果后面没有，就是当前节点）的左孩子去找。</p> 
+<p>（6）插入145</p> 
+<p><img alt="" height="536" src="https://images2.imgbox.com/c2/bc/2rODO84h_o.png" width="1200"></p> 
+<p>（7）插入36</p> 
+<p><img alt="" height="477" src="https://images2.imgbox.com/bf/cf/nQ2R8cwR_o.png" width="1200"></p> 
+<p>（8）进行分裂 </p> 
+<p><img alt="" height="528" src="https://images2.imgbox.com/58/a1/78wkqdAL_o.png" width="1200"></p> 
+<p>（9）插入50</p> 
+<p><img alt="" height="714" src="https://images2.imgbox.com/d6/6f/g7YCxqOd_o.png" width="1200"></p> 
+<p>（10）插入47</p> 
+<p><img alt="" height="696" src="https://images2.imgbox.com/d7/6c/ZdeFe5J2_o.png" width="1200"></p> 
+<p> （11）插入101</p> 
+<p><img alt="" height="646" src="https://images2.imgbox.com/17/8f/2SNfW8JA_o.png" width="1200"></p> 
+<p>（12）继续分裂</p> 
+<p><img alt="" height="493" src="https://images2.imgbox.com/64/d2/SXSksHOo_o.png" width="1200"> （13）二次分裂</p> 
+<p><img alt="" height="761" src="https://images2.imgbox.com/01/41/uo0138k9_o.png" width="1200"></p> 
+<h2> 四、B树简单模拟实现</h2> 
+<h3>4.1 B树的节点设计</h3> 
+<pre><code class="language-cpp">template&lt;class K,size_t M&gt; 
+struct BTreeNode
+{
+	BTreeNode()
+	{
+		for (size_t i = 0; i &lt; M; ++i)
+		{
+			_keys[i] = K();  //K的默认构造
+			_subs[i] = nullptr;
+		}
+		_subs[M] = nullptr;
+		_parent = nullptr;
+		_n = 0;
+	}
+	//关键字永远比孩子少一个  为了方便插入，我们多开一个空间 预防边界情况
+	K _keys[M]; //M-1个关键字
+	BTreeNode&lt;K, M&gt;* _subs[M + 1];// 孩子的集合 M个孩子
+	BTreeNode&lt;K, M&gt;* _parent;//父亲节点  方便插入的时候向上回溯
+	size_t _n; //实际存了多少节点
+};
+template&lt;class K, size_t M&gt;
+class BTree
+{
+	typedef BTreeNode&lt;K, M&gt; Node;
+public:
+
+private:
+	Node* _root=nullptr;
+};</code></pre> 
+<p>1、K代表K类型，一般是表示地址，当然也可以是KV模型</p> 
+<p>2、M表示这是M路多叉树</p> 
+<p>3、_subs表示孩子节点的集合，_keys表示关键字的集合，为了防止边界情况的判断，统一多开一个空间。</p> 
+<p>4、_n表示一共个有效的关键字</p> 
+<p>5、_parent是父亲节点，维护父亲的原因是我们需要向上传中位数，如果不维护一个父亲节点，会比较难实现，但是增加了一个指针，同时也要十分注意去维护这个指针（容易忽略）。</p> 
+<h3>4.2 B树的查找</h3> 
+<p>       在B树不允许键值冗余的情况下，如果我们想插入一个节点，那么我们要保证B树没有该节点，因此我们在实现插入之前，先实现一个查找的函数</p> 
+<pre><code class="language-cpp">pair&lt;Node*, int&gt; Find(const K&amp; key)  //查找这个节点以及对应关键字的下标
+{
+	Node* cur = _root;
+	Node* parent = nullptr;//如果没找到， 把父亲节点带回来
+	while (cur) //因为i每次都要重头开始算
+	{
+		size_t i = 0; 
+		while (i &lt; cur-&gt;_n)
+		{
+			if (key &lt; cur-&gt;_keys[i]) break; //keys[i]的左孩子根他的下标是相等的
+			else if (key &gt; cur-&gt;_keys[i]) ++i;     //左才会往下跳  比右小i++
+			else return make_pair(cur, i);
+		}
+		//但是有可能走到空都不会结束  找不到就往自己的孩子去跳
+		parent = cur;
+		cur = cur-&gt;_subs[i];
+	}
+	return make_pair(parent, -1);
+}</code></pre> 
+<p>1、返回值pair&lt;Node*,int&gt; 前一个返回对应的节点，后一个表示对应节点中的下标。</p> 
+<p>2、parent指针的意义：因为我们在插入之前必须要调用这个查找函数，并且必须插入到相应的叶子节点中去。那么我们可以<span style="color:#fe2c24;"><strong>顺便通过这个返回值返回我们要插入的叶子节点</strong></span>。这样在insert函数中接受find函数的返回值的时就可以直接拿到待插入的叶子节点。</p> 
+<p>3、因为拓展都是往右拓展的，所以我们<span style="color:#fe2c24;"><strong>必须要确保比key当前元素小，我们才能跳到下一层去找他的左孩子，并且每次都要从第一个位置开始找，如果比当前元素大的话，那么先往后找，而不是直接往该节点的右孩子找</strong></span>！！</p> 
+<h3>4.3 插入key的过程</h3> 
+<p>         我们多开一块空间的目的先进行无脑插入，然后再去检查该节点是否满了，如果满了再进行分裂调整，但是我们有些时候可能不光要插入key，还要插入新增的节点。</p> 
+<pre><code class="language-cpp">//每次循环往cur插入newkey和child
+void InsertKey(Node* node, const K&amp; key, Node* child)
+{
+	int end = node-&gt;_n - 1;
+	while (end &gt;= 0)  //如果我比你小，你就往后挪   类似插入排序逻辑
+	{
+		if (key &lt; node-&gt;_keys[end]) //挪动key 还要挪动右孩子
+		{
+			node-&gt;_keys[end + 1] = node-&gt;_keys[end];
+			node-&gt;_subs[end + 2] = node-&gt;_subs[end+1];
+			--end;
+		}
+		else break; //找到了就放
+	}
+	node-&gt;_keys[end + 1] = key;
+	node-&gt;_subs[end + 2] = child;
+	if (child)  child-&gt;_parent = node; // 一定要记得反向链接维护parent指针
+	++node-&gt;_n;
+}</code></pre> 
+<p>1、只有多次分裂的时候才会出现需要链接新增的节点，如果只有一次分裂的话，child就是nullptr，所以在反向链接的时候要注意！！！</p> 
+<p>2、在插入关键字的时候，我们按照插入排序的逻辑从后开始往前找，不断将比自己大的元素往后挪，<span style="color:#fe2c24;"><strong>挪动的时候要别忘了把他的右子树也跟着往后挪动</strong></span>。</p> 
+<p>3、end必须设置成int而不能是size_t，因为是从后往前找的，所以end是有可能会出现负数的。</p> 
+<h3>4.4 B树的插入整体实现</h3> 
+<pre><code class="language-cpp">bool Insert(const K&amp; key)
+{
+	if (_root == nullptr) //如果我为空 那我就让自己成为新的根
+	{
+		_root = new Node;
+		_root-&gt;_keys[0] = key;
+		++_root-&gt;_n;  
+		return true;
+	}
+	//如果不为空  开始执行插入逻辑
+
+	pair&lt;Node*, int&gt; ret = Find(key);
+	if (ret.second&gt;=0) return false;
+	//如果没有找到，find顺便带回了要插入的叶子节点
+	Node* cur = ret.first;
+	//每次循环往cur插入newkey和child
+	
+	K newKey = key;
+	Node* child = nullptr;
+	while (1)
+	{
+		InsertKey(cur, newKey, child);
+		//情况1 没满， 直接结束
+		if (cur-&gt;_n &lt; M) return true;
+
+		Node* brother = new Node;
+		//分裂一半[mid+1,M-1]给兄弟  找到中间那个值
+		size_t mid = M / 2;
+		size_t i = mid + 1;
+		size_t j = 0;
+		for (; i &lt; M; ++i, ++j)
+		{
+			//拷贝key和key的左孩子
+			brother-&gt;_keys[j] = cur-&gt;_keys[i]; 
+			brother-&gt;_subs[j] = cur-&gt;_subs[i]; //节点也拷过去
+			//与父亲建立连接
+			if (cur-&gt;_subs[i])  cur-&gt;_subs[i]-&gt;_parent = brother;
+		
+			//清理一下方便观察
+			cur-&gt;_keys[i] = K();
+			cur-&gt;_subs[i] = nullptr;
+		}
+		// 还有最后一个右孩子拷过去
+		brother-&gt;_subs[j] = cur-&gt;_subs[i];
+		if (cur-&gt;_subs[i])  cur-&gt;_subs[i]-&gt;_parent = brother; //孩子如果不是空  那么父亲就得更新一下
+		cur-&gt;_subs[i] = nullptr;
+
+		brother-&gt;_n = j;
+		cur-&gt;_n -= (brother-&gt;_n + 1);//因为还要把中位数往上放
+
+		K midKey = cur-&gt;_keys[mid];
+		cur-&gt;_keys[mid] = K();//方便观察
+		//转化成往cur的parent去插入 cur-&gt;[mid]和 brother
+		// 说明刚刚分裂是根节点
+		if (cur-&gt;_parent == nullptr)
+		{
+			_root = new Node; //最坏情况 我的父亲是空，那就造一个新的根出来
+			_root-&gt;_keys[0] = midKey;
+			_root-&gt;_subs[0] = cur;
+			_root-&gt;_subs[1] = brother;
+			_root-&gt;_n = 1;
+			//链接起来
+			cur-&gt;_parent = _root;
+			brother-&gt;_parent = _root;
+			break;
+		}
+		else //如果父亲不是空，还可以向上调整
+		{
+			// 转换成往parent-&gt;parent 去插入parent-&gt;[mid] 和 brother
+			newKey = midKey;
+			child = brother;
+			cur = cur-&gt;_parent;
+		}
+	}
+	return true;
+}</code></pre> 
+<p>1、如果什么也没有，那么自己就成为新的树。</p> 
+<p>2、通过find函数去找B树中是否存在这个关键字，如果存在就结束，不存在，那就把返回的pair中的first（待插入的叶子节点）提取出来。</p> 
+<p>3、因为有可能会涉及到多次分裂，所以我们要将插入的函数写在循环里面（通过cur、newkey、child来帮助我们迭代 ），然后每次插入之后就去判断是否还要进行分裂。如果没满就结束，如果满了就分裂。</p> 
+<p>4、分裂一半的key和节点（要注意节点的反向链接）给自己的兄弟，然后清理一下数据方便我们调试观察，最后有一个右孩子还得再拷贝一次。</p> 
+<p>5、传中位数的时候，如果cur没有父亲，那么就直接造一个父亲出来。如果cur有父亲，就更新一下cur、newkey、child，继续往上迭代去走。将问题转化成往父亲节点插入中位数和一个brother节点。</p> 
+<h3>4.5 B树的中序遍历验证</h3> 
+<p>       他的整体逻辑是左、根、左、根、左、根……右  所以我们可以将前两个过程抽出来，然后最后再单独处理右。走一个中序遍历的逻辑实现有序。</p> 
+<pre><code class="language-cpp">	void _InOrder(Node* cur)
+	{
+		if (cur == nullptr)  return;
+		// 左 根  左 根  ...  右
+		size_t i = 0;
+		for (; i &lt; cur-&gt;_n; ++i)
+		{
+			_InOrder(cur-&gt;_subs[i]); // 左子树
+			cout &lt;&lt; cur-&gt;_keys[i] &lt;&lt; " "; // 根
+		}
+		_InOrder(cur-&gt;_subs[i]); // 最后的那个右子树
+	}
+
+	void InOrder()
+	{
+		_InOrder(_root);
+	}</code></pre> 
+<p> 附上测试用例：</p> 
+<pre><code class="language-cpp">void testBtree()
+{
+	BTree&lt;int, 3&gt; t;
+	int a[] = { 53, 139, 75, 49, 145, 36, 101 };
+	for (auto e : a)  t.Insert(e);
+	t.InOrder();
+}
+
+</code></pre> 
+<p><img alt="" height="221" src="https://images2.imgbox.com/c4/bc/S6BnDx4q_o.png" width="698"></p> 
+<h3> 4.6 整体的代码</h3> 
+<pre><code class="language-cpp">#pragma once
+#include&lt;iostream&gt;
+using namespace std;
+
+//K表示存的地址  M表示最多有几个分支
+template&lt;class K,size_t M&gt; 
+struct BTreeNode
+{
+	BTreeNode()
+	{
+		for (size_t i = 0; i &lt; M; ++i)
+		{
+			_keys[i] = K();  //K的默认构造
+			_subs[i] = nullptr;
+		}
+		_subs[M] = nullptr;
+		_parent = nullptr;
+		_n = 0;
+	}
+	//关键字永远比孩子少一个  为了方便插入，我们多开一个空间 预防边界情况
+	K _keys[M]; //M-1个关键字
+	BTreeNode&lt;K, M&gt;* _subs[M + 1];// 孩子的集合 M个孩子
+	BTreeNode&lt;K, M&gt;* _parent;//父亲节点  方便插入的时候向上回溯
+	size_t _n; //实际存了多少节点
+};
+
+
+template&lt;class K, size_t M&gt;
+class BTree
+{
+	typedef BTreeNode&lt;K, M&gt; Node;
+public:
+	pair&lt;Node*, int&gt; Find(const K&amp; key)  //查找这个节点以及对应关键字的下标
+	{
+		Node* cur = _root;
+		Node* parent = nullptr;//如果没找到， 把父亲节点带回来
+		while (cur) //因为i每次都要重头开始算
+		{
+			size_t i = 0; 
+			while (i &lt; cur-&gt;_n)
+			{
+				if (key &lt; cur-&gt;_keys[i]) break; //keys[i]的左孩子根他的下标是相等的
+				else if (key &gt; cur-&gt;_keys[i]) ++i;     //左才会往下跳  比右小i++
+				else return make_pair(cur, i);
+			}
+			//但是有可能走到空都不会结束  找不到就往自己的孩子去跳
+			parent = cur;
+			cur = cur-&gt;_subs[i];
+		}
+		return make_pair(parent, -1);
+	}
+
+	//每次循环往cur插入newkey和child
+	void InsertKey(Node* node, const K&amp; key, Node* child)
+	{
+		int end = node-&gt;_n - 1;
+		while (end &gt;= 0)  //如果我比你小，你就往后挪   类似插入排序
+		{
+			if (key &lt; node-&gt;_keys[end]) //挪动key 还要挪动右孩子
+			{
+				node-&gt;_keys[end + 1] = node-&gt;_keys[end];
+				node-&gt;_subs[end + 2] = node-&gt;_subs[end+1];
+				--end;
+			}
+			else break; //找到了就放
+		}
+		node-&gt;_keys[end + 1] = key;
+		node-&gt;_subs[end + 2] = child;
+		if (child)  child-&gt;_parent = node; // 要记得向上连接
+		++node-&gt;_n;
+	}
+
+	bool Insert(const K&amp; key)
+	{
+		if (_root == nullptr) //如果我为空 那我就让自己成为新的根
+		{
+			_root = new Node;
+			_root-&gt;_keys[0] = key;
+			++_root-&gt;_n;  
+			return true;
+		}
+		//如果不为空  开始执行插入逻辑
+
+		pair&lt;Node*, int&gt; ret = Find(key);
+		if (ret.second&gt;=0) return false;
+		//如果没有找到，find顺便带回了要插入的叶子节点
+		Node* cur = ret.first;
+		//每次循环往cur插入newkey和child
+		
+		K newKey = key;
+		Node* child = nullptr;
+		while (1)
+		{
+			InsertKey(cur, newKey, child);
+			//情况1 没满， 直接结束
+			if (cur-&gt;_n &lt; M) return true;
+
+			Node* brother = new Node;
+			//分裂一半[mid+1,M-1]给兄弟  找到中间那个值
+			size_t mid = M / 2;
+			size_t i = mid + 1;
+			size_t j = 0;
+			for (; i &lt; M; ++i, ++j)
+			{
+				//拷贝key和key的左孩子
+				brother-&gt;_keys[j] = cur-&gt;_keys[i]; 
+				brother-&gt;_subs[j] = cur-&gt;_subs[i]; //节点也拷过去
+				//与父亲建立连接
+				if (cur-&gt;_subs[i])  cur-&gt;_subs[i]-&gt;_parent = brother;
+			
+				//清理一下方便观察
+				cur-&gt;_keys[i] = K();
+				cur-&gt;_subs[i] = nullptr;
+			}
+			// 还有最后一个右孩子拷过去
+			brother-&gt;_subs[j] = cur-&gt;_subs[i];
+			if (cur-&gt;_subs[i])  cur-&gt;_subs[i]-&gt;_parent = brother; //孩子如果不是空  那么父亲就得更新一下
+			cur-&gt;_subs[i] = nullptr;
+
+			brother-&gt;_n = j;
+			cur-&gt;_n -= (brother-&gt;_n + 1);//因为还要把中位数往上放
+
+			K midKey = cur-&gt;_keys[mid];
+			cur-&gt;_keys[mid] = K();//方便观察
+			//转化成往cur的parent去插入 cur-&gt;[mid]和 brother
+			// 说明刚刚分裂是根节点
+			if (cur-&gt;_parent == nullptr)
+			{
+				_root = new Node; //最坏情况 我的父亲是空，那就造一个新的根出来
+				_root-&gt;_keys[0] = midKey;
+				_root-&gt;_subs[0] = cur;
+				_root-&gt;_subs[1] = brother;
+				_root-&gt;_n = 1;
+				//链接起来
+				cur-&gt;_parent = _root;
+				brother-&gt;_parent = _root;
+				break;
+			}
+			else //如果父亲不是空，还可以向上调整
+			{
+				// 转换成往parent-&gt;parent 去插入parent-&gt;[mid] 和 brother
+				newKey = midKey;
+				child = brother;
+				cur = cur-&gt;_parent;
+			}
+		}
+		return true;
+	}
+
+	void _InOrder(Node* cur)
+	{
+		if (cur == nullptr)  return;
+		// 左 根  左 根  ...  右
+		size_t i = 0;
+		for (; i &lt; cur-&gt;_n; ++i)
+		{
+			_InOrder(cur-&gt;_subs[i]); // 左子树
+			cout &lt;&lt; cur-&gt;_keys[i] &lt;&lt; " "; // 根
+		}
+		_InOrder(cur-&gt;_subs[i]); // 最后的那个右子树
+	}
+
+	void InOrder()
+	{
+		_InOrder(_root);
+	}
+
+
+private:
+	Node* _root=nullptr;
+};
+
+
+void testBtree()
+{
+	BTree&lt;int, 3&gt; t;
+	int a[] = { 53, 139, 75, 49, 145, 36, 101 };
+	for (auto e : a)  t.Insert(e);
+	t.InOrder();
+}</code></pre> 
+<h3> 4.7 B树的性能分析</h3> 
+<p>       对于一棵节点为N度为M的B-树，查找和插入需要$log{M-1}N$~$log{M/2}N$次比较，这个很好证明：<span style="color:#fe2c24;">对于度为M的B-树，每一个节点的子节点个数为M/2 ~(M-1)之间，因此树的高度应该在要<br> $log{M-1}N$和$log{M/2}N$之间，在定位到该节点后，再采用二分查找的方式可以很快的定位<br> 到该元素。</span><br>          B-树的效率是很高的，对于N = 62*1000000000个节点，如果度M为1024，则$log_{M/2}N$ &lt;=4，即在620亿个元素中，如果这棵树的度为1024，则需要小于4次即可定位到该节点，然后利用二分查找可以快速定位到该元素，大大减少了读取磁盘的次数。<br><img alt="" height="641" src="https://images2.imgbox.com/07/32/Y7RIB40g_o.png" width="1200"></p> 
+<h3>4.8 B树的删除过程分析 </h3> 
+<p><img alt="" height="401" src="https://images2.imgbox.com/47/5d/AwIVWs7Q_o.png" width="928"> 1、删除36</p> 
+<p><img alt="" height="547" src="https://images2.imgbox.com/69/29/64Rxlskb_o.png" width="1182"></p> 
+<p> 2、删除40</p> 
+<p><img alt="" height="552" src="https://images2.imgbox.com/7e/13/dB5mBWBo_o.png" width="1200"></p> 
+<p>3、删49 </p> 
+<p><img alt="" height="575" src="https://images2.imgbox.com/2e/64/GfRR0HbK_o.png" width="1200"> 4、删150</p> 
+<p><img alt="" height="512" src="https://images2.imgbox.com/95/9f/4GIh84TG_o.png" width="1200"></p> 
+<p>5、删160 </p> 
+<p><img alt="" height="527" src="https://images2.imgbox.com/21/dc/GJpiHchp_o.png" width="1200"></p> 
+<h2> 五、B树系列</h2> 
+<h3>5.1 B+树</h3> 
+<p>       B+树是B树的变形，是在B树基础上优化的多路平衡搜索树，B+树的规则跟B树基本类似，但是又在B树的基础上做了以下几点改进优化：</p> 
+<p>（1）<span style="color:#fe2c24;"><strong>分支节点的子树指针与关键字个数相同（相当于去掉了左边的子树，相比B树取消了孩子和关键字的包含关系，而是一一对应）</strong></span></p> 
+<p><img alt="" height="137" src="https://images2.imgbox.com/58/bc/ShpRgSuX_o.png" width="684"><br> （2）分支节点的子树指针p[i]指向关键字值大小在[k[i]，k[i+1])区间之间（和B树一致）<br> （3）<span style="color:#fe2c24;"><strong> 所有叶子节点增加一个链接指针链接在一起（这样就可以直接找到叶子节点，不一定需要从根去找了！！）</strong></span><br> （4）<span style="color:#fe2c24;"><strong>所有关键字及其映射数据都在叶子节点出现（</strong></span><span style="color:#ff9900;"><strong>1、分支节点和叶子节点有重复的值，分支节点存的是叶子节点的索引-&gt;key.2、父亲中存的是孩子节点中的最小值做索引</strong></span><span style="color:#fe2c24;"><strong>）</strong></span></p> 
+<p>和B树规则区别总结：</p> 
+<p><strong><span style="color:#4da8ee;">1、简化B树孩子比关键字多一个的规则，变成了相等（一一对应）。</span></strong></p> 
+<p><strong><span style="color:#4da8ee;">2、而key value都存在叶子节点上，一方面是节省空间，一方面是方便遍历查找所有值</span></strong></p> 
+<p>B+树的特性：<br><span style="color:#fe2c24;">1. <strong>所有关键字都出现在叶子节点的链表中，且链表中的节点都是有序的</strong>。<br> 2. <strong>不可能在分支节点中命中</strong>（因为只存k而没有存kv）。<br> 3. <strong>分支节点相当于是叶子节点的索引，叶子节点才是存储数据的数据层</strong></span></p> 
+<p><img alt="" height="579" src="https://images2.imgbox.com/5b/b8/BtT0uyVo_o.png" width="967"></p> 
+<h3>5.2 B+树的插入过程分析</h3> 
+<p> <span style="color:#fe2c24;"><strong>用序列{53, 139, 75, 49, 145, 36, 50,47,101}构建B+树的过程如下：</strong></span></p> 
+<p><span style="color:#0d0016;">1、插入53</span></p> 
+<p><img alt="" height="632" src="https://images2.imgbox.com/d2/76/Dnfq6nAM_o.png" width="943"></p> 
+<p>2、插入139</p> 
+<p><img alt="" height="616" src="https://images2.imgbox.com/c3/45/hRcIxF4j_o.png" width="749"> 3、插入75</p> 
+<p><img alt="" height="538" src="https://images2.imgbox.com/33/ea/MW8G7PJT_o.png" width="779"></p> 
+<p>4、插入49</p> 
+<p><img alt="" height="543" src="https://images2.imgbox.com/01/c9/TW6AmDUP_o.png" width="1082"> 5、分裂</p> 
+<p><img alt="" height="509" src="https://images2.imgbox.com/7f/af/Gpe0Cbtl_o.png" width="1200"></p> 
+<p>6、插入145</p> 
+<p><img alt="" height="542" src="https://images2.imgbox.com/a9/cf/LxTZmD3T_o.png" width="1200"> 7、插入36</p> 
+<p><img alt="" height="542" src="https://images2.imgbox.com/b5/8c/CgnHW4vN_o.png" width="1200"></p> 
+<p>8、插入50 </p> 
+<p><img alt="" height="504" src="https://images2.imgbox.com/d6/45/mtb9i44s_o.png" width="1200"></p> 
+<p>9、分裂</p> 
+<p><img alt="" height="542" src="https://images2.imgbox.com/e4/89/fLxNP5Vc_o.png" width="1200"> 10、插入47</p> 
+<p><img alt="" height="551" src="https://images2.imgbox.com/58/5e/K6CUO1Tb_o.png" width="1200"></p> 
+<p>11、插入101</p> 
+<p><img alt="" height="555" src="https://images2.imgbox.com/24/73/o6Qnk0oO_o.png" width="1200"> 12、分裂</p> 
+<p><img alt="" height="531" src="https://images2.imgbox.com/e5/2a/OexW7HS2_o.png" width="1200"></p> 
+<p>13、二次分裂</p> 
+<p><img alt="" height="593" src="https://images2.imgbox.com/90/32/MaO1d1tS_o.png" width="1200"></p> 
+<p><span style="color:#fe2c24;"><strong>和B树插入的区别：</strong></span></p> 
+<p>1、一开始创建的是两层，一层做根，一层做分支</p> 
+<p>2、父亲节点存的是孩子节点中的最小值做索引，如果最小值更新了，那么往上的索引值都要全部更新</p> 
+<p>3、孩子不再是比key多一个（包含关系），而是和key相等（一一对应关系）</p> 
+<p>4、分裂的时候，不再是把中位数往上拿，而是把分裂出来的兄弟节点的最小值往上拿 </p> 
+<h3>5.3 B*树</h3> 
+<p>B*树是B+树的变形，在<span style="color:#fe2c24;"><strong>B+树的非根和非叶子节点再增加指向兄弟节点的指针</strong></span>。<br><img alt="" height="589" src="https://images2.imgbox.com/9c/48/sHKZNrci_o.png" width="965"><span style="color:#fe2c24;"><strong>为什么B*树的非叶子节点需要指向兄弟节点的指针呢？而B+树不需要呢？ 究竟想达到什么目的？</strong></span></p> 
+<p><span style="color:#ff9900;">B+树的分裂：</span><br>         当一个结点满时，分配一个新的结点，并将原结点中1/2的数据复制到新结点，最后在父结点中增加新结点的指针；B+树的分裂只影响原结点和父结点，而不会影响兄弟结点，所以它不需要指向兄弟的指针。</p> 
+<p><span style="color:#ff9900;">B*树的分裂：</span><br>         当一个结点满时，如果它的下一个兄弟结点未满，那么将一部分数据移到兄弟结点中，再在原结点插入关键字，最后修改父结点中兄弟结点的关键字（因为兄弟结点的关键字范围改变了）；如果兄弟也满了，则在原结点与兄弟结点之间增加新结点，并各复制1/3的数据到新结点，最后在父结点增加新结点的指针。（<span style="color:#fe2c24;"><strong>所以B*树的关键字和孩子数量-&gt;[2/3M——M]</strong></span>）<br>       <span style="color:#fe2c24;"><strong>所以，B*树分配新结点的概率比B+树要低，空间使用率更高；</strong></span><br><img alt="" height="545" src="https://images2.imgbox.com/65/48/TJ1oNjCM_o.png" width="1200"></p> 
+<h3>5.3 B树系列总结</h3> 
+<p style="text-align:center;"><span style="color:#fe2c24;"><strong>B树：有序数组+平衡多叉树；<br> B+树：有序数组链表+平衡多叉树；<br> B*树：一棵更丰满的，空间利用率更高的B+树。</strong></span></p> 
+<p style="text-align:center;"><img alt="" height="364" src="https://images2.imgbox.com/05/9f/e70QE9be_o.png" width="1170"><br><img alt="" src="https://images2.imgbox.com/44/65/4k7lbIX6_o.jpg"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b24459880bf84d2861d0a41726a91cfc/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据结构十三：八大排序算法</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b3aeea16573e6dec9753693797c3d572/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java进阶-SpringCloud设计模式-工厂模式的设计与详解</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

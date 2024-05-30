@@ -1,0 +1,228 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Hive面试题 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/87bd916d73d937e9675e1bb2ccf48522/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Hive面试题">
+  <meta property="og:description" content="Hive：分布式SQL计算工具
+作用：将SQL语句解析成MapReduce程序运行
+架构：Metastore元数据存储 &#43;Driver驱动解析SQL&#43;用户接口
+目录
+1.Hive的SQL解析过程
+2.Hive与数据库的区别
+3.内部表和外部表
+4.分桶表和分区表
+5.Hive的四个by排序
+6.开窗函数
+7.表连接方式
+8.union和union all区别
+9.Delet/Drop/Truncate区别
+10.count详解
+11.join的实现
+1.Hive的SQL解析过程 SQL--&gt;抽象语法树--&gt;查询块--&gt;逻辑计划--&gt;物理计划（MRjob）
+解析器： 将 SQL 字符串转换成抽象语法树（ AST ） 语义分析器：将抽象语法树进一步抽象为基本的查询单元 查询块（QueryBlock） 逻辑计划生成器：通过遍历查询块 ，生成逻辑计划 逻辑优化器 ：对逻辑计划进行优化 物理计划生成器 ：根据优化后的逻辑计划生成物理计划（MR任务） 物理优化器 ：对物理计划进行优化 执行器：执行该计划（MR任务），得到查询结果并返回给客户端 2.Hive与数据库的区别 数据存储：Hive数据存储在HDFS中；数据库将数据保存在块设备或者本地文件系统中。数据格式：Hive可以指定数据格式（指定列分隔符，行分隔符）；数据库由数据引擎定义数据格式。数据更新：Hive的内容是读多写少的，不建议对数据改写；数据库中的数据通常是需要经常进行修改。执行延迟：Hive 执行延迟较高，数据库的执行延迟较低。Hive只有在大数据规模下才有优势。索引：Hive没有，数据库有。数据规模：Hive 支持很大规模的数据计算；数据库可以支持的数据规模较小。 3.内部表和外部表 内部表：保存元数据和原始数据，删除时会全部删除。外部表：只保存元数据，删除后表的原始数据还在。 使用场景：绝大多数是外部表，防止数据误删，相对来说安全一些，同时也方便共享源数据。
+4.分桶表和分区表 分区表：按照指定列对数据进行分区，分区相当于将表拆分到不同文件夹中进行存储，一个分区代表一个文件夹，查询时使用分区字段筛选数据可以直接找的对应的目录，避免全表扫描，提高查询效率。分桶表：按照指定列对数据进行分桶，分桶相当于将表拆分到不同文件中进行存储，一个桶代表一个文件，查询时使用分桶字段可以直接定位到对应的分桶，避免全表扫描。 分桶列相同的数据一定在同一个桶内，所以基于分桶列的特定操作（过滤、分组、join）均可以带来性能提升。 使用场景：分区表适合用于多条数据有相同字段值的情况，比如所属分类、日期；分桶表适合用于数据字段没有重复值的情况，或者分区太多更不利于查询的情况，比如表id。
+如何进行分桶：假设分桶数量为3，首先计算分桶列的hash值，然后基于分桶数3进行取模，结果为0.1.2分别进入3个桶。
+5.Hive的四个by排序 order by：全局排序，默认只走一个reduce，当数据量非常大时，耗时太长，效率低下，适用于数据量较小的场景。 select * from emp order by sal desc; sort by：在数据进入reducer前完成排序，每个reducer内部排序 ，不保证全局有序；适用于数据量较大，但对排序要求不严格的场合，可以大幅度提升执行效率。 set mapreduce.job.reduces=3 #预先设置reducer数量 set mapreduce.job.reduces; select * from emp sort by deptno desc; distribute by：相当于分区，按照指定的字段对数据进行划分输出到不同的reducer中，默认使用hash值取余数方法，常和sort by一起使用。 hive (default)&gt; set mapreduce.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-26T15:55:36+08:00">
+    <meta property="article:modified_time" content="2024-04-26T15:55:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Hive面试题</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>Hive：分布式SQL计算工具</p> 
+<p>作用：将SQL语句解析成MapReduce程序运行</p> 
+<p>架构：Metastore<strong>元数据存储</strong> +Driver驱动<strong>解析SQL</strong>+用户接口</p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="1.Hive%E7%9A%84SQL%E8%A7%A3%E6%9E%90%E8%BF%87%E7%A8%8B-toc" style="margin-left:0px;"><a href="#1.Hive%E7%9A%84SQL%E8%A7%A3%E6%9E%90%E8%BF%87%E7%A8%8B" rel="nofollow">1.Hive的SQL解析过程</a></p> 
+<p id="2.Hive%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E5%8C%BA%E5%88%AB-toc" style="margin-left:0px;"><a href="#2.Hive%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E5%8C%BA%E5%88%AB" rel="nofollow">2.Hive与数据库的区别</a></p> 
+<p id="3.%E5%86%85%E9%83%A8%E8%A1%A8%E5%92%8C%E5%A4%96%E9%83%A8%E8%A1%A8-toc" style="margin-left:0px;"><a href="#3.%E5%86%85%E9%83%A8%E8%A1%A8%E5%92%8C%E5%A4%96%E9%83%A8%E8%A1%A8" rel="nofollow">3.内部表和外部表</a></p> 
+<p id="4.%E5%88%86%E6%A1%B6%E8%A1%A8%E5%92%8C%E5%88%86%E5%8C%BA%E8%A1%A8-toc" style="margin-left:0px;"><a href="#4.%E5%88%86%E6%A1%B6%E8%A1%A8%E5%92%8C%E5%88%86%E5%8C%BA%E8%A1%A8" rel="nofollow">4.分桶表和分区表</a></p> 
+<p id="5.Hive%E7%9A%84%E5%9B%9B%E4%B8%AAby%E6%8E%92%E5%BA%8F-toc" style="margin-left:0px;"><a href="#5.Hive%E7%9A%84%E5%9B%9B%E4%B8%AAby%E6%8E%92%E5%BA%8F" rel="nofollow">5.Hive的四个by排序</a></p> 
+<p id="6.%E5%BC%80%E7%AA%97%E5%87%BD%E6%95%B0-toc" style="margin-left:0px;"><a href="#6.%E5%BC%80%E7%AA%97%E5%87%BD%E6%95%B0" rel="nofollow">6.开窗函数</a></p> 
+<p id="7.%E8%A1%A8%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F-toc" style="margin-left:0px;"><a href="#7.%E8%A1%A8%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F" rel="nofollow">7.表连接方式</a></p> 
+<p id="8.union%E5%92%8Cunion%20all%E5%8C%BA%E5%88%AB-toc" style="margin-left:0px;"><a href="#8.union%E5%92%8Cunion%20all%E5%8C%BA%E5%88%AB" rel="nofollow">8.union和union all区别</a></p> 
+<p id="9.Delet%2FDrop%2FTruncate%E5%8C%BA%E5%88%AB-toc" style="margin-left:0px;"><a href="#9.Delet%2FDrop%2FTruncate%E5%8C%BA%E5%88%AB" rel="nofollow">9.Delet/Drop/Truncate区别</a></p> 
+<p id="10.count%E8%AF%A6%E8%A7%A3-toc" style="margin-left:0px;"><a href="#10.count%E8%AF%A6%E8%A7%A3" rel="nofollow">10.count详解</a></p> 
+<p id="11.join%E7%9A%84%E5%AE%9E%E7%8E%B0-toc" style="margin-left:0px;"><a href="#11.join%E7%9A%84%E5%AE%9E%E7%8E%B0" rel="nofollow">11.join的实现</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="1.Hive%E7%9A%84SQL%E8%A7%A3%E6%9E%90%E8%BF%87%E7%A8%8B">1.Hive的SQL解析过程</h2> 
+<p>SQL--&gt;抽象语法树--&gt;查询块--&gt;逻辑计划--&gt;物理计划（MRjob）</p> 
+<ol><li> 
+  <div> 
+   <span style="color:#000000;">解析器：</span> 
+   <span style="color:#000000;">将 </span> 
+   <span style="color:#000000;">SQL </span> 
+   <span style="color:#000000;">字符串转换成抽象语法树（</span> 
+   <span style="color:#000000;">AST</span> 
+   <span style="color:#000000;">）</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">语义分析器：将抽象语法树进一步抽象为基本的查询单元 查询块（QueryBlock）</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">逻辑计划生成器：</span>通过遍历查询块 
+   <span style="color:#000000;">，生成逻辑计划</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">逻辑优化器</span> 
+   <span style="color:#000000;">：对逻辑计划进行优化</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">物理计划生成器</span> 
+   <span style="color:#000000;">：根据优化后的逻辑计划生成物理计划（MR任务）</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">物理优化器</span> 
+   <span style="color:#000000;">：对物理计划进行优化</span> 
+  </div> </li><li> 
+  <div> 
+   <span style="color:#000000;">执行器：执行该计划（MR任务），得到查询结果并返回给客户端</span> 
+  </div> </li></ol> 
+<div></div> 
+<h2 id="2.Hive%E4%B8%8E%E6%95%B0%E6%8D%AE%E5%BA%93%E7%9A%84%E5%8C%BA%E5%88%AB"><span style="color:#000000;">2.Hive与数据库的区别</span></h2> 
+<ol><li><span style="color:#000000;">数据存储：Hive数据存储在HDFS中；数据库将数据保存在块设备或者本地文件系统中。</span></li><li>数据格式：Hive可以指定数据格式（指定列分隔符，行分隔符）；数据库由数据引擎定义数据格式。</li><li>数据更新：Hive的内容是读多写少的，不建议对数据改写；数据库中的数据通常是需要经常进行修改。</li><li>执行延迟：<span style="color:#000000;">Hive 执行延迟较高，数据库的执行延迟较低。Hive只有在大数据规模下才有优势。</span></li><li>索引：Hive没有，数据库有。</li><li>数据规模：<span style="color:#000000;">Hive </span><span style="color:#000000;">支持很大规模的数据计算；数据库可以支持的数据规模较小。</span></li></ol> 
+<p></p> 
+<h2 id="3.%E5%86%85%E9%83%A8%E8%A1%A8%E5%92%8C%E5%A4%96%E9%83%A8%E8%A1%A8"><span style="color:#000000;">3.内部表和外部表</span></h2> 
+<ol><li><span style="color:#000000;">内部表：保存元数据和原始数据，删除时会全部删除。</span></li><li><span style="color:#000000;">外部表：只保存元数据，删除后表的原始数据还在。</span></li></ol> 
+<p><strong>使用场景</strong>：绝大多数是外部表，防止数据误删，相对来说安全一些，同时也方便共享源数据。</p> 
+<p></p> 
+<h2 id="4.%E5%88%86%E6%A1%B6%E8%A1%A8%E5%92%8C%E5%88%86%E5%8C%BA%E8%A1%A8">4.分桶表和分区表</h2> 
+<ol><li>分区表：按照指定列对数据进行分区，分区相当于将表拆分到不同文件夹中进行存储，一个分区代表一个文件夹，查询时使用分区字段筛选数据可以直接找的对应的目录，避免全表扫描，提高查询效率。</li><li>分桶表：按照指定列对数据进行分桶，分桶相当于将表拆分到不同文件中进行存储，一个桶代表一个文件，查询时使用分桶字段可以直接定位到对应的分桶，避免全表扫描。              分桶列相同的数据一定在同一个桶内，所以基于分桶列的特定操作（过滤、分组、join）均可以带来性能提升。</li></ol> 
+<p><strong>使用场景</strong>：分区表适合用于多条数据有相同字段值的情况，比如所属分类、日期；分桶表适合用于数据字段没有重复值的情况，或者分区太多更不利于查询的情况，比如表id。</p> 
+<p><strong>如何进行分桶</strong>：假设分桶数量为3，首先计算分桶列的hash值，然后基于分桶数3进行取模，结果为0.1.2分别进入3个桶。</p> 
+<p></p> 
+<h2 id="5.Hive%E7%9A%84%E5%9B%9B%E4%B8%AAby%E6%8E%92%E5%BA%8F">5.Hive的四个by排序</h2> 
+<ol><li>order by：全局排序，默认只走一个reduce，当数据量非常大时，耗时太长，效率低下，适用于数据量较小的场景。 <pre><code>select * from emp order by sal desc;</code></pre> </li><li>sort by：在数据进入reducer前完成排序，每个reducer内部排序 ，不保证全局有序；适用于数据量较大，但对排序要求不严格的场合，可以大幅度提升执行效率。 <pre><code>set mapreduce.job.reduces=3  #预先设置reducer数量
+set mapreduce.job.reduces;
+select * from emp sort by deptno desc;</code></pre> </li><li>distribute by：相当于分区，按照指定的字段对数据进行划分输出到不同的reducer中，默认使用hash值取余数方法，常和sort by一起使用。 <pre><code>hive (default)&gt; set mapreduce.job.reduces=3;
+hive (default)&gt; select * from emp distribute by deptno sort by empno desc;</code></pre> </li><li>cluster by：当distribute by和sorts by字段相同时，就等于cluster by，但是排序只能是升序排序。 <pre><code>hive (default)&gt; select * from emp cluster by deptno;
+hive (default)&gt; select * from emp distribute by deptno sort by deptno;
+</code></pre> <p></p> </li></ol> 
+<h2 id="6.%E5%BC%80%E7%AA%97%E5%87%BD%E6%95%B0">6.开窗函数</h2> 
+<p>开窗函数（窗口函数）Window Funtion主要有两类：</p> 
+<ol><li>聚合开窗函数</li><li>排序开窗函数</li></ol> 
+<p>常见开窗函数</p> 
+<p><img alt="" height="200" src="https://images2.imgbox.com/4e/2f/AFPYbLwY_o.png" width="351"></p> 
+<p>使用格式：<strong>函数名(</strong>列名<strong>)</strong> <strong>OVER(</strong>partition by 列名 order by列名<strong>)</strong> </p> 
+<ol><li>函数部分：支持聚合函数(count 、sum、avg)、排序函数(row_number、rank)、分析窗口函数(cume_dist)</li><li>窗口定义部分：over里面的内容，包括了三部分(partition,order,ROWS)</li></ol> 
+<p>实现原理：窗口函数的实现，主要借助 Partitioned Table Function （即PTF）</p> 
+<ol><li>对于包含窗口函数的sql语句，首先计算除窗口函数以外的其他操作；</li><li>将第一步的输出作为PTF的输入，计算对应窗口函数的值；</li><li>最后输出合并数据。</li></ol> 
+<p></p> 
+<h2 id="7.%E8%A1%A8%E8%BF%9E%E6%8E%A5%E6%96%B9%E5%BC%8F">7.表连接方式</h2> 
+<p><img alt="" height="312" src="https://images2.imgbox.com/c7/f7/HYMGWoD2_o.png" width="1085"></p> 
+<p></p> 
+<h2 id="8.union%E5%92%8Cunion%20all%E5%8C%BA%E5%88%AB">8.union和union all区别</h2> 
+<ol><li>union: 对两个结果集进行并集操作, 不包括重复行,相当于distinct, 同时进行默认规则的排序操作;</li><li>union all: 对两个结果集进行并集操作, 包括重复行, 即所有的结果全部显示, 不管是不是重复，不会进行排序操作;</li></ol> 
+<p><strong>总结</strong>：union all不会进行去重和排序操作，执行效率要比union高。</p> 
+<p></p> 
+<p></p> 
+<h2 id="9.Delet%2FDrop%2FTruncate%E5%8C%BA%E5%88%AB">9.Delet/Drop/Truncate区别</h2> 
+<ol><li>delet：一般用来删除表中的一行或部分行数据，在不设置WHERE条件下可以删除表中的所有信息，可以回滚；对表执行delete之后，该表不会减少表或者索引所占用的空间。</li><li>truncate是清空的意思，从字面就可以理解为一次删除就可以将表里的数据全部清除，不改变表结构，没有回滚操作；对表执行truncate之后，表和索引就会恢复到初始的大小。</li><li>drop可以将表的结构和数据内容都删除，没有回滚操作；对表执行drop之后，该表所占用的空间全部释放，执行速度快。</li></ol> 
+<p>速度比较：drop&gt;truncate&gt;delete</p> 
+<p></p> 
+<h2 id="10.count%E8%AF%A6%E8%A7%A3">10.<a class="link-info" href="https://blog.csdn.net/qq_52297656/article/details/127893049?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522171396790016800178568582%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fall.%2522%257D&amp;request_id=171396790016800178568582&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~all~first_rank_ecpm_v1~rank_v31_ecpm-2-127893049-null-null.142%5Ev100%5Epc_search_result_base9&amp;utm_term=count%281%29%2Fcount%28*%29%E5%8C%BA%E5%88%AB&amp;spm=1018.2226.3001.4187" title="count详解">count详解</a></h2> 
+<ol><li>count(1)：忽略所有列，用1代表行，统计行数，不会忽略null值。</li><li>count(*)：含所有列，统计行数，不会忽略null值。</li><li>count(列名)：对指定列进行统计，统计行数，不记录null值。</li></ol> 
+<p><strong>执行过程</strong>：server 层会循环向 InnoDB 读取一条记录，如果 count 函数指定的参数不为 NULL，那么就会将变量 count 加 1，直到符合查询的全部记录被读完，就退出循环，最后将 count 变量的值发送给客户端。</p> 
+<p><strong>效率排序</strong>：count(*)=count(1)&gt;count(主键)&gt;count(字段)</p> 
+<p><strong>原因</strong>：count(*) 执行过程跟 count(1) 执行过程基本一样的，使用 count(<code>*</code>) 时，MySQL 会将 <code>*</code> 参数转化为参数 0 来处理，所以同样不需要读取记录中的字段值。count(主键)就需要，当前其他执行过程相同，所以稍慢一点。</p> 
+<p></p> 
+<h2 id="11.join%E7%9A%84%E5%AE%9E%E7%8E%B0">11.<a class="link-info" href="https://blog.csdn.net/m0_71777195/article/details/127684932?ops_request_misc=&amp;request_id=&amp;biz_id=102&amp;utm_term=join%E7%9A%84%E6%B5%81%E7%A8%8B%E5%9B%BE&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~all~sobaiduweb~default-4-127684932.142%5Ev100%5Epc_search_result_base9&amp;spm=1018.2226.3001.4187" title="join的实现">join的实现</a></h2> 
+<pre><code>select * from testa ta left join testb tb on (ta.col1=tb.col2);</code></pre> 
+<ol><li> <p>首先把驱动表testa的所有数据都加在到join buffer里面（内存操作），这里的所有数据是select后面的testa的字段，因为这里是select *，所以就是加载所有的testa字段。</p> </li><li> <p>然后遍历的取testb表中的每一行数据，并且与join buffer里面的数据进行对比，符合条件的，就作为结果集返回。<img alt="" height="706" src="https://images2.imgbox.com/83/32/hZm8ja1C_o.png" width="926"></p> <p></p> </li></ol> 
+<p>补充：如果join buffer内存的大小不足够容纳驱动表的数量级，则将驱动表（testa）分段加载到join buffer，查询完成后清空join buffer重新加载。</p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/c0a3c8a19c3c096cfe2ec53280f89612/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【大数据】分布式数据库HBase</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/cf09b67bd92ad3f49ea5282533dc4fb4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">AI聊天 AI绘画 AI视频 AI制作PPT</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C# 深拷贝和浅拷贝 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/24231a9c622c01f800f337ba3deaa3b8/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C# 深拷贝和浅拷贝">
+  <meta property="og:description" content="文章目录 1.深拷贝2.浅拷贝3.拷贝类4.浅拷贝的实现5.深拷贝实现5.1 浅拷贝对象，对引用类型重新一个个赋值5.2 反射实现5.3 利用XML序列化和反序列化实现 1.深拷贝 拷贝一个对象时，不仅仅把对象的引用进行复制，还把该对象引用的值也一起拷贝。这样进行深拷贝后的拷贝对象就和源对象互相独立，其中任何一个对象的改动都不会对另外一个对象造成影响。
+int source = 123; // 值类型赋值内部执行深拷贝 int copy = source; // 对拷贝对象进行赋值不会改变源对象的值 copy = 234; Console.WriteLine($&#34;source = {source},copy = {copy}&#34;); // 123 234 // 同样对源对象赋值也不会改变拷贝对象的值 source = 345; Console.WriteLine($&#34;source = {source},copy = {copy}&#34;); // 345 234 深拷贝示意图：
+2.浅拷贝 ==拷贝一个对象时，仅仅拷贝对象的引用进行拷贝，但是拷贝对象和源对象还是引用同一份实体。==此时，其中一个对象的改变都会影响到另一个对象。
+public class Person { public string Name { get; set; } } public static void Main(string[] args) { Person sourceP = new Person() { Name = &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-25T15:12:26+08:00">
+    <meta property="article:modified_time" content="2024-05-25T15:12:26+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C# 深拷贝和浅拷贝</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#1_1" rel="nofollow">1.深拷贝</a></li><li><a href="#2_16" rel="nofollow">2.浅拷贝</a></li><li><a href="#3_34" rel="nofollow">3.拷贝类</a></li><li><a href="#4_64" rel="nofollow">4.浅拷贝的实现</a></li><li><a href="#5_100" rel="nofollow">5.深拷贝实现</a></li><li><ul><li><a href="#51__101" rel="nofollow">5.1 浅拷贝对象，对引用类型重新一个个赋值</a></li><li><a href="#52__117" rel="nofollow">5.2 反射实现</a></li><li><a href="#53_XML_219" rel="nofollow">5.3 利用XML序列化和反序列化实现</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="1_1"></a>1.深拷贝</h2> 
+<p><mark>拷贝一个对象时，不仅仅把对象的引用进行复制，还把该对象引用的值也一起拷贝</mark>。这样进行深拷贝后的拷贝对象就和源对象互相独立，其中任何一个对象的改动都不会对另外一个对象造成影响。</p> 
+<pre><code class="prism language-csharp"><span class="token class-name"><span class="token keyword">int</span></span> source <span class="token operator">=</span> <span class="token number">123</span><span class="token punctuation">;</span>
+<span class="token comment">// 值类型赋值内部执行深拷贝</span>
+<span class="token class-name"><span class="token keyword">int</span></span> copy <span class="token operator">=</span> source<span class="token punctuation">;</span>
+<span class="token comment">// 对拷贝对象进行赋值不会改变源对象的值</span>
+copy <span class="token operator">=</span> <span class="token number">234</span><span class="token punctuation">;</span>
+Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token interpolation-string"><span class="token string">$"source = </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">source</span><span class="token punctuation">}</span></span><span class="token string">,copy = </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">copy</span><span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 123 234</span>
+<span class="token comment">// 同样对源对象赋值也不会改变拷贝对象的值</span>
+source <span class="token operator">=</span> <span class="token number">345</span><span class="token punctuation">;</span>
+Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token interpolation-string"><span class="token string">$"source = </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">source</span><span class="token punctuation">}</span></span><span class="token string">,copy = </span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">copy</span><span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">// 345 234</span>
+</code></pre> 
+<p><strong>深拷贝示意图：</strong><br> <img src="https://images2.imgbox.com/7e/c6/wojIoIkw_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="2_16"></a>2.浅拷贝</h2> 
+<p>==拷贝一个对象时，仅仅拷贝对象的引用进行拷贝，但是拷贝对象和源对象还是引用同一份实体。==此时，其中一个对象的改变都会影响到另一个对象。</p> 
+<pre><code class="prism language-csharp"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Person</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">string</span></span> Name <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name"><span class="token keyword">void</span></span> <span class="token function">Main</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">string</span><span class="token punctuation">[</span><span class="token punctuation">]</span></span> args<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">Person</span> sourceP <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Person</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span> Name <span class="token operator">=</span> <span class="token string">"张三"</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token class-name">Person</span> copyP <span class="token operator">=</span> sourceP<span class="token punctuation">;</span> <span class="token comment">// 浅拷贝</span>
+    copyP<span class="token punctuation">.</span>Name <span class="token operator">=</span> <span class="token string">"张老三"</span><span class="token punctuation">;</span>  <span class="token comment">// 拷贝对象改变Name值，源对象Name值也会改变</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"Person.Name: [SourceP: {0}] [CopyP:{1}]"</span><span class="token punctuation">,</span> sourceP<span class="token punctuation">.</span>Name<span class="token punctuation">,</span> copyP<span class="token punctuation">.</span>Name<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 张老三 张老三</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>浅拷贝示意图：</strong><br> <img src="https://images2.imgbox.com/52/9a/60xRGV65_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3_34"></a>3.拷贝类</h2> 
+<pre><code class="prism language-csharp"><span class="token comment">//年级</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Grade</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Stu_Grade <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">//学生</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Student</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">string</span></span> Name <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Age <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token return-type class-name">Grade</span> Grade <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token comment">// 调用Object的MemberwiseClone方法实现浅拷贝</span>
+    <span class="token keyword">public</span> <span class="token return-type class-name">Student</span> <span class="token function">ShallowCopy</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>Student<span class="token punctuation">)</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">MemberwiseClone</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">// 输出学生信息</span>
+    <span class="token keyword">public</span> <span class="token keyword">override</span> <span class="token return-type class-name"><span class="token keyword">string</span></span> <span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token interpolation-string"><span class="token string">$"姓名：</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">Name</span><span class="token punctuation">}</span></span><span class="token string">，年龄：</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">Age</span><span class="token punctuation">}</span></span><span class="token string">，年纪：</span><span class="token interpolation"><span class="token punctuation">{<!-- --></span><span class="token expression language-csharp">Grade<span class="token punctuation">.</span>Stu_Grade</span><span class="token punctuation">}</span></span><span class="token string">"</span></span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h2><a id="4_64"></a>4.浅拷贝的实现</h2> 
+<p>浅拷贝的实现是调用受保护的方法<code>Object.MemberwiseClone()</code></p> 
+<pre><code class="prism language-csharp"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name"><span class="token keyword">void</span></span> <span class="token function">Main</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">string</span><span class="token punctuation">[</span><span class="token punctuation">]</span></span> args<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">Student</span> sourceStu <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Student</span>
+    <span class="token punctuation">{<!-- --></span>
+        Name <span class="token operator">=</span> <span class="token string">"ming"</span><span class="token punctuation">,</span>
+        Age <span class="token operator">=</span> <span class="token number">18</span><span class="token punctuation">,</span>
+        Grade <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Grade</span><span class="token punctuation">{<!-- --></span> Stu_Grade <span class="token operator">=</span> <span class="token number">6</span> <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Student</span> copyStu <span class="token operator">=</span> sourceStu<span class="token punctuation">.</span><span class="token function">ShallowCopy</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 输出修改信息前，源学生和拷贝学生信息</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"------修改前------"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"源学生信息"</span> <span class="token operator">+</span> sourceStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"拷贝信息"</span> <span class="token operator">+</span> copyStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    copyStu<span class="token punctuation">.</span>Name <span class="token operator">=</span> <span class="token string">"Tom"</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Age <span class="token operator">=</span> <span class="token number">26</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Grade<span class="token punctuation">.</span>Stu_Grade <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 输出修改信息后，源学生和拷贝学生信息</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"------修改后------"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"源学生信息"</span> <span class="token operator">+</span> sourceStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"拷贝信息"</span> <span class="token operator">+</span> copyStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>输出：</p> 
+<blockquote> 
+ <p>------修改前------<br> 源学生信息姓名：ming，年龄：18，年级：6<br> 拷贝信息姓名：ming，年龄：18，年级：6<br> ------修改后------<br> 源学生信息姓名：ming，年龄：18，年级：10<br> 拷贝信息姓名：Tom，年龄：26，年级：10</p> 
+</blockquote> 
+<h2><a id="5_100"></a>5.深拷贝实现</h2> 
+<h3><a id="51__101"></a>5.1 浅拷贝对象，对引用类型重新一个个赋值</h3> 
+<pre><code class="prism language-csharp"><span class="token keyword">public</span> <span class="token return-type class-name">Student</span> <span class="token function">DeepCopy</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">Student</span> student <span class="token operator">=</span> <span class="token punctuation">(</span>Student<span class="token punctuation">)</span><span class="token keyword">this</span><span class="token punctuation">.</span><span class="token function">MemberwiseClone</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    student<span class="token punctuation">.</span>Grade <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Grade</span><span class="token punctuation">{<!-- --></span> Stu_Grade <span class="token operator">=</span> student<span class="token punctuation">.</span>Grade<span class="token punctuation">.</span>Stu_Grade <span class="token punctuation">}</span><span class="token punctuation">;</span>
+    <span class="token keyword">return</span> student<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>采用和浅拷贝一样的测试数据进行测试，输出：</p> 
+<blockquote> 
+ <p>------修改前------<br> 源学生信息姓名：ming，年龄：18，年级：6<br> 拷贝信息姓名：ming，年龄：18，年级：6<br> ------修改后------<br> 源学生信息姓名：ming，年龄：18，年级：6<br> 拷贝信息姓名：Tom，年龄：26，年级：10</p> 
+</blockquote> 
+<h3><a id="52__117"></a>5.2 反射实现</h3> 
+<p><strong>拷贝对象：</strong></p> 
+<pre><code class="prism language-csharp"><span class="token comment">//年级</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Grade</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Stu_Grade <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 成绩</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Score</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name">Science</span> Science <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+    <span class="token keyword">public</span> <span class="token return-type class-name">Arts</span> Arts <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 理科</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Science</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// 数学</span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Math <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">// 文科</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Arts</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// 语文</span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Chinese <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">//学生</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">Student</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">string</span></span> Name <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token return-type class-name"><span class="token keyword">int</span></span> Age <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token return-type class-name">Grade</span> Grade <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+
+    <span class="token keyword">public</span> <span class="token return-type class-name">Score</span> Scroe <span class="token punctuation">{<!-- --></span> <span class="token keyword">get</span><span class="token punctuation">;</span> <span class="token keyword">set</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>深拷贝实现：</strong></p> 
+<pre><code class="prism language-csharp"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">DeepCopyHelper</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// 反射实现深拷贝</span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name">T</span> <span class="token generic-method"><span class="token function">DeepCopyByReflect</span><span class="token generic class-name"><span class="token punctuation">&lt;</span>T<span class="token punctuation">&gt;</span></span></span><span class="token punctuation">(</span><span class="token class-name">T</span> obj<span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">//如果是字符串或值类型则直接返回</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>obj <span class="token keyword">is</span> <span class="token class-name"><span class="token keyword">string</span></span> <span class="token operator">||</span> obj<span class="token punctuation">.</span><span class="token function">GetType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span>IsValueType<span class="token punctuation">)</span> <span class="token keyword">return</span> obj<span class="token punctuation">;</span>
+
+        <span class="token class-name"><span class="token keyword">object</span></span> retval <span class="token operator">=</span> Activator<span class="token punctuation">.</span><span class="token function">CreateInstance</span><span class="token punctuation">(</span>obj<span class="token punctuation">.</span><span class="token function">GetType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">FieldInfo<span class="token punctuation">[</span><span class="token punctuation">]</span></span> fields <span class="token operator">=</span> obj<span class="token punctuation">.</span><span class="token function">GetType</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">GetFields</span><span class="token punctuation">(</span>BindingFlags<span class="token punctuation">.</span>Public <span class="token operator">|</span> BindingFlags<span class="token punctuation">.</span>NonPublic <span class="token operator">|</span> BindingFlags<span class="token punctuation">.</span>Instance <span class="token operator">|</span> BindingFlags<span class="token punctuation">.</span>Static<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">foreach</span> <span class="token punctuation">(</span><span class="token class-name">FieldInfo</span> field <span class="token keyword">in</span> fields<span class="token punctuation">)</span>
+        <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// 解决层次引用类型</span>
+            <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span> field<span class="token punctuation">.</span><span class="token function">SetValue</span><span class="token punctuation">(</span>retval<span class="token punctuation">,</span> <span class="token function">DeepCopyByReflect</span><span class="token punctuation">(</span>field<span class="token punctuation">.</span><span class="token function">GetValue</span><span class="token punctuation">(</span>obj<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token punctuation">}</span>
+            <span class="token keyword">catch</span> <span class="token punctuation">{<!-- --></span> <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">return</span> <span class="token punctuation">(</span>T<span class="token punctuation">)</span>retval<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>测试：</strong></p> 
+<pre><code class="prism language-csharp"><span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name"><span class="token keyword">void</span></span> <span class="token function">Main</span><span class="token punctuation">(</span><span class="token class-name"><span class="token keyword">string</span><span class="token punctuation">[</span><span class="token punctuation">]</span></span> args<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">Student</span> sourceStu <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Student</span>
+    <span class="token punctuation">{<!-- --></span>
+        Name <span class="token operator">=</span> <span class="token string">"ming"</span><span class="token punctuation">,</span>
+        Age <span class="token operator">=</span> <span class="token number">18</span><span class="token punctuation">,</span>
+        Grade <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Grade</span><span class="token punctuation">{<!-- --></span> Stu_Grade <span class="token operator">=</span> <span class="token number">6</span> <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        Scroe <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Score</span><span class="token punctuation">{<!-- --></span> Arts <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Arts</span><span class="token punctuation">{<!-- --></span>Chinese <span class="token operator">=</span> <span class="token number">90</span><span class="token punctuation">}</span><span class="token punctuation">,</span> Science <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">Science</span><span class="token punctuation">{<!-- --></span>Math <span class="token operator">=</span> <span class="token number">90</span><span class="token punctuation">}</span><span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+    <span class="token class-name">Student</span> copyStu <span class="token operator">=</span> DeepCopyHelper<span class="token punctuation">.</span><span class="token generic-method"><span class="token function">DeepCopyByReflect</span><span class="token generic class-name"><span class="token punctuation">&lt;</span>Student<span class="token punctuation">&gt;</span></span></span><span class="token punctuation">(</span>sourceStu<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 输出修改信息前，源学生和拷贝学生信息</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"------修改前------"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"源学生信息"</span> <span class="token operator">+</span> sourceStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"拷贝信息"</span> <span class="token operator">+</span> copyStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    copyStu<span class="token punctuation">.</span>Name <span class="token operator">=</span> <span class="token string">"Tom"</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Age <span class="token operator">=</span> <span class="token number">26</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Grade<span class="token punctuation">.</span>Stu_Grade <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Scroe<span class="token punctuation">.</span>Arts<span class="token punctuation">.</span>Chinese <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+    copyStu<span class="token punctuation">.</span>Scroe<span class="token punctuation">.</span>Science<span class="token punctuation">.</span>Math <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">;</span>
+
+    <span class="token comment">// 输出修改信息后，源学生和拷贝学生信息</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"------修改后------"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"源学生信息"</span> <span class="token operator">+</span> sourceStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    Console<span class="token punctuation">.</span><span class="token function">WriteLine</span><span class="token punctuation">(</span><span class="token string">"拷贝信息"</span> <span class="token operator">+</span> copyStu<span class="token punctuation">.</span><span class="token function">ToString</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>结果：</strong></p> 
+<blockquote> 
+ <p>------修改前------<br> 源学生信息姓名：ming，年龄：18，年级：6， 成绩：(语文：90,数学：90)<br> 拷贝信息姓名：ming，年龄：18，年级：6， 成绩：(语文：90,数学：90)<br> ------修改后------<br> 源学生信息姓名：ming，年龄：18，年级：6， 成绩：(语文：90,数学：90)<br> 拷贝信息姓名：Tom，年龄：26，年级：10， 成绩：(语文：100,数学：100)</p> 
+</blockquote> 
+<h3><a id="53_XML_219"></a>5.3 利用XML序列化和反序列化实现</h3> 
+<p>测试内容和结果和5.2一样</p> 
+<pre><code class="prism language-csharp"><span class="token comment">// xml 实现深拷贝</span>
+<span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token return-type class-name">T</span> <span class="token generic-method"><span class="token function">DeepCopyByXml</span><span class="token generic class-name"><span class="token punctuation">&lt;</span>T<span class="token punctuation">&gt;</span></span></span><span class="token punctuation">(</span><span class="token class-name">T</span> obj<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+    <span class="token class-name"><span class="token keyword">object</span></span> retval<span class="token punctuation">;</span>
+    <span class="token keyword">using</span> <span class="token punctuation">(</span><span class="token class-name">MemoryStream</span> ms <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">MemoryStream</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">XmlSerializer</span> xml <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token constructor-invocation class-name">XmlSerializer</span><span class="token punctuation">(</span><span class="token keyword">typeof</span><span class="token punctuation">(</span><span class="token type-expression class-name">T</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        xml<span class="token punctuation">.</span><span class="token function">Serialize</span><span class="token punctuation">(</span>ms<span class="token punctuation">,</span> obj<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ms<span class="token punctuation">.</span><span class="token function">Seek</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span> SeekOrigin<span class="token punctuation">.</span>Begin<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        retval <span class="token operator">=</span> xml<span class="token punctuation">.</span><span class="token function">Deserialize</span><span class="token punctuation">(</span>ms<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        ms<span class="token punctuation">.</span><span class="token function">Close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">return</span> <span class="token punctuation">(</span>T<span class="token punctuation">)</span>retval<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/36e2db1230b7aef7d7d4311960d2c8dd/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">如何解决VSCode Git插件差异查看器 无法读取文件 Error: 无法解析不存在的文件 的问题</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/52518040ea83b8aedc90d98ac7a43cdc/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">若依框架代码生成器详解：从入门到高级定制</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

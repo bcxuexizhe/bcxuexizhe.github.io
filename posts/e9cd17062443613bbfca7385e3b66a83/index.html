@@ -1,0 +1,930 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>深入OceanBase分布式数据库：MySQL 模式下的 SQL 基本操作 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e9cd17062443613bbfca7385e3b66a83/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="深入OceanBase分布式数据库：MySQL 模式下的 SQL 基本操作">
+  <meta property="og:description" content="码到三十五 ： 个人主页 OceanBase与MySQL模式下兼容性序
+在当今的大数据时代，数据库技术的选择对于企业的信息化发展至关重要。OceanBase作为一种高性能、高可用的分布式关系数据库，在与MySQL模式的兼容性方面展现出了显著的优势，为企业数据迁移、整合与升级提供了极大的便利。
+OceanBase与MySQL的兼容性不仅体现在数据类型、SQL语法等基本面，更深入到了存储引擎、优化器等多个层次。这种高度的兼容性使得企业在不改变原有业务逻辑的情况下，能够轻松地将数据和应用从MySQL迁移到OceanBase，从而享受到OceanBase带来的高性能和可扩展性。
+本文将探讨OceanBase与MySQL模式下的兼容性和OceanBase的MySQL 模式下的 SQL 基本操作。
+目录 前言：OceanBase与 MySQL 兼容性对比数据类型兼容性SQL语法兼容性存储引擎和分区功能优化器和执行计划备份与恢复 1. 创建数据库1.1 语法1.2 参数说明 2. 表操作2.1 创建表2.2 查看表2.3 修改表2.4 删除表 3. 索引操作3.1 创建索引3.2 查看索引3.3 删除索引 4. 插入数据5. 删除数据6. 更新数据7. 查询数据8. 提交事务9. 回滚事务 前言：OceanBase与 MySQL 兼容性对比 OceanBase与MySQL模式下的兼容性可以从以下几个方面进行简述：
+数据类型兼容性 OceanBase的MySQL模式兼容MySQL 5.7的绝大部分数据类型，包括数值类型（如INT、BIGINT、FLOAT、DOUBLE等）、日期和时间类型（如DATETIME、TIMESTAMP等）、字符串类型（如CHAR、VARCHAR等）以及其他复杂数据类型（如ENUM、SET、JSON等）。此外，OceanBase还支持空间数据类型，这在某些特定应用场景中非常有用。
+OceanBase 数据库支持的数据类型有：
+数值类型
+整数类型：BOOL/BOOLEAN/TINYINT、SMALLINT、MEDIUMINT、INT/INTEGER 和 BIGINT。
+定点类型：DECIMAL 和 NUMERIC。
+浮点类型：FLOAT 和 DOUBLE。
+Bit-Value 类型：BIT。
+日期时间类型：DATETIME、TIMESTAMP、DATE、TIME 和 YEAR。
+字符类型：CHAR、VARCHAR、BINARY 和 VARBINARY。
+大对象类型：TINYBLOB、BLOB、MEDIUMBLOB 和 LONGBLOB。
+文本类型：TINYTEXT、TEXT、MEDIUMTEXT 和 LONGTEXT。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-30T14:52:39+08:00">
+    <meta property="article:modified_time" content="2024-04-30T14:52:39+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">深入OceanBase分布式数据库：MySQL 模式下的 SQL 基本操作</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <center> 
+ <font color="#c09008" size="4"><strong> 码到三十五 ：</strong></font> 
+ <a href="https://blog.csdn.net/qq_26664043" size="6"><font color="#555fff" size="4"> 个人主页</font></a> 
+</center> 
+<hr> 
+<p><strong>OceanBase与MySQL模式下兼容性序</strong></p> 
+<p>在当今的大数据时代，数据库技术的选择对于企业的信息化发展至关重要。OceanBase作为一种高性能、高可用的分布式关系数据库，在与MySQL模式的兼容性方面展现出了显著的优势，为企业数据迁移、整合与升级提供了极大的便利。</p> 
+<p>OceanBase与MySQL的兼容性不仅体现在数据类型、SQL语法等基本面，更深入到了存储引擎、优化器等多个层次。这种高度的兼容性使得企业在不改变原有业务逻辑的情况下，能够轻松地将数据和应用从MySQL迁移到OceanBase，从而享受到OceanBase带来的高性能和可扩展性。</p> 
+<p><img src="https://images2.imgbox.com/c4/95/j2RPIXgf_o.jpg" alt="在这里插入图片描述"></p> 
+<p>本文将探讨OceanBase与MySQL模式下的兼容性和OceanBase的MySQL 模式下的 SQL 基本操作。</p> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><ul><li><ul><li><a href="#OceanBase_MySQL__18" rel="nofollow">前言：OceanBase与 MySQL 兼容性对比</a></li><li><ul><li><a href="#_21" rel="nofollow">数据类型兼容性</a></li><li><a href="#SQL_39" rel="nofollow">SQL语法兼容性</a></li><li><a href="#_67" rel="nofollow">存储引擎和分区功能</a></li><li><a href="#_71" rel="nofollow">优化器和执行计划</a></li><li><a href="#_75" rel="nofollow">备份与恢复</a></li></ul> 
+    </li><li><a href="#1__82" rel="nofollow">1. 创建数据库</a></li><li><ul><li><a href="#11__83" rel="nofollow">1.1 语法</a></li><li><a href="#12__214" rel="nofollow">1.2 参数说明</a></li></ul> 
+    </li><li><a href="#2__260" rel="nofollow">2. 表操作</a></li><li><ul><li><a href="#21__263" rel="nofollow">2.1 创建表</a></li><li><a href="#22__278" rel="nofollow">2.2 查看表</a></li><li><a href="#23__309" rel="nofollow">2.3 修改表</a></li><li><a href="#24__378" rel="nofollow">2.4 删除表</a></li></ul> 
+    </li><li><a href="#3__388" rel="nofollow">3. 索引操作</a></li><li><ul><li><a href="#31__391" rel="nofollow">3.1 创建索引</a></li><li><a href="#32__410" rel="nofollow">3.2 查看索引</a></li><li><a href="#33__465" rel="nofollow">3.3 删除索引</a></li></ul> 
+    </li><li><a href="#4__475" rel="nofollow">4. 插入数据</a></li><li><a href="#5__522" rel="nofollow">5. 删除数据</a></li><li><a href="#6__664" rel="nofollow">6. 更新数据</a></li><li><a href="#7__800" rel="nofollow">7. 查询数据</a></li><li><a href="#8__862" rel="nofollow">8. 提交事务</a></li><li><a href="#9__926" rel="nofollow">9. 回滚事务</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h4><a id="OceanBase_MySQL__18"></a>前言：OceanBase与 MySQL 兼容性对比</h4> 
+<p>OceanBase与MySQL模式下的兼容性可以从以下几个方面进行简述：</p> 
+<h5><a id="_21"></a>数据类型兼容性</h5> 
+<p>OceanBase的MySQL模式兼容MySQL 5.7的绝大部分数据类型，包括数值类型（如INT、BIGINT、FLOAT、DOUBLE等）、日期和时间类型（如DATETIME、TIMESTAMP等）、字符串类型（如CHAR、VARCHAR等）以及其他复杂数据类型（如ENUM、SET、JSON等）。此外，OceanBase还支持空间数据类型，这在某些特定应用场景中非常有用。</p> 
+<p><strong>OceanBase 数据库支持的数据类型有：</strong><br> 数值类型<br> 整数类型：BOOL/BOOLEAN/TINYINT、SMALLINT、MEDIUMINT、INT/INTEGER 和 BIGINT。<br> 定点类型：DECIMAL 和 NUMERIC。<br> 浮点类型：FLOAT 和 DOUBLE。<br> Bit-Value 类型：BIT。<br> 日期时间类型：DATETIME、TIMESTAMP、DATE、TIME 和 YEAR。<br> 字符类型：CHAR、VARCHAR、BINARY 和 VARBINARY。<br> 大对象类型：TINYBLOB、BLOB、MEDIUMBLOB 和 LONGBLOB。<br> 文本类型：TINYTEXT、TEXT、MEDIUMTEXT 和 LONGTEXT。<br> 枚举类型：ENUM。<br> 集合类型：SET。<br> JSON 数据类型<br> 空间数据类型</p> 
+<h5><a id="SQL_39"></a>SQL语法兼容性</h5> 
+<p>OceanBase支持MySQL 5.7版本的大部分SQL语法，包括SELECT、INSERT、UPDATE、DELETE等基本操作，以及复杂的SQL查询，如子查询、联接操作、聚合函数等。此外，OceanBase还支持对JSON数据进行查询和操作，提供了丰富的JSON函数。</p> 
+<p><strong>SELECT</strong><br> 支持大部分查询功能，包括支持单、多表查询；支持子查询；支持内联接、半联接以及外联接；支持分组、聚合；支持常见的概率、线性回归等数据挖掘函数等。<br> 支持对多个 SELECT 查询的结果进行 UNION、UNION ALL、MINUS、EXCEPT 或 INTERSECT 等集合操作。</p> 
+<p><strong>支持使用 EXPLAIN 语法查看执行计划。</strong></p> 
+<p><strong>INSERT</strong><br> 支持单行和多行插入数据，同时支持指定分区插入数据。<br> 支持 INSERT INTO … SELECT … 语句。</p> 
+<p><strong>UPDATE</strong><br> 支持单列和多列更新数据。<br> 支持使用子查询更新数据。<br> 支持集合更新数据。</p> 
+<p><strong>DELETE</strong><br> 支持单表和多表删除。</p> 
+<p><strong>TRUNCATE</strong><br> 支持完全清空指定表。</p> 
+<p>然而，需要注意的是，OceanBase在某些方面与MySQL存在不兼容的情况。例如，OceanBase不支持SELECT…FOR SHARE语法，也不支持部分JSON类型和空间数据类型。此外，在函数支持方面，OceanBase也有一些与MySQL不同的地方。</p> 
+<h5><a id="_67"></a>存储引擎和分区功能</h5> 
+<p>OceanBase本质上是一个基线加增量的存储引擎，采用LSM树（Log-Structured Merge Tree）作为存储机制，这与传统的关系数据库存储引擎有所不同。尽管如此，OceanBase仍然提供了与MySQL相似的分区功能，支持分区表和二级分区，可以完全取代MySQL常用的分库分表方案。</p> 
+<h5><a id="_71"></a>优化器和执行计划</h5> 
+<p>OceanBase的优化器在执行查询时会生成与MySQL相似的执行计划。然而，两者在执行计划的表示和细节上可能存在差异。此外，OceanBase还支持使用EXPLAIN语法查看执行计划，这有助于用户理解和优化查询性能。</p> 
+<h5><a id="_75"></a>备份与恢复</h5> 
+<p>与MySQL相比，OceanBase在备份与恢复方面有所不同。例如，OceanBase不支持冷备份、数据库和表级的备份恢复以及备份数据的有效性验证。因此，在使用OceanBase时需要考虑这些差异并采取相应的措施来确保数据的完整性和可用性。</p> 
+<p>总的来说，OceanBase在MySQL模式下与MySQL具有较高的兼容性，但仍然存在一些差异和限制。在使用OceanBase时，建议仔细了解其与MySQL的兼容性和差异，并根据实际需求进行相应的调整和优化。<br> OceanBase 数据库的 MySQL 模式兼容 MySQL 5.7/8.0 的绝大部分功能和语法。</p> 
+<h4><a id="1__82"></a>1. 创建数据库</h4> 
+<h5><a id="11__83"></a>1.1 语法</h5> 
+<pre><code class="prism language-java"><span class="token constant">CREATE</span> <span class="token constant">TABLE</span> <span class="token punctuation">[</span><span class="token constant">IF</span> <span class="token constant">NOT</span> <span class="token constant">EXISTS</span><span class="token punctuation">]</span> table_name
+      <span class="token punctuation">(</span>table_definition_list<span class="token punctuation">)</span> <span class="token punctuation">[</span>table_option_list<span class="token punctuation">]</span> <span class="token punctuation">[</span>partition_option<span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token constant">AS</span><span class="token punctuation">]</span> select<span class="token punctuation">;</span>
+
+<span class="token constant">CREATE</span> <span class="token constant">TABLE</span> <span class="token punctuation">[</span><span class="token constant">IF</span> <span class="token constant">NOT</span> <span class="token constant">EXISTS</span><span class="token punctuation">]</span> table_name
+      <span class="token class-name">LIKE</span> table_name<span class="token punctuation">;</span>
+
+table_definition_list<span class="token operator">:</span>
+    table_definition <span class="token punctuation">[</span><span class="token punctuation">,</span> table_definition <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+table_definition<span class="token operator">:</span>
+      column_definition
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">CONSTRAINT</span> <span class="token punctuation">[</span>constraint_name<span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token constant">PRIMARY</span> <span class="token constant">KEY</span> index_desc
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">CONSTRAINT</span> <span class="token punctuation">[</span>constraint_name<span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token constant">UNIQUE</span> <span class="token punctuation">{<!-- --></span><span class="token constant">INDEX</span> <span class="token operator">|</span> <span class="token constant">KEY</span><span class="token punctuation">}</span> 
+            <span class="token punctuation">[</span>index_name<span class="token punctuation">]</span> index_desc
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">CONSTRAINT</span> <span class="token punctuation">[</span>constraint_name<span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token constant">FOREIGN</span> <span class="token constant">KEY</span> 
+            <span class="token punctuation">[</span>index_name<span class="token punctuation">]</span> index_desc 
+            <span class="token constant">REFERENCES</span> reference_definition 
+            <span class="token punctuation">[</span>match_action<span class="token punctuation">]</span><span class="token punctuation">[</span>opt_reference_option_list<span class="token punctuation">]</span>
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">SPATIAL</span><span class="token punctuation">]</span> <span class="token punctuation">{<!-- --></span><span class="token constant">INDEX</span> <span class="token operator">|</span> <span class="token constant">KEY</span><span class="token punctuation">}</span> <span class="token punctuation">[</span>index_name<span class="token punctuation">]</span> <span class="token punctuation">[</span>index_type<span class="token punctuation">]</span> <span class="token punctuation">(</span>key_part<span class="token punctuation">,</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">)</span>
+      <span class="token punctuation">[</span>index_optionn_list<span class="token punctuation">]</span> 
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">CONSTRAINT</span> <span class="token punctuation">[</span>constraint_name<span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token function">CHECK</span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span> constranit_state
+
+column_definition_list<span class="token operator">:</span>
+    column_definition <span class="token punctuation">[</span><span class="token punctuation">,</span> column_definition <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+column_definition<span class="token operator">:</span>
+     column_name data_type
+         <span class="token punctuation">[</span><span class="token constant">DEFAULT</span> const_value<span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token constant">AUTO_INCREMENT</span><span class="token punctuation">]</span>
+         <span class="token punctuation">[</span><span class="token constant">NULL</span> <span class="token operator">|</span> <span class="token constant">NOT</span> <span class="token constant">NULL</span><span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token constant">PRIMARY</span><span class="token punctuation">]</span> <span class="token constant">KEY</span><span class="token punctuation">]</span> <span class="token punctuation">[</span><span class="token constant">UNIQUE</span> <span class="token punctuation">[</span><span class="token constant">KEY</span><span class="token punctuation">]</span><span class="token punctuation">]</span> comment
+   <span class="token operator">|</span> column_name data_type
+         <span class="token punctuation">[</span><span class="token constant">GENERATED</span> <span class="token constant">ALWAYS</span><span class="token punctuation">]</span> <span class="token constant">AS</span> <span class="token punctuation">(</span>expr<span class="token punctuation">)</span> <span class="token punctuation">[</span><span class="token constant">VIRTUAL</span> <span class="token operator">|</span> <span class="token constant">STORED</span><span class="token punctuation">]</span>
+         <span class="token punctuation">[</span>opt_generated_column_attribute<span class="token punctuation">]</span> 
+
+index_desc<span class="token operator">:</span>
+   <span class="token punctuation">(</span>column_desc_list<span class="token punctuation">)</span> <span class="token punctuation">[</span>index_type<span class="token punctuation">]</span> <span class="token punctuation">[</span>index_option_list<span class="token punctuation">]</span>
+
+match_action<span class="token operator">:</span>
+   <span class="token constant">MATCH</span> <span class="token punctuation">{<!-- --></span><span class="token constant">SIMPLE</span> <span class="token operator">|</span> <span class="token constant">FULL</span> <span class="token operator">|</span> <span class="token constant">PARTIAL</span><span class="token punctuation">}</span>
+
+opt_reference_option_list<span class="token operator">:</span>
+   reference_option <span class="token punctuation">[</span><span class="token punctuation">,</span>reference_option <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+reference_option<span class="token operator">:</span>
+   <span class="token constant">ON</span> <span class="token punctuation">{<!-- --></span><span class="token constant">DELETE</span> <span class="token operator">|</span> <span class="token constant">UPDATE</span><span class="token punctuation">}</span> <span class="token punctuation">{<!-- --></span><span class="token constant">RESTRICT</span> <span class="token operator">|</span> <span class="token constant">CASCADE</span> <span class="token operator">|</span> <span class="token constant">SET</span> <span class="token constant">NULL</span> <span class="token operator">|</span> <span class="token constant">NO</span> <span class="token constant">ACTION</span> <span class="token operator">|</span> <span class="token constant">SET</span> <span class="token constant">DEFAULT</span><span class="token punctuation">}</span>
+
+
+key_part<span class="token operator">:</span> 
+    <span class="token punctuation">{<!-- --></span>index_col_name <span class="token punctuation">[</span><span class="token punctuation">(</span>length<span class="token punctuation">)</span><span class="token punctuation">]</span> <span class="token operator">|</span> <span class="token punctuation">(</span>expr<span class="token punctuation">)</span><span class="token punctuation">}</span> <span class="token punctuation">[</span><span class="token constant">ASC</span> <span class="token operator">|</span> <span class="token constant">DESC</span><span class="token punctuation">]</span>
+
+index_type<span class="token operator">:</span>
+    <span class="token constant">USING</span> <span class="token constant">BTREE</span>
+
+index_option_list<span class="token operator">:</span>
+    index_option <span class="token punctuation">[</span> index_option <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+index_option<span class="token operator">:</span>
+      <span class="token punctuation">[</span><span class="token constant">GLOBAL</span> <span class="token operator">|</span> <span class="token constant">LOCAL</span><span class="token punctuation">]</span>
+    <span class="token operator">|</span> block_size
+    <span class="token operator">|</span> compression
+    <span class="token operator">|</span> <span class="token function">STORING</span><span class="token punctuation">(</span>column_name_list<span class="token punctuation">)</span>
+    <span class="token operator">|</span> comment
+
+table_option_list<span class="token operator">:</span>
+    table_option <span class="token punctuation">[</span> table_option <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+table_option<span class="token operator">:</span>
+      <span class="token punctuation">[</span><span class="token constant">DEFAULT</span><span class="token punctuation">]</span> <span class="token punctuation">{<!-- --></span><span class="token constant">CHARSET</span> <span class="token operator">|</span> <span class="token constant">CHARACTER</span> <span class="token constant">SET</span><span class="token punctuation">}</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> charset_name
+    <span class="token operator">|</span> <span class="token punctuation">[</span><span class="token constant">DEFAULT</span><span class="token punctuation">]</span> <span class="token constant">COLLATE</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> collation_name
+    <span class="token operator">|</span> table_tablegroup
+    <span class="token operator">|</span> block_size
+    <span class="token operator">|</span> compression
+    <span class="token operator">|</span> <span class="token constant">AUTO_INCREMENT</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> <span class="token constant">INT_VALUE</span>
+    <span class="token operator">|</span> comment
+    <span class="token operator">|</span> <span class="token constant">ROW_FORMAT</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> <span class="token constant">REDUNDANT</span><span class="token operator">|</span><span class="token constant">COMPACT</span><span class="token operator">|</span><span class="token constant">DYNAMIC</span><span class="token operator">|</span><span class="token constant">COMPRESSED</span><span class="token operator">|</span><span class="token constant">DEFAULT</span>
+    <span class="token operator">|</span> <span class="token constant">PCTFREE</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> num
+    <span class="token operator">|</span> parallel_clause
+    <span class="token operator">|</span> <span class="token constant">DUPLICATE_SCOPE</span> <span class="token punctuation">[</span><span class="token operator">=</span><span class="token punctuation">]</span> 'none<span class="token operator">|</span>cluster'
+
+parallel_clause<span class="token operator">:</span>
+    <span class="token punctuation">{<!-- --></span><span class="token constant">NOPARALLEL</span> <span class="token operator">|</span> <span class="token constant">PARALLEL</span> integer<span class="token punctuation">}</span>
+
+partition_option<span class="token operator">:</span>
+      <span class="token constant">PARTITION</span> <span class="token class-name">BY</span> <span class="token function">HASH</span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span>
+      <span class="token punctuation">[</span>subpartition_option<span class="token punctuation">]</span> <span class="token constant">PARTITIONS</span> partition_count
+    <span class="token operator">|</span> <span class="token constant">PARTITION</span> <span class="token class-name">BY</span> <span class="token function">KEY</span><span class="token punctuation">(</span><span class="token punctuation">[</span>column_name_list<span class="token punctuation">]</span><span class="token punctuation">)</span>
+      <span class="token punctuation">[</span>subpartition_option<span class="token punctuation">]</span> <span class="token constant">PARTITIONS</span> partition_count
+    <span class="token operator">|</span> <span class="token constant">PARTITION</span> <span class="token constant">BY</span> <span class="token constant">RANGE</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token constant">COLUMNS</span> <span class="token punctuation">(</span>column_name_list<span class="token punctuation">)</span><span class="token punctuation">}</span>
+      <span class="token punctuation">[</span>subpartition_option<span class="token punctuation">]</span> <span class="token punctuation">(</span>range_partition_list<span class="token punctuation">)</span>
+    <span class="token operator">|</span> <span class="token constant">PARTITION</span> <span class="token constant">BY</span> <span class="token constant">LIST</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token constant">COLUMNS</span> <span class="token punctuation">(</span>column_name_list<span class="token punctuation">)</span><span class="token punctuation">}</span>
+      <span class="token punctuation">[</span>subpartition_option<span class="token punctuation">]</span> <span class="token constant">PARTITIONS</span> partition_count
+
+subpartition_option<span class="token operator">:</span>
+      <span class="token constant">SUBPARTITION</span> <span class="token class-name">BY</span> <span class="token function">HASH</span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span>
+      <span class="token constant">SUBPARTITIONS</span> subpartition_count
+    <span class="token operator">|</span> <span class="token constant">SUBPARTITION</span> <span class="token class-name">BY</span> <span class="token function">KEY</span><span class="token punctuation">(</span>column_name_list<span class="token punctuation">)</span>
+      <span class="token constant">SUBPARTITIONS</span> subpartition_count
+    <span class="token operator">|</span> <span class="token constant">SUBPARTITION</span> <span class="token constant">BY</span> <span class="token constant">RANGE</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token constant">COLUMNS</span> <span class="token punctuation">(</span>column_name_list<span class="token punctuation">)</span><span class="token punctuation">}</span>
+      <span class="token punctuation">(</span>range_subpartition_list<span class="token punctuation">)</span>
+    <span class="token operator">|</span> <span class="token constant">SUBPARTITION</span> <span class="token class-name">BY</span> <span class="token function">LIST</span><span class="token punctuation">(</span>expression<span class="token punctuation">)</span>
+
+range_partition_list<span class="token operator">:</span>
+    range_partition <span class="token punctuation">[</span><span class="token punctuation">,</span> range_partition <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+range_partition<span class="token operator">:</span>
+    <span class="token constant">PARTITION</span> partition_name
+    <span class="token constant">VALUES</span> <span class="token constant">LESS</span> <span class="token constant">THAN</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">(</span>expression_list<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token constant">MAXVALUE</span><span class="token punctuation">}</span>
+
+range_subpartition_list<span class="token operator">:</span>
+    range_subpartition <span class="token punctuation">[</span><span class="token punctuation">,</span> range_subpartition <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+range_subpartition<span class="token operator">:</span>
+    <span class="token constant">SUBPARTITION</span> subpartition_name
+    <span class="token constant">VALUES</span> <span class="token constant">LESS</span> <span class="token constant">THAN</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">(</span>expression_list<span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token constant">MAXVALUE</span><span class="token punctuation">}</span>
+
+expression_list<span class="token operator">:</span>
+    expression <span class="token punctuation">[</span><span class="token punctuation">,</span> expression <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+column_name_list<span class="token operator">:</span>
+    column_name <span class="token punctuation">[</span><span class="token punctuation">,</span> column_name <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+partition_name_list<span class="token operator">:</span>
+    partition_name <span class="token punctuation">[</span><span class="token punctuation">,</span> partition_name <span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">.</span><span class="token punctuation">]</span>
+
+partition_count <span class="token operator">|</span> subpartition_count<span class="token operator">:</span>
+    <span class="token constant">INT_VALUE</span>
+</code></pre> 
+<h5><a id="12__214"></a>1.2 参数说明</h5> 
+<table><thead><tr><th>参数</th><th>描述</th></tr></thead><tbody><tr><td>PRIMARY KEY</td><td>为创建的表指定主键。如果不指定，则使用隐藏主键。 特别地，OceanBase 数据库不支持修改表的主键或通过 ALTER TABLE 语句为表添加主键，因此推荐您在创建表时指定好表的主键。</td></tr><tr><td>FOREIGN KEY</td><td>为创建的表指定外键。如果不指定外键名，则会使用表名 + OBFK + 创建时间命名。（例如，在 2021 年 8 月 1 日 00:00:00 为 t1 表创建的外键名称为 t1_OBFK_1627747200000000）。</td></tr><tr><td>KEY , INDEX</td><td>为创建的表指定键或索引。 如果不指定索引名，则会使用索引引用的第一列作为索引名，如果命名存在重复，则会使用下划线（_）+ 序号的方式命名。（例如，使用 c1 列创建的索引如果命名重复，则会将索引命名为 c1_2。） 您可以通过 SHOW INDEX</td></tr><tr><td>key_part</td><td>定义所创建的索引。</td></tr><tr><td>index_col_name</td><td>指定索引的列名，每个列名后都支持 ASC（升序），不支持 DESC（降序）。默认为升序。 建立索引的排序方式为：首先以 index_col_name 中第一个列的值排序；该列值相同的记录，按下一列名的值排序；以此类推。</td></tr><tr><td>expr</td><td>表示合法的函数索引表达式，且允许是布尔表达式，例如 c1=c1。OceanBase 数据库当前版本禁止创建生成列上的函数索引。</td></tr><tr><td>ROW_FORMAT</td><td>指定表是否开启 Encoding 存储格式。redundant：不开启 Encoding 存储格式。compact：不开启 Encoding 存储格式。dynamic：Encoding 存储格式。compressed：Encoding 存储格式。default：等价 dynamic 模式。</td></tr><tr><td>[GENERATED ALWAYS] AS (expr) [VIRTUAL . STORED]</td><td>创建生成列，expr 为用于计算列值的表达式。VIRTUAL：列值不会被存储，而是在读取行时，在任何 BEFORE 触发器之后立即计算 。虚拟列不占用存储空间。STORED：在插入或更新行时评估和存储列值。存储列确实需要存储空间并且可以被索引。</td></tr><tr><td>BLOCK_SIZE</td><td>指定表的微块大小。</td></tr><tr><td>COMPRESSION</td><td>指定表的压缩算法，取值如下：none：不使用压缩算法。lz4_1.0: 使用 lz4 压缩算法。zstd_1.0: 使用 zstd 压缩算法。snappy_1.0: 使用 snappy 压缩算法。</td></tr><tr><td>CHARSET , CHARACTER SET</td><td>指定表中列的默认字符集，可使用的字符集请参见 字符集。</td></tr><tr><td>COLLATE</td><td>指定表中列的默认字符序，可使用的字符序请参见 字符序。</td></tr><tr><td>table_tablegroup</td><td>指定表所属的 tablegroup。</td></tr><tr><td>AUTO_INCREMENT</td><td>指定表中自增列的初始值。OceanBase 数据库支持使用自增列作为分区键。</td></tr><tr><td>comment</td><td>注释。</td></tr><tr><td>PCTFREE</td><td>指定宏块保留空间百分比。</td></tr><tr><td>parallel_clause</td><td>指定表级别的并行度：NOPARALLEL：并行度为 1，默认配置PARALLEL integer：指定并行度，integer 取值大于等于 1。DUPLICATE_SCOPE 指定复制表的属性，取值如下：</td></tr></tbody></table> 
+<p><strong>使用 CREATE DATABASE 语句创建数据库。</strong></p> 
+<p>示例：创建数据库 db1，指定字符集为 utf8mb4，并创建读写属性。</p> 
+<pre><code class="prism language-java">obclient<span class="token operator">&gt;</span> <span class="token constant">CREATE</span> <span class="token constant">DATABASE</span> db1 <span class="token constant">DEFAULT</span> <span class="token constant">CHARACTER</span> <span class="token constant">SET</span> utf8mb4 <span class="token class-name">READ</span> <span class="token constant">WRITE</span><span class="token punctuation">;</span>
+<span class="token class-name">Query</span> <span class="token constant">OK</span><span class="token punctuation">,</span> <span class="token number">1</span> row affected
+</code></pre> 
+<p>创建完成后，可以通过 SHOW DATABASES 命令查看当前数据库服务器中所有的数据库。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SHOW</span> <span class="token keyword">DATABASES</span><span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">--------------------+</span>
+<span class="token operator">|</span> <span class="token keyword">Database</span>           <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">--------------------+</span>
+<span class="token operator">|</span> oceanbase          <span class="token operator">|</span>
+<span class="token operator">|</span> db1                <span class="token operator">|</span>
+<span class="token operator">|</span> test               <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">--------------------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h4><a id="2__260"></a>2. 表操作</h4> 
+<p>在 OceanBase 数据库中，表是最基础的数据存储单元，包含了所有用户可以访问的数据，每个表包含多行记录，每个记录由多个列组成。本节主要提供数据库中表的创建、查看、修改和删除的语法和示例。</p> 
+<h5><a id="21__263"></a>2.1 创建表</h5> 
+<p>使用 CREATE TABLE 语句在数据库中创建新表。</p> 
+<p>示例：在数据库 db1 中创建表 test。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">USE</span> db1<span class="token punctuation">;</span>
+<span class="token keyword">Database</span> changed
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> test <span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+</code></pre> 
+<p>更多 CREATE TABLE 语句相关的语法说明，请参见 CREATE TABLE 章节。</p> 
+<h5><a id="22__278"></a>2.2 查看表</h5> 
+<p>使用 SHOW CREATE TABLE 语句查看建表语句。</p> 
+<p>示例：</p> 
+<p>查看表 test 的建表语句。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SHOW</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> test\G
+<span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token number">1.</span> <span class="token keyword">row</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span>
+      <span class="token keyword">Table</span>: test
+<span class="token keyword">Create</span> <span class="token keyword">Table</span>: <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> <span class="token identifier"><span class="token punctuation">`</span>test<span class="token punctuation">`</span></span> <span class="token punctuation">(</span>
+  <span class="token identifier"><span class="token punctuation">`</span>c1<span class="token punctuation">`</span></span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token identifier"><span class="token punctuation">`</span>c2<span class="token punctuation">`</span></span> <span class="token keyword">varchar</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span>
+  <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span> <span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>c1<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CHARSET</span> <span class="token operator">=</span> utf8mb4 ROW_FORMAT <span class="token operator">=</span> DYNAMIC COMPRESSION <span class="token operator">=</span> <span class="token string">'zstd_1.3.8'</span> REPLICA_NUM <span class="token operator">=</span> <span class="token number">1</span> BLOCK_SIZE <span class="token operator">=</span> <span class="token number">16384</span> USE_BLOOM_FILTER <span class="token operator">=</span> <span class="token boolean">FALSE</span> TABLET_SIZE <span class="token operator">=</span> <span class="token number">134217728</span> PCTFREE <span class="token operator">=</span> <span class="token number">0</span>
+<span class="token number">1</span> <span class="token keyword">row</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>使用 SHOW TABLES 语句查看 db1 数据库中的所有表。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SHOW</span> <span class="token keyword">TABLES</span> <span class="token keyword">FROM</span> db1<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">---------------+</span>
+<span class="token operator">|</span> Tables_in_db1 <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">---------------+</span>
+<span class="token operator">|</span> test          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">---------------+</span>
+<span class="token number">1</span> <span class="token keyword">row</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h5><a id="23__309"></a>2.3 修改表</h5> 
+<p>使用 ALTER TABLE 语句来修改已存在的表的结构，包括修改表及表属性、新增列、修改列及属性、删除列等。</p> 
+<p>示例：</p> 
+<p>将表 test 的字段 c2 改名为 c3，并同时修改其字段类型。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+------------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>       <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+------------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>    <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c2    <span class="token operator">|</span> <span class="token keyword">varchar</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+------------+------+-----+---------+-------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> test CHANGE <span class="token keyword">COLUMN</span> c2 c3 <span class="token keyword">CHAR</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>     <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>  <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c3    <span class="token operator">|</span> <span class="token keyword">char</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p><strong>在表 test 中增加、删除列。</strong></p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>     <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>  <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c3    <span class="token operator">|</span> <span class="token keyword">char</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> test <span class="token keyword">ADD</span> c4 <span class="token keyword">int</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>     <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>  <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c3    <span class="token operator">|</span> <span class="token keyword">char</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c4    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>  <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">ALTER</span> <span class="token keyword">TABLE</span> test <span class="token keyword">DROP</span> c3<span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+---------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>    <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+---------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c4    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span> <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+---------+------+-----+---------+-------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h5><a id="24__378"></a>2.4 删除表</h5> 
+<p>使用 DROP TABLE 语句删除表。</p> 
+<p>示例：删除表 test。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DROP</span> <span class="token keyword">TABLE</span> test<span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+</code></pre> 
+<h4><a id="3__388"></a>3. 索引操作</h4> 
+<p>索引是创建在表上并对数据库表中一列或多列的值进行排序的一种结构。其作用主要在于提高查询的速度，降低数据库系统的性能开销。本节主要介绍数据库中索引的创建、查看、删除的语法和示例。</p> 
+<h5><a id="31__391"></a>3.1 创建索引</h5> 
+<p>使用 CREATE INDEX 语句创建表的索引。</p> 
+<p>示例：在表 test 中创建索引。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DESCRIBE</span> test<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> Field <span class="token operator">|</span> <span class="token keyword">Type</span>     <span class="token operator">|</span> <span class="token boolean">Null</span> <span class="token operator">|</span> <span class="token keyword">Key</span> <span class="token operator">|</span> <span class="token keyword">Default</span> <span class="token operator">|</span> Extra <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token operator">|</span> c1    <span class="token operator">|</span> <span class="token keyword">int</span><span class="token punctuation">(</span><span class="token number">11</span><span class="token punctuation">)</span>  <span class="token operator">|</span> <span class="token keyword">NO</span>   <span class="token operator">|</span> PRI <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">|</span> c2    <span class="token operator">|</span> <span class="token keyword">char</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span>  <span class="token operator">|</span> YES  <span class="token operator">|</span>     <span class="token operator">|</span> <span class="token boolean">NULL</span>    <span class="token operator">|</span>       <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">-------+----------+------+-----+---------+-------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">INDEX</span> test_index <span class="token keyword">ON</span> test <span class="token punctuation">(</span>c1<span class="token punctuation">,</span> c2<span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+</code></pre> 
+<h5><a id="32__410"></a>3.2 查看索引</h5> 
+<p>使用 SHOW INDEX 语句查看表的索引。</p> 
+<p>示例：查看表 test 中的索引信息。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SHOW</span> <span class="token keyword">INDEX</span> <span class="token keyword">FROM</span> test\G
+<span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token number">1.</span> <span class="token keyword">row</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span>
+        <span class="token keyword">Table</span>: test
+   Non_unique: <span class="token number">0</span>
+     Key_name: <span class="token keyword">PRIMARY</span>
+ Seq_in_index: <span class="token number">1</span>
+  Column_name: c1
+    Collation: A
+  Cardinality: <span class="token boolean">NULL</span>
+     Sub_part: <span class="token boolean">NULL</span>
+       Packed: <span class="token boolean">NULL</span>
+         <span class="token boolean">Null</span>:
+   Index_type: <span class="token keyword">BTREE</span>
+      <span class="token keyword">Comment</span>: available
+Index_comment:
+      Visible: YES
+<span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token number">2.</span> <span class="token keyword">row</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span>
+        <span class="token keyword">Table</span>: test
+   Non_unique: <span class="token number">1</span>
+     Key_name: test_index
+ Seq_in_index: <span class="token number">1</span>
+  Column_name: c1
+    Collation: A
+  Cardinality: <span class="token boolean">NULL</span>
+     Sub_part: <span class="token boolean">NULL</span>
+       Packed: <span class="token boolean">NULL</span>
+         <span class="token boolean">Null</span>:
+   Index_type: <span class="token keyword">BTREE</span>
+      <span class="token keyword">Comment</span>: available
+Index_comment:
+      Visible: YES
+<span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token number">3.</span> <span class="token keyword">row</span> <span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span>
+        <span class="token keyword">Table</span>: test
+   Non_unique: <span class="token number">1</span>
+     Key_name: test_index
+ Seq_in_index: <span class="token number">2</span>
+  Column_name: c2
+    Collation: A
+  Cardinality: <span class="token boolean">NULL</span>
+     Sub_part: <span class="token boolean">NULL</span>
+       Packed: <span class="token boolean">NULL</span>
+         <span class="token boolean">Null</span>: YES
+   Index_type: <span class="token keyword">BTREE</span>
+      <span class="token keyword">Comment</span>: available
+Index_comment:
+      Visible: YES
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h5><a id="33__465"></a>3.3 删除索引</h5> 
+<p>使用 DROP INDEX 语句删除表的索引。</p> 
+<p>示例：删除表 test 中的索引。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DROP</span> <span class="token keyword">INDEX</span> test_index <span class="token keyword">ON</span> test<span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+</code></pre> 
+<h4><a id="4__475"></a>4. 插入数据</h4> 
+<p>使用 INSERT 语句在已经存在的表中插入数据。</p> 
+<p>示例：</p> 
+<p>创建表 t1 并插入一行数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t1<span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">int</span><span class="token punctuation">)</span> <span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> <span class="token keyword">KEY</span><span class="token punctuation">(</span>c1<span class="token punctuation">)</span> PARTITIONS <span class="token number">4</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t1<span class="token punctuation">;</span>
+Empty <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> t1 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t1<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">1</span> <span class="token keyword">row</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>向表 t1 中插入多行数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> t1 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token keyword">default</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token operator">+</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token operator">*</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">3</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t1<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span>    <span class="token number">2</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> <span class="token boolean">NULL</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">4</span> <span class="token operator">|</span>   <span class="token number">12</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>更多 INSERT 语句相关的语法，请参见 INSERT 章节。</p> 
+<h4><a id="5__522"></a>5. 删除数据</h4> 
+<p>使用 DELETE 语句删除数据，支持单表删除和多表删除数据。</p> 
+<p>示例：</p> 
+<p>通过 CREATE TABLE 创建表 t2 和 t3。删除 c1=2 的行，其中 c1 列为表 t2 中的 PRIMARY KEY。</p> 
+<p>/<em>表 <code>t3</code> 为 <code>KEY</code> 分区表，且分区名由系统根据分区命令规则自动生成，即分区名为 <code>p0</code>、<code>p1</code>、<code>p2</code>、<code>p3</code></em>/</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t2<span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">INT</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> t2 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">4</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">4</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t2<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span>    <span class="token number">2</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t3<span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">INT</span><span class="token punctuation">)</span> <span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> <span class="token keyword">KEY</span><span class="token punctuation">(</span>c1<span class="token punctuation">)</span> PARTITIONS <span class="token number">4</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t3 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span><span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">4</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">4</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t3<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span>    <span class="token number">2</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> t2 <span class="token keyword">WHERE</span> c1 <span class="token operator">=</span> <span class="token number">2</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t2<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>删除表 t2 中按照 c2 列排序之后的第一行数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> t2 <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> c2 <span class="token keyword">LIMIT</span> <span class="token number">1</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t2<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>删除表 t3 的 p2 分区的数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t3 <span class="token keyword">PARTITION</span><span class="token punctuation">(</span>p2<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span>    <span class="token number">2</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DELETE</span> <span class="token keyword">FROM</span> t3 <span class="token keyword">PARTITION</span><span class="token punctuation">(</span>p2<span class="token punctuation">)</span><span class="token punctuation">;</span> 
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t3<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span> 
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">1</span> <span class="token keyword">row</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>删除 t2、t3 表中 t2.c1 = t3.c1 的数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t2<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t3<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span> 
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span>    <span class="token number">5</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">DELETE</span> t2<span class="token punctuation">,</span> t3 <span class="token keyword">FROM</span> t2<span class="token punctuation">,</span> t3 <span class="token keyword">WHERE</span> t2<span class="token punctuation">.</span>c1 <span class="token operator">=</span> t3<span class="token punctuation">.</span>c1<span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+
+
+<span class="token comment">/*等价于
+obclient&gt; DELETE FROM t2, t3 USING t2, t3 WHERE t2.c1 = t3.c1;
+*/</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t2<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">1</span> <span class="token keyword">row</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t3<span class="token punctuation">;</span>
+Empty <span class="token keyword">set</span>
+
+</code></pre> 
+<h4><a id="6__664"></a>6. 更新数据</h4> 
+<p>使用 UPDATE 语句修改表中的字段值。</p> 
+<p>示例：</p> 
+<p>通过 CREATE TABLE 创建表 t4 和 t5，将表 t4 中 t4.c1=10 对应的那一行数据的 c2 列值修改为 100。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t4<span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">INT</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> t4 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">,</span><span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">,</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">40</span><span class="token punctuation">,</span><span class="token number">40</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">4</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">4</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t4<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>   <span class="token number">10</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>   <span class="token number">20</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>   <span class="token number">30</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">40</span> <span class="token operator">|</span>   <span class="token number">40</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t5<span class="token punctuation">(</span>c1 <span class="token keyword">INT</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span> c2 <span class="token keyword">INT</span><span class="token punctuation">)</span> <span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> <span class="token keyword">KEY</span><span class="token punctuation">(</span>c1<span class="token punctuation">)</span> PARTITIONS <span class="token number">4</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> t5 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">50</span><span class="token punctuation">,</span><span class="token number">50</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">,</span><span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">,</span><span class="token number">20</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">,</span><span class="token number">30</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">4</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">4</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t5<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>   <span class="token number">20</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>   <span class="token number">10</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">50</span> <span class="token operator">|</span>   <span class="token number">50</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>   <span class="token number">30</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">UPDATE</span> t4 <span class="token keyword">SET</span> t4<span class="token punctuation">.</span>c2 <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">WHERE</span> t4<span class="token punctuation">.</span>c1 <span class="token operator">=</span> <span class="token number">10</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+<span class="token keyword">Rows</span> <span class="token keyword">matched</span>: <span class="token number">1</span>  Changed: <span class="token number">1</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t4<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>   <span class="token number">20</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>   <span class="token number">30</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">40</span> <span class="token operator">|</span>   <span class="token number">40</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>将表 t4 中按照 c2 列排序的前两行数据的 c2 列值修改为 100。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">UPDATE</span> t4 <span class="token keyword">set</span> t4<span class="token punctuation">.</span>c2 <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">ORDER</span> <span class="token keyword">BY</span> c2 <span class="token keyword">LIMIT</span> <span class="token number">2</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">2</span> <span class="token keyword">rows</span> affected
+<span class="token keyword">Rows</span> <span class="token keyword">matched</span>: <span class="token number">2</span>  Changed: <span class="token number">2</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t4<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">40</span> <span class="token operator">|</span>   <span class="token number">40</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>将表 t5 中 p1 分区的数据中 t5.c1 &gt; 20 的对应行数据的 c2 列值修改为 100。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t5 <span class="token keyword">PARTITION</span> <span class="token punctuation">(</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>   <span class="token number">10</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">50</span> <span class="token operator">|</span>   <span class="token number">50</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">UPDATE</span> t5 <span class="token keyword">PARTITION</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span> <span class="token keyword">SET</span> t5<span class="token punctuation">.</span>c2 <span class="token operator">=</span> <span class="token number">100</span> <span class="token keyword">WHERE</span> t5<span class="token punctuation">.</span>c1 <span class="token operator">&gt;</span> <span class="token number">20</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+<span class="token keyword">Rows</span> <span class="token keyword">matched</span>: <span class="token number">1</span>  Changed: <span class="token number">1</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t5 <span class="token keyword">PARTITION</span><span class="token punctuation">(</span>p1<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>   <span class="token number">10</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">50</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>对于表 t4 和表 t5 中满足 t4.c2 = t5.c2 对应行的数据，将表 t4 中的 c2 列值修改为 100，表 t5 中的 c2 列值修改为 200。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">UPDATE</span> t4<span class="token punctuation">,</span>t5 <span class="token keyword">SET</span> t4<span class="token punctuation">.</span>c2 <span class="token operator">=</span> <span class="token number">100</span><span class="token punctuation">,</span> t5<span class="token punctuation">.</span>c2 <span class="token operator">=</span> <span class="token number">200</span> <span class="token keyword">WHERE</span> t4<span class="token punctuation">.</span>c2 <span class="token operator">=</span> t5<span class="token punctuation">.</span>c2<span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected 
+<span class="token keyword">Rows</span> <span class="token keyword">matched</span>: <span class="token number">4</span>  Changed: <span class="token number">1</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t4<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">40</span> <span class="token operator">|</span>   <span class="token number">40</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t5<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> c1 <span class="token operator">|</span> c2   <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token operator">|</span> <span class="token number">20</span> <span class="token operator">|</span>   <span class="token number">20</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">10</span> <span class="token operator">|</span>   <span class="token number">10</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">50</span> <span class="token operator">|</span>  <span class="token number">200</span> <span class="token operator">|</span>
+<span class="token operator">|</span> <span class="token number">30</span> <span class="token operator">|</span>   <span class="token number">30</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h4><a id="7__800"></a>7. 查询数据</h4> 
+<p>使用 SELECT 语句查询表中的内容。</p> 
+<p>示例：</p> 
+<p>通过 CREATE TABLE 创建表 t6。从表 t6 中读取 name 的数据。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t6 <span class="token punctuation">(</span>id <span class="token keyword">INT</span><span class="token punctuation">,</span> name <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">50</span><span class="token punctuation">)</span><span class="token punctuation">,</span> num <span class="token keyword">INT</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t6 <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token number">100</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token number">200</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token number">50</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">3</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t6<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token operator">|</span> ID   <span class="token operator">|</span> NAME <span class="token operator">|</span> NUM  <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span> a    <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token number">2</span> <span class="token operator">|</span> b    <span class="token operator">|</span>  <span class="token number">200</span> <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span> a    <span class="token operator">|</span>   <span class="token number">50</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> name <span class="token keyword">FROM</span> t6<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token operator">|</span> NAME <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token operator">|</span> a    <span class="token operator">|</span>
+<span class="token operator">|</span> b    <span class="token operator">|</span>
+<span class="token operator">|</span> a    <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>在查询结果中对 name 进行去重处理。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token keyword">DISTINCT</span> name <span class="token keyword">FROM</span> t6<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token operator">|</span> NAME <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token operator">|</span> a    <span class="token operator">|</span>
+<span class="token operator">|</span> b    <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<p>从表 t6 中根据筛选条件 name = ‘a’ ，输出对应的 id 、name 和 num。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> num <span class="token keyword">FROM</span> t6 <span class="token keyword">WHERE</span> name <span class="token operator">=</span> <span class="token string">'a'</span><span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token operator">|</span> ID   <span class="token operator">|</span> NAME <span class="token operator">|</span> NUM  <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token operator">|</span>    <span class="token number">1</span> <span class="token operator">|</span> a    <span class="token operator">|</span>  <span class="token number">100</span> <span class="token operator">|</span>
+<span class="token operator">|</span>    <span class="token number">3</span> <span class="token operator">|</span> a    <span class="token operator">|</span>   <span class="token number">50</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">------+------+------+</span>
+<span class="token number">2</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h4><a id="8__862"></a>8. 提交事务</h4> 
+<p>使用 COMMIT 语句提交事务。</p> 
+<p><strong>在提交事务（COMMIT）之前：</strong></p> 
+<ul><li>您的修改只对当前会话可见，对其他数据库会话均不可见。</li><li>您的修改没有持久化，您可以通过 ROLLBACK 语句撤销修改。</li></ul> 
+<p><strong>在提交事务（COMMIT）之后：</strong></p> 
+<ul><li>您的修改对所有数据库会话可见。</li><li>您的修改持久化成功，不能通过 ROLLBACK 语句回滚修改。</li></ul> 
+<p>示例：通过 CREATE TABLE 创建表 t_insert。使用 COMMIT 语句提交事务。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">BEGIN</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> t_insert<span class="token punctuation">(</span>
+    id number <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">PRIMARY</span> <span class="token keyword">KEY</span><span class="token punctuation">,</span>
+    name <span class="token keyword">varchar</span><span class="token punctuation">(</span><span class="token number">10</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span><span class="token punctuation">,</span> 
+    <span class="token keyword">value</span> number<span class="token punctuation">,</span>
+    gmt_create <span class="token keyword">DATETIME</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">DEFAULT</span> <span class="token keyword">CURRENT_TIMESTAMP</span>
+ <span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_insert<span class="token punctuation">(</span>id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> <span class="token keyword">value</span><span class="token punctuation">,</span> gmt_create<span class="token punctuation">)</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token string">'CN'</span><span class="token punctuation">,</span><span class="token number">10001</span><span class="token punctuation">,</span> <span class="token keyword">current_timestamp</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">'US'</span><span class="token punctuation">,</span><span class="token number">10002</span><span class="token punctuation">,</span> <span class="token keyword">current_timestamp</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span><span class="token string">'EN'</span><span class="token punctuation">,</span><span class="token number">10003</span><span class="token punctuation">,</span> <span class="token keyword">current_timestamp</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">3</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_insert<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span> id <span class="token operator">|</span> name <span class="token operator">|</span> <span class="token keyword">value</span> <span class="token operator">|</span> gmt_create          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span> CN   <span class="token operator">|</span> <span class="token number">10001</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span> US   <span class="token operator">|</span> <span class="token number">10002</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> EN   <span class="token operator">|</span> <span class="token number">10003</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_insert<span class="token punctuation">(</span>id<span class="token punctuation">,</span>name<span class="token punctuation">)</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token string">'JP'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">1</span> <span class="token keyword">row</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">COMMIT</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">exit</span><span class="token punctuation">;</span>
+Bye
+
+obclient<span class="token operator">&gt;</span> obclient <span class="token operator">-</span>h127<span class="token punctuation">.</span><span class="token number">0.0</span><span class="token number">.1</span> <span class="token operator">-</span>ur<span class="token operator">*</span><span class="token operator">*</span>t<span class="token variable">@mysql</span> <span class="token operator">-</span>P2881 <span class="token operator">-</span>p<span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span><span class="token operator">*</span> <span class="token operator">-</span>Ddb1
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_insert<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span> id <span class="token operator">|</span> name <span class="token operator">|</span> <span class="token keyword">value</span> <span class="token operator">|</span> gmt_create          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span> CN   <span class="token operator">|</span> <span class="token number">10001</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span> US   <span class="token operator">|</span> <span class="token number">10002</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> EN   <span class="token operator">|</span> <span class="token number">10003</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">4</span> <span class="token operator">|</span> JP   <span class="token operator">|</span>  <span class="token boolean">NULL</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">21</span>:<span class="token number">39</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token number">4</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<h4><a id="9__926"></a>9. 回滚事务</h4> 
+<p>使用 ROLLBACK 语句回滚事务。</p> 
+<p>回滚一个事务指将事务的修改全部撤销。可以回滚当前整个未提交的事务，也可以回滚到事务中任意一个保存点。如果要回滚到某个保存点，必须结合使用 ROLLBACK 和 TO SAVEPOINT 语句。 其中：</p> 
+<p><strong>如果回滚整个事务</strong>，则：</p> 
+<ul><li> <p>事务会结束</p> </li><li> <p>所有的修改会被丢弃</p> </li><li> <p>清除所有保存点</p> </li><li> <p>释放事务持有的所有锁<br> <strong>如果回滚到某个保存点</strong>，则：</p> </li><li> <p>事务不会结束</p> </li><li> <p>保存点之前的修改被保留，保存点之后的修改被丢弃</p> </li><li> <p>清除保存点之后的保存点（不包括保存点自身）</p> </li><li> <p>释放保存点之后事务持有的所有锁</p> </li></ul> 
+<p>示例：回滚事务的全部修改。</p> 
+<pre><code class="prism language-sql">obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_insert<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span> id <span class="token operator">|</span> name <span class="token operator">|</span> <span class="token keyword">value</span> <span class="token operator">|</span> gmt_create          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span> CN   <span class="token operator">|</span> <span class="token number">10001</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span> US   <span class="token operator">|</span> <span class="token number">10002</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> EN   <span class="token operator">|</span> <span class="token number">10003</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">BEGIN</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> t_insert<span class="token punctuation">(</span>id<span class="token punctuation">,</span> name<span class="token punctuation">,</span> <span class="token keyword">value</span><span class="token punctuation">)</span> <span class="token keyword">VALUES</span><span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">,</span><span class="token string">'JP'</span><span class="token punctuation">,</span><span class="token number">10004</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">5</span><span class="token punctuation">,</span><span class="token string">'FR'</span><span class="token punctuation">,</span><span class="token number">10005</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token number">6</span><span class="token punctuation">,</span><span class="token string">'RU'</span><span class="token punctuation">,</span><span class="token number">10006</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">3</span> <span class="token keyword">rows</span> affected
+Records: <span class="token number">3</span>  Duplicates: <span class="token number">0</span>  <span class="token keyword">Warnings</span>: <span class="token number">0</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> t_insert<span class="token punctuation">;</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span> id <span class="token operator">|</span> name <span class="token operator">|</span> <span class="token keyword">value</span> <span class="token operator">|</span> gmt_create          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span> CN   <span class="token operator">|</span> <span class="token number">10001</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span> US   <span class="token operator">|</span> <span class="token number">10002</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> EN   <span class="token operator">|</span> <span class="token number">10003</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">4</span> <span class="token operator">|</span> JP   <span class="token operator">|</span> <span class="token number">10004</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">26</span>:<span class="token number">23</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">5</span> <span class="token operator">|</span> FR   <span class="token operator">|</span> <span class="token number">10005</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">26</span>:<span class="token number">23</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">6</span> <span class="token operator">|</span> RU   <span class="token operator">|</span> <span class="token number">10006</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">26</span>:<span class="token number">23</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token number">6</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+
+obclient<span class="token operator">&gt;</span> <span class="token keyword">ROLLBACK</span><span class="token punctuation">;</span>
+Query OK<span class="token punctuation">,</span> <span class="token number">0</span> <span class="token keyword">rows</span> affected
+
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span> id <span class="token operator">|</span> name <span class="token operator">|</span> <span class="token keyword">value</span> <span class="token operator">|</span> gmt_create          <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token operator">|</span>  <span class="token number">1</span> <span class="token operator">|</span> CN   <span class="token operator">|</span> <span class="token number">10001</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">2</span> <span class="token operator">|</span> US   <span class="token operator">|</span> <span class="token number">10002</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">|</span>  <span class="token number">3</span> <span class="token operator">|</span> EN   <span class="token operator">|</span> <span class="token number">10003</span> <span class="token operator">|</span> <span class="token number">2022</span><span class="token operator">-</span><span class="token number">08</span><span class="token operator">-</span><span class="token number">22</span> <span class="token number">16</span>:<span class="token number">19</span>:<span class="token number">26</span> <span class="token operator">|</span>
+<span class="token operator">+</span><span class="token comment">----+------+-------+---------------------+</span>
+<span class="token number">3</span> <span class="token keyword">rows</span> <span class="token operator">in</span> <span class="token keyword">set</span>
+</code></pre> 
+<hr> 
+<center> 
+ <font color="#c65a6c" size="4"> 听说...关注下面公众号的人都变牛了，纯技术，纯干货 ! </font> 
+</center> 
+<p><img src="https://images2.imgbox.com/1f/48/L3uzopxn_o.gif" alt=""></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/67e70a86f8d5dafdf9beb807094199e8/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Python实战演练之python实现神经网络模型算法</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/025b8eddf10cf3a88076a575f3f03544/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">java.lang.IllegalArgumentException异常的正确解决方法</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

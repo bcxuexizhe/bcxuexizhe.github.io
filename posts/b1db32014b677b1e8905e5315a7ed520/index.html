@@ -1,0 +1,468 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>基于SpringBoot和Leaflet的地震台网信息预警可视化 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b1db32014b677b1e8905e5315a7ed520/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="基于SpringBoot和Leaflet的地震台网信息预警可视化">
+  <meta property="og:description" content="目录
+前言
+一、后台管理设计与实现
+1、Model层
+2、业务层
+3、控制层
+二、前端预警可视化设计与实现
+1、网页结构
+2、数据绑定
+三、效果展示
+总结
+前言 在之前的几篇博客中，我们讲解了如何在Leaflet中进行预警信息提示效果，以及基于XxlCrawler进行中国地震台网信息的采集、入库以及如何进行反爬处理。博文目录如下，感兴趣的朋友可以点击标题进入：
+序号博客地址1基于Leaflet.js的Marker闪烁特效的实现-模拟预警2基于Java的XxlCrawler网络信息爬取实战-以中国地震台网为例3使用SpringBoot将中国地震台网数据保存PostGIS数据库实践4在Java中使用XxlCrawler时防止被反爬的几种方式 在实际应用中，我们不仅需要将数据及时的采集回来，同时也需要实现对数据进行可视化。不仅对二维数据的列表展示，同时还需要对数据进行空间可视化。
+本文即对采集回来的中国地震台网数据进行预警可视化进行深入讲解。首先讲解后台的代码和功能设计，然后基于L.Icon.Pulse进行地震预警展示，最后展示预警可视化效果。地址灾害不可预测，但是我们在灾后应该快速提供应急救援，将尽量减少人民群众的生命财产损失。如果您目前也有类似的需求，不妨来博文中指导一二。
+一、后台管理设计与实现 后台管理使用SpringBoot框架来开发，数据库访问层依然采用熟悉的Mybatis-Plus框架。本小节将主要基于MVC结构介绍后台的相关设计与实现。数据后台提供数据访问支持，为前台的数据展示提供有效支撑。
+1、Model层 model层包含地震台网数据的实体类，在之前的博客中有过介绍，这里也将主要的代码分享出来。让大家在熟悉这部分代码时，不至于有不适感：
+package com.yelang.project.extend.earthquake.domain.crawler; import java.io.Serializable; import java.math.BigDecimal; import java.util.Date; import com.baomidou.mybatisplus.annotation.TableField; import com.baomidou.mybatisplus.annotation.TableId; import com.baomidou.mybatisplus.annotation.TableName; import com.google.gson.annotations.SerializedName; import com.yelang.framework.handler.PgGeometryTypeHandler; import lombok.AllArgsConstructor; import lombok.Data; import lombok.NoArgsConstructor; import lombok.ToString; @Data @ToString @AllArgsConstructor @NoArgsConstructor @TableName(value =&#34;biz_ceic_earthquake&#34;,autoResultMap = true) public class CeicEarthquake implements Serializable{ private static final long serialVersionUID = -1212153879708670015L; @TableId(value=&#34;pk_id&#34;) private Long pkId;//主键 @SerializedName(&#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-25T19:35:38+08:00">
+    <meta property="article:modified_time" content="2024-04-25T19:35:38+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">基于SpringBoot和Leaflet的地震台网信息预警可视化</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2><a id="AIGC_0"></a></h2> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E4%B8%80%E3%80%81%E5%90%8E%E5%8F%B0%E7%AE%A1%E7%90%86%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E5%90%8E%E5%8F%B0%E7%AE%A1%E7%90%86%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0" rel="nofollow">一、后台管理设计与实现</a></p> 
+<p id="1%E3%80%81Model%E5%B1%82-toc" style="margin-left:40px;"><a href="#1%E3%80%81Model%E5%B1%82" rel="nofollow">1、Model层</a></p> 
+<p id="2%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82" rel="nofollow">2、业务层</a></p> 
+<p id="3%E3%80%81%E6%8E%A7%E5%88%B6%E5%B1%82-toc" style="margin-left:40px;"><a href="#3%E3%80%81%E6%8E%A7%E5%88%B6%E5%B1%82" rel="nofollow">3、控制层</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E5%89%8D%E7%AB%AF%E9%A2%84%E8%AD%A6%E5%8F%AF%E8%A7%86%E5%8C%96%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E5%89%8D%E7%AB%AF%E9%A2%84%E8%AD%A6%E5%8F%AF%E8%A7%86%E5%8C%96%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0" rel="nofollow">二、前端预警可视化设计与实现</a></p> 
+<p id="1%E3%80%81%E7%BD%91%E9%A1%B5%E7%BB%93%E6%9E%84-toc" style="margin-left:40px;"><a href="#1%E3%80%81%E7%BD%91%E9%A1%B5%E7%BB%93%E6%9E%84" rel="nofollow">1、网页结构</a></p> 
+<p id="2%E3%80%81%E6%95%B0%E6%8D%AE%E7%BB%91%E5%AE%9A-toc" style="margin-left:40px;"><a href="#2%E3%80%81%E6%95%B0%E6%8D%AE%E7%BB%91%E5%AE%9A" rel="nofollow">2、数据绑定</a></p> 
+<p id="%E4%B8%89%E3%80%81%E6%95%88%E6%9E%9C%E5%B1%95%E7%A4%BA-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81%E6%95%88%E6%9E%9C%E5%B1%95%E7%A4%BA" rel="nofollow">三、效果展示</a></p> 
+<p id="%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E6%80%BB%E7%BB%93" rel="nofollow">总结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E5%89%8D%E8%A8%80">前言</h2> 
+<p>        在之前的几篇博客中，我们讲解了如何在Leaflet中进行预警信息提示效果，以及基于XxlCrawler进行中国地震台网信息的采集、入库以及如何进行反爬处理。博文目录如下，感兴趣的朋友可以点击标题进入：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><tbody><tr><td style="width:130px;">序号</td><td style="width:551px;">博客地址</td></tr><tr><td style="width:130px;">1</td><td style="width:551px;"><a class="link-info" href="https://blog.csdn.net/yelangkingwuzuhu/article/details/137521033?spm=1001.2014.3001.5502" title="基于Leaflet.js的Marker闪烁特效的实现-模拟预警">基于Leaflet.js的Marker闪烁特效的实现-模拟预警</a></td></tr><tr><td style="width:130px;">2</td><td style="width:551px;"><a class="link-info" href="https://blog.csdn.net/yelangkingwuzuhu/article/details/137726644?spm=1001.2014.3001.5502" title="基于Java的XxlCrawler网络信息爬取实战-以中国地震台网为例">基于Java的XxlCrawler网络信息爬取实战-以中国地震台网为例</a></td></tr><tr><td style="width:130px;">3</td><td style="width:551px;"><a class="link-info" href="https://blog.csdn.net/yelangkingwuzuhu/article/details/137884458?spm=1001.2014.3001.5502" title="使用SpringBoot将中国地震台网数据保存PostGIS数据库实践">使用SpringBoot将中国地震台网数据保存PostGIS数据库实践</a></td></tr><tr><td style="width:130px;">4</td><td style="width:551px;"><a class="link-info" href="https://blog.csdn.net/yelangkingwuzuhu/article/details/138012039?spm=1001.2014.3001.5502" title="在Java中使用XxlCrawler时防止被反爬的几种方式">在Java中使用XxlCrawler时防止被反爬的几种方式</a></td></tr></tbody></table> 
+<p>        在实际应用中，我们不仅需要将数据及时的采集回来，同时也需要实现对数据进行可视化。不仅对二维数据的列表展示，同时还需要对数据进行空间可视化。</p> 
+<p>        本文即对采集回来的中国地震台网数据进行预警可视化进行深入讲解。首先讲解后台的代码和功能设计，然后基于L.Icon.Pulse进行地震预警展示，最后展示预警可视化效果。地址灾害不可预测，但是我们在灾后应该快速提供应急救援，将尽量减少人民群众的生命财产损失。如果您目前也有类似的需求，不妨来博文中指导一二。</p> 
+<h2 id="%E4%B8%80%E3%80%81%E5%90%8E%E5%8F%B0%E7%AE%A1%E7%90%86%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0">一、后台管理设计与实现</h2> 
+<p>        后台管理使用SpringBoot框架来开发，数据库访问层依然采用熟悉的Mybatis-Plus框架。本小节将主要基于MVC结构介绍后台的相关设计与实现。数据后台提供数据访问支持，为前台的数据展示提供有效支撑。</p> 
+<h3 id="1%E3%80%81Model%E5%B1%82">1、Model层</h3> 
+<p>        model层包含地震台网数据的实体类，在之前的博客中有过介绍，这里也将主要的代码分享出来。让大家在熟悉这部分代码时，不至于有不适感：</p> 
+<pre><code class="language-java">package com.yelang.project.extend.earthquake.domain.crawler;
+import java.io.Serializable;
+import java.math.BigDecimal;
+import java.util.Date;
+import com.baomidou.mybatisplus.annotation.TableField;
+import com.baomidou.mybatisplus.annotation.TableId;
+import com.baomidou.mybatisplus.annotation.TableName;
+import com.google.gson.annotations.SerializedName;
+import com.yelang.framework.handler.PgGeometryTypeHandler;
+import lombok.AllArgsConstructor;
+import lombok.Data;
+import lombok.NoArgsConstructor;
+import lombok.ToString;
+@Data
+@ToString
+@AllArgsConstructor
+@NoArgsConstructor
+@TableName(value ="biz_ceic_earthquake",autoResultMap = true)
+public class CeicEarthquake implements Serializable{
+	private static final long serialVersionUID = -1212153879708670015L;
+	@TableId(value="pk_id")
+	private Long pkId;//主键
+	@SerializedName("AUTO_FLAG")
+	@TableField(value="auto_flag")
+	private String autoFlag;
+	@SerializedName("CATA_ID")
+	@TableField(value="cata_id")
+	private String cataId;
+	@SerializedName("CATA_TYPE")
+	@TableField(value="cata_type")
+	private String cataType;
+	@SerializedName("EPI_DEPTH")
+	@TableField(value="epi_depth")
+	private BigDecimal epiDepth = new BigDecimal("0.0");
+	@SerializedName("EPI_LAT")
+	@TableField(value="epi_lat")
+	private String epiLat;//纬度
+	@SerializedName("EPI_LON")
+	@TableField(value="epi_lon")
+	private String epiLon;
+	@SerializedName("EQ_CATA_TYPE")
+	@TableField(value="eq_cata_type")
+	private String eqCataType;
+	@SerializedName("EQ_TYPE")
+	@TableField(value="eq_type")
+	private String eqType;
+	@SerializedName("IS_DEL")
+	@TableField(value="is_del")
+	private String isDel;
+	@SerializedName("LOCATION_C")
+	@TableField(value="location_c")
+	private String locationC;
+	@SerializedName("LOCATION_S")
+	@TableField(value="location_s")
+	private String locationS;
+	@SerializedName("LOC_STN")
+	@TableField(value="loc_stn")
+	private String locStn;
+	@SerializedName("M")
+	@TableField(value="m")
+	private String m;
+	@SerializedName("M_MB")
+	@TableField(value="mmb")
+	private String mmb;
+	@SerializedName("M_MB2")
+	@TableField(value="mmb2")
+	private String mmb2;
+	@SerializedName("M_ML")
+	@TableField(value="mml")
+	private String mml;
+	@SerializedName("M_MS")
+	@TableField(value="mms")
+	private String mms;
+	@SerializedName("M_MS7")
+	@TableField(value="mms7")
+	private String mms7;
+	@SerializedName("NEW_DID")
+	@TableField(value="new_did")
+	private String newDid;
+	@SerializedName("O_TIME")
+	@TableField(value="o_time")
+	private Date oTime;
+	@SerializedName("O_TIME_FRA")
+	@TableField(value="o_time_fra")
+	private String oTimeFra;
+	@SerializedName("SAVE_TIME")
+	@TableField(value="save_time")
+	private Date saveTime;
+	@SerializedName("SUM_STN")
+	@TableField(value="sum_stn")
+	private String sumStn;
+	@SerializedName("SYNC_TIME")
+	@TableField(value="sync_time")
+	private Date syncTime;
+	@SerializedName("id")
+	@TableField(value="epi_id")
+	private String epiId;
+	@TableField(typeHandler = PgGeometryTypeHandler.class)
+	private String geom;
+	@TableField(exist=false)
+	private String geomJson;
+}</code></pre> 
+<p>        Maper层没有其它特殊的业务，仅实现了基础的BaseMapper，方法体内没有扩展业务。在此不再赘述。 </p> 
+<h3 id="2%E3%80%81%E4%B8%9A%E5%8A%A1%E5%B1%82">2、业务层</h3> 
+<p>        业务层作为控制层和模型层的中间层，主要负责数据的传递以及业务逻辑的处理。在地震可视化中，需要扩展的方法是需要提供按照震中位置和震级进行模糊 查询，同时提供按照地震主键查询地震详情的接口。在进行地震预警时，通过ajax获取详情实现地震位置的可视化。</p> 
+<p>根据震中位置和震级模糊查询的核心方法如下：</p> 
+<pre><code class="language-java">@Override
+public List&lt;CeicEarthquake&gt; getList(CeicEarthquake earthquake) {
+	QueryWrapper&lt;CeicEarthquake&gt; queryWrapper = new QueryWrapper&lt;CeicEarthquake&gt;();
+	if (StringUtils.isNotBlank(earthquake.getLocationC())) {
+		queryWrapper.like("location_c", earthquake.getLocationC());
+	}
+	if (StringUtils.isNotBlank(earthquake.getM())) {
+		queryWrapper.eq("m", earthquake.getM());
+	}
+	queryWrapper.orderByDesc("o_time");
+	return this.baseMapper.selectList(queryWrapper);
+}</code></pre> 
+<h3 id="3%E3%80%81%E6%8E%A7%E5%88%B6%E5%B1%82">3、控制层</h3> 
+<p>        控制层是对接前台，接收前台请求，调用业务层的业务方法，查询相关数据或者保存相关数据的入口。前端地图展示和列表展示都是通过控制层实现。在控制层中，主要实现以下三个方法：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><tbody><tr><td style="width:55px;">序号</td><td style="width:340px;">方法</td><td style="width:295px;">说明</td></tr><tr><td style="width:55px;">1</td><td style="width:340px;"> public String index()</td><td style="width:295px;">跳转到首页</td></tr><tr><td style="width:55px;">2</td><td style="width:340px;">public TableDataInfo list(CeicEarthquake earthquake)</td><td style="width:295px;">根据震中位置和震级查询信息</td></tr><tr><td style="width:55px;">3</td><td style="width:340px;">public AjaxResult detail(@PathVariable("pkId")Long pkId)</td><td style="width:295px;">根据数据ID查询数据详情</td></tr></tbody></table> 
+<p>        关键代码如下：</p> 
+<pre><code class="language-java">package com.yelang.project.extend.earthquake.controller;
+import java.util.List;
+import org.apache.shiro.authz.annotation.RequiresPermissions;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.ResponseBody;
+import com.yelang.framework.aspectj.lang.annotation.Log;
+import com.yelang.framework.aspectj.lang.enums.BusinessType;
+import com.yelang.framework.web.controller.BaseController;
+import com.yelang.framework.web.domain.AjaxResult;
+import com.yelang.framework.web.page.TableDataInfo;
+import com.yelang.project.extend.earthquake.domain.EarthquakeInfo;
+import com.yelang.project.extend.earthquake.domain.crawler.CeicEarthquake;
+import com.yelang.project.extend.earthquake.service.ICeicEarthquakeService;
+
+@Controller
+@RequestMapping("/ceiceq/info")
+public class CeicEarthquakeInfoController extends BaseController{
+	private String prefix = "ceicearthquake/info";
+    @Autowired
+    private ICeicEarthquakeService ceicEarthQuakeService;
+    @RequiresPermissions("ceiceq:info:view")
+    @GetMapping()
+    public String index(){
+        return prefix + "/index";
+    }
+
+    @RequiresPermissions("ceiceq:info:list")
+    @PostMapping("/list")
+    @ResponseBody
+    public TableDataInfo list(CeicEarthquake earthquake){
+        startPage();
+        List&lt;CeicEarthquake&gt; list = ceicEarthQuakeService.getList(earthquake);
+        return getDataTable(list);
+    }
+    
+    @PostMapping("/detail/{pkId}")
+    @ResponseBody
+    public AjaxResult detail(@PathVariable("pkId")Long pkId){
+        AjaxResult ar = AjaxResult.success();
+        ar.put("data", ceicEarthQuakeService.getById(pkId));
+        return ar;
+    }
+}
+</code></pre> 
+<p>        到此，我们已经将相关的服务接口开发完成，同时完成了对数据库数据的访问和调用。在完成后端的应用开发之后，我们来进行前端可视化的开发。</p> 
+<h2 id="%E4%BA%8C%E3%80%81%E5%89%8D%E7%AB%AF%E9%A2%84%E8%AD%A6%E5%8F%AF%E8%A7%86%E5%8C%96%E8%AE%BE%E8%AE%A1%E4%B8%8E%E5%AE%9E%E7%8E%B0">二、前端预警可视化设计与实现</h2> 
+<p>        为了在前端方便的对地震信息进行综合展示，我们计划将数据和底图使用Leaflet来进行集成。使用之前介绍过的预警信息实现方式。本小节主要是面向前端的设计与实现。</p> 
+<h3 id="1%E3%80%81%E7%BD%91%E9%A1%B5%E7%BB%93%E6%9E%84">1、网页结构</h3> 
+<p>        为了比较直观的展示信息，同时将列表和地图定位技术进行结合。我们决定采用栅格布局的模式，台网地震信息和地图分别占50%。在html的框架中大致采用如下的结构来展示：</p> 
+<pre><code class="language-html">&lt;div class="row"&gt;
+        	&lt;div class="col-sm-6"&gt;
+	        	&lt;div class="col-sm-12 search-collapse" style="display: none;"&gt;
+	                &lt;form id="formId"&gt;
+	                    &lt;div class="select-list"&gt;
+	                        &lt;ul&gt;
+	                            &lt;li&gt;
+	                                &lt;label&gt;发震位置：&lt;/label&gt;
+	                                &lt;input type="text" name="locationC"/&gt;
+	                            &lt;/li&gt;
+	                            &lt;li&gt;
+	                                &lt;label&gt;震级：&lt;/label&gt;
+	                                &lt;input type="text" name="m"/&gt;
+	                            &lt;/li&gt;
+	                            &lt;li&gt;
+	                                &lt;a class="btn btn-primary btn-rounded btn-sm" onclick="$.table.search()"&gt;&lt;i class="fa fa-search"&gt;&lt;/i&gt;&amp;nbsp;搜索&lt;/a&gt;
+	                                &lt;a class="btn btn-warning btn-rounded btn-sm" onclick="$.form.reset()"&gt;&lt;i class="fa fa-refresh"&gt;&lt;/i&gt;&amp;nbsp;重置&lt;/a&gt;
+	                            &lt;/li&gt;
+	                        &lt;/ul&gt;
+	                    &lt;/div&gt;
+	                &lt;/form&gt;
+	            &lt;/div&gt;
+	            &lt;div class="btn-group-sm" id="toolbar" role="group"&gt;
+	                &lt;a class="btn btn-warning" onclick="$.table.exportExcel()" shiro:hasPermission="eq:info:export"&gt;
+	                    &lt;i class="fa fa-download"&gt;&lt;/i&gt; 导出
+	                &lt;/a&gt;
+	            &lt;/div&gt;
+	            &lt;div class="col-sm-12 select-table table-striped"&gt;
+	                &lt;table id="bootstrap-table"&gt;&lt;/table&gt;
+	            &lt;/div&gt;
+        	&lt;/div&gt;
+        	&lt;div class="col-sm-6"&gt;
+        		&lt;!-- leaflet map元素 --&gt;
+				&lt;div id="mapid" style="width: 100%;"&gt;&lt;/div&gt;
+        	&lt;/div&gt;
+        &lt;/div&gt;</code></pre> 
+<h3 id="2%E3%80%81%E6%95%B0%E6%8D%AE%E7%BB%91%E5%AE%9A">2、数据绑定</h3> 
+<p>        在定义好网页框架结构之后，我们需要将列表和后台的接口进行对接，同时将地图和底图进行绑定。关于如何在Leaflet中进行底图绑定，应该很多朋友都比较了解了。这里不再进行过多的说明。这里仅说明如何进行table的绑定和预警可视化。</p> 
+<p><strong>        table绑定：</strong>为了将地震信息，如震发地点、震级、地震深度、经纬度等信息在列表中展示出来。这里采用layui的table组件。数据绑定的关键代码如下：</p> 
+<pre><code class="language-javascript">var options = {
+         url: prefix + "/list",
+         exportUrl: prefix + "/export",
+         modalName: "台网地震信息",
+         columns: [
+         {
+              field: 'id',
+              title: '',
+              visible: false
+         },
+         {
+            field: 'locationC',
+            title: '震中位置',
+            formatter: function(value, row, index) {
+           return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                },
+                {
+                    field: 'epiLon',
+                    title: '经度',
+                    formatter: function(value, row, index) {
+                        return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                },
+                {
+                    field: 'epiLat',
+                    title: '纬度',
+                    formatter: function(value, row, index) {
+                        return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                    
+                },
+                {
+                    field: 'm',
+                    title: '震级',
+                    formatter: function(value, row, index) {
+                        return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                },
+                {
+                    field: 'epiDepth',
+                    title: '深度',
+                    formatter: function(value, row, index) {
+                        return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                },
+                {
+                	field: 'otime',
+                    title: '发震时间',
+                    formatter: function(value, row, index) {
+                        return parseFloat(row.m) &gt;= '6.0' ? "&lt;font color='red'&gt;"+ value +"&lt;/font&gt;" : value;
+                    }
+                },
+                {
+                    title: '操作',
+                    align: 'center',
+                    formatter: function(value, row, index) {
+                        var actions = [];
+                        actions.push('&lt;a class="btn btn-success btn-xs ' + editFlag + '" href="javascript:void(0)" onclick="preview(\'' + row.pkId + '\')"&gt;&lt;i class="fa fa-send-o"&gt;&lt;/i&gt;&lt;/a&gt; ');
+                        return actions.join('');
+                    }
+                }]
+            };
+            $.table.init(options);</code></pre> 
+<p><strong>        预警绑定</strong>：预警信息绑定是参考中国地震台网的信息，在列表中点击地震信息，在右边的地图中可以直接定位，同时点击预警点，可以把相应的主要信息以弹窗的形式展示出来。这里的主要逻辑就是通过ajax去后台查询台网地震信息详情。然后根据经纬度绑定marker，同时将marker在地图上进行展示。</p> 
+<pre><code class="language-javascript">function preview(pkId){
+        	$.ajax({  
+		        type:"post",  
+		        url:prefix + "/detail/" + pkId,  
+		        dataType:"json",  
+		        cache:false,
+		        processData:false,
+		        success:function(result){
+		        	if(result.code == web_status.SUCCESS){
+		        		var eqInfo = result.data;
+		        		var content = "&lt;strong&gt;发震时间:&lt;/strong&gt;"+eqInfo.otime + "&lt;br/&gt;&lt;strong&gt;震中位置:&lt;/strong&gt;"+eqInfo.locationC;
+    				    content += "&lt;br/&gt;&lt;strong&gt;震源深度（千米）:&lt;/strong&gt;"+eqInfo.epiDepth + "&lt;br/&gt;&lt;strong&gt;震级:&lt;/strong&gt;"+eqInfo.m;
+		        		var marker = L.marker([eqInfo.epiLat, eqInfo.epiLon],
+		        				{icon: L.icon.pulse({iconSize:[25,25],color:'#e50b3d',fillColor:"#e50b3d"})}).bindPopup(content).addTo(mymap);
+		        	    showLayerGroup.clearLayers();
+		        		showLayerGroup.addLayer(marker);
+		        		mymap.setView(showLayerGroup.getBounds().getCenter(),8);//同时设置中心位置和级别
+		        	}
+		        },
+		        error:function(){
+		        	$.modal.alertWarning("获取信息失败");
+		        }
+		    });
+        }</code></pre> 
+<p>        至此，前端的主要代码也编写完毕，最后我们将工程启动起来，然后进行前后台的联调。 展示最终的效果。</p> 
+<h2 id="%E4%B8%89%E3%80%81%E6%95%88%E6%9E%9C%E5%B1%95%E7%A4%BA">三、效果展示</h2> 
+<p>        本小节主要展示基于SpringBoot和Leaflet的地震台网信息预警可视化效果。从列表搜索到地图定位，让大家对开发出来的效果有一个直观的感受。同时为了将大于（含）6级的地震信息进行醒目的提示，在列表中我们对这些数据进行标红。</p> 
+<p class="img-center"><img alt="" height="306" src="https://images2.imgbox.com/25/78/kcQHZikF_o.png" width="666"></p> 
+<p style="text-align:center;">默认系统功能界面</p> 
+<p>        默认情况下，列表的搜索功能是关闭的，如果您在使用过程中需要进行数据检索，可以点击搜索按钮打开检索栏。</p> 
+<p class="img-center"><img alt="" height="311" src="https://images2.imgbox.com/4a/f5/iLiZVxMr_o.png" width="671"></p> 
+<p style="text-align:center;">系统检索支持页面</p> 
+<p>         在系统中，点击操作按钮栏中的定位功能。会自动实现当前地震信息在地图上的定位。</p> 
+<p class="img-center"><img alt="" height="300" src="https://images2.imgbox.com/68/03/Rne0H9ZN_o.png" width="655"></p> 
+<p style="text-align:center;">地震地图定位示意图 </p> 
+<p class="img-center"><img alt="" height="301" src="https://images2.imgbox.com/99/5b/Ky9ShMk7_o.png" width="656"></p> 
+<p style="text-align:center;">台湾花莲某地地震 </p> 
+<p class="img-center"><img alt="" height="301" src="https://images2.imgbox.com/72/b3/oKHzSCpB_o.png" width="646"></p> 
+<p style="text-align:center;">青岛某地地震示意图 </p> 
+<p class="img-center"><img alt="" height="302" src="https://images2.imgbox.com/dc/1c/cs3ybGX5_o.png" width="656"></p> 
+<p style="text-align:center;">四川某地地震示意图 </p> 
+<h2 id="%E6%80%BB%E7%BB%93">总结</h2> 
+<p>        以上就是本文的主要内容， 本文即对采集回来的中国地震台网数据进行预警可视化进行深入讲解。首先讲解后台的代码和功能设计，然后基于L.Icon.Pulse进行地震预警展示，最后展示预警可视化效果。地址灾害不可预测，但是我们在灾后应该快速提供应急救援，将尽量减少人民群众的生命财产损失。行文仓促，定有不足之处，不管是批评或者指导，不妨来博文中指导一二，不胜感激。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/42030ba12059debcaf1ae53f57fc6df2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">MySQL-----多表查询（一）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c1a966c886f6715ee3beb5687d66df93/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Java--数据结构】链表经典OJ题详解（上）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

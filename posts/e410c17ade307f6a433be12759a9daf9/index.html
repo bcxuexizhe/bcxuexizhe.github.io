@@ -1,0 +1,872 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android malloc_debug实现原理及使用 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e410c17ade307f6a433be12759a9daf9/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android malloc_debug实现原理及使用">
+  <meta property="og:description" content="一、malloc_debug工具使用 malloc_debug作用：用于调试单个native进程内存问题，如检测内存损坏、内存泄漏、内存访问越界、内存释放再使用等。
+1.1 打开malloc_debug开关 adb shell setprop libc.debug.malloc.program app_process(proc name) ---指定 app_process，即malloc_debug 只针对 app_process 这个进程生效 adb shell setprop libc.debug.malloc.options &#34;\&#34;backtrace front_guard=16 rear_guard=16 backtrace_dump_prefix=/sdcard/Download/heap&#34;\&#34; 1.2 malloc_debug 的 options // bionic/libc/malloc_debug/Config.h constexpr uint64_t FRONT_GUARD = 0x1; // 设置前置保护区，用于检测内存越界访问 constexpr uint64_t REAR_GUARD = 0x2; // 设置后置保护区，用于检测内存越界访问 constexpr uint64_t BACKTRACE = 0x4; // 打印堆栈信息 constexpr uint64_t FILL_ON_ALLOC = 0x8; // 内存分配时填充0xeb constexpr uint64_t FILL_ON_FREE = 0x10; // 内存释放时填充0xef constexpr uint64_t EXPAND_ALLOC = 0x20; // 增加额外的内存 constexpr uint64_t FREE_TRACK = 0x40; // 记录内存释放信息 constexpr uint64_t TRACK_ALLOCS = 0x80; // 记录内存分配信息 constexpr uint64_t LEAK_TRACK = 0x100; // 记录内存泄漏信息 constexpr uint64_t RECORD_ALLOCS = 0x200; // 记录线程的内存分配与释放信息 constexpr uint64_t BACKTRACE_FULL = 0x400; // 以Java frames展开 constexpr uint64_t ABORT_ON_ERROR = 0x800; constexpr uint64_t VERBOSE = 0x1000; 1.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-23T10:55:46+08:00">
+    <meta property="article:modified_time" content="2024-04-23T10:55:46+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android malloc_debug实现原理及使用</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2></h2> 
+<h2>一、malloc_debug工具使用</h2> 
+<p>malloc_debug作用：用于调试单个native进程内存问题，如检测内存损坏、内存泄漏、内存访问越界、内存释放再使用等。</p> 
+<h3>1.1 打开malloc_debug开关</h3> 
+<pre><code class="language-bash">adb shell setprop libc.debug.malloc.program app_process(proc name)   ---指定 app_process，即malloc_debug 只针对 app_process 这个进程生效
+adb shell setprop libc.debug.malloc.options "\"backtrace front_guard=16 rear_guard=16 backtrace_dump_prefix=/sdcard/Download/heap"\"</code></pre> 
+<h3>1.2 malloc_debug 的 options</h3> 
+<pre><code class="language-bash">// bionic/libc/malloc_debug/Config.h
+ 
+constexpr uint64_t FRONT_GUARD = 0x1;    // 设置前置保护区，用于检测内存越界访问
+constexpr uint64_t REAR_GUARD = 0x2;    // 设置后置保护区，用于检测内存越界访问
+constexpr uint64_t BACKTRACE = 0x4;    // 打印堆栈信息
+constexpr uint64_t FILL_ON_ALLOC = 0x8;    // 内存分配时填充0xeb
+constexpr uint64_t FILL_ON_FREE = 0x10;    // 内存释放时填充0xef
+constexpr uint64_t EXPAND_ALLOC = 0x20;    // 增加额外的内存
+constexpr uint64_t FREE_TRACK = 0x40;    // 记录内存释放信息
+constexpr uint64_t TRACK_ALLOCS = 0x80;    // 记录内存分配信息
+constexpr uint64_t LEAK_TRACK = 0x100;    // 记录内存泄漏信息
+constexpr uint64_t RECORD_ALLOCS = 0x200;  // 记录线程的内存分配与释放信息
+constexpr uint64_t BACKTRACE_FULL = 0x400;    // 以Java frames展开
+constexpr uint64_t ABORT_ON_ERROR = 0x800;
+constexpr uint64_t VERBOSE = 0x1000;</code></pre> 
+<h3>1.3 内存分配与释放检测</h3> 
+<h4 style="background-color:transparent;">1.3.1 mem leak</h4> 
+<p>内存泄漏检测，如果options选项包含backtrace，在发生mem leak时，会将相关信息输出到logcat.</p> 
+<p>日志如下：</p> 
+<pre><code class="language-bash">    04-15 12:35:33.304  7412  7412 E malloc_debug: +++ APP leaked block of size 100 at 0x2be3b0b0 (leak 1 of 2)
+    04-15 12:35:33.304  7412  7412 E malloc_debug: Backtrace at time of allocation:
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so
+    04-15 12:35:33.305  7412  7412 E malloc_debug: +++ APP leaked block of size 24 at 0x7be32380 (leak 2 of 2)
+    04-15 12:35:33.305  7412  7412 E malloc_debug: Backtrace at time of allocation:
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:35:33.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so</code></pre> 
+<p>mem leak监控实现原理详见<strong>2.4</strong>.</p> 
+<h4>1.3.2 record_allocs[=TOTAL_ENTRIES]</h4> 
+<p>记录每个线程的每一次 分配 / 释放 的 track，当收到信号 SIGRTMAX - 18时，将这些 track dump 到一个文件中。</p> 
+<p>TOTAL_ENTRIES 表示 分配 /释放 的记录总数。如果达到了 TOTAL_ENTRIES，后面的 分配 / 释放将不再记录。默认值为 8,000,000，最大值可以设到 50,000,000。当收到信号时，所有的记录都会写到文件中，所有的记录也会被删除。</p> 
+<p>文件格式，如下：</p> 
+<pre><code class="language-bash">Threadid:     action   pointer   size
+186: malloc 0xb6038060 20
+186: free 0xb6038060
+186: calloc 0xb609f080 32 4
+186: realloc 0xb609f080 0xb603e9a0 12
+186: memalign 0x85423660 16 104
+186: memalign 0x85423660 4096 112
+186: memalign 0x85423660 4096 8192</code></pre> 
+<h4>1.2.3 record_allocs_file[=FILE_NAME]</h4> 
+<p>只有在 record_allocs 这个option 使用时生效，用以指定记录dump 的文件名。</p> 
+<h4>1.2.4 verify_pointers</h4> 
+<p>检测已释放的内存是否被一个指针指向或使用。</p> 
+<p>如下：</p> 
+<pre><code class="language-bash">    04-15 12:00:31.304  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 UNKNOWN POINTER (free)
+    04-15 12:00:31.305  7412  7412 E malloc_debug: Backtrace at time of failure:
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so</code></pre> 
+<h4>1.2.5 abort_on_error</h4> 
+<p>当malloc debug 检测到error 时，在发送错误 log 消息之后终止。</p> 
+<p>注意，如果 lead_track 被使能，当进程退出时检测出泄漏时不会产生 abort。</p> 
+<p>什么情况下会发生error ？</p> 
+<h4>1.2.6 Use After Free</h4> 
+<p>1） after free 之后指针被用来进行了realloc 操作</p> 
+<pre><code class="language-bash">    04-15 12:00:31.304  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 USED AFTER FREE (realloc)</code></pre> 
+<p>2）after free 之后又进行了 free</p> 
+<pre><code class="language-bash">    04-15 12:00:31.304  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 USED AFTER FREE (free)
+    04-15 12:00:31.305  7412  7412 E malloc_debug: Backtrace of original free:
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug: Backtrace at time of failure:
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so</code></pre> 
+<h4>1.2.7 Invalid Tag</h4> 
+<pre><code class="language-bash">    04-15 12:00:31.304  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 HAS INVALID TAG 1ee7d000 (malloc_usable_size)
+    04-15 12:00:31.305  7412  7412 E malloc_debug: Backtrace at time of failure:
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so</code></pre> 
+<p>malloc_usable_size 这个函数被一个指针调用，而这个指针不是用来分配内存，或指针指向的内存已经损坏。</p> 
+<p>malloc_usable_size 这个函数被一个指针调用，而这个指针不是用来分配内存，或指针指向的内存已经损坏。</p> 
+<h3>1.4 内存越界访问检测</h3> 
+<h4>1.4.1 front_guard[=SIZE_BYTES]</h4> 
+<p>设置前置保护区， front guard 空间会被写上一个特定模式的数据(0xaa)。当分配的内存被释放，front guard 空间会被用来check 是否已经被修改。如果 front guard 空间任意地方被修改，将会在 log 中产生一个 error 来表示哪些 bytes 被修改。</p> 
+<p>如下：</p> 
+<p>setprop libc.debug.malloc.options front_guard=16</p> 
+<pre><code class="language-bash">char *ptr = (char*) malloc(1 * 1024 * 1024);  //申请 1M 空间
+memset(ptr, 0, 1* 1024* 1024);                //给这1M空间初始化
+printf("*(ptr-16) = %d\n", *(ptr-16));        //将front guard打印一下，应该是0xaa
+*(ptr - 16) = 0xee;                           //这个时候将值修改了
+free(ptr);                                    //free的时候malloc_debug会verify，确认是否损坏</code></pre> 
+<pre><code class="language-bash">04-10 12:00:45.621  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 SIZE 100 HAS A CORRUPTED FRONT GUARD
+04-10 12:00:45.622  7412  7412 E malloc_debug:   allocation[-32] = 0x00 (expected 0xaa)
+04-10 12:00:45.622  7412  7412 E malloc_debug:   allocation[-15] = 0x02 (expected 0xaa)</code></pre> 
+<h4>1.4.2 rear_guard[=SIZE_BYTES]</h4> 
+<p>后置保护区，同 front_guard，不过是在待分配内存的尾部加上一个小的buffer，在rear guard 空间写上特定模式的数据(0xbb)。</p> 
+<p>日志如下：</p> 
+<pre><code class="language-bash">04-10 12:00:45.621  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 SIZE 100 HAS A CORRUPTED REAR GUARD
+04-10 12:00:45.622  7412  7412 E malloc_debug:   allocation[130] = 0xbf (expected 0xbb)
+04-10 12:00:45.622  7412  7412 E malloc_debug:   allocation[131] = 0x00 (expected 0xbb)</code></pre> 
+<h4>1.4.3 guard[=SIZE_BYTES]</h4> 
+<p>同时分配 front guard 和 rear guard。</p> 
+<h3>1.5 使能调用栈功能</h3> 
+<h4>1.5.1 backtrace[=MAX_FRAMES]</h4> 
+<p>使能抓取每一个分配点的调用栈信息的功能。</p> 
+<p>MAX_FRAMES：表示抓取的调用栈最大数目，默认值为 16，最大值为 256.</p> 
+<p>当进程收到信号SIGRTMAX-17时会dump 堆数据到一个文件。dump 下来的数据格式与运行 am dumpheap -n 的数据格式相同。默认dump 到文件 /data/local/tmp/backtrace_head.**PID**.txt 中。这对于不是从 zygote 进程fork 出来的native 进程是很有用的。</p> 
+<p>需要注意的是，当信号收到时，head 数据不是立即dump，而是等到下一次的 malloc/free 发生。</p> 
+<h4>1.5.2 backtrace_enable_on_signal[=MAX_FRAMES]</h4> 
+<p>当进程收到信号 SIGRTMAX-19时触发抓取。当这个 option 单独使用的时候，调用栈抓取默认是不开启的，在接受到 signal 之后才开始。如果与backtrace 选项一起设置，那么调用栈抓取在收到 signal之后使能。</p> 
+<h4>1.5.3 backtrace_dump_on_exit</h4> 
+<p>从 P 版本开始，当backtrace 选项使能，这个option 会导致在进程退出才将dump 的堆信息dump 到一个文件。当backtrace 选项没有使能，这个option 不做任何事情。</p> 
+<p>dump 的默认文件路径是：/data/local/tmp/backtrace_head.**PID**.exit.txt</p> 
+<p>文件路径可以使用 backtrace_dump_prefix 选项修改，见第 <strong>1.5.4.</strong></p> 
+<h4>1.5.4 backtrace_dump_prefix</h4> 
+<p>从 P 版本开始，当一个 backtrace 的选项使能，这个前缀会在 SIGRTMAX-17 信号收到或backtrace_dump_on_exit 设置时使用。</p> 
+<p>默认的前缀是：/data/local/tmp/backtrace_head</p> 
+<p>设置该prefix 路径之后，原来backtrace 的路径将变为：backtrace_dump_prefix.**PID**.txt 或 backtrace_dump_prefix.**PID**.exit.txt</p> 
+<p>例如，</p> 
+<p>setprop libc.debug.malloc.options backtrace_dump_prefix=/sdcard/log</p> 
+<p>那么调用栈将会被存到/sdcard/log.**PID**.txt 或 /sdcard/log.**PID**.exit.txt 中</p> 
+<h4>1.5.5 backtrace_full</h4> 
+<p>从 Q 版本开始，调用栈无论何时抓到，都会用另一个不同的算法能够以Java 帧展开。这将比正常的调用栈更慢。</p> 
+<p>核心代码，如下：</p> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+ 
+void BacktraceAndLog() {
+  if (g_debug-&gt;config().options() &amp; BACKTRACE_FULL) {
+    // frames 中的每个元素代表一个函数在内存中的地址
+    std::vector&lt;uintptr_t&gt; frames;
+    std::vector&lt;unwindstack::LocalFrameData&gt; frames_info;
+    if (!Unwind(&amp;frames, &amp;frames_info, 256)) {
+      error_log("  Backtrace failed to get any frames.");
+    } else {
+      UnwindLog(frames_info);
+    }
+  } else {
+    std::vector&lt;uintptr_t&gt; frames(256);
+    size_t num_frames = backtrace_get(frames.data(), frames.size());
+    if (num_frames == 0) {
+      error_log("  Backtrace failed to get any frames.");
+    } else {
+      backtrace_log(frames.data(), num_frames);
+    }
+  }
+}</code></pre> 
+<p>当options 中设置了backtrace_full，会调用unwind()。</p> 
+<h3>1.6 填充分配空间</h3> 
+<h4>1.6.1 fill_on_alloc[=MAX_FILLED_BYTES]</h4> 
+<p>除了 calloc函数，其他的常规的分配，都会使用0xeb 填充分配空间。当使用realloc 分配一个更大的空间，扩大的空间也会填充 0xeb。</p> 
+<p>如果 MAX_FILLED_BYTES 指定，那么按照该值只填充指定空间大小。默认填充整个分配空间。</p> 
+<h4>1.6.2 fill_on_free[=MAX_FILLED_BYTES]</h4> 
+<p>当分配空间被释放的时候，用 0xef 填充需要释放的空间。</p> 
+<p>如果 MAX_FILLED_BYTES 指定，那么按照该值只填充指定空间大小。默认填充整个分配空间。</p> 
+<h4>1.6.3 fill[=MAX_FILLED_BYTES]</h4> 
+<p>同时使能 fill_on_alloc 和 fill_on_free</p> 
+<h4>1.6.4 expand_alloc[=EXPADN_BYTES]</h4> 
+<p>为每一次分配扩充额外数量的空间。如果EXPAND_BYTES 设定，将按照该值扩充分配空间，默认值为 16字节，最大为16384 字节。</p> 
+<h3>1.7 释放内存空间</h3> 
+<h4>1.7.1 free_track[=ALLOCATION_COUNT]</h4> 
+<p>如果使用该option，当一个指针被释放时，不会立即释放内存，而是将其添加到一个列表，该列表存放已被释放的allocation。除了添加到列表之外，整个分配空间将被 0xef 填充(相当于使能fill_on_free)，free 时候的调用栈也会被记录。这里调用栈记录是完全独立于backtrace option，也是进行自动记录。默认会记录最大到 16 frames 的调用找，但这个值可以使用 free_track_backtrace_num_frames 进行更改。</p> 
+<p>当然也可以将 free_track_backtrace_num_frames 设为0 来禁用该功能。</p> 
+<p>当列表满了的时候，一个 allocation 将从列表中移除，且会确认该空间的内容从添加到列表时就已经被更改。当进程结束的时候，在列表中所有的分配空间都会被核实。</p> 
+<p>ALLOCATION_COUNT 如果被设定，代表列表中总的 allocation 的个数，默认记录100 个已释放的 allocation 数，最大值可以设到 16384.</p> 
+<p>日志如下：</p> 
+<pre><code class="language-bash">    04-15 12:00:31.304  7412  7412 E malloc_debug: +++ ALLOCATION 0x12345678 USED AFTER FREE
+    04-15 12:00:31.305  7412  7412 E malloc_debug:   allocation[20] = 0xaf (expected 0xef)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:   allocation[99] = 0x12 (expected 0xef)
+    04-15 12:00:31.305  7412  7412 E malloc_debug: Backtrace at time of free:
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #00  pc 00029310  /system/lib/libc.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #01  pc 00021438  /system/lib/libc.so (newlocale+160)
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #02  pc 000a9e38  /system/lib/libc++.so
+    04-15 12:00:31.305  7412  7412 E malloc_debug:           #03  pc 000a28a8  /system/lib/libc++.so</code></pre> 
+<p>通过这样的方式，可以检测填充为 0xef 的空间是否在被 freed 之后还在使用。</p> 
+<h4>1.7.2 free_track_backtrace_num_frames[=MAX_FRAMES]</h4> 
+<p>这个option 只针对上面 free_track 被设定时生效。表示当一个分配空间被释放，有多少个 frames 的调用栈可以抓取。MAX_FRAMES 表示被抓取的 frames 的数量，如果设为0， 表示在分配空间被释放时，不会抓取任何调用栈。默认值为16，最大可以设置到 256.</p> 
+<h2>二、malloc_debug实现原理</h2> 
+<h3>2.1 malloc_debug 初始化</h3> 
+<h4>2.1.1 进程加载lib.so 时进行preinit</h4> 
+<p>在程序加载 libc.so 的时候会调用 __libc_preinit()：</p> 
+<pre><code class="language-cpp">bionic/libc/bionic/libc_init_dynamic.cpp
+ 
+// We flag the __libc_preinit function as a constructor to ensure that
+// its address is listed in libc.so's .init_array section.
+// This ensures that the function is called by the dynamic linker as
+// soon as the shared library is loaded.
+// We give this constructor priority 1 because we want libc's constructor
+// to run before any others (such as the jemalloc constructor), and lower
+// is better (http://b/68046352).
+__attribute__((constructor(1))) static void __libc_preinit() {
+  // The linker has initialized its copy of the global stack_chk_guard, and filled in the main
+  // thread's TLS slot with that value. Initialize the local global stack guard with its value.
+  __stack_chk_guard = reinterpret_cast&lt;uintptr_t&gt;(__get_tls()[TLS_SLOT_STACK_GUARD]);
+ 
+  __libc_preinit_impl();
+}
+ 
+// We need a helper function for __libc_preinit because compiling with LTO may
+// inline functions requiring a stack protector check, but __stack_chk_guard is
+// not initialized at the start of __libc_preinit. __libc_preinit_impl will run
+// after __stack_chk_guard is initialized and therefore can safely have a stack
+// protector.
+__attribute__((noinline))
+static void __libc_preinit_impl() {
+#if defined(__i386__)
+  __libc_init_sysinfo();
+#endif
+ 
+  // Register libc.so's copy of the TLS generation variable so the linker can
+  // update it when it loads or unloads a shared object.
+  TlsModules&amp; tls_modules = __libc_shared_globals()-&gt;tls_modules;
+  tls_modules.generation_libc_so = &amp;__libc_tls_generation_copy;
+  __libc_tls_generation_copy = tls_modules.generation;
+  
+  // _libc_globals 初始化
+  __libc_init_globals();
+  __libc_init_common();
+ 
+  // Hooks for various libraries to let them know that we're starting up.
+  // 为每个进程注册通知
+  __libc_globals.mutate(__libc_init_malloc);
+ 
+  // Install reserved signal handlers for assisting the platform's profilers.
+  __libc_init_profiling_handlers();
+ 
+  __libc_init_fork_handler();
+ 
+#if __has_feature(hwaddress_sanitizer)
+  // Notify the HWASan runtime library whenever a library is loaded or unloaded
+  // so that it can update its shadow memory.
+  // 当loaded或unloaded so库时，通知HWASan运行库更新shadow memory
+  __libc_shared_globals()-&gt;load_hook = __hwasan_library_loaded;
+  __libc_shared_globals()-&gt;unload_hook = __hwasan_library_unloaded;
+#endif
+ 
+  netdClientInit();
+}</code></pre> 
+<p>__libc_preinit() 在main 函数执行前执行，因为它有 __attribute__((constructor(1)))，通过这个constructor 对此程序所连接的 libc.so 进行 preinit。</p> 
+<p>（ __attribute__((constructor)) 是 GCC 和 Clang 编译器提供的函数属性，用来标记一个函数为构造函数。构造函数是在程序运行时，在 main() 函数执行之前自动执行的函数。而括号中的数字可以用来指定构造函数的优先级，数字越小，优先级越高，默认为0 ）</p> 
+<p></p> 
+<p>__libc_init_malloc():</p> 
+<pre><code class="language-cpp">// bioni/libc/bionic/malloc_common_dynamic.cpp
+ 
+// Initializes memory allocation framework.
+// This routine is called from __libc_init routines in libc_init_dynamic.cpp.
+__BIONIC_WEAK_FOR_NATIVE_BRIDGE
+__LIBC_HIDDEN__ void __libc_init_malloc(libc_globals* globals) {
+  MallocInitImpl(globals);
+}</code></pre> 
+<pre><code class="language-cpp">// bionic/libc/private/bionic_globals.h
+ 
+struct libc_globals {
+  vdso_entry vdso[VDSO_END];
+  long setjmp_cookie;
+  uintptr_t heap_pointer_tag;
+  _Atomic(const MallocDispatch*) current_dispatch_table;
+  _Atomic(const MallocDispatch*) default_dispatch_table;
+  MallocDispatch malloc_dispatch_table;
+};</code></pre> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+ 
+static void MallocInitImpl(libc_globals* globals) {
+  char prop[PROP_VALUE_MAX];
+  char* options = prop;
+ 
+  MaybeInitGwpAsanFromLibc(globals);
+ 
+  // Prefer malloc debug since it existed first and is a more complete
+  // malloc interceptor than the hooks.
+  bool hook_installed = false;
+  // 检查工具是否enable
+  if (CheckLoadMallocDebug(&amp;options)) {
+    hook_installed = InstallHooks(globals, options, kDebugPrefix, kDebugSharedLib);
+  } else if (CheckLoadMallocHooks(&amp;options)) {
+    hook_installed = InstallHooks(globals, options, kHooksPrefix, kHooksSharedLib);
+  }
+ 
+  if (!hook_installed) {
+    if (HeapprofdShouldLoad()) {
+      HeapprofdInstallHooksAtInit(globals);
+    }
+  } else {
+    // Record the fact that incompatible hooks are active, to skip any later
+    // heapprofd signal handler invocations.
+    HeapprofdRememberHookConflict();
+  }
+}</code></pre> 
+<p>CheckLoadMallocDebug()：</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+ 
+static bool CheckLoadMallocDebug(char** options) {
+  // If kDebugMallocEnvOptions is set then it overrides the system properties.
+  // 如果通过设备环境和系统属性都没有设置options，返回false
+  char* env = getenv(kDebugEnvOptions);
+  if (env == nullptr || env[0] == '\0') {
+    if (__system_property_get(kDebugPropertyOptions, *options) == 0 || *options[0] == '\0') {
+      return false;
+    }
+ 
+    // Check to see if only a specific program should have debug malloc enabled.
+    // 检查 prop  libc.debug.malloc.program 是否设定 program name
+    char program[PROP_VALUE_MAX];
+    if (__system_property_get(kDebugPropertyProgram, program) != 0 &amp;&amp;
+        strstr(getprogname(), program) == nullptr) {
+      return false;
+    }
+  } else {
+    *options = env;
+  }
+  return true;
+}</code></pre> 
+<p>InstallHooks()：</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+ 
+static bool InstallHooks(libc_globals* globals, const char* options, const char* prefix,
+                         const char* shared_lib) {
+  void* impl_handle = LoadSharedLibrary(shared_lib, prefix, &amp;globals-&gt;malloc_dispatch_table);
+  if (impl_handle == nullptr) {
+    return false;
+  }
+ 
+  if (!FinishInstallHooks(globals, options, prefix)) {
+    dlclose(impl_handle);
+    return false;
+  }
+  return true;
+}</code></pre> 
+<p>LoadSharedLibrary():</p> 
+<p>LoadSharedLibrary() 中通过 dlopen() 动态加载 libc_malloc_debug.so，接着通过 InitSharedLibrary() 函数查找如下names 数组中的 symbol，将查找到的 symbol 保存在全局数组变量 gfunctions 中。注意查找的函数都会加上 debug_ 前缀。</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+
+void* LoadSharedLibrary(const char* shared_lib, const char* prefix, MallocDispatch* dispatch_table) {
+  void* impl_handle = nullptr;
+  // Try to load the libc_malloc_* libs from the "runtime" namespace and then
+  // fall back to dlopen() to load them from the default namespace.
+  //
+  // The libraries are packaged in the runtime APEX together with libc.so.
+  // However, since the libc.so is searched via the symlink in the system
+  // partition (/system/lib/libc.so -&gt; /apex/com.android.runtime/bionic/libc.so)
+  // libc.so is loaded into the default namespace. If we just dlopen() here, the
+  // linker will load the libs found in /system/lib which might be incompatible
+  // with libc.so in the runtime APEX. Use android_dlopen_ext to explicitly load
+  // the ones in the runtime APEX.
+  struct android_namespace_t* runtime_ns = android_get_exported_namespace("com_android_runtime");
+  if (runtime_ns != nullptr) {
+    const android_dlextinfo dlextinfo = {
+      .flags = ANDROID_DLEXT_USE_NAMESPACE,
+      .library_namespace = runtime_ns,
+    };
+    impl_handle = android_dlopen_ext(shared_lib, RTLD_NOW | RTLD_LOCAL, &amp;dlextinfo);
+  }
+
+  if (impl_handle == nullptr) {
+    impl_handle = dlopen(shared_lib, RTLD_NOW | RTLD_LOCAL);
+  }
+
+  if (impl_handle == nullptr) {
+    error_log("%s: Unable to open shared library %s: %s", getprogname(), shared_lib, dlerror());
+    return nullptr;
+  }
+
+  if (!InitSharedLibrary(impl_handle, shared_lib, prefix, dispatch_table)) {
+    dlclose(impl_handle);
+    impl_handle = nullptr;
+  }
+
+  return impl_handle;
+}
+ 
+bool InitSharedLibrary(void* impl_handle, const char* shared_lib, const char* prefix, MallocDispatch* dispatch_table) {
+  static constexpr const char* names[] = {
+    "initialize",
+    "finalize",
+    "get_malloc_leak_info",
+    "free_malloc_leak_info",
+    "malloc_backtrace",
+    "write_malloc_leak_info",
+  };
+  for (size_t i = 0; i &lt; FUNC_LAST; i++) {
+    char symbol[128];
+    snprintf(symbol, sizeof(symbol), "%s_%s", prefix, names[i]);
+    gFunctions[i] = dlsym(impl_handle, symbol);
+    if (gFunctions[i] == nullptr) {
+      error_log("%s: %s routine not found in %s", getprogname(), symbol, shared_lib);
+      ClearGlobalFunctions();
+      return false;
+    }
+  }
+ 
+  if (!InitMallocFunctions(impl_handle, dispatch_table, prefix)) {
+    ClearGlobalFunctions();
+    return false;
+  }
+  return true;
+}</code></pre> 
+<p>通过 InitMallocFuntions() 在这个so里继续查找 malloc_debug 其他系列函数：</p> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+ 
+debug_free()
+debug_calloc()
+debug_mallinfo()
+debug_malloc()
+debug_realloc()
+...</code></pre> 
+<p>并将查找到的 symbol 都存放到 MallocDispatch 对应的函数指针，这个 MallocDispatch 就是最开始 LoadSharedLibrary() 的第三个参数，也就是 globals-&gt;malloc_dispatch_table:</p> 
+<pre><code class="language-cpp">// bionic/libc/private/bionic_malloc_dispatch.h
+ 
+struct MallocDispatch {
+  MallocCalloc calloc;
+  MallocFree free;
+  MallocMallinfo mallinfo;
+  MallocMalloc malloc;
+  MallocMallocUsableSize malloc_usable_size;
+  MallocMemalign memalign;
+  MallocPosixMemalign posix_memalign;
+#if defined(HAVE_DEPRECATED_MALLOC_FUNCS)
+  MallocPvalloc pvalloc;
+#endif
+  MallocRealloc realloc;
+#if defined(HAVE_DEPRECATED_MALLOC_FUNCS)
+  MallocValloc valloc;
+#endif
+  MallocIterate malloc_iterate;
+  MallocMallocDisable malloc_disable;
+  MallocMallocEnable malloc_enable;
+  MallocMallopt mallopt;
+  MallocAlignedAlloc aligned_alloc;
+  MallocMallocInfo malloc_info;
+} __attribute__((aligned(32)));</code></pre> 
+<p>指定这些函数的目的是什么呢？详细可以查看第 2.2 中的malloc() 函数调用。</p> 
+<p></p> 
+<p>FinishInstallHooks():</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+ 
+bool FinishInstallHooks(libc_globals* globals, const char* options, const char* prefix) {
+  init_func_t init_func = reinterpret_cast&lt;init_func_t&gt;(gFunctions[FUNC_INITIALIZE]);
+ 
+  // If GWP-ASan was initialised, we should use it as the dispatch table for
+  // heapprofd/malloc_debug/malloc_debug.
+  const MallocDispatch* prev_dispatch = GetDefaultDispatchTable();
+  if (prev_dispatch == nullptr) {
+    prev_dispatch = NativeAllocatorDispatch();
+  }
+ 
+  if (!init_func(prev_dispatch, &amp;gZygoteChild, options)) {
+    error_log("%s: failed to enable malloc %s", getprogname(), prefix);
+    ClearGlobalFunctions();
+    return false;
+  }
+ 
+  // Do a pointer swap so that all of the functions become valid at once to
+  // avoid any initialization order problems.
+  atomic_store(&amp;globals-&gt;default_dispatch_table, &amp;globals-&gt;malloc_dispatch_table);
+  if (!MallocLimitInstalled()) {
+    atomic_store(&amp;globals-&gt;current_dispatch_table, &amp;globals-&gt;malloc_dispatch_table);
+  }
+ 
+  // Use atexit to trigger the cleanup function. This avoids a problem
+  // where another atexit function is used to cleanup allocated memory,
+  // but the finalize function was already called. This particular error
+  // seems to be triggered by a zygote spawned process calling exit.
+  int ret_value = __cxa_atexit(MallocFiniImpl, nullptr, nullptr);
+  if (ret_value != 0) {
+    // We don't consider this a fatal error.
+    warning_log("failed to set atexit cleanup function: %d", ret_value);
+  }
+  return true;
+}</code></pre> 
+<p>该函数大致做了三件事情：</p> 
+<p>1）调用 malloc_debug 中的 debug_initialize()，对 malloc_debug 内存进行初始化工作，例如其中的关键变量 g_dispatch 和 g_debug，注意参数 prev_dispatch 是默认dispatch，最开始默认为 NULL，用 NativeAllocatorDispatch() 进行创建；</p> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+bool debug_initialize(const MallocDispatch* malloc_dispatch, bool* zygote_child,                      const char* options) {
+  if (zygote_child == nullptr || options == nullptr) {
+    return false;
+  }
+
+  if (__asan_init != 0) {
+    error_log("malloc debug cannot be enabled alongside ASAN");
+    return false;
+  }
+
+  InitAtfork();
+
+  g_zygote_child = zygote_child;
+
+  g_dispatch = malloc_dispatch;
+
+  if (!DebugDisableInitialize()) {
+    return false;
+  }
+
+  DebugData* debug = new DebugData();
+  // g_debug 在初始化
+  if (!debug-&gt;Initialize(options) || !Unreachable::Initialize(debug-&gt;config())) {
+    delete debug;
+    DebugDisableFinalize();
+    return false;
+  }
+  g_debug = debug;
+
+  // Always enable the backtrace code since we will use it in a number// of different error cases.backtrace_startup();
+
+  if (g_debug-&gt;config().options() &amp; VERBOSE) {
+    info_log("%s: malloc debug enabled", getprogname());
+  }
+
+  ScopedConcurrentLock::Init();
+
+  return true;
+}
+
+// bionic/libc/malloc_debug/DebugData.cpp
+bool DebugData::Initialize(const char* options) {
+  if (config_.options() &amp; HEADER_OPTIONS) {
+    // Initialize all of the static header offsets.
+    pointer_offset_ = __BIONIC_ALIGN(sizeof(Header), MINIMUM_ALIGNMENT_BYTES);
+ 
+    if (config_.options() &amp; FRONT_GUARD) {
+      front_guard.reset(new FrontGuardData(this, config_, &amp;pointer_offset_));
+    }
+ 
+    extra_bytes_ = pointer_offset_;
+ 
+    // Initialize all of the non-header data.
+    if (config_.options() &amp; REAR_GUARD) {
+      rear_guard.reset(new RearGuardData(this, config_));
+      extra_bytes_ += config_.rear_guard_bytes();
+    }
+  }
+ 
+  ...
+ 
+  if (config_.options() &amp; EXPAND_ALLOC) {
+    extra_bytes_ += config_.expand_alloc_bytes();
+  }
+  return true;
+}
+</code></pre> 
+<p>2）设置 __libc_globals 对象中的 libc_globals.default_dispatch_table 和 current_dispatch_table 指向 malloc_dispatch_table，以后在 malloc 库函数里都会通过 GetDispatchTable()，这个函数就是返回的 current_dispatch_table 指针；</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common.h
+
+static inline const MallocDispatch* GetDispatchTable() {  
+    return atomic_load_explicit(&amp;__libc_globals-&gt;current_dispatch_table, memory_order_acquire);
+}</code></pre> 
+<p>3）通过 __cxa_atexit() 调用，注册 MallocFiniImpl()，注册的此函数将在进程 exit 时(例如调用 exit()函数) 进行回调：</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common_dynamic.cpp
+ 
+static void MallocFiniImpl(void*) {
+  // Our BSD stdio implementation doesn't close the standard streams,
+  // it only flushes them. Other unclosed FILE*s will show up as
+  // malloc leaks, but to avoid the standard streams showing up in
+  // leak reports, close them here.
+  fclose(stdin);
+  fclose(stdout);
+  fclose(stderr);
+ 
+  reinterpret_cast&lt;finalize_func_t&gt;(gFunctions[FUNC_FINALIZE])();
+}</code></pre> 
+<p>终调用的是 malloc_debug 中的 debug_finalize() 进行检查，例如是否有内存泄漏，如果有，会将调用栈打印出来。详见2.4.</p> 
+<p>注：</p> 
+<p>__cxa_atexit() 注册的 MallocFiniImpl()，是需要进程主动调用 exit() 才会调用 debug_finalize() 去检查，如果进程收到 fatal signal 而导致被 kernel 强制 exit，此时进程不会调用 exit()，也就不会调用 debug_finalize() 进行检查了。</p> 
+<h3>2.2 malloc函数入口</h3> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common.cpp
+ 
+extern "C" void* malloc(size_t bytes) {
+  auto dispatch_table = GetDispatchTable();
+  void *result;
+  if (__predict_false(dispatch_table != nullptr)) {
+    result = dispatch_table-&gt;malloc(bytes);
+  } else {
+    result = Malloc(malloc)(bytes);
+  }
+  if (__predict_false(result == nullptr)) {
+    warning_log("malloc(%zu) failed: returning null pointer", bytes);
+    return nullptr;
+  }
+  return MaybeTagPointer(result);
+}</code></pre> 
+<p>如果没有使能 malloc_debug 时，dispatch_table 为 nullptr，则会进入 Malloc() 调用，即原生的 malloc 函数。</p> 
+<p>这里的 dispatch_table 就是加载 libc_malloc_debug.so 之后初始化全局变量 __libc_globals 中的 current_dispatch_table.</p> 
+<p>如果使能了 malloc_debug 时，就会调用 dispatch_table-&gt;malloc()，这里的 malloc 函数就是之前MallocDispatch 里面的函数指针。这里最终调用的就是 malloc_debug 中的 debug_malloc() 函数。</p> 
+<h3>2.3 debug_malloc函数入口</h3> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+ 
+void* debug_malloc(size_t size) {
+  if (DebugCallsDisabled()) {
+    return g_dispatch-&gt;malloc(size);
+  }
+  ScopedConcurrentLock lock;
+  ScopedDisableDebugCalls disable;
+  ScopedBacktraceSignalBlocker blocked;
+  // malloc_debug内存分配核心函数
+  void* pointer = InternalMalloc(size);
+  // 内存首地址存到g_debug
+  if (g_debug-&gt;config().options() &amp; RECORD_ALLOCS) {
+    g_debug-&gt;record-&gt;AddEntry(new MallocEntry(pointer, size));
+  }
+ 
+  return pointer;
+}</code></pre> 
+<p>FinishInstallHooks() 函数会对 malloc_debug 进行初始化，其中就包括 malloc_debug 中的关键变量 g_debug，options 的解析也是在 g_debug 的 Initialize() 中完成。</p> 
+<h4>2.3.1 InternalMalloc函数</h4> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+ 
+static void* InternalMalloc(size_t size) {
+  if ((g_debug-&gt;config().options() &amp; BACKTRACE) &amp;&amp; g_debug-&gt;pointer-&gt;ShouldDumpAndReset()) {
+    debug_dump_heap(android::base::StringPrintf(
+                        "%s.%d.txt", g_debug-&gt;config().backtrace_dump_prefix().c_str(), getpid())
+                        .c_str());
+  }
+ 
+  if (size == 0) {
+    size = 1;
+  }
+ 
+  //g_debug在初始化的时候，会根据options解析 extra_bytes_
+  size_t real_size = size + g_debug-&gt;extra_bytes();
+  if (real_size &lt; size) {
+    // Overflow.
+    errno = ENOMEM;
+    return nullptr;
+  }
+ 
+  if (size &gt; PointerInfoType::MaxSize()) {
+    errno = ENOMEM;
+    return nullptr;
+  }
+ 
+  void* pointer;
+  //创建 header，real_size 按照16字节或8字节对齐，64位系统按16字节
+  if (g_debug-&gt;HeaderEnabled()) {
+    Header* header =
+        reinterpret_cast&lt;Header*&gt;(g_dispatch-&gt;memalign(MINIMUM_ALIGNMENT_BYTES, real_size));
+    if (header == nullptr) {
+      return nullptr;
+    }
+    pointer = InitHeader(header, header, size);
+  } else {
+    // android p之后直接调用原生的系统内存分配机制，一般用scudo
+    pointer = g_dispatch-&gt;malloc(real_size);
+  }
+ 
+  if (pointer != nullptr) {
+     // 如果打开track，将内存首地址存入PointerData
+    if (g_debug-&gt;TrackPointers()) {
+      PointerData::Add(pointer, size);
+    }
+     // options的FILL_ON_ALLOC选项打开，在内存分配时进行数据0xeb填充
+    if (g_debug-&gt;config().options() &amp; FILL_ON_ALLOC) {
+      size_t bytes = InternalMallocUsableSize(pointer);
+      size_t fill_bytes = g_debug-&gt;config().fill_on_alloc_bytes();
+      bytes = (bytes &lt; fill_bytes) ? bytes : fill_bytes;
+      memset(pointer, g_debug-&gt;config().fill_alloc_value(), bytes);
+    }
+  }
+  return pointer;
+}</code></pre> 
+<p>real_size 是在size 基础上又加上了 g_debug-&gt;extra_bytes()，在g_debug 在初始化时根据 options 指定计算出增加的空间保存在 g_debug-&gt;extra_bytes_ 中，详细可以查看 g_debug-&gt;Initialize().</p> 
+<p>通过 g_dispatch-&gt;malloc() 通过原生的 malloc() 流程申请 real_size 空间:</p> 
+<pre><code class="language-cpp">// bionic/libc/bionic/malloc_common.cpp
+ 
+static constexpr MallocDispatch __libc_malloc_default_dispatch __attribute__((unused)) = {
+  Malloc(calloc),
+  Malloc(free),
+  Malloc(mallinfo),
+  Malloc(malloc),
+  Malloc(malloc_usable_size),
+  Malloc(memalign),
+  Malloc(posix_memalign),
+#if defined(HAVE_DEPRECATED_MALLOC_FUNCS)
+  Malloc(pvalloc),
+#endif
+  Malloc(realloc),
+#if defined(HAVE_DEPRECATED_MALLOC_FUNCS)
+  Malloc(valloc),
+#endif
+  Malloc(malloc_iterate),
+  Malloc(malloc_disable),
+  Malloc(malloc_enable),
+  Malloc(mallopt),
+  Malloc(aligned_alloc),
+  Malloc(malloc_info),
+};</code></pre> 
+<p>小结：在原来size基础上新增加了一些检测相关的东西，最终调用原生的malloc进行内存分配（一般采用scudo内存分配机制），通过mmap syscall方式向内核请求分配内存。</p> 
+<h3>2.4 mem leak监控原理</h3> 
+<p>内存泄漏的检测原理：维护一个记录内存申请和释放的列表，每当申请内存时列表成员+1，内存释放时列表成员-1，程序退出时列表中还存在的成员即内存泄漏的成员。</p> 
+<p>1）内存申请</p> 
+<p>在 PointData 里维护了一个全局的 pointers_ map，每次申请内存时调用 Add 函数增加 pointers_ 成员，释放内存时调用 Remove 函数移除 pointers_ 成员。</p> 
+<pre><code class="language-cpp">// malloc_debug.cpp 
+static TimedResult InternalMalloc(size_t size) {
+......
+
+ if (pointer != nullptr) {
+   if (g_debug-&gt;TrackPointers()) {
+   // 内存申请时调用 Add 函数增加 pointers_ 成员
+     PointerData::Add(pointer, size);
+   }
+
+   ......
+ }
+
+ return result;
+}
+</code></pre> 
+<p>2）内存释放</p> 
+<pre><code class="language-cpp">// malloc_debug.cpp 
+static TimedResult InternalFree(void* pointer) {
+...
+  if (g_debug-&gt;TrackPointers()) {
+  // 释放内存时调用 Remove 函数移除 pointers_ 成员
+    PointerData::Remove(pointer);
+  }
+...
+  return result;
+}
+</code></pre> 
+<p>3）内存泄漏信息打印</p> 
+<p>程序退出时调用 debug_finalize() 打印内存泄漏并保存dump 文件，调用 LogLeaks() 将内存泄漏信息在log 打印，将dump 文件写入设备存储。</p> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/malloc_debug.cpp
+ 
+void debug_finalize() {
+......
+ 
+  if (g_debug-&gt;config().options() &amp; LEAK_TRACK) {
+    PointerData::LogLeaks();
+  }
+ ......
+}</code></pre> 
+<p>LogLeaks()：</p> 
+<p>LogLeaks() 内部调用 GetList 函数获得 pointers_ 成员，打印相关backtrace信息。</p> 
+<pre><code class="language-cpp">// bionic/libc/malloc_debug/PointerData.cpp
+
+void PointerData::LogLeaks() {
+  std::vector&lt;ListInfoType&gt; list;
+
+  std::lock_guard&lt;std::mutex&gt; pointer_guard(pointer_mutex_);
+  std::lock_guard&lt;std::mutex&gt; frame_guard(frame_mutex_);
+  GetList(&amp;list, false);
+
+  size_t track_count = 0;
+  for (const auto&amp; list_info : list) {
+    error_log("+++ %s leaked block of size %zu at 0x%" PRIxPTR " (leak %zu of %zu)", getprogname(),
+              list_info.size, list_info.pointer, ++track_count, list.size());
+    if (list_info.backtrace_info != nullptr) {
+      error_log("Backtrace at time of allocation:");
+      UnwindLog(*list_info.backtrace_info);
+    } else if (list_info.frame_info != nullptr) {
+      error_log("Backtrace at time of allocation:");
+      backtrace_log(list_info.frame_info-&gt;frames.data(), list_info.frame_info-&gt;frames.size());
+    }
+    // Do not bother to free the pointers, we are about to exit any way.
+  }
+}
+</code></pre> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/778ccbd7eeb02faf63c13c73af2db0a9/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">2024统计建模：大数据与人工智能时代的统计研究</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ee1e6a2e8241f05ea2b292efcbf1873a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">JAVA poi-tl 制作word模板 表格数据行循环 带有复选框勾选的表格</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

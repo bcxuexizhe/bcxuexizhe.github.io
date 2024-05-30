@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【hive】列转行—collect_set()/collect_list()/concat_ws()函数的使用场景 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/239aeb7286769dd1fef702ce873ca649/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【hive】列转行—collect_set()/collect_list()/concat_ws()函数的使用场景">
+  <meta property="og:description" content="文章目录 一、collect_set()/collect_list()二、实际运用把同一分组的不同行的数据聚合成一个行用下标可以随机取某一个聚合后的中的值用‘|’分隔开使用collect_set()/collect_list()使得全局有序 一、collect_set()/collect_list() 在 Hive 中想实现按某字段分组，对另外字段进行合并，可通过collect_list()或者collect_set()实现。
+collect_set()函数与collect_list()函数：列转行专用函数，都是将分组中的某列转为一个数组返回。有时为了字段拼接效果，多和concat_ws()函数连用。
+collect_set()与collect_list()的区别：
+collect_list()函数 - - 不去重collect_set()函数 - - 去重 有点类似于Python中的列表与集合。
+二、实际运用 创建测试表及插入数据
+drop table test_1; create table test_1( id string, cur_day string, rule string ) row format delimited fields terminated by &#39;,&#39;; insert into test_1 values (&#39;a&#39;,&#39;20230809&#39;,&#39;501&#39;),(&#39;a&#39;,&#39;20230811&#39;,&#39;502&#39;),(&#39;a&#39;,&#39;20230812&#39;,&#39;503&#39;),(&#39;a&#39;,&#39;20230812&#39;,&#39;501&#39;),(&#39;a&#39;,&#39;20230813&#39;,&#39;512&#39;),(&#39;b&#39;,&#39;20230809&#39;,&#39;511&#39;),(&#39;b&#39;,&#39;20230811&#39;,&#39;512&#39;),(&#39;b&#39;,&#39;20230812&#39;,&#39;513&#39;),(&#39;b&#39;,&#39;20230812&#39;,&#39;511&#39;),(&#39;b&#39;,&#39;20230813&#39;,&#39;512&#39;),(&#39;b&#39;,&#39;20230809&#39;,&#39;511&#39;),(&#39;c&#39;,&#39;20230811&#39;,&#39;512&#39;),(&#39;c&#39;,&#39;20230812&#39;,&#39;513&#39;),(&#39;c&#39;,&#39;20230812&#39;,&#39;511&#39;),(&#39;c&#39;,&#39;20230813&#39;,&#39;512&#39;); 把同一分组的不同行的数据聚合成一个行 举例1：按照id，cur_day分组，取出每个id对应的所有rule（不去重）。
+select id,cur_day,collect_list(rule) as rule_total from test_1 group by id,cur_day order by id,cur_day; 举例2：按照id，cur_day分组，取出每个id对应的所有rule（去重）。
+select id,cur_day,collect_set(rule) as rule_total from test_1 group by id,cur_day order by id,cur_day; 用下标可以随机取某一个 select id,cur_day,collect_list(rule)[0] as rule_one from test_1 group by id,cur_day order by id,cur_day; select id,cur_day,collect_set(rule)[0] as rule_one from test_1 group by id,cur_day order by id,cur_day; 聚合后的中的值用‘|’分隔开 select id,cur_day,concat_ws(&#39;|&#39;,collect_list(rule)) as rule_total from test_1 group by id,cur_day order by id,cur_day; select id,cur_day,concat_ws(&#39;|&#39;,collect_set(rule)) as rule_totalfrom test_1 group by id,cur_day order by id,cur_day; 使用collect_set()/collect_list()使得全局有序 现在需求：严格按照同一个id进行分组，规则按时间升序排序，使用collect_list()将时间与规则按升序排序且一 一 对应展示出来。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-12-07T16:32:33+08:00">
+    <meta property="article:modified_time" content="2023-12-07T16:32:33+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【hive】列转行—collect_set()/collect_list()/concat_ws()函数的使用场景</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#collect_setcollect_list_7" rel="nofollow">一、collect_set()/collect_list()</a></li><li><a href="#_22" rel="nofollow">二、实际运用</a></li><li><ul><li><a href="#_39" rel="nofollow">把同一分组的不同行的数据聚合成一个行</a></li><li><a href="#_57" rel="nofollow">用下标可以随机取某一个</a></li><li><a href="#_68" rel="nofollow">聚合后的中的值用‘|’分隔开</a></li><li><a href="#collect_setcollect_list_78" rel="nofollow">使用collect_set()/collect_list()使得全局有序</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="collect_setcollect_list_7"></a>一、collect_set()/collect_list()</h2> 
+<p>在 Hive 中想实现按某字段分组，对另外字段进行合并，可通过collect_list()或者collect_set()实现。</p> 
+<ul><li> <p>collect_set()函数与collect_list()函数：<strong>列转行</strong>专用函数，都是将分组中的某列转为一个数组返回。有时为了字段拼接效果，多和concat_ws()函数连用。</p> </li><li> <p>collect_set()与collect_list()的区别：</p> 
+  <ul><li>collect_list()函数 - - 不去重</li><li>collect_set()函数 - - 去重</li></ul> </li></ul> 
+<p>有点类似于Python中的列表与集合。</p> 
+<hr> 
+<h2><a id="_22"></a>二、实际运用</h2> 
+<p>创建测试表及插入数据</p> 
+<pre><code class="prism language-python">drop table test_1<span class="token punctuation">;</span>
+create table test_1<span class="token punctuation">(</span>
+<span class="token builtin">id</span> string<span class="token punctuation">,</span>
+cur_day string<span class="token punctuation">,</span>
+rule string
+<span class="token punctuation">)</span> 
+row <span class="token builtin">format</span> delimited fields terminated by <span class="token string">','</span><span class="token punctuation">;</span>
+
+insert into test_1 values
+<span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'20230809'</span><span class="token punctuation">,</span><span class="token string">'501'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'20230811'</span><span class="token punctuation">,</span><span class="token string">'502'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'503'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'501'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'a'</span><span class="token punctuation">,</span><span class="token string">'20230813'</span><span class="token punctuation">,</span><span class="token string">'512'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230809'</span><span class="token punctuation">,</span><span class="token string">'511'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230811'</span><span class="token punctuation">,</span><span class="token string">'512'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'513'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'511'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230813'</span><span class="token punctuation">,</span><span class="token string">'512'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'b'</span><span class="token punctuation">,</span><span class="token string">'20230809'</span><span class="token punctuation">,</span><span class="token string">'511'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'c'</span><span class="token punctuation">,</span><span class="token string">'20230811'</span><span class="token punctuation">,</span><span class="token string">'512'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'c'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'513'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'c'</span><span class="token punctuation">,</span><span class="token string">'20230812'</span><span class="token punctuation">,</span><span class="token string">'511'</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token punctuation">(</span><span class="token string">'c'</span><span class="token punctuation">,</span><span class="token string">'20230813'</span><span class="token punctuation">,</span><span class="token string">'512'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="_39"></a>把同一分组的不同行的数据聚合成一个行</h3> 
+<p>举例1：按照id，cur_day分组，取出每个id对应的所有rule（不去重）。</p> 
+<pre><code class="prism language-python">select <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span> <span class="token keyword">as</span> rule_total  <span class="token keyword">from</span> test_1 group by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day order by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/20/b2/ooCggii7_o.png" alt="在这里插入图片描述"><br> 举例2：按照id，cur_day分组，取出每个id对应的所有rule（去重）。</p> 
+<pre><code class="prism language-c">select id<span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span><span class="token function">collect_set</span><span class="token punctuation">(</span>rule<span class="token punctuation">)</span> as rule_total from test_1 group by id<span class="token punctuation">,</span>cur_day order by id<span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f5/9a/Fop17lQ0_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_57"></a>用下标可以随机取某一个</h3> 
+<pre><code class="prism language-python">select <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token keyword">as</span> rule_one <span class="token keyword">from</span> test_1 group by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day order by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+
+select <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>collect_set<span class="token punctuation">(</span>rule<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token keyword">as</span> rule_one <span class="token keyword">from</span> test_1 group by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day order by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/32/60/vxkj72p8_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_68"></a>聚合后的中的值用‘|’分隔开</h3> 
+<pre><code class="prism language-python">select <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>concat_ws<span class="token punctuation">(</span><span class="token string">'|'</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> rule_total <span class="token keyword">from</span> test_1 group by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day order by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+
+select <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>concat_ws<span class="token punctuation">(</span><span class="token string">'|'</span><span class="token punctuation">,</span>collect_set<span class="token punctuation">(</span>rule<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> rule_totalfrom test_1 group by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day order by <span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/53/43/2KmszKLY_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="collect_setcollect_list_78"></a>使用collect_set()/collect_list()使得全局有序</h3> 
+<p>现在需求：严格按照同一个id进行分组，规则按时间升序排序，使用collect_list()将时间与规则按升序排序且一 一 对应展示出来。</p> 
+<p>1.原数据详情：</p> 
+<p><img src="https://images2.imgbox.com/20/b0/fbWOfn26_o.png" alt="在这里插入图片描述"><br> 2.要求输出结果如下：按id分组，将rule按cur_day升序排序，将cur_day,rule放在一个列表中,并且列表中cur_day与rule是按升序一一对应的关系。<br> <img src="https://images2.imgbox.com/b9/ef/JLAAvdKZ_o.png" alt="在这里插入图片描述"></p> 
+<p>3.实现思路：将其使用row_number()over(partition by id order by cur_day as)排序，然后再使用collect_list()或者collect_list()/collect_set()进行聚合就可以了。</p> 
+<pre><code class="prism language-python">drop table test_2 <span class="token punctuation">;</span>
+create table test_2 <span class="token keyword">as</span> 
+select <span class="token builtin">id</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>cur_day<span class="token punctuation">)</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span> 
+<span class="token keyword">from</span> <span class="token punctuation">(</span>
+select t<span class="token punctuation">.</span><span class="token builtin">id</span><span class="token punctuation">,</span>t<span class="token punctuation">.</span>cur_day<span class="token punctuation">,</span>t<span class="token punctuation">.</span>rule<span class="token punctuation">,</span>row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> over<span class="token punctuation">(</span>partition by <span class="token builtin">id</span> order by cur_day asc<span class="token punctuation">)</span> rn <span class="token keyword">from</span> test_1 t
+<span class="token punctuation">)</span>t group by <span class="token builtin">id</span> <span class="token punctuation">;</span>
+
+select <span class="token operator">*</span> <span class="token keyword">from</span> test_2 group by <span class="token builtin">id</span> order by <span class="token builtin">id</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/bd/37/e5Z393OQ_o.png" alt="在这里插入图片描述"></p> 
+<p>4.发现问题：cur_day数组内的时间并没有按照升序排序输出。</p> 
+<p>5.原因分析：</p> 
+<ul><li>HiveQL执行时，大部分情况都会转换为MR来执行，当开户多个Mapper的时候，Mapper1可能处理的是id为a，cur_day排名为1、2、3的数据，Mapper2可能处理的id为a，cur_day排名为4、5、6的数据。</li><li>collect_list()的底层是ArrayList来实现的，当put到ArrayList的时候，不一定是哪个Mapper先，哪个Mapper后，所以会出现20230811、20230812、20230813在20230809前面的情况。所以，row_number() over(partitiion by order by) 与collect_list一起使用只能实现局部有序，不能实现全局有序。</li></ul> 
+<p>6.解决方案：</p> 
+<ul><li>方法一：全局 order by</li></ul> 
+<pre><code class="prism language-python">drop table test_2 <span class="token punctuation">;</span>
+create table test_2 <span class="token keyword">as</span> 
+select <span class="token builtin">id</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>cur_day<span class="token punctuation">)</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span> 
+<span class="token keyword">from</span> <span class="token punctuation">(</span>
+	select t<span class="token punctuation">.</span><span class="token operator">*</span> <span class="token keyword">from</span><span class="token punctuation">(</span>
+		select t<span class="token punctuation">.</span><span class="token builtin">id</span><span class="token punctuation">,</span>t<span class="token punctuation">.</span>cur_day<span class="token punctuation">,</span>t<span class="token punctuation">.</span>rule<span class="token punctuation">,</span>row_number<span class="token punctuation">(</span><span class="token punctuation">)</span> over<span class="token punctuation">(</span>partition by <span class="token builtin">id</span> order by cur_day asc<span class="token punctuation">)</span> rn <span class="token keyword">from</span> test_1 t
+	<span class="token punctuation">)</span> t order by rn 
+<span class="token punctuation">)</span>t group by <span class="token builtin">id</span> <span class="token punctuation">;</span>
+
+select <span class="token operator">*</span> <span class="token keyword">from</span> test_2 group by <span class="token builtin">id</span> order by <span class="token builtin">id</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f5/02/irDLqQ1A_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>方法二：distribute by + order by</li></ul> 
+<pre><code class="prism language-python">select
+<span class="token builtin">id</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>cur_day<span class="token punctuation">)</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>rule<span class="token punctuation">)</span> 
+<span class="token keyword">from</span><span class="token punctuation">(</span>
+	select
+	t<span class="token punctuation">.</span><span class="token builtin">id</span><span class="token punctuation">,</span>t<span class="token punctuation">.</span>cur_day<span class="token punctuation">,</span>t<span class="token punctuation">.</span>rule
+	<span class="token punctuation">,</span>row_number<span class="token punctuation">(</span><span class="token punctuation">)</span>over<span class="token punctuation">(</span>partition by <span class="token builtin">id</span> order by cur_day asc<span class="token punctuation">)</span> <span class="token keyword">as</span> rn
+	<span class="token keyword">from</span><span class="token punctuation">(</span>
+		select
+		t<span class="token punctuation">.</span><span class="token builtin">id</span><span class="token punctuation">,</span>t<span class="token punctuation">.</span>cur_day<span class="token punctuation">,</span>t<span class="token punctuation">.</span>rule
+		<span class="token keyword">from</span> test_1 t
+		distribute by <span class="token builtin">id</span> sort by cur_day asc
+	<span class="token punctuation">)</span>t
+<span class="token punctuation">)</span>t 
+group by <span class="token builtin">id</span> order by <span class="token builtin">id</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/7e/52/eKdW8Qlb_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>方法三：sort_array (只支持升序）</li></ul> 
+<pre><code class="prism language-python">select
+<span class="token builtin">id</span><span class="token punctuation">,</span>concat_ws<span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span>collect_list<span class="token punctuation">(</span>cur_day<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span>regexp_replace<span class="token punctuation">(</span>concat_ws<span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span>sort_array<span class="token punctuation">(</span>collect_list<span class="token punctuation">(</span>concat_ws<span class="token punctuation">(</span><span class="token string">'|'</span> <span class="token punctuation">,</span>lpad<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>rn <span class="token keyword">as</span> string<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">'0'</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>rule<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token string">'\\d+\\|'</span><span class="token punctuation">,</span><span class="token string">''</span><span class="token punctuation">)</span> 
+<span class="token keyword">from</span><span class="token punctuation">(</span>
+select t<span class="token punctuation">.</span><span class="token operator">*</span> 
+<span class="token keyword">from</span><span class="token punctuation">(</span>
+select
+<span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>rule<span class="token punctuation">,</span>
+row_number<span class="token punctuation">(</span><span class="token punctuation">)</span>over<span class="token punctuation">(</span>partition by <span class="token builtin">id</span> order by cur_day asc<span class="token punctuation">)</span> <span class="token keyword">as</span> rn
+<span class="token keyword">from</span> test_1
+<span class="token punctuation">)</span>t order by rn
+<span class="token punctuation">)</span>t group by <span class="token builtin">id</span> order by <span class="token builtin">id</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/60/e7/heG7q1lA_o.png" alt="在这里插入图片描述"></p> 
+<p>上面代码用到相关函数解析：</p> 
+<ul><li> <p>lpad(str,len,pad) 函数：这个是对排序值(也就是rule)来补位的，当要排序的值过大时，因为sort_array是按顺序对字符进行排序（即11会在2的前面）,所以可以使用此函数补位（即将1，2，3，4变成01，02，03，04），这样就能正常排序了。</p> 
+  <ul><li>第一个参数：你要补齐的字段值</li><li>第二个参数：补齐之后总共的位数</li><li>第三个参数：你要在左边填充的字符</li></ul> </li><li> <p>regexp_replace(strA,strB,strC) 函数：将字符串A中的符合JAVA正则表达式B的部分替换为C，即排序之前将序号使用，跟需要的字段拼接，而排序之后，需要将序号和:去掉</p> </li><li> <p>sort_array(expr[, ascendingOrder])默认是升序排序，但其中可以带参数，默认为True，即按升序，如果输入False，就会按降序排序。</p> 
+  <ul><li>expr：一个可排序元素的 ARRAY 表达式。</li><li>ascendingOrder：可选的 BOOLEAN 表达式，默认值为 True，即按升序。</li></ul> </li></ul> 
+<pre><code class="prism language-python">select <span class="token builtin">id</span>
+<span class="token punctuation">,</span>concat_ws<span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span>sort_array<span class="token punctuation">(</span>collect_list<span class="token punctuation">(</span>concat_ws<span class="token punctuation">(</span><span class="token string">'|'</span> <span class="token punctuation">,</span>lpad<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>rn <span class="token keyword">as</span> string<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">'0'</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>rule<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token keyword">as</span> middle_value <span class="token operator">-</span><span class="token operator">-</span>中间值
+<span class="token punctuation">,</span>regexp_replace<span class="token punctuation">(</span>concat_ws<span class="token punctuation">(</span><span class="token string">','</span><span class="token punctuation">,</span>sort_array<span class="token punctuation">(</span>collect_list<span class="token punctuation">(</span>concat_ws<span class="token punctuation">(</span><span class="token string">'|'</span> <span class="token punctuation">,</span>lpad<span class="token punctuation">(</span>cast<span class="token punctuation">(</span>rn <span class="token keyword">as</span> string<span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">,</span><span class="token string">'0'</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>rule<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token string">'\\d+\\|'</span><span class="token punctuation">,</span><span class="token string">''</span><span class="token punctuation">)</span>  <span class="token keyword">as</span> result_values <span class="token operator">-</span><span class="token operator">-</span>最终结果
+<span class="token keyword">from</span><span class="token punctuation">(</span>
+select t<span class="token punctuation">.</span><span class="token operator">*</span> 
+<span class="token keyword">from</span><span class="token punctuation">(</span>
+select
+<span class="token builtin">id</span><span class="token punctuation">,</span>cur_day<span class="token punctuation">,</span>rule<span class="token punctuation">,</span>
+row_number<span class="token punctuation">(</span><span class="token punctuation">)</span>over<span class="token punctuation">(</span>partition by <span class="token builtin">id</span> order by cur_day asc<span class="token punctuation">)</span> <span class="token keyword">as</span> rn
+<span class="token keyword">from</span> test_1
+<span class="token punctuation">)</span>t order by rn
+<span class="token punctuation">)</span>t group by <span class="token builtin">id</span> order by <span class="token builtin">id</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/68/c0/YCBlirGM_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/c640d5d8c4098a410c339d599dd0652c/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">详解数据仓库和数据集市：ODS、DW、DWD、DWM、DWS、ADS</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/caef456b100b98b4d32c20a041953cf3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">adb版本不一致，使用adb devices查看设备：adb server version (36) doesn‘t match this client (41)； killing...已解决1207</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

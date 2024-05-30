@@ -1,0 +1,368 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>深入解析实时数仓Doris：介绍、架构剖析、应用场景与数据划分细节 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3a67de820cb2799f6264cc4f1e69551d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="深入解析实时数仓Doris：介绍、架构剖析、应用场景与数据划分细节">
+  <meta property="og:description" content="码到三十五 ： 个人主页 心中有诗画，指尖舞代码，目光览世界，步履越千山，人间尽值得 ! Doris是一款高性能、开源的实时分析数据仓库，旨在为用户提供毫秒级查询响应、高并发、高可用以及易于扩展的OLAP解决方案。它融合了MPP（大规模并行处理）架构与分布式存储，支持PB级别的数据存储和分析，是大数据场景下理想的实时数仓选择。
+目录 1. Doris 介绍2. 使用场景2.1 报表分析2.2 即席查询（Ad-hoc Query）2.3 数仓构建2.4 数据湖联邦查询 3. 技术概述4. 数据划分4.1 基本概念4.2 数据划分 1. Doris 介绍 Apache Doris 是一个基于 MPP 架构的高性能、实时的分析型数据库，以极速易用的特点被人们所熟知，仅需亚秒级响应时间即可返回海量数据下的查询结果，不仅可以支持高并发的点查询场景，也能支持高吞吐的复杂分析场景。基于此，Apache Doris 能够较好的满足报表分析、即席查询、统一数仓构建、数据湖联邦查询加速等使用场景，用户可以在此之上构建用户行为分析、AB 实验平台、日志检索分析、用户画像分析、订单分析等应用。
+Apache Doris 最早是诞生于百度广告报表业务的 Palo 项目，2017 年正式对外开源，2018 年 7 月由百度捐赠给 Apache 基金会进行孵化，之后在 Apache 导师的指导下由孵化器项目管理委员会成员进行孵化和运营。目前 Apache Doris 社区已经聚集了来自不同行业数百家企业的 600 余位贡献者，并且每月活跃贡献者人数也超过 120 位。 2022 年 6 月，Apache Doris 成功从 Apache 孵化器毕业，正式成为 Apache 顶级项目（Top-Level Project，TLP）
+Apache Doris 如今在中国乃至全球范围内都拥有着广泛的用户群体，截止目前， Apache Doris 已经在全球超过 4000 家企业的生产环境中得到应用，在中国市值或估值排行前 50 的互联网公司中，有超过 80% 长期使用 Apache Doris，包括百度、美团、小米、京东、字节跳动、腾讯、网易、快手、微博、贝壳等。同时在一些传统行业如金融、能源、制造、电信等领域也有着丰富的应用。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-24T10:47:10+08:00">
+    <meta property="article:modified_time" content="2024-03-24T10:47:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">深入解析实时数仓Doris：介绍、架构剖析、应用场景与数据划分细节</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/50/b8/PJgfWCbE_o.png" alt="在这里插入图片描述"></p> 
+<center> 
+ <font color="#c09008" size="4"><strong> 码到三十五 ：</strong></font> 
+ <a href="https://blog.csdn.net/qq_26664043" size="6"><font color="#555fff" size="4"> 个人主页</font></a> 
+</center> 
+<br> 
+<center> 
+ <font color="#f2312" size="4"><strong>心中有诗画，指尖舞代码，目光览世界，步履越千山，人间尽值得 ! </strong> </font> 
+</center> 
+<hr> 
+<hr> 
+<blockquote> 
+ <p>Doris是一款高性能、开源的实时分析数据仓库，旨在为用户提供毫秒级查询响应、高并发、高可用以及易于扩展的OLAP解决方案。它融合了MPP（大规模并行处理）架构与分布式存储，支持PB级别的数据存储和分析，是大数据场景下理想的实时数仓选择。</p> 
+</blockquote> 
+<p></p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><ul><li><a href="#1_Doris__14" rel="nofollow">1. Doris 介绍</a></li><li><a href="#2__21" rel="nofollow">2. 使用场景</a></li><li><ul><li><a href="#21__25" rel="nofollow">2.1 报表分析</a></li><li><a href="#22_Adhoc_Query_31" rel="nofollow">2.2 即席查询（Ad-hoc Query）</a></li><li><a href="#23__37" rel="nofollow">2.3 数仓构建</a></li><li><a href="#24__43" rel="nofollow">2.4 数据湖联邦查询</a></li></ul> 
+   </li><li><a href="#3__46" rel="nofollow">3. 技术概述</a></li><li><a href="#4__101" rel="nofollow">4. 数据划分</a></li><li><ul><li><a href="#41__103" rel="nofollow">4.1 基本概念</a></li><li><a href="#42__124" rel="nofollow">4.2 数据划分</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="1_Doris__14"></a>1. Doris 介绍</h3> 
+<p>Apache Doris 是一个基于 MPP 架构的高性能、实时的分析型数据库，以极速易用的特点被人们所熟知，仅需亚秒级响应时间即可返回海量数据下的查询结果，不仅可以支持高并发的点查询场景，也能支持高吞吐的复杂分析场景。基于此，Apache Doris 能够较好的满足报表分析、即席查询、统一数仓构建、数据湖联邦查询加速等使用场景，用户可以在此之上构建用户行为分析、AB 实验平台、日志检索分析、用户画像分析、订单分析等应用。</p> 
+<p>Apache Doris 最早是诞生于百度广告报表业务的 Palo 项目，2017 年正式对外开源，2018 年 7 月由百度捐赠给 Apache 基金会进行孵化，之后在 Apache 导师的指导下由孵化器项目管理委员会成员进行孵化和运营。目前 Apache Doris 社区已经聚集了来自不同行业数百家企业的 600 余位贡献者，并且每月活跃贡献者人数也超过 120 位。 2022 年 6 月，Apache Doris 成功从 Apache 孵化器毕业，正式成为 Apache 顶级项目（Top-Level Project，TLP）</p> 
+<p>Apache Doris 如今在中国乃至全球范围内都拥有着广泛的用户群体，截止目前， Apache Doris 已经在全球超过 4000 家企业的生产环境中得到应用，在中国市值或估值排行前 50 的互联网公司中，有超过 80% 长期使用 Apache Doris，包括百度、美团、小米、京东、字节跳动、腾讯、网易、快手、微博、贝壳等。同时在一些传统行业如金融、能源、制造、电信等领域也有着丰富的应用。</p> 
+<h3><a id="2__21"></a>2. 使用场景</h3> 
+<p>如下图所示，数据源经过各种数据集成和加工处理后，通常会入库到实时数仓 Doris 和离线湖仓（Hive, Iceberg, Hudi 中），Apache Doris 被广泛应用在以下场景中。Image description<br> <img src="https://images2.imgbox.com/0b/09/dMIDeCS1_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="21__25"></a>2.1 报表分析</h4> 
+<ul><li>实时看板 （Dashboards）</li><li>面向企业内部分析师和管理者的报表</li><li>面向用户或者客户的高并发报表分析（Customer Facing Analytics）。比如面向网站主的站点分析、面向广告主的广告报表，并发通常要求成千上万的 QPS ，查询延时要求毫秒级响应。著名的电商公司京东在广告报表中使用 Apache Doris ，每天写入 100 亿行数据，查询并发 QPS 上万，99 分位的查询延时 150ms。</li></ul> 
+<h4><a id="22_Adhoc_Query_31"></a>2.2 即席查询（Ad-hoc Query）</h4> 
+<p>面向分析师的自助分析，查询模式不固定，要求较高的吞吐。小米公司基于 Doris 构建了增长分析平台（Growing Analytics，GA），利用用户行为数据对业务进行增长分析，平均查询延时 10s，95 分位的查询延时 30s 以内，每天的 SQL 查询量为数万条。</p> 
+<p><img src="https://images2.imgbox.com/d9/4d/ULvkKDYU_o.jpg" alt="在这里插入图片描述"></p> 
+<h4><a id="23__37"></a>2.3 数仓构建</h4> 
+<p>一个平台满足统一的数据仓库建设需求，简化繁琐的大数据软件栈。海底捞基于 Doris 构建的统一数仓，替换了原来由 Spark、Hive、Kudu、Hbase、Phoenix 组成的旧架构，架构大大简化。</p> 
+<p><img src="https://images2.imgbox.com/a6/cb/aRYjOcvA_o.jpg" alt="在这里插入图片描述"></p> 
+<h4><a id="24__43"></a>2.4 数据湖联邦查询</h4> 
+<p>通过外表的方式联邦分析位于 Hive、Iceberg、Hudi 中的数据，在避免数据拷贝的前提下，查询性能大幅提升。</p> 
+<h3><a id="3__46"></a>3. 技术概述</h3> 
+<p>Doris<strong>整体架构</strong>如下图所示，Doris 架构非常简单，只有两类进程</p> 
+<ul><li> <p><strong>Frontend（FE</strong>），主要负责用户请求的接入、查询解析规划、元数据的管理、节点管理相关工作。</p> </li><li> <p><strong>Backend（BE）</strong>，主要负责数据存储、查询计划的执行。</p> </li></ul> 
+<p><img src="https://images2.imgbox.com/19/8c/qD18X1zU_o.jpg" alt="在这里插入图片描述"></p> 
+<p>这两类进程都是可以横向扩展的，单集群可以支持到数百台机器，数十 PB 的存储容量。并且这两类进程通过一致性协议来保证服务的高可用和数据的高可靠。这种高度集成的架构设计极大的降低了一款分布式系统的运维成本。<br> <img src="https://images2.imgbox.com/99/e2/8OPLNDhT_o.png" alt="在这里插入图片描述"></p> 
+<p>在<strong>使用接口</strong>方面，Doris 采用 MySQL 协议，高度兼容 MySQL 语法，支持标准 SQL，用户可以通过各类客户端工具来访问 Doris，并支持与 BI 工具的无缝对接。Doris 当前支持多种主流的 BI 产品，包括不限于 SmartBI、DataEase、FineBI、Tableau、Power BI、SuperSet 等，只要支持 MySQL 协议的 BI 工具，Doris 就可以作为数据源提供查询支持。</p> 
+<p>在<strong>存储引擎</strong>方面，Doris 采用列式存储，按列进行数据的编码压缩和读取，能够实现极高的压缩比，同时减少大量非相关数据的扫描，从而更加有效利用 IO 和 CPU 资源。</p> 
+<p>Doris 也支持比较丰富的<strong>索引结构</strong>，来减少数据的扫描：</p> 
+<ul><li> <p>Sorted Compound Key Index，可以最多指定三个列组成复合排序键，通过该索引，能够有效进行数据裁剪，从而能够更好支持高并发的报表场景</p> </li><li> <p>Min/Max ：有效过滤数值类型的等值和范围查询</p> </li><li> <p>Bloom Filter ：对高基数列的等值过滤裁剪非常有效</p> </li><li> <p>Invert Index ：能够对任意字段实现快速检索</p> </li></ul> 
+<p>在<strong>存储模型</strong>方面，Doris 支持多种存储模型，针对不同的场景做了针对性的优化：</p> 
+<ul><li> <p>Aggregate Key 模型：相同 Key 的 Value 列合并，通过提前聚合大幅提升性能</p> </li><li> <p>Unique Key 模型：Key 唯一，相同 Key 的数据覆盖，实现行级别数据更新</p> </li><li> <p>Duplicate Key 模型：明细数据模型，满足事实表的明细存储</p> </li></ul> 
+<p>Doris 也支持强一致的<strong>物化视图</strong>，物化视图的更新和选择都在系统内自动进行，不需要用户手动选择，从而大幅减少了物化视图维护的代价。</p> 
+<p>在<strong>查询引擎</strong>方面，Doris 采用 MPP 的模型，节点间和节点内都并行执行，也支持多个大表的分布式 Shuffle Join，从而能够更好应对复杂查询。</p> 
+<p><img src="https://images2.imgbox.com/37/da/XanXXtwr_o.png" alt="Image description"></p> 
+<p>Doris 查询引擎是<strong>向量化的查询引擎</strong>，所有的内存结构能够按照列式布局，能够达到大幅减少虚函数调用、提升 Cache 命中率，高效利用 SIMD 指令的效果。<strong>在宽表聚合场景下性能是非向量化引擎的 5-10 倍。</strong></p> 
+<p><img src="https://images2.imgbox.com/ee/0f/AniMGrQJ_o.png" alt="Image description"></p> 
+<p>Doris 采用了 Adaptive Query Execution 技术， 可以根据 Runtime Statistics 来动态调整执行计划，比如通过 Runtime Filter 技术能够在运行时生成 Filter 推到 Probe 侧，并且能够将 Filter 自动穿透到 Probe 侧最底层的 Scan 节点，从而大幅减少 Probe 的数据量，加速 Join 性能。Doris 的 Runtime Filter 支持 In/Min/Max/Bloom Filter。</p> 
+<p><strong>在优化器方面 Doris 使用 CBO 和 RBO 结合的优化策略</strong>，RBO 支持常量折叠、子查询改写、谓词下推等，CBO 支持 Join Reorder。目前 CBO 还在持续优化中，主要集中在更加精准的统计信息收集和推导，更加精准的代价模型预估等方面。</p> 
+<h3><a id="4__101"></a>4. 数据划分</h3> 
+<h4><a id="41__103"></a>4.1 基本概念</h4> 
+<p>在 Doris 中，数据都以表（Table）的形式进行逻辑上的描述。</p> 
+<p><strong>Row &amp; Column</strong></p> 
+<p>一张表包括行（Row）和列（Column）：</p> 
+<ul><li> <p>Row：即用户的一行数据；</p> </li><li> <p>Column： 用于描述一行数据中不同的字段。</p> </li></ul> 
+<p>Column 可以分为两大类：Key 和 Value。从业务角度看，Key 和 Value 可以分别对应维度列和指标列。Doris的key列是建表语句中指定的列，建表语句中的关键字’unique key’或’aggregate key’或’duplicate key’后面的列就是key列，除了key列剩下的就是value列。从聚合模型的角度来说，Key 列相同的行，会聚合成一行。其中 Value 列的聚合方式由用户在建表时指定。关于更多聚合模型的介绍，可以参阅 Doris 数据模型。</p> 
+<p><strong>Tablet &amp; Partition</strong></p> 
+<p>在 Doris 的存储引擎中，用户数据被水平划分为若干个数据分片（Tablet，也称作数据分桶）。每个 Tablet 包含若干数据行。各个 Tablet 之间的数据没有交集，并且在物理上是独立存储的。</p> 
+<p>多个 Tablet 在逻辑上归属于不同的分区（Partition）。一个 Tablet 只属于一个 Partition。而一个 Partition 包含若干个 Tablet。因为 Tablet 在物理上是独立存储的，所以可以视为 Partition 在物理上也是独立。Tablet 是数据移动、复制等操作的最小物理存储单元。</p> 
+<p>若干个 Partition 组成一个 Table。Partition 可以视为是逻辑上最小的管理单元。数据的导入与删除，仅能针对一个 Partition 进行。</p> 
+<h4><a id="42__124"></a>4.2 数据划分</h4> 
+<p>我们以一个建表操作来说明 Doris 的数据划分。</p> 
+<p>Doris 的建表是一个同步命令，SQL执行完成即返回结果，命令返回成功即表示建表成功。具体建表语法可以参考CREATE TABLE，也可以通过 HELP CREATE TABLE; 查看更多帮助。</p> 
+<p>本小节通过一个例子，来介绍 Doris 的建表方式。</p> 
+<pre><code class="prism language-sql"><span class="token comment">-- Range Partition</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> <span class="token keyword">IF</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> example_db<span class="token punctuation">.</span>example_range_tbl
+<span class="token punctuation">(</span>
+    <span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span> LARGEINT <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户id"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span> <span class="token keyword">DATE</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"数据灌入日期时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>timestamp<span class="token punctuation">`</span></span> <span class="token keyword">DATETIME</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"数据灌入的时间戳"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>city<span class="token punctuation">`</span></span> <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">)</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户所在城市"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>age<span class="token punctuation">`</span></span> <span class="token keyword">SMALLINT</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户年龄"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>sex<span class="token punctuation">`</span></span> <span class="token keyword">TINYINT</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户性别"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>last_visit_date<span class="token punctuation">`</span></span> <span class="token keyword">DATETIME</span> <span class="token keyword">REPLACE</span> <span class="token keyword">DEFAULT</span> <span class="token string">"1970-01-01 00:00:00"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最后一次访问时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>cost<span class="token punctuation">`</span></span> <span class="token keyword">BIGINT</span> SUM <span class="token keyword">DEFAULT</span> <span class="token string">"0"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户总消费"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>max_dwell_time<span class="token punctuation">`</span></span> <span class="token keyword">INT</span> MAX <span class="token keyword">DEFAULT</span> <span class="token string">"0"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最大停留时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>min_dwell_time<span class="token punctuation">`</span></span> <span class="token keyword">INT</span> MIN <span class="token keyword">DEFAULT</span> <span class="token string">"99999"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最小停留时间"</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">ENGINE</span><span class="token operator">=</span>OLAP
+AGGREGATE <span class="token keyword">KEY</span><span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>timestamp<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>city<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>age<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>sex<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> RANGE<span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">(</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201701<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-02-01"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201702<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-03-01"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201703<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-04-01"</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">DISTRIBUTED</span> <span class="token keyword">BY</span> <span class="token keyword">HASH</span><span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span><span class="token punctuation">)</span> BUCKETS <span class="token number">16</span>
+PROPERTIES
+<span class="token punctuation">(</span>
+    <span class="token string">"replication_num"</span> <span class="token operator">=</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+    <span class="token string">"storage_medium"</span> <span class="token operator">=</span> <span class="token string">"SSD"</span><span class="token punctuation">,</span>
+    <span class="token string">"storage_cooldown_time"</span> <span class="token operator">=</span> <span class="token string">"2018-01-01 12:00:00"</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+
+<span class="token comment">-- List Partition</span>
+
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span> <span class="token keyword">IF</span> <span class="token operator">NOT</span> <span class="token keyword">EXISTS</span> example_db<span class="token punctuation">.</span>example_list_tbl
+<span class="token punctuation">(</span>
+    <span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span> LARGEINT <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户id"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span> <span class="token keyword">DATE</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"数据灌入日期时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>timestamp<span class="token punctuation">`</span></span> <span class="token keyword">DATETIME</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"数据灌入的时间戳"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>city<span class="token punctuation">`</span></span> <span class="token keyword">VARCHAR</span><span class="token punctuation">(</span><span class="token number">20</span><span class="token punctuation">)</span> <span class="token operator">NOT</span> <span class="token boolean">NULL</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户所在城市"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>age<span class="token punctuation">`</span></span> <span class="token keyword">SMALLINT</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户年龄"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>sex<span class="token punctuation">`</span></span> <span class="token keyword">TINYINT</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户性别"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>last_visit_date<span class="token punctuation">`</span></span> <span class="token keyword">DATETIME</span> <span class="token keyword">REPLACE</span> <span class="token keyword">DEFAULT</span> <span class="token string">"1970-01-01 00:00:00"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最后一次访问时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>cost<span class="token punctuation">`</span></span> <span class="token keyword">BIGINT</span> SUM <span class="token keyword">DEFAULT</span> <span class="token string">"0"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户总消费"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>max_dwell_time<span class="token punctuation">`</span></span> <span class="token keyword">INT</span> MAX <span class="token keyword">DEFAULT</span> <span class="token string">"0"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最大停留时间"</span><span class="token punctuation">,</span>
+    <span class="token identifier"><span class="token punctuation">`</span>min_dwell_time<span class="token punctuation">`</span></span> <span class="token keyword">INT</span> MIN <span class="token keyword">DEFAULT</span> <span class="token string">"99999"</span> <span class="token keyword">COMMENT</span> <span class="token string">"用户最小停留时间"</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">ENGINE</span><span class="token operator">=</span>olap
+AGGREGATE <span class="token keyword">KEY</span><span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>timestamp<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>city<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>age<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>sex<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> LIST<span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>city<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">(</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p_cn<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token string">"Beijing"</span><span class="token punctuation">,</span> <span class="token string">"Shanghai"</span><span class="token punctuation">,</span> <span class="token string">"Hong Kong"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p_usa<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token string">"New York"</span><span class="token punctuation">,</span> <span class="token string">"San Francisco"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p_jp<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> <span class="token operator">IN</span> <span class="token punctuation">(</span><span class="token string">"Tokyo"</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+<span class="token keyword">DISTRIBUTED</span> <span class="token keyword">BY</span> <span class="token keyword">HASH</span><span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>user_id<span class="token punctuation">`</span></span><span class="token punctuation">)</span> BUCKETS <span class="token number">16</span>
+PROPERTIES
+<span class="token punctuation">(</span>
+    <span class="token string">"replication_num"</span> <span class="token operator">=</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+    <span class="token string">"storage_medium"</span> <span class="token operator">=</span> <span class="token string">"SSD"</span><span class="token punctuation">,</span>
+    <span class="token string">"storage_cooldown_time"</span> <span class="token operator">=</span> <span class="token string">"2018-01-01 12:00:00"</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>列定义</strong></p> 
+<p>这里我们只以 AGGREGATE KEY 数据模型为例进行说明。更多数据模型参阅 Doris 数据模型。</p> 
+<p>列的基本类型，可以通过在 mysql-client 中执行 HELP CREATE TABLE; 查看。</p> 
+<p>AGGREGATE KEY 数据模型中，所有没有指定聚合方式（SUM、REPLACE、MAX、MIN）的列视为 Key 列。而其余则为 Value 列。</p> 
+<p><strong>定义列时，可参照如下建议：</strong></p> 
+<ul><li>Key 列必须在所有 Value 列之前。</li><li>尽量选择整型类型。因为整型类型的计算和查找效率远高于字符串。</li><li>对于不同长度的整型类型的选择原则，遵循 够用即可。</li><li>对于 VARCHAR 和 STRING 类型的长度，遵循 够用即可。</li></ul> 
+<p><strong>分区和分桶</strong></p> 
+<p>Doris 支持两层的数据划分。第一层是 Partition，支持 Range 和 List 的划分方式。第二层是 Bucket（Tablet），支持 Hash 和 Random 的划分方式。</p> 
+<p>也可以仅使用一层分区，建表时如果不写分区的语句即可，此时Doris会生成一个默认的分区，对用户是透明的。使用一层分区时，只支持 Bucket 划分。下面我们来分别介绍下分区以及分桶：</p> 
+<p><strong>Partition</strong></p> 
+<ul><li>Partition 列可以指定一列或多列，分区列必须为 KEY 列。</li><li>当 allowPartitionColumnNullable 为 true 时，Range Partition 支持使用 NULL 分区列。List Partition 始终不支持 NULL 分区列。</li><li>不论分区列是什么类型，在写分区值时，都需要加双引号。</li><li>分区数量理论上没有上限。</li><li>当不使用 Partition 建表时，系统会自动生成一个和表名同名的，全值范围的 Partition。该 Partition 对用户不可见，并且不可删改。</li><li>创建分区时不可添加范围重叠的分区。</li></ul> 
+<p><strong>Range 分区</strong></p> 
+<ul><li> <p>分区列通常为时间列，以方便的管理新旧数据。</p> </li><li> <p>Range 分区支持的列类型：[DATE,DATETIME,TINYINT,SMALLINT,INT,BIGINT,LARGEINT]</p> </li><li> <p>Partition 支持通过 VALUES LESS THAN (…) 仅指定上界，系统会将前一个分区的上界作为该分区的下界，生成一个左闭右开的区间。也支持通过 VALUES […) 指定上下界，生成一个左闭右开的区间。</p> </li><li> <p>Version 1.2.0同时，也支持通过<code>FROM(...) TO (...) INTERVAL ...</code> 来批量创建分区。</p> </li></ul> 
+<p>通过 VALUES […) 同时指定上下界比较容易理解。这里举例说明，当使用 VALUES LESS THAN (…) 语句进行分区的增删操作时，分区范围的变化情况：</p> 
+<p>如上 example_range_tbl 示例，当建表完成后，会自动生成如下3个分区：</p> 
+<pre><code class="prism language-sql">p201701: <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201702: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201703: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>当我们增加一个分区 p201705 VALUES LESS THAN (“2017-06-01”)，分区结果如下：</p> 
+<pre><code class="prism language-sql">p201701: <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201702: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201703: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201705: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>此时我们删除分区 p201703，则分区结果如下：</p> 
+<pre><code class="prism language-sql">p201701: <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201702: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201705: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>注意到 p201702 和 p201705 的分区范围并没有发生变化，而这两个分区之间，出现了一个空洞：[2017-03-01, 2017-04-01)。即如果导入的数据范围在这个空洞范围内，是无法导入的。</p> 
+<p>继续删除分区 p201702，分区结果如下：</p> 
+<pre><code class="prism language-sql">p201701: <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201705: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>空洞范围变为：[2017-02-01, 2017-04-01)</p> 
+<p>现在增加一个分区 p201702new VALUES LESS THAN (“2017-03-01”)，分区结果如下：</p> 
+<pre><code class="prism language-sql">p201701:    <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201702new: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201705:    <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>可以看到空洞范围缩小为：[2017-03-01, 2017-04-01)</p> 
+<p>现在删除分区 p201701，并添加分区 p201612 VALUES LESS THAN (“2017-01-01”)，分区结果如下：</p> 
+<pre><code class="prism language-sql">p201612:    <span class="token punctuation">[</span>MIN_VALUE<span class="token punctuation">,</span>  <span class="token number">2017</span><span class="token operator">-</span><span class="token number">01</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201702new: <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">02</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">03</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span>
+p201705:    <span class="token punctuation">[</span><span class="token number">2017</span><span class="token operator">-</span><span class="token number">04</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">,</span> <span class="token number">2017</span><span class="token operator">-</span><span class="token number">06</span><span class="token operator">-</span><span class="token number">01</span><span class="token punctuation">)</span> 
+</code></pre> 
+<p>即出现了一个新的空洞：[2017-01-01, 2017-02-01)</p> 
+<p>综上，分区的删除不会改变已存在分区的范围。删除分区可能出现空洞。通过 VALUES LESS THAN 语句增加分区时，分区的下界紧接上一个分区的上界。</p> 
+<p>Range分区除了上述我们看到的单列分区，也支持多列分区，示例如下：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">PARTITION</span> <span class="token keyword">BY</span> RANGE<span class="token punctuation">(</span><span class="token identifier"><span class="token punctuation">`</span>date<span class="token punctuation">`</span></span><span class="token punctuation">,</span> <span class="token identifier"><span class="token punctuation">`</span>id<span class="token punctuation">`</span></span><span class="token punctuation">)</span>
+<span class="token punctuation">(</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201701_1000<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-02-01"</span><span class="token punctuation">,</span> <span class="token string">"1000"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201702_2000<span class="token punctuation">`</span></span> <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-03-01"</span><span class="token punctuation">,</span> <span class="token string">"2000"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>
+    <span class="token keyword">PARTITION</span> <span class="token identifier"><span class="token punctuation">`</span>p201703_all<span class="token punctuation">`</span></span>  <span class="token keyword">VALUES</span> LESS THAN <span class="token punctuation">(</span><span class="token string">"2017-04-01"</span><span class="token punctuation">)</span>
+<span class="token punctuation">)</span>
+</code></pre> 
+<p>在以上示例中，我们指定 date(DATE 类型) 和 id(INT 类型) 作为分区列。以上示例最终得到的分区如下：</p> 
+<pre><code>* p201701_1000:    [(MIN_VALUE,  MIN_VALUE), ("2017-02-01", "1000")   )
+* p201702_2000:    [("2017-02-01", "1000"),  ("2017-03-01", "2000")   )
+* p201703_all:     [("2017-03-01", "2000"),  ("2017-04-01", MIN_VALUE)) 
+</code></pre> 
+<p>注意，最后一个分区用户缺省只指定了 date 列的分区值，所以 id 列的分区值会默认填充 MIN_VALUE。当用户插入数据时，分区列值会按照顺序依次比较，最终得到对应的分区。举例如下：</p> 
+<pre><code>* 数据  --&gt;  分区
+* 2017-01-01, 200     --&gt; p201701_1000
+* 2017-01-01, 2000    --&gt; p201701_1000
+* 2017-02-01, 100     --&gt; p201701_1000
+* 2017-02-01, 2000    --&gt; p201702_2000
+* 2017-02-15, 5000    --&gt; p201702_2000
+* 2017-03-01, 2000    --&gt; p201703_all
+* 2017-03-10, 1       --&gt; p201703_all
+* 2017-04-01, 1000    --&gt; 无法导入
+* 2017-05-01, 1000    --&gt; 无法导入
+</code></pre> 
+<p>Range分区同样支持批量分区， 通过语句 FROM (“2022-01-03”) TO (“2022-01-06”) INTERVAL 1 DAY 批量创建按天划分的分区：2022-01-03到2022-01-06（不含2022-01-06日），分区结果如下：</p> 
+<blockquote> 
+ <p>p20220103: [2022-01-03, 2022-01-04) p20220104: [2022-01-04,<br> 2022-01-05) p20220105: [2022-01-05, 2022-01-06)</p> 
+</blockquote> 
+<p><strong>List 分区</strong></p> 
+<p>分区列支持 BOOLEAN, TINYINT, SMALLINT, INT, BIGINT, LARGEINT, DATE, DATETIME, CHAR, VARCHAR 数据类型，分区值为枚举值。只有当数据为目标分区枚举值其中之一时，才可以命中分区。</p> 
+<p>Partition 支持通过 VALUES IN (…) 来指定每个分区包含的枚举值。</p> 
+<p>下面通过示例说明，进行分区的增删操作时，分区的变化。</p> 
+<p>如上 example_list_tbl 示例，当建表完成后，会自动生成如下3个分区：</p> 
+<blockquote> 
+ <p>p_cn: (“Beijing”, “Shanghai”, “Hong Kong”) p_usa: (“New York”, “San<br> Francisco”) p_jp: (“Tokyo”)</p> 
+</blockquote> 
+<p>当我们增加一个分区 p_uk VALUES IN (“London”)，分区结果如下：</p> 
+<blockquote> 
+ <p>p_cn: (“Beijing”, “Shanghai”, “Hong Kong”) p_usa: (“New York”, “San<br> Francisco”) p_jp: (“Tokyo”) p_uk: (“London”)</p> 
+</blockquote> 
+<p>当我们删除分区 p_jp，分区结果如下：</p> 
+<blockquote> 
+ <p>p_cn: (“Beijing”, “Shanghai”, “Hong Kong”) p_usa: (“New York”, “San<br> Francisco”) p_uk: (“London”)</p> 
+</blockquote> 
+<p>List分区也支持多列分区，示例如下：</p> 
+<blockquote> 
+ <p>PARTITION BY LIST(<code>id</code>, <code>city</code>) (<br> PARTITION <code>p1_city</code> VALUES IN ((“1”, “Beijing”), (“1”, “Shanghai”)),<br> PARTITION <code>p2_city</code> VALUES IN ((“2”, “Beijing”), (“2”, “Shanghai”)),<br> PARTITION <code>p3_city</code> VALUES IN ((“3”, “Beijing”), (“3”, “Shanghai”)) )</p> 
+</blockquote> 
+<p>在以上示例中，我们指定 id(INT 类型) 和 city(VARCHAR 类型) 作为分区列。以上示例最终得到的分区如下：</p> 
+<ul><li>p1_city: [(“1”, “Beijing”), (“1”, “Shanghai”)]</li><li>p2_city: [(“2”, “Beijing”), (“2”, “Shanghai”)]</li><li>p3_city: [(“3”, “Beijing”), (“3”, “Shanghai”)]</li></ul> 
+<p>当用户插入数据时，分区列值会按照顺序依次比较，最终得到对应的分区。举例如下：</p> 
+<ul><li>数据 —&gt; 分区</li><li>1, Beijing —&gt; p1_city</li><li>1, Shanghai —&gt; p1_city</li><li>2, Shanghai —&gt; p2_city</li><li>3, Beijing —&gt; p3_city</li><li>1, Tianjin —&gt; 无法导入</li><li>4, Beijing —&gt; 无法导入</li></ul> 
+<p><strong>Bucket</strong></p> 
+<ul><li> <p>如果使用了 Partition，则 DISTRIBUTED … 语句描述的是数据在各个分区内的划分规则。如果不使用 Partition，则描述的是对整个表的数据的划分规则。</p> </li><li> <p>分桶列可以是多列，Aggregate 和 Unique 模型必须为 Key 列，Duplicate 模型可以是 key 列和 value 列。分桶列可以和 Partition 列相同或不同。</p> </li><li> <p>分桶列的选择，是在 查询吞吐 和 查询并发 之间的一种权衡：</p> 
+  <ul><li>如果选择多个分桶列，则数据分布更均匀。如果一个查询条件不包含所有分桶列的等值条件，那么该查询会触发所有分桶同时扫描，这样查询的吞吐会增加，单个查询的延迟随之降低。这个方式适合大吞吐低并发的查询场景。</li><li>如果仅选择一个或少数分桶列，则对应的点查询可以仅触发一个分桶扫描。此时，当多个点查询并发时，这些查询有较大的概率分别触发不同的分桶扫描，各个查询之间的IO影响较小（尤其当不同桶分布在不同磁盘上时），所以这种方式适合高并发的点查询场景。</li></ul> </li><li> <p>AutoBucket: 根据数据量，计算分桶数。 对于分区表，可以根据历史分区的数据量、机器数、盘数，确定一个分桶。</p> </li><li> <p>分桶的数量理论上没有上限。</p> </li></ul> 
+<p><strong>关于 Partition 和 Bucket 的数量和数据量的建议</strong></p> 
+<ul><li>一个表的 Tablet 总数量等于 (Partition num * Bucket num)。</li><li>一个表的 Tablet 数量，在不考虑扩容的情况下，推荐略多于整个集群的磁盘数量。<br> 单个 Tablet 的数据量理论上没有上下界，但建议在 1G - 10G 的范围内。如果单个 Tablet 数据量过小，则数据的聚合效果不佳，且元数据管理压力大。如果数据量过大，则不利于副本的迁移、补齐，且会增加 Schema Change 或者 Rollup 操作失败重试的代价（这些操作失败重试的粒度是 Tablet）。</li><li>当 Tablet 的数据量原则和数量原则冲突时，建议优先考虑数据量原则。</li><li>在建表时，每个分区的 Bucket 数量统一指定。但是在动态增加分区时（ADD PARTITION），可以单独指定新分区的 Bucket 数量。可以利用这个功能方便的应对数据缩小或膨胀。</li><li>一个 Partition 的 Bucket 数量一旦指定，不可更改。所以在确定 Bucket 数量时，需要预先考虑集群扩容的情况。比如当前只有 3 台 host，每台 host 有 1 块盘。如果 Bucket 的数量只设置为 3 或更小，那么后期即使再增加机器，也不能提高并发度。</li><li>举一些例子：假设在有10台BE，每台BE一块磁盘的情况下。如果一个表总大小为 500MB，则可以考虑4-8个分片。5GB：8-16个分片。50GB：32个分片。500GB：建议分区，每个分区大小在 50GB 左右，每个分区16-32个分片。5TB：建议分区，每个分区大小在 50GB 左右，每个分区16-32个分片。<br> 注：表的数据量可以通过 SHOW DATA 命令查看，结果除以副本数，即表的数据量。</li></ul> 
+<p><strong>关于 Random Distribution 的设置以及使用场景</strong></p> 
+<ul><li>如果 OLAP 表没有更新类型的字段，将表的数据分桶模式设置为 RANDOM，则可以避免严重的数据倾斜(数据在导入表对应的分区的时候，单次导入作业每个 batch 的数据将随机选择一个tablet进行写入)。</li><li>当表的分桶模式被设置为RANDOM 时，因为没有分桶列，无法根据分桶列的值仅对几个分桶查询，对表进行查询的时候将对命中分区的全部分桶同时扫描，该设置适合对表数据整体的聚合查询分析而不适合高并发的点查询。</li><li>如果 OLAP 表的是 Random Distribution 的数据分布，那么在数据导入的时候可以设置单分片导入模式（将 load_to_single_tablet 设置为 true），那么在大数据量的导入的时候，一个任务在将数据写入对应的分区时将只写入一个分片，这样将能提高数据导入的并发度和吞吐量，减少数据导入和 Compaction 导致的写放大问题，保障集群的稳定性。</li></ul> 
+<p><strong>复合分区与单分区</strong></p> 
+<p><strong>复合分区</strong></p> 
+<ul><li>第一级称为 Partition，即分区。用户可以指定某一维度列作为分区列（当前只支持整型和时间类型的列），并指定每个分区的取值范围。</li><li>第二级称为 Distribution，即分桶。用户可以指定一个或多个维度列以及桶数对数据进行 HASH 分布 或者不指定分桶列设置成 Random Distribution 对数据进行随机分布。</li></ul> 
+<p><strong>以下场景推荐使用复合分区</strong></p> 
+<ul><li>有时间维度或类似带有有序值的维度，可以以这类维度列作为分区列。分区粒度可以根据导入频次、分区数据量等进行评估。</li><li>历史数据删除需求：如有删除历史数据的需求（比如仅保留最近N 天的数据）。使用复合分区，可以通过删除历史分区来达到目的。也可以通过在指定分区内发送 DELETE 语句进行数据删除。</li><li>解决数据倾斜问题：每个分区可以单独指定分桶数量。如按天分区，当每天的数据量差异很大时，可以通过指定分区的分桶数，合理划分不同分区的数据,分桶列建议选择区分度大的列。</li><li>用户也可以不使用复合分区，即使用单分区。则数据只做 HASH 分布。</li></ul> 
+<p><strong>ENGINE</strong><br> 本示例中，ENGINE 的类型是 olap，即默认的 ENGINE 类型。在 Doris 中，只有这个 ENGINE 类型是由 Doris 负责数据管理和存储的。其他 ENGINE 类型，如 mysql、broker、es 等等，本质上只是对外部其他数据库或系统中的表的映射，以保证 Doris 可以读取这些数据。而 Doris 本身并不创建、管理和存储任何非 olap ENGINE 类型的表和数据。</p> 
+<p><strong>其他</strong><br> <code>IF NOT EXISTS</code> 表示如果没有创建过该表，则创建。注意这里只判断表名是否存在，而不会判断新建表结构是否与已存在的表结构相同。所以如果存在一个同名但不同构的表，该命令也会返回成功，但并不代表已经创建了新的表和新的结构。</p> 
+<hr> 
+<hr> 
+<blockquote> 
+ <p>术因分享而日新，每获新知，喜溢心扉。<br> 诚邀关注公众号 <strong>『 <code>码到三十五</code> 』</strong> ，获取更多技术资料。</p> 
+</blockquote> 
+<hr>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/89b8096d89840085e9a3af1b0720820c/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【mysql 127错误】mysql启动报错mysqld.service: Failed with result ‘exit-code‘.</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/3aa3739043b818ecaadc469f5df45703/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">axios 传递参数的方式(data 与 params)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

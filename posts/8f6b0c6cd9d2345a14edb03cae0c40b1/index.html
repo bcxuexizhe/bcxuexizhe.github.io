@@ -1,0 +1,1032 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C#结合JS实现HtmlTable动态添加行并保存到数据库 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/8f6b0c6cd9d2345a14edb03cae0c40b1/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C#结合JS实现HtmlTable动态添加行并保存到数据库">
+  <meta property="og:description" content="目录
+需求
+效果视频演示
+范例运行环境
+准备数据源
+数据表设计
+UI及表结构Json配置
+Json数据包提交配置
+设计实现
+前端UI
+Javascript 脚本
+Jquery引用
+C# 服务端操作 小结
+需求 在 Web 应用项目中，实现一对多录入的数据管理功能是一项常见的应用。因此可以实现一个相对轻量化的设计实现表格的录入，为保证功能的可用性、界面友好性，总体的需求如下：
+1、数据网格可以动态的添加行，行可以提供输入框、选择框的控件进行录入。
+2、数据网格可以删除选中的行。
+3、数据网格可以上下移动选中的行重新进行排序。
+4、可以实现数据的有效性验证功能（如必填写、位数限制、类型限制等）。
+5、需要对输入的文字过滤和屏蔽HTML标记等危险内容。
+6、添加新行前判断已有行的有效性，对于未校验通过的暂不允许添加新行。
+7、对于修改中的、保存时的、保存后的状态有一定的相关提示信息。
+8、数据保存实现动态无刷新。
+效果视频演示 为实现需求会使用到用C# 编写服务端Web 静态方法，Jquery 实现 Ajax 无刷新技术并调用服务器方法，Json 存储数据表格需要的配置，客户端大部分设计使用 Javascript 实现。实现的效果演示视频如下：
+动态添加 HtmlTable 行并保存到数据库
+范例运行环境 操作系统： Windows Server 2019 DataCenter
+数据库：Microsoft SQL Server 2016
+.net版本： .netFramework4.0 或以上
+开发工具及相关技术：VS2019 C# 、Jquery 、Json、Javascript
+准备数据源 数据表设计 我们在 MS SQL Server 创建 att_jypx（教育培训经历表），其结构如下表：
+序号字段名类型说明1ciduniqueidentifier行唯一标识，唯一键2xmbhvarchar(20)外键父项，指项目编号3sfzhnvarchar(18)外键父项，指身份证号4nf1nvarchar(4)起始年份5yf1nvarchar(2)起始月份6nf2nvarchar(4)截止年份7yf2nvarchar(2)截止月份8xxmcnvarchar(100)学校名称9zynvarchar(50)所学专业10xlnvarchar(10)学历11byzlbnvarchar(50)毕业证类别12xhint排序号 执行如下 创建表的 SQL 语句：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-18T13:50:21+08:00">
+    <meta property="article:modified_time" content="2024-05-18T13:50:21+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C#结合JS实现HtmlTable动态添加行并保存到数据库</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>   </strong></p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E9%9C%80%E6%B1%82-toc" style="margin-left:40px;"><a href="#%E9%9C%80%E6%B1%82" rel="nofollow">需求</a></p> 
+<p id="%E6%95%88%E6%9E%9C%E8%A7%86%E9%A2%91%E6%BC%94%E7%A4%BA-toc" style="margin-left:40px;"><a href="#%E6%95%88%E6%9E%9C%E8%A7%86%E9%A2%91%E6%BC%94%E7%A4%BA" rel="nofollow">效果视频演示</a></p> 
+<p id="%E8%8C%83%E4%BE%8B%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83-toc" style="margin-left:40px;"><a href="#%E8%8C%83%E4%BE%8B%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83" rel="nofollow">范例运行环境</a></p> 
+<p id="%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90-toc" style="margin-left:40px;"><a href="#%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90" rel="nofollow">准备数据源</a></p> 
+<p id="%E6%95%B0%E6%8D%AE%E8%A1%A8%E8%AE%BE%E8%AE%A1-toc" style="margin-left:80px;"><a href="#%E6%95%B0%E6%8D%AE%E8%A1%A8%E8%AE%BE%E8%AE%A1" rel="nofollow">数据表设计</a></p> 
+<p id="UI%E5%8F%8A%E8%A1%A8%E7%BB%93%E6%9E%84Json%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#UI%E5%8F%8A%E8%A1%A8%E7%BB%93%E6%9E%84Json%E9%85%8D%E7%BD%AE" rel="nofollow">UI及表结构Json配置</a></p> 
+<p id="Json%E6%95%B0%E6%8D%AE%E5%8C%85%E6%8F%90%E4%BA%A4%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#Json%E6%95%B0%E6%8D%AE%E5%8C%85%E6%8F%90%E4%BA%A4%E9%85%8D%E7%BD%AE" rel="nofollow">Json数据包提交配置</a></p> 
+<p id="%E2%80%8B%E7%BC%96%E8%BE%91-toc" style="margin-left:40px;"><a href="#%E2%80%8B%E7%BC%96%E8%BE%91" rel="nofollow">设计实现</a></p> 
+<p id="%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0-toc" style="margin-left:80px;"><a href="#%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0" rel="nofollow">前端UI</a></p> 
+<p id="%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0-toc" style="margin-left:80px;"><a href="#%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0" rel="nofollow">Javascript 脚本</a></p> 
+<p id="Jquery%E5%BC%95%E7%94%A8-toc" style="margin-left:80px;"><a href="#Jquery%E5%BC%95%E7%94%A8" rel="nofollow">Jquery引用</a></p> 
+<p id="C%23%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%93%8D%E4%BD%9C%C2%A0-toc" style="margin-left:80px;"><a href="#C%23%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%93%8D%E4%BD%9C%C2%A0" rel="nofollow">C# 服务端操作 </a></p> 
+<p id="%E5%B0%8F%E7%BB%93-toc" style="margin-left:40px;"><a href="#%E5%B0%8F%E7%BB%93" rel="nofollow">小结</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<p id="main-toc"></p> 
+<h3 id="%E9%9C%80%E6%B1%82">需求</h3> 
+<p>在 Web 应用项目中，实现一对多录入的数据管理功能是一项常见的应用。因此可以实现一个相对轻量化的设计实现表格的录入，为保证功能的可用性、界面友好性，总体的需求如下：</p> 
+<p>1、数据网格可以动态的添加行，行可以提供输入框、选择框的控件进行录入。</p> 
+<p>2、数据网格可以删除选中的行。</p> 
+<p>3、数据网格可以上下移动选中的行重新进行排序。</p> 
+<p>4、可以实现数据的有效性验证功能（如必填写、位数限制、类型限制等）。</p> 
+<p>5、需要对输入的文字过滤和屏蔽HTML标记等危险内容。</p> 
+<p>6、添加新行前判断已有行的有效性，对于未校验通过的暂不允许添加新行。</p> 
+<p>7、对于修改中的、保存时的、保存后的状态有一定的相关提示信息。</p> 
+<p>8、数据保存实现动态无刷新。</p> 
+<h3 id="%E6%95%88%E6%9E%9C%E8%A7%86%E9%A2%91%E6%BC%94%E7%A4%BA">效果视频演示</h3> 
+<p>为实现需求会使用到用C# 编写服务端Web 静态方法，Jquery 实现 Ajax 无刷新技术并调用服务器方法，Json 存储数据表格需要的配置，客户端大部分设计使用 Javascript 实现。实现的效果演示视频如下：</p> 
+<div class="csdn-video-box"> 
+ <iframe id="QmfiHOdg-1715922878915" frameborder="0" src="https://live.csdn.net/v/embed/388257" allowfullscreen="true" data-mediaembed="csdn"></iframe> 
+ <p>动态添加 HtmlTable 行并保存到数据库</p> 
+</div> 
+<p></p> 
+<h3 id="%E8%8C%83%E4%BE%8B%E8%BF%90%E8%A1%8C%E7%8E%AF%E5%A2%83">范例运行环境</h3> 
+<p>操作系统： Windows Server 2019 DataCenter</p> 
+<p>数据库：Microsoft SQL Server 2016</p> 
+<p>.net版本： .netFramework4.0 或以上</p> 
+<p>开发工具及相关技术：VS2019  C# 、Jquery 、Json、Javascript</p> 
+<p></p> 
+<h3 id="%E5%87%86%E5%A4%87%E6%95%B0%E6%8D%AE%E6%BA%90">准备数据源</h3> 
+<h4 id="%E6%95%B0%E6%8D%AE%E8%A1%A8%E8%AE%BE%E8%AE%A1">数据表设计</h4> 
+<p>我们在 MS SQL Server 创建 att_jypx（教育培训经历表），其结构如下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th style="text-align:center;">序号</th><th style="text-align:center;">字段名</th><th style="text-align:center;">类型</th><th style="text-align:center;">说明</th></tr></thead><tbody><tr><th style="text-align:center;">1</th><td>cid</td><td>uniqueidentifier</td><td>行唯一标识，唯一键</td></tr><tr><th style="text-align:center;">2</th><td>xmbh</td><td>varchar(20)</td><td>外键父项，指项目编号</td></tr><tr><th style="text-align:center;">3</th><td>sfzh</td><td>nvarchar(18)</td><td>外键父项，指身份证号</td></tr><tr><th style="text-align:center;">4</th><td>nf1</td><td>nvarchar(4)</td><td>起始年份</td></tr><tr><th style="text-align:center;">5</th><td>yf1</td><td>nvarchar(2)</td><td>起始月份</td></tr><tr><th style="text-align:center;">6</th><td>nf2</td><td>nvarchar(4)</td><td>截止年份</td></tr><tr><th style="text-align:center;">7</th><td>yf2</td><td>nvarchar(2)</td><td>截止月份</td></tr><tr><th style="text-align:center;">8</th><td>xxmc</td><td>nvarchar(100)</td><td>学校名称</td></tr><tr><th style="text-align:center;">9</th><td>zy</td><td>nvarchar(50)</td><td>所学专业</td></tr><tr><th style="text-align:center;">10</th><td>xl</td><td>nvarchar(10)</td><td>学历</td></tr><tr><th style="text-align:center;">11</th><td>byzlb</td><td>nvarchar(50)</td><td>毕业证类别</td></tr><tr><th style="text-align:center;">12</th><td>xh</td><td>int</td><td>排序号</td></tr></tbody></table> 
+<p>执行如下 创建表的 SQL 语句：</p> 
+<pre><code class="language-sql">CREATE TABLE [dbo].[att_jypx](
+	[cid] [uniqueidentifier] ROWGUIDCOL  NOT NULL,
+	[xmbh] [varchar](20) NOT NULL,
+	[sfzh] [nvarchar](18) NOT NULL,
+	[nf1] [nvarchar](4) NULL,
+	[yf1] [nvarchar](2) NULL,
+	[nf2] [nvarchar](4) NULL,
+	[yf2] [nvarchar](2) NULL,
+	[xxmc] [nvarchar](100) NULL,
+	[zy] [nvarchar](50) NULL,
+	[xl] [nvarchar](10) NULL,
+	[byzlb] [nvarchar](50) NULL,
+	[xh] [int] NULL,
+ CONSTRAINT [PK_att_jypx] PRIMARY KEY CLUSTERED 
+(
+	[cid] ASC
+)WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, IGNORE_DUP_KEY = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON) ON [PRIMARY]
+) ON [PRIMARY]
+GO
+
+ALTER TABLE [dbo].[att_jypx] ADD  CONSTRAINT [DF_att_jypx_cid]  DEFAULT (newid()) FOR [cid]
+GO</code></pre> 
+<p>数据表的其它说明如下：</p> 
+<p>1、CID字段为GUID类型，可用于标识 HtmlTable 的 Row 行对象的 ID 并用于存储。</p> 
+<p>2、xmbh 字段和 sfzh 字段是引用的外键，我们为了演示方便假设为 项目编号 为‘001’、身份证号为‘120102’</p> 
+<p>3、xh 为排序记录顺序所用。</p> 
+<p>以上的所述字段均不参与 HtmlTable 表格内容的呈现，以降低数据包的容量，只参与外键操作。</p> 
+<h4 id="UI%E5%8F%8A%E8%A1%A8%E7%BB%93%E6%9E%84Json%E9%85%8D%E7%BD%AE">UI及表结构Json配置</h4> 
+<p>对于 HtmlTable 表格内容的呈现、数据结构及数据验证的校验，我们将使用Json文件进行配置，配置说明如下：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1" style="width:700px;"><thead><tr><th style="text-align:center;width:60px;">序号</th><th style="text-align:center;width:115px;">项</th><th style="width:52px;">类型</th><th style="text-align:center;width:384px;">说明</th></tr></thead><tbody><tr><th style="text-align:center;width:60px;">1</th><td style="width:115px;">maxRowCount</td><td style="width:52px;">字符</td><td style="width:384px;">允许添加的最大行数</td></tr><tr><th style="text-align:center;width:60px;">2</th><td style="width:115px;">mtable_style</td><td style="width:52px;">字符</td><td style="width:384px;">主体编辑HtmlTable的风格</td></tr><tr><th style="text-align:center;width:60px;">3</th><td style="width:115px;">ttable_style</td><td style="width:52px;">字符</td><td style="width:384px;">标题HtmlTable的风格</td></tr><tr><th style="text-align:center;width:60px;">4</th><td style="width:115px;">cols</td><td style="width:52px;">数组</td><td style="width:384px;">列数组定义变量，以下5到12均为 cols 所包含每一数组元素对象的属性</td></tr><tr><th style="text-align:center;width:60px;">5</th><td style="width:115px;">fname</td><td style="width:52px;">字符</td><td style="width:384px;">字段名</td></tr><tr><th style="text-align:center;width:60px;">6</th><td style="width:115px;">cname</td><td style="width:52px;">字符</td><td style="width:384px;">字段中文名或说明</td></tr><tr><th style="text-align:center;width:60px;">7</th><td style="width:115px;"> len</td><td style="width:52px;">数字</td><td style="width:384px;">字段长度</td></tr><tr><th style="text-align:center;width:60px;">8</th><td style="width:115px;">td_style</td><td style="width:52px;">字符</td><td style="width:384px;">HtmlTabelCell 单元格的风格</td></tr><tr><th style="text-align:center;width:60px;">9</th><td style="width:115px;">ctl_style</td><td style="width:52px;">字符</td><td style="width:384px;">单元格中输入或选择控件的风格</td></tr><tr><th style="text-align:center;width:60px;">10</th><td style="width:115px;"> input</td><td style="width:52px;">字符</td><td style="width:384px;">可输入 text 和 select，分别对应输入框和选择框</td></tr><tr><th style="text-align:center;width:60px;">11</th><td style="width:115px;"> list</td><td style="width:52px;">字符</td><td style="width:384px;">用于select选择框的选项设置，各选项间以 “|” 进行分隔</td></tr><tr><th style="text-align:center;width:60px;">12</th><td style="width:115px;"> check</td><td style="width:52px;">字符</td><td style="width:384px;">用于数据校验方案设置，如果设置请参考我的文章<a class="link-info" href="https://blog.csdn.net/michaelline/article/details/138941723" title="《C# 结合 JavaScript 对 Web 控件进行数据输入验证》">《C# 结合 JavaScript 对 Web 控件进行数据输入验证》</a></td></tr></tbody></table> 
+<p></p> 
+<p> 完全的样例JSON如下：</p> 
+<p> </p> 
+<pre><code class="language-XML">{
+  "att_jypx":[
+	{"maxRowCount":12,
+          "mtable_style":"table-layout: fixed;word-break: break-all; word-wrap: break-word;font-size:10pt; width:700px; position:absolute;left:0px; border-color:rgb(235,235,235); border-width:1px 1px 1px 1px;border-collapse:collapse;",
+          "ttable_style":"z-index:9999;position:fixed;left:0px;top:37px;table-layout: fixed;word-break: break-all; word-wrap: break-word;font-size:10pt; width:700px; background-color:rgb(235,235,235);border-color:rgb(235,235,235); border-width:1px 1px 1px 1px;border-collapse:collapse;",
+	  "cols": [
+	    {
+	      "fname": "nf1",
+	      "cname": "起始年份",
+	      "len":4,
+	      "td_style":"width:75px",
+	      "ctl_style":"width:70px;border-radius:2px;border-width:1px;",
+	      "input":"text",
+	      "list":"",
+	      "display":"",
+	      "check":"notnull|mustlen4|int"
+	    },
+	    {
+ 	     "fname": "yf1",
+ 	     "cname": "起始月份",
+	      "len":2,
+	      "td_style":"width:75px",
+	      "ctl_style":"width:70px;border-radius:2px;",
+	      "input":"select",
+ 	     "list":"01|02|03|04|05|06|07|08|09|10|11|12",
+ 	     "check":"notnull"
+   	    },
+	    {
+	      "fname": "nf2",
+	      "cname": "截止年份",
+	      "len":4,
+	      "td_style":"width:75px",
+	      "ctl_style":"width:70px;border-radius:2px;border-width:1px;",
+	      "input":"text",
+	      "list":"",
+	      "display":"",
+	      "check":"notnull|mustlen4|int"
+	    },
+	    {
+ 	     "fname": "yf2",
+ 	     "cname": "截止月份",
+	      "len":2,
+	      "td_style":"width:75px",
+	      "ctl_style":"width:70px;border-radius:2px;",
+	      "input":"select",
+ 	     "list":"01|02|03|04|05|06|07|08|09|10|11|12",
+ 	     "check":"notnull"
+   	    },
+	    {
+ 	     "fname": "xxmc",
+ 	     "cname": "所在院校",
+	      "len":100,
+	      "td_style":"width:200px;",
+	      "ctl_style":"width:195px;border-radius:2px;border-width:1px;",
+	      "input":"text",
+ 	     "list":"",
+ 	     "check":"notnull|maxlen100"
+   	    },
+	   {
+ 	     "fname": "xl",
+ 	     "cname": "学历",
+	      "len":10,
+	      "td_style":"width:60px",
+	      "ctl_style":"width:55px;border-radius:2px;border-width:1px;",
+	      "input":"text",
+ 	     "list":"",
+ 	     "check":"notnull|maxlen10"
+   	    },
+	    {
+ 	     "fname": "zy",
+ 	     "cname": "所学专业",
+	      "len":50,
+	      "td_style":"width:80px",
+	      "ctl_style":"width:75px;border-radius:2px;border-width:1px;",
+	      "input":"text",
+ 	     "list":"",
+ 	     "check":"notnull|maxlen50"
+   	    },
+	    {
+ 	     "fname": "byzlb",
+ 	     "cname": "毕业证类别",
+	      "len":50,
+	      "td_style":"width:160px",
+	      "ctl_style":"width:155px;border-radius:2px;border-width:1px;",
+	      "input":"select",
+ 	     "list":"全日制普通高等教育毕业证|成人高等教育毕业证|高等教育自学考试毕业证|其他",
+ 	     "check":"notnull"
+   	    } 	 ]
+             }
+       ]
+}</code></pre> 
+<h4 id="Json%E6%95%B0%E6%8D%AE%E5%8C%85%E6%8F%90%E4%BA%A4%E9%85%8D%E7%BD%AE">Json数据包提交配置</h4> 
+<p>Json数据包根据Json配置信息通过服务端生成，主要包括字段名的项，用于将来提交数据时使用，因为提交的数据方式仍然是Json数据对象，即Json数据包，生成的初始格式如下示例：</p> 
+<pre><code class="language-XML">{"nf1":"",
+"yf1":"",
+"nf2":"",
+"yf2":"",
+"xxmc":"",
+"zy":"",
+"xmbh":"001",
+"sfzh":"120102",
+"xh":"",
+"cid":"",
+"com_name":"jypx"}</code></pre> 
+<h3 id="%E2%80%8B%E7%BC%96%E8%BE%91">设计实现</h3> 
+<h4 id="%E8%8E%B7%E5%8F%96%E6%95%B0%E6%8D%AE%E8%BF%9B%E8%A1%8C%E5%91%88%E7%8E%B0">前端UI</h4> 
+<p>前端UI我们主要放置一些中间变量控件，表格元素等，主要元素说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th>元素Id</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><th>1</th><td>curid</td><td>TextBox</td><td>用于记录当前点行的ID</td></tr><tr><th>2</th><td>pjson</td><td>TextBox</td><td>用于存储Json配置数据</td></tr><tr><th>3</th><td>djson</td><td>TextBox</td><td>用于存储Json提交数据包</td></tr><tr><th>4</th><td>ttable</td><td>HtmlTable</td><td>标题列表格，用于固定显示表头</td></tr><tr><th>5</th><td>mtable</td><td>HtmlTable</td><td>主编辑表格对象</td></tr><tr><th>6</th><td>topnavs</td><td>Div</td><td>一组固定于顶端的工具栏对象层，包括新增、删除、上移、下移、保存按钮</td></tr></tbody></table> 
+<p>示例代码如下：</p> 
+<div> 
+ <pre><code class="language-html">&lt;form  runat="server"&gt;
+&lt;asp:TextBox ID="cid" style="display:none" runat="server"&gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="com_name" style="display:none" runat="server"&gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="xmbh" style="display:none" runat="server"&gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="sfzh" style="display:none" runat="server"&gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="p_acode"  Runat="server" Visible="true" style="display:none" &gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="curid"  Runat="server" Visible="true" style="display:none" &gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="pjson" TextMode="MultiLine"  Runat="server" Visible="true" style="display:none" &gt;&lt;/asp:TextBox&gt;
+&lt;asp:TextBox ID="djson" TextMode="MultiLine"  Runat="server" Visible="true" style="display:none" &gt;&lt;/asp:TextBox&gt;
+&lt;div id="topnavs" runat="server" style=" z-index:9999; border-bottom: 1px solid silver; padding:3px;display:flex;justify-content:start; background-color:rgb(235,235,235); position:fixed;top:0px;left:0px;width:100%;height:30px; text-align:center; line-height:30px;"&gt;
+&lt;input id="closebutton" runat="server" type="button" value='' style=" border-width:0px; background-position:center; background-image:url(/images/att_add6.jpg);font-size:14pt;cursor:pointer;width:25px;height:25px;" onclick="addRow()" class="" /&gt;
+&lt;input id="Button1" runat="server" type="button" value='' style=" border-width:0px;background-position:center;  background-image:url(/images/att_del.jpg); margin-left:5px; font-size:14pt;cursor:pointer;width:25px;height:25px;" onclick='delinfo()' class="" /&gt;
+&lt;input id="Button2" runat="server" type="button" value='' style="border-width:0px; background-position:center; background-image:url(/images/att_up2.jpg); margin-left:5px; font-size:14pt;cursor:pointer;width:25px;height:25px;" onclick="swarp(document.getElementById('curid').value,1);" class="" /&gt;
+&lt;input id="Button3" runat="server" type="button" value='' style="border-width:0px; background-position:center; background-image:url(/images/att_down3.jpg); margin-left:5px; font-size:14pt;cursor:pointer;width:25px;height:25px;" onclick="swarp(document.getElementById('curid').value,2);" class="" /&gt;
+&lt;input id="Button4" runat="server" type="button" value='' style="border-width:0px; background-position:center; background-image:url(/images/att_save.jpg); margin-left:5px; font-size:14pt;cursor:pointer;width:25px;height:25px;" onclick="if (validall('') == false) {document.getElementById('Button4').removeAttribute('disabled');return;}saveall();if(document.getElementById('mtable').rows.length&gt;0){ this.setAttribute('disabled','true');}" class="" /&gt;
+&lt;div id="saved" style="margin-left:10px; font-weight:bold; font-size:11pt; color:Red; "&gt;&lt;/div&gt;
+&lt;/div&gt;
+&lt;table align="left" id="ttable" runat="server" style="z-index:9999;position:fixed;left:0px;top:37px;table-layout: fixed;word-break: break-all; word-wrap: break-word;font-size:10pt; width:700px; background-color:rgb(235,235,235);border-color:rgb(235,235,235); border-width:1px 1px 1px 1px;border-collapse:collapse;"  border="1" cellspacing="0" cellpadding="3"&gt;
+&lt;/table&gt;
+&lt;table align="left" id="mtable" runat="server" style="table-layout: fixed;word-break: break-all; word-wrap: break-word;font-size:10pt; width:700px; position:absolute;left:0px;top:67px; border-color:rgb(235,235,235); border-width:1px 1px 1px 1px;border-collapse:collapse;"  border="1" cellspacing="0" cellpadding="3"&gt;
+&lt;/table&gt;
+&lt;/form&gt;
+</code></pre> 
+</div> 
+<p></p> 
+<h4>Javascript 脚本</h4> 
+<p>Javascript 脚本实现表格编辑操作及通过Ajax与服务器方法通信，并保存数据的功能，主要方法说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th>方法名称</th><th style="width:247px;">参数</th><th style="width:311px;">说明</th></tr></thead><tbody><tr><th>1</th><td>simplecheck</td><td style="width:247px;"> <p>chkobj：单元格对象</p> <p>_chkvalue：单元格编辑的值</p> <p> allowAlert：是否允许弹出提示</p> <p>etip：弹出提示的扩展前缀字串</p> </td><td style="width:311px;"> <p>本方法用于数据有效性的校验</p> <p></p> </td></tr><tr><th>2</th><td>swarp</td><td style="width:247px;"> <p>mId：当前行的ID</p> <p>stype:移动方向，1上移，2下移</p> </td><td style="width:311px;">用于对选中行的移动排序操作</td></tr><tr><th>3</th><td>chnRowSelColor</td><td style="width:247px;">rowobj：当前行对象</td><td style="width:311px;">用于高亮显示选中行的颜色，并同时将当前行设置为可编辑状态</td></tr><tr><th>4</th><td>tojsonstr</td><td style="width:247px;">str:输入的值</td><td style="width:311px;">对输入的值进行安全检测，并移除HTML标记，对单引号双引号做特殊处理，以保证JSON字符串传递的字符合法性</td></tr><tr><th>5</th><td>saveall</td><td style="width:247px;"></td><td style="width:311px;">保存所有行记录并提交数据库操作</td></tr><tr><th>6</th><td>delinfo</td><td style="width:247px;"></td><td style="width:311px;">删除当前选中的行并提交数据库操作</td></tr><tr><th>7</th><td>validall</td><td style="width:247px;">extip：附加的前缀性提示</td><td style="width:311px;">保存前对所有行进行数据有效性校验</td></tr><tr><th>8</th><td>validchange</td><td style="width:247px;">obj:当前编辑的控件元素</td><td style="width:311px;">提示用户当前正修改哪个控件元素的值</td></tr><tr><th>9</th><td>validsave</td><td style="width:247px;">extip：附加的前缀性提示</td><td style="width:311px;">用于检验是否正有保存的记录</td></tr><tr><th>10</th><td>addRow</td><td style="width:247px;"></td><td style="width:311px;">添加一个新行并提交到数据库操作</td></tr><tr><th>11</th><td>gGuid</td><td style="width:247px;"></td><td style="width:311px;">用于增加新行时生成一个GUID字符串</td></tr><tr><th>12</th><td>ScrollToBottom</td><td style="width:247px;"></td><td style="width:311px;">用于增加新行时自动滚动到页面底部</td></tr></tbody></table> 
+<p>完整示例代码如下：</p> 
+<div> 
+ <pre><code class="language-javascript">&lt;script language="javascript"&gt;
+    function simplecheck(chkobj, _chkvalue, allowAlert,etip) {
+        check_result = true; check_errid = ''; check_errmsg = '';var _checkSchema = chkobj.getAttribute('checkSchema');var _cName = chkobj.getAttribute('cName');
+        if (_checkSchema.indexOf('ctrim') != -1) { _chkvalue = ctrim(_chkvalue); } var _objlength = _chkvalue.length; if (_checkSchema.indexOf('abslen') != -1) { _objlength = PositionLen(_chkvalue); }
+        var _schemaList = _checkSchema.split('|'); var _reqeustnotnull = false;
+        for (var k = 0; k &lt; _schemaList.length; k++) { if (_schemaList[k].toLowerCase() == 'notnull') { _reqeustnotnull = true; } }
+        if ((!_reqeustnotnull) &amp;&amp; (_chkvalue == '')) { return check_result; }
+        for (var j = 0; j &lt; _schemaList.length; j++) {
+            var curSchema = _schemaList[j].toLowerCase(); check_errid = curSchema; var curErrmsg = ''; switch (true) { case curSchema == 'notnull': check_result = isNotNull(_chkvalue); curErrmsg = _cName + '需要填写内容！'; break; case curSchema == 'number': check_result = isNumber(_chkvalue); curErrmsg = _cName + ' 输入的数值不合理，请核对！'; break; case curSchema == 'bnumber': check_result = isBNumber(_chkvalue); curErrmsg = _cName + ' 输入的数值应为&gt;=0的正数，请核对！'; break; case curSchema == 'snumber': check_result = isSNumber(_chkvalue); curErrmsg = _cName + ' 输入的数值应为&lt;0的负数，请核对！'; break; case curSchema == 'date': check_result = isDate(_chkvalue, _cName); check_errid = 'date'; check_errmsg = (check_result ? '' : _cName + ' 输入的日期不合理，请核对！'); curErrmsg = ''; break; case curSchema.indexOf('minlen') != -1: var _slen = parseInt(curSchema.substr('minlen'.length, curSchema.length - 'minlen'.length), 10); if (isNaN(_slen)) { check_result = false; curErrmsg = _cName + ' 输入的最小位数参数不合理，请与软件供应商联系！'; } else { check_result = (_objlength &lt; _slen ? false : true); curErrmsg = _cName + ' 的内容要求最小输入' + _slen + '位，请核对！'; } break; case curSchema.indexOf('maxlen') != -1: var _slen = parseInt(curSchema.substr('maxlen'.length, curSchema.length - 'maxlen'.length), 10); if (isNaN(_slen)) { check_result = false; curErrmsg = _cName + ' 输入的最大位数参数不合理，请与软件供应商联系！'; } else { check_result = (_objlength &gt; _slen ? false : true); curErrmsg = _cName + ' 最大允许输入' + _slen + '位，请核对！'; } break; case curSchema.indexOf('mustlen') != -1: var _slen = parseInt(curSchema.substr('mustlen'.length, curSchema.length - 'mustlen'.length), 10); if (isNaN(_slen)) { check_result = false; curErrmsg = _cName + ' 输入的限制位数参数不合理，请与软件供应商联系！'; } else { check_result = (_objlength != _slen ? false : true); curErrmsg = _cName + ' 的内容输入长度只能是' + _slen + '位，请核对！'; } break; case curSchema == 'time': check_result = validRegs(_chkvalue, /^\d{1,2}:\d{1,2}:\d{1,2}$/); curErrmsg = _cName + ' 输入的时间不合理，请核对。'; break; case curSchema == 'alpha': check_result = isAlpha(_chkvalue); curErrmsg = _cName + ' 只能输入的数字、字母和下划线，请核对。'; break; case curSchema == 'mail': check_result = validRegs(_chkvalue, /^([a-zA-Z0-9._-])+@([a-zA-Z0-9_-])+(\.[a-zA-Z0-9_-])+/); curErrmsg = _cName + ' 输入的邮件地址不合理，请核对。'; break; case curSchema == 'phone': check_result = validRegs(_chkvalue, /([a-zA-Z0-9\.-\u4e00-\u9fa5]{8,})$/); curErrmsg = _cName + ' 输入的电话号码不合理，请核对。'; break; case curSchema == 'mobile': check_result = validRegs(_chkvalue, /^1(3[0-9]|5[012356789]|8[056789])\d{8}$/); curErrmsg = _cName + ' 输入的手机号码不合理，请核对。'; break; case curSchema == 'money': check_result = validRegs(_chkvalue, /^\d+(\.\d+)?$/); curErrmsg = _cName + ' 输入的内容不符合货币类型的要求，请核对。'; break; case curSchema == 'zip': check_result = validRegs(_chkvalue, /^[1-9]\d{5}$/); curErrmsg = _cName + ' 输入的邮政编码不合理，请核对。'; break; case curSchema == 'int': check_result = validRegs(_chkvalue, /^[-\+]?\d+$/); curErrmsg = _cName + ' 需要输入一个整数，请核对。'; break; case curSchema == 'en': check_result = validRegs(_chkvalue, /^[A-Za-z]+$/); curErrmsg = _cName + ' 只能输入英文大小写字母，请核对。'; break; case curSchema == 'cn': check_result = validRegs(_chkvalue, /^[\u0391-\uFFE5]+$/); curErrmsg = _cName + ' 只能输入中文，请核对。'; break; case curSchema == 'url': check_result = validRegs(_chkvalue, /([\w-]+\.)+[\w-]+(\/[\w- .\/?%&amp;=]*)?/); curErrmsg = _cName + ' 输入的网址不合理，请核对。'; break; case curSchema == 'idcard18': rv_result = checkIdcard(_chkvalue); check_result = (rv_result == '' ? true : false); curErrmsg = _cName + rv_result; break; case curSchema == 'idcard15': rv_result = checkIdcard(_chkvalue); check_result = (rv_result == '' ? true : false); curErrmsg = _cName + rv_result; break; case curSchema == 'idcard': rv_result = checkIdcard(_chkvalue); check_result = (rv_result == '' ? true : false); curErrmsg = _cName + rv_result; break; } if (!check_result) {
+                if (curErrmsg != '') { check_errmsg = etip + curErrmsg; } if ((curErrmsg != '') &amp;&amp; (allowAlert)) { document.getElementById('saved').innerHTML = etip + curErrmsg; alert(etip + curErrmsg); return check_result; }
+            }
+        }
+        return check_result;
+    }
+    function checkIdcard(idcard) {
+        var _idcard = idcard;  var Errors = new Array('', '身份证号码位数不对!', '身份证号码出生日期超出范围或含有非法字符!', '身份证号码校验错误!', '身份证地区非法!', '');
+        if (_idcard == '') { return Errors[5]; }
+        var area = { 11: '北京', 12: '天津', 13: '河北', 14: '山西', 15: '内蒙古', 21: '辽宁', 22: '吉林', 23: '黑龙江', 31: '上海', 32: '江苏', 33: '浙江', 34: '安徽', 35: '福建', 36: '江西', 37: '山东', 41: '河南', 42: '湖北', 43: '湖南', 44: '广东', 45: '广西', 46: '海南', 50: '重庆', 51: '四川', 52: '贵州', 53: '云南', 54: '西藏', 61: '陕西', 62: '甘肃', 63: '青海', 64: '宁夏', 65: '新疆', 71: '台湾', 81: '香港', 82: '澳门', 91: '国外' }
+        var _idcard, Y, JYM; var S, M; var idcard_array = new Array(); idcard_array = _idcard.split('');
+        if (area[parseInt(_idcard.substr(0, 2))] == null) { return Errors[4]; }
+        switch (_idcard.length) {
+            case 15: if ((parseInt(_idcard.substr(6, 2)) + 1900) % 4 == 0 || ((parseInt(_idcard.substr(6, 2)) + 1900) % 100 == 0 &amp;&amp; (parseInt(_idcard.substr(6, 2)) + 1900) % 4 == 0)) {
+                    ereg = /^[1-9][0-9]{5}[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|[1-2][0-9]))[0-9]{3}$/;
+                } else {
+                    ereg = /^[1-9][0-9]{5}[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|1[0-9]|2[0-8]))[0-9]{3}$/;
+                }
+                if (ereg.test(_idcard)) {
+                    var iS = 0; var iW = new Array; iW[0] = 7; iW[1] = 9; iW[2] = 10; iW[3] = 5; iW[4] = 8; iW[5] = 4; iW[6] = 2; iW[7] = 1; iW[8] = 6; iW[9] = 3; iW[10] = 7; iW[11] = 9; iW[12] = 10; iW[13] = 5; iW[14] = 8; iW[15] = 4; iW[16] = 2;
+                    var LastCode = '10X98765432'; var perIDNew; perIDNew = _idcard.substr(0, 6); perIDNew += '19'; perIDNew += _idcard.substr(6, 9);
+                    for (var i = 0; i &lt; 17; i++) { iS += parseInt(perIDNew.substr(i, 1)) * iW[i]; }
+                    var iY = iS % 11; perIDNew += LastCode.substr(iY, 1);
+                    return Errors[0];
+                } else {
+                    return Errors[2];
+                }
+                break;
+            case 18: if (parseInt(_idcard.substr(6, 4)) % 4 == 0 || (parseInt(_idcard.substr(6, 4)) % 100 == 0 &amp;&amp; parseInt(_idcard.substr(6, 4)) % 4 == 0)) {
+                    ereg = _idcard.substr(6, 2) == '19' ? /^[1-9][0-9]{5}19[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|[1-2][0-9]))[0-9]{3}[0-9Xx]$/ : /^[1-9][0-9]{5}20[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|[1-2][0-9]))[0-9]{3}[0-9Xx]$/;
+                } else {
+                    ereg = _idcard.substr(6, 2) == '19' ? /^[1-9][0-9]{5}19[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|1[0-9]|2[0-8]))[0-9]{3}[0-9Xx]$/ : /^[1-9][0-9]{5}20[0-9]{2}((01|03|05|07|08|10|12)(0[1-9]|[1-2][0-9]|3[0-1])|(04|06|09|11)(0[1-9]|[1-2][0-9]|30)|02(0[1-9]|1[0-9]|2[0-8]))[0-9]{3}[0-9Xx]$/;
+                }
+                if (ereg.test(_idcard)) {
+                    S = (parseInt(idcard_array[0]) + parseInt(idcard_array[10])) * 7 + (parseInt(idcard_array[1]) + parseInt(idcard_array[11])) * 9 + (parseInt(idcard_array[2]) + parseInt(idcard_array[12])) * 10 + (parseInt(idcard_array[3]) + parseInt(idcard_array[13])) * 5 + (parseInt(idcard_array[4]) + parseInt(idcard_array[14])) * 8 + (parseInt(idcard_array[5]) + parseInt(idcard_array[15])) * 4 + (parseInt(idcard_array[6]) + parseInt(idcard_array[16])) * 2 + parseInt(idcard_array[7]) * 1 + parseInt(idcard_array[8]) * 6 + parseInt(idcard_array[9]) * 3;
+                    Y = S % 11; M = 'F'; JYM = '10X98765432'; M = JYM.substr(Y, 1); if (M == idcard_array[17]) return Errors[0]; else { return Errors[3]; } 
+                } else { return Errors[2]; } break; default: return Errors[1]; break;
+        } 
+    }
+    function getid(id) { alert(checkIdcard(id)) }
+    function per18To15(perIDSrc) { rstr = ''; for (var i = 0; i &lt; 17; i++) { if ((i == 6) || (i == 7)) { continue; } rstr += perIDSrc.charAt(i); } return rstr; }
+    function per15To18(perIDSrc) {
+        var iS = 0; var iW = new Array;
+        iW[0] = 7; iW[1] = 9; iW[2] = 10; iW[3] = 5; iW[4] = 8; iW[5] = 4; iW[6] = 2; iW[7] = 1; iW[8] = 6; iW[9] = 3; iW[10] = 7; iW[11] = 9; iW[12] = 10; iW[13] = 5; iW[14] = 8; iW[15] = 4; iW[16] = 2;
+        var LastCode = '10X98765432'; var perIDNew; perIDNew = perIDSrc.substr(0, 6); perIDNew += '19'; perIDNew += perIDSrc.substr(6, 9);
+        for (var i = 0; i &lt; 17; i++) { iS += parseInt(perIDNew.substr(i, 1)) * iW[i]; }
+        var iY = iS % 11; perIDNew += LastCode.substr(iY, 1); return perIDNew;
+    }
+    var aCity = { 11: '北京', 12: '天津', 13: '河北', 14: '山西', 15: '内蒙古', 21: '辽宁', 22: '吉林', 23: '黑龙江', 31: '上海', 32: '江苏', 33: '浙江', 34: '安徽', 35: '福建', 36: '江西', 37: '山东', 41: '河南', 42: '湖北', 43: '湖南', 44: '广东', 45: '广西', 46: '海南', 50: '重庆', 51: '四川', 52: '贵州', 53: '云南', 54: '西藏', 61: '陕西', 62: '甘肃', 63: '青海', 64: '宁夏', 65: '新疆', 71: '台湾', 81: '香港', 82: '澳门', 91: '国外' }
+    function cidInfo(sId) {
+        var iSum = 0; var info = '';
+        if (!/^\d{17}(\d|x)$/i.test(sId))
+            return false; sId = sId.replace(/x$/i, 'a');
+        if (aCity[parseInt(sId.substr(0, 2))] == null) return 'Error:非法地区'; sBirthday = sId.substr(6, 4) + '-' + Number(sId.substr(10, 2)) + '-' + Number(sId.substr(12, 2));
+        var d = new Date(sBirthday.replace(/-/g, '/'))
+        if (sBirthday != (d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate()))
+            return 'Error:非法生日';
+        for (var i = 17; i &gt;= 0; i--) iSum += (Math.pow(2, i) % 11) * parseInt(sId.charAt(17 - i), 11)
+        if (iSum % 11 != 1) return 'Error:非法证号';
+        return aCity[parseInt(sId.substr(0, 2))] + ',' + sBirthday + ',' + (sId.substr(16, 1) % 2 ? '男' : '女')
+    }
+function PositionLen(s){var i,str1,str2,str3,nLen;	str1 =s;nLen = 0;for(i=1;i&lt;=str1.length;i++){str2=str1.substring(i-1,i);str3=escape(str2);if(str3.length&gt;3){	nLen = nLen + 2;}else{nLen = nLen + 1;}	}
+return nLen;}
+function isNotNull(str){return (str==''?false:true);}
+function isNumber(str){if(str==''){return true;}return (isNaN(str)?false:true);}
+function isNumber(str){if(str==''){return true;}return (isNaN(str)?false:true);}
+function isBNumber(str){if(str==''){return true;}return (!isNaN(str)?parseInt(str,10)&gt;=0?true:false:false);}
+function isSNumber(str){if(str==''){return true;}return (!isNaN(str)?parseInt(str,10)&lt;0?true:false:false);}
+function isAlpha(_str){return (_str.replace(/\w/g,'').length == 0);}
+function isAN(_str){var reg = /^(([a-z]+[0-9]+)|([0-9]+[a-z]+))[a-z0-9]*$/i;return reg.test(_str);}
+function validRegs(_value,_Regs){return _Regs.test(_value); }
+function isVisibled(obj){   if( (obj.style.display=='none')||( (obj.offsetHeight==0)&amp;&amp;(obj.offsetWidth==0) ) )       return false; if(obj.currentStyle){if(obj.currentStyle['display']=='none') return false;}  return true;}
+function isFocused(obj){   if( (obj.disabled==false)&amp;&amp;(isVisibled(obj)) )       return true;   return false;}
+function isDate(str,cname,notip){if(str==''){return true;}
+str=str.replace(/\//g,'-');
+dt=str.split(' ');if(dt.length&gt;2){if(!notip) alert(cname+'日期输入不正确！可能包括非法的日期组成部分。');return false;	} dt1=dt[0].split('-');if(dt1.length!=3){if(!notip) 	alert(cname+'日期输入不正确！日期部分应为YYYY-MM-DD。');return false;}dt1n=(dt1[0]+dt1[1]+dt1[2]).split('');for(var i=0;i&lt;dt1.length;i++){if((isNaN(dt1[i])||(ctrim(dt1[i])==''))){if(!notip) 	alert(cname+'字符：'+dt1[i]+'，年月日部分必须输入数字！');	return false;}	}_year=parseInt(dt1[0],10);	_month=parseInt(dt1[1],10);	_day=parseInt(dt1[2],10);if((_year&lt;1000)||(_year&gt;9999)||(_month&lt;1)||(_month&gt;12)||(_day&lt;1)||(_day&gt;31)){if(!notip) alert(cname+'年月日部分输入的数字不合理，请核对！');return false;	}v_date31=new Array;v_date31[0]=4;v_date31[1]=6;v_date31[2]=9;v_date31[3]=11;if((getArrayIndex(v_date31,_month)!=-1)&amp;&amp;(_day&gt;30)){if(!notip) alert(cname+'月份：'+_month+'，天数输入范围不合理！');	return false;}if(_month==2){	if(((_year%4==0)&amp;&amp;(_year%100!=0))||(_year%400==0)){	if(_day&gt;29){if(!notip) alert(cname+'月份：'+_month+'，天数输入范围不合理！');return false;	}}else{	if(_day&gt;28){if(!notip) alert(cname+'月份：'+_month+'，天数输入范围不合理！');return false;	}}	}	return true;   }
+function getArrayIndex(xArray,find){_rs=-1;for(var j=0;j&lt;xArray.length;j++){if(xArray[j]==find){_rs=j;	break; 	}}	return _rs;	}
+function ctrim(ename){ if(ename==undefined) return '';	return (ename.replace(/(^\s*)|(\s*$)/g, '')).replace(/^[\s　\t]+|[\s　\t]+$/, '');}
+
+
+    var RowsCount = 0;
+    var ErrorMessage = "";
+
+    function swarp(mId, stype) {
+        var mObj = document.getElementById(mId);
+        if (mObj == undefined) {
+            return false;
+        }
+        var premObj = mObj.previousElementSibling;
+        if (stype == 2) {
+            premObj = mObj.nextElementSibling;
+        }
+        if (premObj == null) return false;
+        if (stype == 1) {
+            mObj.parentNode.insertBefore(mObj, premObj);
+        } else if (stype == 2) {
+            mObj.parentNode.insertBefore(premObj, mObj);
+        }
+    }
+    function setrow(rowobj) {
+        document.getElementById('curid').value = rowobj.id;
+        chnRowSelColor(rowobj);
+    }
+    function chnRowSelColor(rowobj) {
+        var _com = "att_" + document.getElementById('com_name').value;
+        var mt = document.getElementById('mtable');
+        for (var i = 0; i &lt; mt.rows.length; i++) {
+            var mt_row = mt.rows[i];
+            mt_row.style.backgroundColor = '';
+            if (mt_row.id == rowobj.id) {continue;}
+            for (var j = 0; j &lt; mt_row.cells.length; j++) {
+                var cell1 = mt_row.cells[j];
+                if (cell1.getElementsByTagName('input').length &gt; 0) {
+                    cell1.innerHTML = cell1.getElementsByTagName('input')[0].value.replace(/&lt;[^&gt;]*&gt;/g, '');
+                }else 
+                if (cell1.getElementsByTagName('select').length &gt; 0) {
+                        cell1.innerHTML = cell1.getElementsByTagName('select')[0].value.replace(/&lt;[^&gt;]*&gt;/g, '');
+                }
+            }
+        }
+        rowobj.style.backgroundColor = 'rgb(235,235,235)';
+        var pj = JSON.parse(document.getElementById('pjson').value);
+        var jtcy = pj[_com][0].cols;
+        var isadd = false;
+        if (rowobj.cells.length == 0) {
+            isadd = true;
+        }
+        for (var i = 0; i &lt; jtcy.length; i++) {
+            var cell1 = isadd==true?rowobj.insertCell(i):rowobj.cells[i];
+            var ctype = jtcy[i].input;
+            var innerhtml = "";
+            var oldvalue = "";
+            if(isadd==true){
+                cell1.setAttribute("checkSchema",jtcy[i].check);
+                cell1.setAttribute("cName",jtcy[i].cname);
+            }
+            if (ctype == "text") {
+                oldvalue = cell1.innerText;
+                innerhtml = "&lt;input type='" + ctype + "' onchange='validchange(this)' placeholder='" + jtcy[i].cname + "'style='" + jtcy[i].ctl_style + "'/&gt;";
+            } else if (ctype == "select") {
+                oldvalue = cell1.innerText;
+                innerhtml = "&lt;" + ctype + " onchange='validchange(this)' style='" + jtcy[i].ctl_style + "' /&gt;";
+                innerhtml += "&lt;option value=''&gt;" + jtcy[i].cname + "&lt;/option&gt;";
+                var items = jtcy[i].list.split("|");
+                for (var j = 0; j &lt; items.length; j++) {
+                    innerhtml += "&lt;option&gt;" + items[j] + "&lt;/option&gt;";
+                }
+                innerhtml += "&lt;/" + ctype + "&gt;";
+            }
+            cell1.innerHTML = innerhtml;
+            cell1.style = jtcy[i].td_style;
+            cell1.addEventListener('click', function (event) {
+                event.stopPropagation();
+                if (cell1.parentNode.id != document.getElementById('curid').value) {
+                    setrow(cell1.parentNode);
+                }
+            });
+            if (cell1.getElementsByTagName('input').length &gt; 0) {
+                cell1.getElementsByTagName('input')[0].value=oldvalue;
+                cell1.getElementsByTagName('input')[0].addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            } else if (cell1.getElementsByTagName('select').length &gt; 0) {
+                cell1.getElementsByTagName('select')[0].value = oldvalue;
+                cell1.getElementsByTagName('select')[0].addEventListener('click', function (event) {
+                    event.stopPropagation();
+                });
+            }
+        }
+
+    }
+    function ss(type, result) {
+        try {
+            var robj = JSON.parse(result);
+            if (robj.errcode != 0) {
+                ErrorMessage = robj.errmsg;
+                alert(ErrorMessage);
+            } else {
+                RowsCount++;
+            }
+        } catch (ss_e) {
+            ErrorMessage=(ss_e);
+            alert(ErrorMessage);
+        }
+        if (RowsCount == document.getElementById('mtable').rows.length) {
+            document.getElementById('Button4').removeAttribute("disabled");
+            document.getElementById('saved').style.color = 'green';
+            document.getElementById('saved').innerHTML = "保存所有成功。";
+            window.setTimeout(function () {
+                document.getElementById('saved').style.color = 'red';
+                document.getElementById('saved').innerHTML = "";
+            }, 1000);
+
+
+            callServerFunction("", "save_att_data", "{ypz_cid:'" +document.getElementById('cid').value+"',com_name:'"+document.getElementById('com_name').value + "'}", ss4);
+        }
+    }
+    function ss4(type, result) {
+        if (JSON.stringify(result) == "\"true\"") {
+        } else {
+            alert('同步更新简历信息失败，请点击修改简历按钮提交修改。' + JSON.stringify(result));
+        }
+    }
+    function ss3(type, result) {
+        try {
+            var robj = JSON.parse(result);
+            if (robj.errcode != 0) {
+                ErrorMessage = robj.errmsg;
+                alert(ErrorMessage);
+            } else {
+                RowsCount++;
+            }
+        } catch (ss3_e) {
+            ErrorMessage = (ss3_e);
+            alert(ErrorMessage);
+        }
+    }
+    function tojsonstr(str) {
+        var prv = str.replace(/["\\]/g, '\\$&amp;').replace(/&lt;[^&gt;]*&gt;/g, '').replace(/&lt;[^&gt;]*&gt;/g, '') ;
+        return prv;
+    }
+    function saveall() {
+        var mt = document.getElementById('mtable');
+        if (mt.rows.length == 0) {
+            document.getElementById('saved').style.color = '#4169E1';
+            document.getElementById('saved').innerHTML = "请添加行后再执行保存操作...";
+            window.setTimeout(function () {
+                document.getElementById('saved').style.color = 'red';
+                document.getElementById('saved').innerHTML = "";
+            }, 3000);
+            return;
+        }
+        RowsCount = 0;
+        ErrorMessage = "";
+        document.getElementById('saved').style.color = '#4169E1';
+        document.getElementById('saved').innerHTML = "正在保存...";
+
+        var _com = "att_" + document.getElementById('com_name').value;
+        var pj = JSON.parse(document.getElementById('pjson').value);
+        var dj = JSON.parse(document.getElementById('djson').value);
+        var jtcy = pj[_com][0].cols;
+        for (var i = 0; i &lt; mt.rows.length; i++) {
+            var mt_row = mt.rows[i];
+            dj.cid = mt_row.id;
+            dj.sortid = (i + 1);
+            for (var j = 0; j &lt; mt_row.cells.length; j++) {
+                var cell1 = mt_row.cells[j];
+                var _value = cell1.innerText;
+                if (cell1.getElementsByTagName('input').length &gt; 0) {
+                    _value = cell1.getElementsByTagName('input')[0].value;
+                } else if (cell1.getElementsByTagName('select').length &gt; 0) {
+                    _value = cell1.getElementsByTagName('select')[0].value;
+                }
+                dj[jtcy[j].fname] =tojsonstr(_value);
+            }
+            callServerFunction("", "saveInfo", "{jdata:'" + JSON.stringify(dj).replace(/['\\]/g, '\\$&amp;') + "'}", ss);
+        }
+    }
+    function ss2(type, result) {
+        try {
+            var robj = JSON.parse(result);
+            if (robj.errcode != 0) {
+                ErrorMessage = robj.errmsg;
+                alert(ErrorMessage);
+            } else {
+                RowsCount++;
+                var curid = document.getElementById('curid').value;
+                var mt_row = document.getElementById(curid);
+                document.getElementById('mtable').deleteRow(mt_row.rowIndex);
+                document.getElementById('saved').style.color = 'red';
+                document.getElementById('saved').innerHTML = "";
+                alert('删除当前行成功！');
+            }
+        } catch (ss2_e) {
+            ErrorMessage = (ss2_e);
+            alert(ErrorMessage);
+        }
+    }
+
+    function delinfo() {
+        var curid = document.getElementById('curid').value;
+        if (curid == "") {
+            alert('请选中记录后再执行删除操作。');
+            return;
+        }
+        RowsCount = 0;
+        ErrorMessage = "";
+        var _com = "att_" + document.getElementById('com_name').value;
+        var dj = JSON.parse(document.getElementById('djson').value);
+        var mt_row = document.getElementById(curid);
+        dj.cid = mt_row.id;
+        callServerFunction("", "deleteInfo", "{jdata:'" + JSON.stringify(dj).replace(/['\\]/g, '\\$&amp;') + "'}", ss2);
+    }
+    function validall(extip) {
+        
+
+        var _com = "att_" + document.getElementById('com_name').value;
+        var mt = document.getElementById('mtable');
+
+        var pj = JSON.parse(document.getElementById('pjson').value);
+        var dj = JSON.parse(document.getElementById('djson').value);
+        var jtcy = pj[_com][0].cols;
+        for (var i = 0; i &lt; mt.rows.length; i++) {
+            var mt_row = mt.rows[i];
+            for (var j = 0; j &lt; mt_row.cells.length; j++) {
+                var cell1 = mt_row.cells[j];
+                var _value = cell1.innerText;
+                if (cell1.getElementsByTagName('input').length &gt; 0) {
+                    _value = cell1.getElementsByTagName('input')[0].value;
+                } else if (cell1.getElementsByTagName('select').length &gt; 0) {
+                    _value = cell1.getElementsByTagName('select')[0].value;
+                }
+                var isvalid = simplecheck(cell1, _value, true, extip+"第" + (i + 1) + "行：");
+                if (isvalid == false) {
+                    mt_row.style.backgroundColor = '#B22222';
+                    
+                    return false;
+                }
+            }
+        }
+        return true;
+    }
+    function validchange(obj) {
+        document.getElementById('saved').innerText = '修改了'+obj.parentNode.getAttribute('cname')+'待保存';
+    }
+    function validsave(extip) {
+        if (document.getElementById('saved').innerText != '') {
+            return false;
+        }
+        return true;
+    }
+    function addRow() {
+        if (validall('') == false) {
+            return;
+        }
+        RowsCount = 0;
+        ErrorMessage = "";
+
+        var _com = "att_" + document.getElementById('com_name').value;
+        var pj = JSON.parse(document.getElementById('pjson').value);
+        
+        var jtcy=pj[_com][0].cols;
+        var mt = document.getElementById('mtable');
+        var maxCount = parseInt(pj[_com][0].maxRowCount, 10);
+        if (mt.rows.length &gt;= maxCount) {
+            alert("本内容最多允许添加" + maxCount + "行。");
+            return;
+        }
+        var row = mt.insertRow(-1); // -1 表示在表的末尾插入新行
+        row.id = gGuid();
+        row.setAttribute("onclick", "setrow(this)");
+        setrow(row);
+        var dj = JSON.parse(document.getElementById('djson').value);
+        dj["cid"] = row.id;
+        dj["sortid"] = mt.rows.length;
+
+        callServerFunction("", "saveInfo", "{jdata:'" + JSON.stringify(dj) + "'}", ss3);
+        document.getElementById('saved').style.color = 'red';
+        document.getElementById('saved').innerHTML = "添加新行未保存";
+        ScrollToBottom();
+    }
+    function gGuid() {
+        return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+            var r = Math.floor(Math.random() * 16);
+            var v = c === 'x' ? r : (r &amp; 0x3 | 0x8);
+            return v.toString(16);
+        });
+    }
+    function ScrollToBottom() {
+        $("html, body").animate({ scrollTop: $(document).height() - $(window).height() });
+    }
+&lt;/script&gt;
+</code></pre> 
+</div> 
+<p></p> 
+<h4 id="Jquery%E5%BC%95%E7%94%A8">Jquery引用</h4> 
+<p>这是一组基于Jquery的自定义开发的扩展应用库，请下载我的资源：</p> 
+<p><a class="link-info" href="https://download.csdn.net/download/michaelline/88615565" title="https://download.csdn.net/download/michaelline/88615565">https://download.csdn.net/download/michaelline/88615565</a></p> 
+<p>进行引用，本库用于调用服务器静态方法等功能使用。</p> 
+<h4 id="C%23%20%E6%9C%8D%E5%8A%A1%E7%AB%AF%E6%93%8D%E4%BD%9C%C2%A0">C# 服务端操作 </h4> 
+<p>服务端主要用于对已有数据的提取显示并初始化到主编辑表中的行，并提供保存及删除操作的静态方法，主要方法说明见下表：</p> 
+<table align="center" border="1" cellpadding="1" cellspacing="1"><thead><tr><th>序号</th><th style="width:237.5px;">方法名</th><th style="width:101px;">返回类型</th><th style="width:319px;">说明</th></tr></thead><tbody><tr><th>1</th><td style="width:237.5px;">public void InitPage()</td><td style="width:101px;">void</td><td style="width:319px;">主要用于提取已有数据表数据并显示到主编辑表 mtable 的数据行，如何提取数据请参照我的文章 <p> <a href="https://blog.csdn.net/michaelline/article/details/138275943" title="《C# 利用IDbDataAdapter / IDataReader 实现通用数据集获取》 ">《C# 利用IDbDataAdapter / IDataReader 实现通用数据集获取》 </a></p> </td></tr><tr><th>2</th><td style="width:237.5px;">public static string saveInfo(string jdata)</td><td style="width:101px;">string</td><td style="width:319px;"> <p>保存行信息到数据表，参数为提交的Json数据包,</p> <p>保存数据操作请参照我的文章<a class="link-info" href="https://blog.csdn.net/michaelline/article/details/138282315" title="《C#利用IDbCommand实现通用数据库脚本执行程序》">《C#利用IDbCommand实现通用数据库脚本执行程序》</a></p> </td></tr><tr><th>3</th><td style="width:237.5px;">public static string deleteInfo(string jdata)</td><td style="width:101px;">string</td><td style="width:319px;">删除行信息到数据表，参数为提交的Json数据包，保存数据库操作请参照我的文章<a class="link-info" href="https://blog.csdn.net/michaelline/article/details/138282315" title="《C#利用IDbCommand实现通用数据库脚本执行程序》">《C#利用IDbCommand实现通用数据库脚本执行程序》</a></td></tr><tr><th>4</th><td style="width:237.5px;">private static string String2Json(String s)</td><td style="width:101px;">string</td><td style="width:319px;">规范字符串，以符合Json字符串要求</td></tr></tbody></table> 
+<p>实现示例代码如下：</p> 
+<div> 
+ <pre><code class="language-cs">&lt;%@ Page Language="C#" %&gt;
+&lt;!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd"&gt;
+&lt;%@ Import Namespace="System.Data"%&gt;
+&lt;%@ Import NameSpace="System.Data.SqlClient"%&gt;
+&lt;%@ Import Namespace="System.IO"%&gt;
+&lt;%@ Import Namespace="System.Web.Services"%&gt;
+&lt;script language="C#" runat="server"&gt;
+public CosysJaneCommonAPI.CODAL dal = new CosysJaneCommonAPI.CODAL();
+void Page_Load(Object sender, EventArgs e)
+{
+    if (Page.IsPostBack) { return; }
+    InitPage();
+}
+
+public void InitPage()
+{
+    dal.RunAt = Page.Form;
+    string _xmbh = "001";
+    string _p_att_json = pjson.Text;
+    string _sfzh = "120102";
+    xmbh.Text = _xmbh;
+    sfzh.Text = _sfzh;
+    
+    com_name.Text = Request.QueryString["com_name"];
+    Newtonsoft.Json.Linq.JObject jobj = Newtonsoft.Json.Linq.JObject.Parse(pjson.Text);
+    djson.Text = "{";
+    _sql = "select ";
+    HtmlTableRow trow = new HtmlTableRow();
+    ttable.Attributes["style"] = jobj["att_" + com_name.Text][0]["ttable_style"].ToString();
+    mtable.Attributes["style"] = jobj["att_" + com_name.Text][0]["mtable_style"].ToString();
+    for (int i = 0; i &lt; jobj["att_" + com_name.Text][0]["cols"].Count(); i++)
+    {
+        HtmlTableCell tcell = new HtmlTableCell();
+        tcell.InnerText = jobj["att_" + com_name.Text][0]["cols"][i]["cname"].ToString();
+        tcell.Attributes["style"] = jobj["att_" + com_name.Text][0]["cols"][i]["td_style"].ToString();
+        trow.Cells.Add(tcell);
+        djson.Text += string.Format("\"{0}\":\"{1}\",", jobj["att_" + com_name.Text][0]["cols"][i]["fname"].ToString(), "");
+        _sql += jobj["att_" + com_name.Text][0]["cols"][i]["fname"].ToString() + ",";
+    }
+    ttable.Rows.Add(trow);
+    djson.Text += string.Format("\"{0}\":\"{1}\"", "xmbh", _xmbh);
+    djson.Text += string.Format(",\"{0}\":\"{1}\"", "sfzh",_sfzh);
+    djson.Text += string.Format(",\"{0}\":\"{1}\"", "sortid", "");
+    djson.Text += string.Format(",\"{0}\":\"{1}\"", "cid", "");
+    djson.Text += string.Format(",\"{0}\":\"{1}\"", "com_name", com_name.Text);
+    djson.Text += "}";
+    _sql = _sql + "cid from att_" + com_name.Text+" where xmbh=@xmbh and sfzh=@sfzh order by sortid"; 
+    paras.Clear();
+    paras.Add(new SqlParameter("xmbh", _xmbh));
+    paras.Add(new SqlParameter("sfzh", _sfzh));
+    rv = dal.GetDataSet(_sql, paras);
+    if (dal.ErrorMessage != "")
+    {
+        return;
+    }
+    topnavs.Visible = true;
+    ttable.Style["top"] = "37px";
+    mtable.Style["top"] = "67px";
+    if (dal.RowsCount == 0)
+    {
+        return;
+    }
+    dt = ((DataSet)rv).Tables[0];
+
+    for (int i = 0; i &lt; dt.Rows.Count; i++)
+    {
+        HtmlTableRow hrow = new HtmlTableRow();
+        if (_zwmc == "" || (_bcbz == "true" &amp;&amp; _bcsm != ""))
+        {
+            hrow.Attributes["onclick"] = "setrow(this)";
+        }
+        hrow.ID = dt.Rows[i]["cid"].ToString();
+        for (int j = 0; j &lt; dt.Columns.Count-1; j++)
+        {
+            HtmlTableCell hcell = new HtmlTableCell();
+            hcell.Attributes["style"] = jobj["att_" + com_name.Text][0]["cols"][j]["td_style"].ToString();
+            hcell.Attributes["cName"] = jobj["att_" + com_name.Text][0]["cols"][j]["cname"].ToString();
+            hcell.Attributes["checkSchema"] = jobj["att_" + com_name.Text][0]["cols"][j]["check"].ToString();
+            hcell.InnerText = dt.Rows[i][dt.Columns[j].ToString()].ToString();
+            hrow.Cells.Add(hcell);
+        }
+        mtable.Rows.Add(hrow);
+    }
+
+}
+[WebMethod(BufferResponse = true)]
+public static string saveInfo(string jdata)
+{
+    Newtonsoft.Json.Linq.JObject jobj = Newtonsoft.Json.Linq.JObject.Parse(jdata);
+    string tablename = "";
+    string inssql = "";
+    string inslist = "";
+    string insparas = "";
+    string updsql = "";
+    string updparas = "";
+    ArrayList paras = new ArrayList();
+    paras.Clear();
+
+    foreach (KeyValuePair&lt;string, Newtonsoft.Json.Linq.JToken&gt; kvp in jobj)
+    {
+        string key = kvp.Key.ToString();
+        string value = kvp.Value.ToString();
+        if (key == "com_name" &amp;&amp; (value == "jtcy" || value == "shgx" || value == "jypx" || value == "gzjl"))
+        {
+            tablename = "att_"+value;
+        }
+        else
+        {
+            inslist += key + ",";
+            insparas +="@"+ key + ",";
+            updparas += string.Format(" {0}=@{1},",key,key);
+            paras.Add(new SqlParameter(key, value));
+        }
+    }
+    if (inslist.Length &gt; 1)
+    {
+        inslist = inslist.Substring(0, inslist.Length - 1);
+        insparas = insparas.Substring(0, insparas.Length - 1);
+        inssql = string.Format("insert into {0} ({1}) values({2});", tablename, inslist, insparas);
+    }
+    if (updparas.Length &gt; 1)
+    {
+        updparas = updparas.Substring(0, updparas.Length - 1);
+        updsql = string.Format("update {0} set {1} where cid=@cid;", tablename, updparas);
+    }
+    string sql = string.Format(" if not exists(select cid from {0} where cid=@cid) begin {1} end else begin {2} end", tablename, inssql, updsql);
+    
+    CosysJaneCommonAPI.CODAL dal = new CosysJaneCommonAPI.CODAL();
+   dal.ExecDbScripts(sql, paras);
+   string rv = "{\"errcode\":0,\"errmsg\":\"\"}";
+   if (dal.ErrorMessage != "")
+   {
+       rv="{\"errcode\":2,\"errmsg\":\""+String2Json(dal.ErrorMessage)+"\"}";
+   }
+   else if (dal.RowsCount == 0)
+   {
+       rv = "{\"errcode\":1,\"errmsg\":\"" + String2Json("未成功更新记录。") + "\"}";
+   }
+    return rv;
+}
+[WebMethod(BufferResponse = true)]
+public static string deleteInfo(string jdata)
+{
+    Newtonsoft.Json.Linq.JObject jobj = Newtonsoft.Json.Linq.JObject.Parse(jdata);
+    string tablename = "";
+    string updsql = "";
+    string updparas = "";
+    ArrayList paras = new ArrayList();
+    paras.Clear();
+
+    foreach (KeyValuePair&lt;string, Newtonsoft.Json.Linq.JToken&gt; kvp in jobj)
+    {
+        string key = kvp.Key.ToString();
+        string value = kvp.Value.ToString();
+        if (key == "com_name" &amp;&amp; (value == "jtcy" || value == "shgx"|| value == "jypx" || value == "gzjl"))
+        {
+            tablename = "att_"+value;
+        }
+        else if(key=="cid")
+        {
+            paras.Add(new SqlParameter(key, value));
+        }
+    }
+    updsql = string.Format("delete from {0} where cid=@cid;", tablename);
+
+    CosysJaneCommonAPI.CODAL dal = new CosysJaneCommonAPI.CODAL();
+    dal.ExecDbScripts(updsql, paras);
+    string rv = "{\"errcode\":0,\"errmsg\":\"\"}";
+    if (dal.ErrorMessage != "")
+    {
+        rv = "{\"errcode\":2,\"errmsg\":\"" + String2Json(dal.ErrorMessage) +  "\"}";
+    }
+    else if (dal.RowsCount == 0)
+    {
+        rv = "{\"errcode\":1,\"errmsg\":\"" + String2Json("未成功更新记录。") + "\"}";
+    }
+    return rv;
+}
+
+private static string String2Json(String s)
+{
+
+    StringBuilder sb = new StringBuilder();
+
+    for (int i = 0; i &lt; s.Length; i++)
+    {
+
+        char c = s.ToCharArray()[i];
+
+        switch (c)
+        {
+
+            case '\"':
+
+                sb.Append("\\\""); break;
+
+            case '\\':
+
+                sb.Append("\\\\"); break;
+
+            case '/':
+
+                sb.Append("\\/"); break;
+
+            case '\b':
+
+                sb.Append("\\b"); break;
+
+            case '\f':
+
+                sb.Append("\\f"); break;
+
+            case '\n':
+
+                sb.Append("\\n"); break;
+
+            case '\r':
+
+                sb.Append("\\r"); break;
+
+            case '\t':
+
+                sb.Append("\\t"); break;
+
+            default:
+
+                if ((c &gt;= 0 &amp;&amp; c &lt;= 31) || c == 127)//在ASCⅡ码中，第0～31号及第127号(共33个)是控制字符或通讯专用字符
+                {
+
+
+
+                }
+
+                else
+                {
+
+                    sb.Append(c);
+
+                }
+
+                break;
+
+        }
+
+    }
+
+    return sb.ToString();
+
+}
+
+&lt;/script&gt;
+</code></pre> 
+</div> 
+<div></div> 
+<h3 id="%E5%B0%8F%E7%BB%93">小结</h3> 
+<p>由于一对多录入的特点，我们采用了嵌入 iframe 元素的方法，然后传递参数名称 com_name，以决定使用Json配置文件中的节点信息 。</p> 
+<p>正常的情况下，我们还会有父项的录入界面，并提供有保存按钮，因此点击保存按钮时客户端可能还需要对 iframe 里的表格数据再进行一次校验或处理，访问iframe里的元素方法主要通过iframe.contentWindow.document 处理，比如如下代码：</p> 
+<pre><code class="language-javascript">    var atts = new Array();
+    atts.push('att_jypx');
+    function before_submit() {
+        for (var i = 0; i &lt; atts.length; i++) {
+            var p_att = document.getElementById('p_' + atts[i]);
+            if (p_att == undefined) { continue; }
+            var p_att_ifr = document.getElementById('x_p_' + atts[i]);
+            var l_att = document.getElementById('l_' + atts[i]);
+            if (p_att_ifr.contentWindow.document.getElementById('mtable').rows.length == 0) {
+                alert(l_att.innerText + "的内容需要添加。");
+                return false;
+            }
+
+            if (p_att_ifr.contentWindow.validall(l_att.innerText+"内容的") == false) {
+                return false;
+            }
+            if (p_att_ifr.contentWindow.validsave('')== false) {
+                alert(l_att.innerText + "的内容有尚未或正在保存的内容，请保存后再进行提交。");
+                return false;
+            }
+        }
+        return true;
+    }
+</code></pre> 
+<div> 
+ <p>​另外工具栏按钮的图片文件，我们可以按照自己的实际需要进行替换。本代码仅供您参考使用，感谢您的阅读，希望本文能够对您有所帮助。</p> 
+</div> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f240cdcc95c62cf70f6549302c87f3cf/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">计算机网络学习小结_概述</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/f0c0708480da7ce6420d7c43888e0601/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Java笔记】第6章：数组</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

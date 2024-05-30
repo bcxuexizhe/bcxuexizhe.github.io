@@ -1,0 +1,755 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Posts - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Posts">
+  <meta property="og:description" content="编程学习者的博客">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="website">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+	<link rel="alternate" type="application/rss+xml" href="/posts/index.xml" title="编程学习者">
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main list" role="main">
+	<header class="main__header">
+		<h1 class="main__title">Posts</h1>
+	</header><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/2a29d01e2d23b942e3d3e580cdc254c8/" rel="bookmark">
+			纯python实现小程序云函数抓包（附完整代码）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		纯python实现小程序云函数抓包 原理参数call返回结果call使用frida进行hook结果 原理 其实小程序授权和云函数执行是一回事，和小程序取code也是一回事，调用的call也是同一个，只不过参数不同，而且实际上执行的call和hook结果的call是不一样的，在这里我们使用frida来hook云函数执行的参数和结果。
+目前其他功能以开发完成，并编译为DLL，具体文档可以看：个非寻的 wechathook 文档
+以上仅供学习交流使用。 参数call 首先确定参数的call，逆向找call的过程就不说了，想要知道怎么找call的私聊就好，这里我们HOOK这个wechatwin.3B4E370，此时可以看到ecx的值就是json格式的参数，但实际上我们从这三个连续的call可以猜到，他可能有3个参数，然后我们在堆栈窗口上也能看到，除了json格式的参数以外，还有两个参数（另外一个是重复的），所以这里我们确切的说应该是要hook三个参数出来，实际的测试中还涉及一个task_id的数据，这个数据不为0的，才是真正的参数。这段json数据的偏移是0。
+返回结果call 云函数的返回结果我这里hook的是wmpf_host_export.dll这个模块，可以看到，在这里下断之后，在与esi接近的地址中有一段是返回的云函数结果，偏移的0x24
+使用frida进行hook from __future__ import print_function import json import frida import sys def on_message(message, data): conte = json.loads(message['payload']) if conte['task_id'] != 0: print('返回结果:',message['payload']) def on_parameter(message, data): conte = json.loads(message['payload']) if conte.get('task_id',None) != 0: print('参数:', message['payload']) def main(target_process): session = frida.attach(target_process) scriptresult = session.create_script(""" var ModAddress=Process.findModuleByName('wmpf_host_export.dll'); //console.log('ModAdress:' + ModAddress.base); var hookAddress=ModAddress.base.add('0xA5320') Interceptor.attach(hookAddress,{ onEnter:function(args) { //console.log(JSON.stringify(this.context)); var esi=this.context.esi; //var esi1=Memory.readPointer(esi+0x24) var result=Memory.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/2a29d01e2d23b942e3d3e580cdc254c8/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/f95730ef2038419d27ae023574a791eb/" rel="bookmark">
+			MySQL 8.0 新特性之不可见主键
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		数据库设计通常需要满足一定的范式要求，其中主键更是最基本的要求。不过，数据库管理系统却允许我们创建没有主键的表。这样的表在 MySQL 中会带来查询性能低下、复制延迟甚至无法实现高可用配置等问题。
+为此，MySQL 8.0.30 版本引入了一个新的功能，叫做不可见主键（Generated Invisible Primary Keys），它可以自动为没有显式指定主键的 InnoDB 表创建一个不可见的主键。
+不可见主键 MySQL 通过系统变量 sql_generate_invisible_primary_key 控制是否启用 GIPK 特性，该变量的默认设置为 OFF。
+以下示例创建了两个表，都没有指定主键。
+mysql&gt; SELECT @@sql_generate_invisible_primary_key; +--------------------------------------+ | @@sql_generate_invisible_primary_key | +--------------------------------------+ | 0 | +--------------------------------------+ 1 row in set (0.00 sec) mysql&gt; CREATE TABLE auto_0 (c1 VARCHAR(50), c2 INT); Query OK, 0 rows affected (0.02 sec) mysql&gt; SET sql_generate_invisible_primary_key=ON; Query OK, 0 rows affected (0.00 sec) mysql&gt; SELECT @@sql_generate_invisible_primary_key; +--------------------------------------+ | @@sql_generate_invisible_primary_key | +--------------------------------------+ | 1 | +--------------------------------------+ 1 row in set (0.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/f95730ef2038419d27ae023574a791eb/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/0cec8cb48a8aedb51657d952269cca08/" rel="bookmark">
+			动态规划的时间复杂度优化
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		作者推荐 视频算法专题
+本文涉及知识点 动态规划汇总
+优化动态规划的时间复杂度，主要有如下几种：
+一，不同的状态表示。 比如：n个人，m顶帽子。
+第一种方式：dp[i][mask] ,i表示前i个人已经选择帽子，mask 表示 那些帽子已经选择。 空间复杂度：O(n2m)。
+第二种方式：dp[i][mask] ,i表示前i个帽子已经选择，mask表示那些人已经选择。 空间复杂度：O(m22)。
+n大，则现在方式一；否则选择方式二。
+【状态压缩】【动态规划】【C++算法】1125.最小的必要团队
+二，通过优化状态减少状态数 例一 【动态规划】【C++算法】2518. 好分区的数目
+num的长度 ∈ \in ∈[1,1000],num[i] ∈ \in ∈[0,106] k ∈ \in ∈[0,1000]。
+将num的元素放到两个数组中，两个数组的和都为k。
+由于num[i] &gt;=0，所以 数组和已经大于k 的无论如何都不会等于k，抛弃。
+dp[k1][k2] 的状态数是固定。
+当处理完 n u m [ 0 , i ) 时 , 两个数组的和是固定 ⟺ k 1 + k 2 ≡ ∑ j : 0 i − 1 n u m s [ j ] 当处理完num[0,i)时,两个数组的和是固定 \iff k1+k2 \equiv \sum\Large_{j:0}^{i-1} nums[j] 当处理完num[0,i)时,两个数组的和是固定⟺k1+k2≡∑j:0i−1​nums[j]
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/0cec8cb48a8aedb51657d952269cca08/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/497c912e81e828d38b6581e27f1a91a7/" rel="bookmark">
+			RedisTemplate.opsForHash()用法简介并举例
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		RedisTemplate.opsForHash()是RedisTemplate类提供的用于操作Hash类型的方法。它可以用于对Redis中的Hash数据结构进行各种操作，如设置字段值、获取字段值、删除字段值等。
+下面是一些常用的RedisTemplate.opsForHash()方法及其用法示例：
+put：设置哈希字段的值
+redisTemplate.opsForHash().put("myhash", "field1", "value1"); putAll：设置多个哈希字段的值
+Map&lt;String, Object&gt; map = new HashMap&lt;&gt;(); map.put("field1", "value1"); map.put("field2", "value2"); redisTemplate.opsForHash().putAll("myhash", map); 设置过期时间 redisTemplate.opsForHash().getOperations().expire(keyString,10, TimeUnit.SECONDS); get：获取哈希字段的值
+Object value = redisTemplate.opsForHash().get("myhash", "field1"); multiGet：获取多个哈希字段的值
+List&lt;Object&gt; values = redisTemplate.opsForHash().multiGet("myhash", Arrays.asList("field1", "field2")); hasKey：判断哈希中是否存在指定的字段
+Boolean hasKey = redisTemplate.opsForHash().hasKey("myhash", "field1"); keys：获取哈希的所有字段
+Set&lt;Object&gt; keys = redisTemplate.opsForHash().keys("myhash"); values：获取哈希的所有值
+List&lt;Object&gt; values = redisTemplate.opsForHash().values("myhash"); entries：获取哈希的所有字段和对应的值
+Map&lt;Object, Object&gt; entries = redisTemplate.opsForHash().entries("myhash"); increment：将指定字段的值增加指定步长
+Long incrementedValue = redisTemplate.opsForHash().increment("myhash", "field1", 5); delete：删除指定的字段
+Long deletedFields = redisTemplate.opsForHash().delete("myhash", "
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/497c912e81e828d38b6581e27f1a91a7/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/70479a8d39144e56f3559fe74ec3cc19/" rel="bookmark">
+			CTS-Camera本地测试（无需科学上网）及Android13高通平台部分fail项修改
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		半年前在做gms认证，其他部分多多少少能找到一些资料，camera这部分卡的时间比较久，主要涉及到几个文件的修改 xxxx_sensor.xml camxtitan17context.cpp camxsettings.xml 错误多为某些配置项缺失或错误配置导致。
+目录
+本地测试方法
+部分fail项修改
+1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]
+2、android.hardware.camera2.cts.CaptureRequestTest#testAeModeAndLock[1]
+3、android.hardware.camera2.cts.CaptureRequestTest#testColorCorrectionControl[1]
+4、android.hardware.camera2.cts.BurstCaptureRawTest#testManualAutoSwitch[1]
+5、android.hardware.camera2.cts.BurstCaptureRawTest#testMetadataRoundDown[1]
+6、android.hardware.camera2.cts.BurstCaptureRawTest#testTimestamp[1]
+7、android.hardware.camera2.cts.MultiViewTest#testDualCameraPreview[1]
+8、android.hardware.camera2.cts.NativeImageReaderTest#testHeic
+9、android.hardware.camera2.cts.ZoomCaptureTest#testRawZoomCapture[1] &amp; android.hardware.camera2.cts.ZoomCaptureTest#testJpegZoomCapture[1]
+本地测试方法 1、在源码包的cts文件夹下含有各个cts测试的源码，camera通过如下命令编译：
+mmm cts/tests/camera 其他的模块大部分也可以通过这种方式本地初测。搜索下test项函数，看下在哪个包里，编译对应的包就可以了。
+2、编译完成生成的是 CtsCameraTestCases.apk,执行
+adb install CtsCameraTestCases.apk 3、进入到设置里，赋予这个apk所需的权限。
+4、查看install 的cts_test包
+adb shell pm list instrumentation #显示如下 #instrumentation:android.camera.cts/androidx.test.runner.AndroidJUnitRunner (target=android.camera.cts) 5、运行测试
+adb shell am instrument -r -e class android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1] -w android.camera.cts/androidx.test.runner.AndroidJUnitRunner android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]这个就是fail项，也可以运行一个类，android.hardware.camera2.cts.CameraDeviceTest。
+部分fail项修改 过的时间比较久了，报告找不到了，但问题有一些简要记录。
+1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1] 报错信息：setup的设备有两个，teardown的只有一个。
+这说明有crash，抓了log分析，判断为aec错误导致session dump最终导致crash，检查是否有自定义的aec相关feature。判断依据如下：
+&gt; 06-02 18:43:08.350 8136 8161 W CamX : [ WARN][STATS_AEC] caecxcontrol.cpp:541: process error pre-processing stats; marking stats as invalid &gt; 06-02 18:43:08.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/70479a8d39144e56f3559fe74ec3cc19/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/deb413e5c774c1bcb059611d38f05bec/" rel="bookmark">
+			前端实现浏览器自定义滚动条
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		前言： 最近有个项目，产品觉得浏览器默认滚动条太丑了。想美化一下，比如自定义颜色，加上圆角，宽高都要更改一下。我查了资料和文档总结了一下 写法，特此记录以便之后使用。
+浏览器滚动条api 总结： 标准api： scrollbar-width scrollbar-width 属性允许开发者在元素显示滚动条时设置滚动条的最大宽度。
+语法: /* 关键字值 */ scrollbar-width: auto; scrollbar-width: thin; scrollbar-width: none; /* 全局值 */ scrollbar-width: inherit; scrollbar-width: initial; scrollbar-width: revert; scrollbar-width: revert-layer; scrollbar-width: unset; 取值: 将滚动条的宽度定义为数值宽度或者预定义宽度，当被定义为预定义宽度时，则必须为下列值之一： auto 系统默认的滚动条宽度。
+thin 系统提供的瘦滚动条宽度，或者比默认滚动条宽度更窄的宽度。
+none 不显示滚动条，但是该元素依然可以滚动。
+备注： 用户代理必须将应用于根元素的任何 scrollbar-width 值应用于视口。
+兼容性： 需要注意的是 各个浏览器 宽度不一样 设置这个 不能保证各个浏览器都一致！！！
+更多请参考：
+MDN scrollbar-width
+scrollbar-color 实验性: 这是一项实验性技术
+在将其用于生产之前，请仔细检查浏览器兼容性表格。
+scrollbar-color该CSS属性设置滚动条轨道和拇指的颜色
+**track（轨道）**是指滚动条，其一般是固定的而不管滚动位置的背景。
+thumb（拇指）是指滚动条通常漂浮在轨道的顶部上的移动部分。
+语法： /* Keyword values */ scrollbar-color: auto; scrollbar-color: dark; scrollbar-color: light; /* &lt;color&gt; values */ scrollbar-color: rebeccapurple green; /* Two valid colors.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/deb413e5c774c1bcb059611d38f05bec/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/c840d70a6f77fc69efd73e5729b7dac2/" rel="bookmark">
+			【前端】Layui的表格常用功能，表单提交事件，表格下拉按钮点击事件，表格外的按钮点击事件
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		欢迎来到《小5讲堂》
+大家好，我是全栈小5。
+这是《前端》系列文章，每篇文章将以博主理解的角度展开讲解，
+特别是针对知识点的概念进行叙说，大部分文章将会对这些概念进行实际例子验证，以此达到加深对知识点的理解和掌握。
+温馨提示：博主能力有限，理解水平有限，若有不对之处望指正！
+目录 前言核心方法常用模块表单按钮事件表格字段事件文章推荐 前言 最近在维护老系统，尽量使用过layui，但是时间久了，总会忘记一些方法的使用。
+因此通过本篇文章大概记录常用的功能方法，比如，表单提交事件，表格下拉按钮点击事件，表格外的按钮点击事件等
+核心方法 在 layui 中，layui.use() 方法是用来加载和使用 layui 模块的主要方法。
+它接受一个数组作为参数，数组中包含了需要使用的 layui 模块的名称，同时也可以传入一个回调函数来处理模块加载完成后的逻辑。
+具体语法如下：
+layui.use(['module1', 'module2'], function(){ // 在这里编写模块加载完成后的逻辑 }); 在这个方法中，layui.use() 会按照参数中指定的模块顺序加载对应的模块，在所有模块加载完成后，会执行回调函数中的逻辑。
+在回调函数中可以进行具体的模块使用和操作，确保在模块加载完成后再进行相应的处理。
+需要注意的是，layui.use() 方法在页面中使用 layui 模块时是必须的，因为 layui 采用异步加载模块的机制，通过 layui.use() 方法可以确保模块加载完成后再进行后续逻辑处理，避免出现模块未加载完成就调用的情况。
+常用模块 var $ = layui.$; var layer = layui.layer; var table = layui.table; var form = layui.form; 在 layui 中，常用的模块包括但不限于以下几个：
+1.layui.$
+这是 layui 的 jQuery 版本，可以用来操作 DOM、事件处理等功能。
+2.layui.layer
+弹出层模块，用于显示各种类型的弹出窗口，包括提示框、询问框、加载层等，提供丰富的参数和回调函数来定制不同需求的弹出窗口。
+3.layui.table
+数据表格模块，用于展示和操作数据表格，支持表格的渲染、事件监听、数据操作等功能。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/c840d70a6f77fc69efd73e5729b7dac2/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/3036bb1b97d0c02e5c46df28bef06e16/" rel="bookmark">
+			详解各种LLM系列｜LLaMA 2模型架构、 预训练、SFT内容详解 (PART1)
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		作者 | Sunnyyyyy 整理 | NewBeeNLP https://zhuanlan.zhihu.com/p/670002922
+大家好，这里是 NewBeeNLP。之前我们分享了详解各种LLM系列｜LLaMA 1 模型架构、预训练、部署优化特点总结
+今天来看看Llama 2，是Meta在LLaMA基础上升级的一系列从 7B到 70B 参数的大语言模型。Llama2 在各个榜单上精度全面超过 LLaMA1，Llama 2 作为开源界表现最好的模型之一，目前被广泛使用。
+为了更深入地理解Llama 2的技术特点，特地在此整理了Llama 2模型架构、 预训练、SFT、RLHF内容详解，也从安全性角度进行了分析。
+话不多说，直接上干货啦
+一、LLaMA 2简介 论文：https://arxiv.org/abs/2307.09288
+Github：GitHub \- facebookresearch/llama: Inference code for LLaMA models[1]
+Meta 在原本的LLaMA 1的基础上，增加了预训练使用的token数量；同时，修改了模型的架构，引入了Group Query Attention（GQA）。
+并且，在Llama 2的基础上，Meta同时发布了 Llama 2-Chat。其通过应用监督微调来创建 Llama 2-Chat 的初始版本。随后，使用带有人类反馈 (RLHF) 方法的强化学习迭代地改进模型，过程中使用了拒绝采样和近端策略优化 (PPO)。
+Llama 2-Chat的训练主要流程如下：
+Llama 2-Chat的训练主要流程 二、模型架构 2.1 主要架构 Llama 2采用LLaMA 1的大部分预训练设置和模型架构，包括：
+Tokenzier: 和LLaMA 1一样的 tokenizer，使用 SentencePiece 实现的 BPE 算法。与LLaMA 1一样，将所有数字拆分为单个数字并使用字节来分解未知的 UTF-8 字符。总词汇量为 32k个 token。
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/3036bb1b97d0c02e5c46df28bef06e16/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/bcde8d252e080978b5073e2e07d25ac5/" rel="bookmark">
+			【大模型部署】小白教学,离线本地部署AI： chatglm3&#43;one-api&#43;fastGPT----Linux环境部署CPU运行---带资源包
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		小白教学,离线本地部署AI： chatglm3+one-api+fastGPT----Linux环境部署CPU运行
+在所有操作之前需在在线机器上按在线部署步骤部署一遍导出离线部署所需文件,在这里我为大家已经准备好了所需文件所以免去此步骤!
+(由于部分文件过于庞大这里还是不放了,本文只提供了部分关键文件)
+linux离线安装docker 从官方下载Docker安装包并上传至虚拟机Index of linux/static/stable/x86_64/https://download.docker.com/linux/static/stable/x86_64/ 解压安装包 sudo tar -xvf docker-25.0.3.tgz 将解压出来的docker文件内容移动到 /usr/bin/ 目录下 #移动命令 复制命令请用cp sudo mv docker/* /usr/bin/ 将docker注册为service服务 sudo vi /etc/systemd/system/docker.service 在打开的docker.service 文件中写入以下代码: [Unit] # 服务的描述信息 Description=Docker Application Container Engine # 服务的文档链接 Documentation=https://docs.docker.com # 服务启动顺序，确保在网络和防火墙服务之后启动 After=network-online.target firewalld.service # 表明该服务希望与 network-online.target 同时启动 Wants=network-online.target [Service] # 服务类型，notify 表示当服务准备好后，会发送一个信号给 systemd Type=notify # 默认情况下不使用 systemd 管理 cgroups，因为还存在代理问题，并且 systemd 目前不支持 Docker 容器所需的 cgroup 功能集 # the default is not to use systemd for cgroups because the delegate issues still # exists and systemd currently does not support the cgroup feature set required # for containers run by docker ExecStart=/usr/bin/dockerd # 重新加载服务的命令 ExecReload=/bin/kill -s HUP $MAINPID # 由于内核中的会计开销，非零的 Limit* 会导致性能问题。我们建议使用 cgroups 进行容器本地会计。 # Having non-zero Limit*s causes performance problems due to accounting overhead # in the kernel.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/bcde8d252e080978b5073e2e07d25ac5/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/5e566c495e9e89120fe44665cb8322ff/" rel="bookmark">
+			【MySQL】lower_case_table_names作用及使用
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		知识点： lower_case_table_names 是mysql设置大小写是否敏感的一个参数。
+场景：在使用dataease时，连接外部数据库，启动报错！后查看官方文档，特别要求改数据库配置文件：lower_case_table_names = 1，之后，果然启动使用正常。那么lower_case_table_names这个参数字面意思就是小写表名，应该是对大小写有关，详细看下面：
+[参数说明：]
+lower_case_table_names=0 表名存储为给定的大小和比较是区分大小写的 lower_case_table_names = 1 表名存储在磁盘是小写的，但是比较的时候是不区分大小写 lower_case_table_names=2 表名存储为给定的大小写但是比较的时候是小写的 unix,linux下lower_case_table_names默认值为 0 .Windows下默认值是 1 .Mac OS X下默认值是 2 进入mysql命令行 执行以下任一语句查看：
+1.show variables like ‘lower_case_table_names’;
+2.select @@lower_case_table_names;
+根据自己需求，更改配置文件即可！
+更改数据库参数文件my.cnf
+在mysqld下 添加或修改 lower_case_table_names = 1 之后重启数据库
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/3d0ed45344d9441ae0a901de144df4d0/" rel="bookmark">
+			Android Studio下载与安装
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		Android Studio下载与安装 1、下载地址：https://developer.android.google.cn/studio/
+2、同意许可条款后点击下载
+3、下载完成后双击打开安装包
+4、点击Next
+5、取消Android Virtual Driver前面的钩，不取消也可以，点击Next
+6、更改默认位置，我这里是虚拟机所以默认安装，建议更改前面的盘符即可，不修改后面的路径
+7、点击Install安装
+8、等待安装完成，点击Next，再点击Finish
+9、Finish之后默认会启动Android Studio,选择不导入配置（默认）
+10、点击取消，然后弹出的框上再点击Next
+11、选择自定义配置，也可选择标准配置，选择标准配置后期会无法修改安装SDK安装位置，这里选择自定义
+12、这里选择默认安装位置,当然你也可以修改位置，盘符和第6步保持一致
+13、选择主题颜色，我这里选择Light
+14,去掉Android Virtual Device前面的钩，如果有需要后面在进行安装，并且修改SDK安装位置，建议修改为Android studio的安装目录下，安装的目录为C:\Android\Android studio，则SDK的目录为C:\Android\SDK,然后点击Next,等待下载安装完成，点击Finish，如果前面第12步修改了安装位置，则这里也要跟着修改，一般都是修改盘符不修改后面内容
+15、先不着急创建项目，先下载所需要的SDK，点击Configure
+16、默认安装的是Android11,也就是API30，这里去掉Android11前面的钩，选择一个最高版本Android10，然后再选择一个低版本Android7.1.1(最新的夜神模拟器为Android 7.1.1)，也可以选择自定义的版本，比如手机是Android6的就最低版本就选择Android6，因为模拟器选择的是夜神模拟器，所以安装Android7.1.1，这里选择Android 10的原因是Android 11的使用率没有Android10高，现在普遍使用的都是Android 6-10，选择完成后点击Apply,然后点击OK。
+17、选择Accept,点击Next,等待下载完成，点击Finish
+18、点击创建新建项目，选择空布局
+20、填写项目名称(Name),修改包名（Package name）和Java包命名一致，选择存储位置（Save Location）,选择Java开发（Language）,选择SDK版本，点击Finish
+21、第一次创建项目需要下载布局包，等待时间可能稍微有点长，如果包下载失败，则按照提示的网址下载布局包后，放置在C:\Users\你的用户名.gradle\wrapper\dists下面，关闭Android Studio 然后重新打开Android Studio再次配置
+安装夜神模拟器 下载地址:https://www.yeshen.com/
+Android Studio连接夜神模拟器设置，点击安装桥接驱动，安装完成后需要重新启动模拟器
+将夜神模拟器改为手机模式，需要重新启动模拟器
+Android Studio连接夜神模拟器运行项目
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/017b1fb3775e99dd1ef6db69291e87d3/" rel="bookmark">
+			数据结构从入门到精通——归并排序
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		归并排序 前言一、归并排序的基本思想二、归并排序的特性总结三、归并排序的动画展示四、递归实现归并排序的具体代码展示五、非递归实现归并排序 前言 归并排序是一种分治策略的排序算法。它将一个序列分为两个等长（几乎等长）的子序列，分别对子序列进行排序，然后将排序结果合并起来，得到完全有序的序列。这个过程递归进行，直到整个序列有序。归并排序的时间复杂度为O(nlogn)，空间复杂度为O(n)。
+一、归并排序的基本思想 归并排序（MERGE-SORT）是建立在归并操作上的一种有效的排序算法,该算法是采用分治法（Divide and Conquer）的一个非常典型的应用。将已有序的子序列合并，得到完全有序的序列；即先使每个子序列有序，再使子序列段间有序。若将两个有序表合并成一个有序表，称为二路归并。
+归并排序的基本思想是将两个或两个以上的有序表合并成一个新的有序表。这个思想可以递归地应用于子序列的排序，最终使得整个序列有序。
+具体来说，归并排序可以分为两个主要步骤：分解和合并。
+分解步骤是将待排序的序列不断分解成两个子序列，直到子序列的长度为1。这个过程可以通过递归实现，每次递归都将当前序列的中间点作为分割点，将序列分成左右两个子序列。由于子序列的长度为1，因此它们本身就被视为有序序列。
+合并步骤是将两个有序子序列合并成一个新的有序序列。这个过程可以通过迭代实现，每次迭代都取两个子序列中的第一个元素，比较它们的大小，将较小的元素添加到新序列中，并将其从原序列中移除。这个过程一直持续到其中一个子序列为空，然后将另一个子序列中剩余的元素全部添加到新序列中。
+归并排序的时间复杂度为O(nlogn)，其中n是待排序序列的长度。这是因为分解步骤需要递归地将序列分解成子序列，这个过程的复杂度为O(logn)；而合并步骤需要将两个子序列合并成一个新序列，这个过程的复杂度为O(n)。由于这两个步骤都需要进行logn次，因此总的时间复杂度为O(nlogn)。
+归并排序是一种稳定排序算法，即相等元素的相对顺序在排序前后保持不变。这是因为在合并步骤中，当两个子序列中出现相等元素时，我们总是先取左子序列中的元素，因此相等元素在左子序列中的相对顺序会被保留下来。
+二、归并排序的特性总结 归并的缺点在于需要O(N)的空间复杂度，归并排序的思考更多的是解决在磁盘中的外排序问题。时间复杂度：O(N*logN)空间复杂度：O(N)稳定性：稳定 归并排序的特性总结起来主要有四点：稳定性、时间复杂度、空间复杂度和递归性。
+首先是稳定性。归并排序是一种稳定的排序算法，即相同元素的相对顺序在排序过程中不会改变。这一特性使得归并排序在处理需要保持原始顺序的数据时非常有用，比如在数据库查询、文件处理等场景中，保持数据的原始顺序往往是非常重要的。
+其次是时间复杂度。归并排序的时间复杂度为O(nlogn)，其中n是待排序数据的数量。这意味着无论数据是已经部分排序还是完全无序，归并排序都能保持较高的效率。这种优良的时间复杂度使得归并排序在处理大规模数据时具有显著优势。
+再次是空间复杂度。归并排序的空间复杂度为O(n)，因为它需要额外的空间来合并两个已排序的子数组。这意味着在内存有限的情况下，使用归并排序可能需要额外的考虑。然而，在大多数情况下，这种空间消耗是可以接受的，因为归并排序的高效性和稳定性往往能够抵消其空间复杂度的不足。
+最后是递归性。归并排序是一种典型的分治算法，它通过递归地将问题分解为更小的子问题来解决。这种递归性使得归并排序的实现相对简单明了，也易于理解和维护。然而，递归也可能导致栈空间的消耗，因此在处理大规模数据时需要注意递归深度的问题。
+综上所述，归并排序作为一种高效稳定的排序算法，在实际应用中具有广泛的应用场景。其稳定的特性使得它能够保持数据的原始顺序不变；优良的时间复杂度使得它能够处理大规模数据；额外的空间消耗在大多数情况下是可以接受的；递归性则使得归并排序的实现简单明了。了解这些特性并合理利用它们，可以让我们在实际编程中更加高效地使用归并排序算法。
+三、归并排序的动画展示 归并排序是一种分治策略的排序算法。动画展示中，初始时，列表被分为单个元素的子列表。然后，相邻的子列表通过归并操作合并为有序的较长子列表，这一过程递归进行，直至整个列表有序。动画生动展示了如何通过将小有序片段合并为更大有序片段来实现整个列表的排序。
+归并排序
+四、递归实现归并排序的具体代码展示 #include&lt;stdio.h&gt; #include&lt;stdlib.h&gt; #include &lt;string.h&gt; #include&lt;time.h&gt; void MergeSort(int* a, int n); void _MergeSort(int* a, int begin, int end, int* tmp); void PrintArray(int* a, int n); void TestMergeSort() { int a[] = { 5, 13, 9, 16, 12, 4, 7, 1, 28, 25, 3, 9, 6, 2, 4, 7, 1, 8 }; //int a[] = { 5, 3, 9, 6, 2, 4, 7, 1, 8 }; PrintArray(a, sizeof(a) / sizeof(int)); MergeSort(a, sizeof(a) / sizeof(int)); PrintArray(a, sizeof(a) / sizeof(int)); } void PrintArray(int* a, int n) { for (int i = 0; i &lt; n; i++) { printf("
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/017b1fb3775e99dd1ef6db69291e87d3/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/12bf30ec00332307042ec41021e10d9b/" rel="bookmark">
+			uniapp 安卓，ios 相机权限，华为审核被拒解决方案
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		背景：上架华为被拒了 1.您的应用在运行时，未同步告知权限申请的使用目的，向用户索取（相机、存储）等权限，不符合华为应用市场审核标准。
+测试步骤：点击我的-投诉反馈-上传附件-拍摄/从相册选择，申请相机、存储权限。点击我的钱包-充值-上传转款凭证-拍摄/从相册选择，申请相机、存储权限。
+【文献参考】App权限判断和提示 - DCloud 插件市场
+解决方案：permission.js 和getAuth.js
+permission.js 完整代码
+var isIos // #ifdef APP-PLUS isIos = (plus.os.name == "iOS") // #endif // 判断推送权限是否开启 function judgeIosPermissionPush() { var result = false; var UIApplication = plus.ios.import("UIApplication"); var app = UIApplication.sharedApplication(); var enabledTypes = 0; if (app.currentUserNotificationSettings) { var settings = app.currentUserNotificationSettings(); enabledTypes = settings.plusGetAttribute("types"); console.log("enabledTypes1:" + enabledTypes); if (enabledTypes == 0) { console.log("推送权限没有开启"); } else { result = true; console.
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/12bf30ec00332307042ec41021e10d9b/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/2d36392a4f8b4124084e74501f4fb9cd/" rel="bookmark">
+			2024年 Java 面试八股文（20w字）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		目录
+第一章-Java基础篇
+1、你是怎样理解OOP面向对象 难度系数：⭐
+2、重载与重写区别 难度系数：⭐
+3、接口与抽象类的区别 难度系数：⭐
+4、深拷贝与浅拷贝的理解 难度系数：⭐
+5、sleep和wait区别 难度系数：⭐
+6、什么是自动拆装箱 int和Integer有什么区别 难度系数：⭐
+7、==和equals区别 难度系数：⭐
+8、String能被继承吗 为什么用final修饰 难度系数：⭐
+9、String buffer和String builder区别 难度系数：⭐
+10、final、finally、finalize 难度系数：⭐
+11、Object中有哪些方法 难度系数：⭐
+12、说一下集合体系 难度系数：⭐
+13、ArrarList和LinkedList区别 难度系数：⭐ 14、HashMap底层是 数组+链表+红黑树，为什么要用这几类结构 难度系数：⭐⭐
+15、HashMap和HashTable区别 难度系数：⭐
+16、线程的创建方式 难度系数：⭐
+17、线程的状态转换有什么（生命周期） 难度系数：⭐
+18、Java中有几种类型的流 难度系数：⭐
+19、请写出你最常见的5个RuntimeException 难度系数：⭐
+20、谈谈你对反射的理解 难度系数：⭐
+21、什么是 java 序列化，如何实现 java 序列化 难度系数：⭐
+22、Http 常见的状态码 难度系数：⭐
+23、GET 和POST 的区别 难度系数：⭐
+24、Cookie 和Session 的区别 难度系数：⭐
+第二章-Java高级篇
+1、HashMap底层源码 难度系数：⭐⭐⭐
+2、JVM内存分哪几个区，每个区的作用是什么 难度系数：⭐⭐
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/2d36392a4f8b4124084e74501f4fb9cd/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/20ec48e06855719558147f29f787b9f3/" rel="bookmark">
+			微信小程序 ——入门介绍及简单的小程序编写
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		目录
+一、小程序入门
+1.1 什么是小程序
+1.2 小程序的优点
+1.3 小程序注册
+1.4 安装开发工具
+1.5 创建第一个小程序
+二、小程序目录结构及入门案例
+2.1 目录结构
+2.2 入门案例
+2.2.1 创建界面
+2.2.2 设置标题
+2.2.3 编写WXML文件
+2.2.4 编写JS文件
+2.2.5 编写WXSS演样式文件
+2.3 案例效果演示
+一、小程序入门 1.1 什么是小程序 小程序是一种轻量级的应用程序，通常用于在移动设备上提供特定功能或服务。它们类似于手机应用程序，但不需要用户下载和安装，可以直接在支持的平台上运行。小程序通常由HTML、CSS和JavaScript等前端技术开发，可以在微信、支付宝、百度等平台上运行。
+1.2 小程序的优点 无需从商店下载和更新不占内存，加载速度快开发成本低、门槛低连接线上线下 它还可以与手机的硬件功能（如相机、位置信息）进行交互，并提供与用户进行实时互动的能力。
+1.3 小程序注册 开发小程序的第一步，你需要拥有一个小程序帐号，通过这个帐号你就可以管理你的小程序。 进入官方文档申请账号👉 小程序注册
+1、小程序注册
+根据指引填写信息和提交相应的资料，就可以拥有自己的小程序帐号。
+2、激活邮箱
+3、用户登记注册
+如果只是学习的话，注册个人小程序即可如果想商用,想使用微信支付,取用户手机号等复杂功能,可以注册企业小程序,不过企业小程序必须有营业执照才可以注册一个邮箱只能注册一个小程序一个身份证可以注册5个，个人小程序一个企业的营业执照可以注册50个企业小程序 4、登录 小程序后台 ，在这个小程序管理平台，你可以管理你的小程序的权限，查看数据报表，发布小程序等操作。
+我们可以在菜单 “开发”-“开发设置” 看到小程序的 AppID 了 。
+1.4 安装开发工具 前往 开发者工具下载页面 ，根据自己的操作系统下载对应的安装包进行安装，有关开发者工具更详细的介绍可以查看 《开发者工具介绍》 。
+打开小程序开发者工具，用微信扫码登录开发者工具，准备开发你的第一个小程序吧！
+1.5 创建第一个小程序 新建项目选择小程序项目，选择代码存放的硬盘路径，填入刚刚申请到的小程序的 AppID，给你的项目起一个好听的名字，勾选 "不使用云服务" （注意: 你要选择一个空的目录才可以创建项目），点击新建，你就得到了你的第一个小程序了，点击顶部菜单编译就可以在微信开发者工具中预览你的第一个小程序。 先选择一个别人写好的模版预览效果
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/20ec48e06855719558147f29f787b9f3/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/107227b0d9e85b6d91c82ecf9fac1a72/" rel="bookmark">
+			值得收藏！2024年人工智能顶级会议投稿信息汇总（大数据领域）
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		大数据是信息时代的核心，大数据技术是处理和分析海量数据的核心技术之一。本文首先对大数据领域内的重要会议进行了介绍，以便读者了解会议主题、截稿日期、举办时间及地点等关键信息。接下来，对这些会议信息汇总成了表格，做到一目了然，为读者投稿大数据相关会议论文提供方便。需要提醒读者注意的是，大数据是一个比较新的研究领域，因此被CCF（中国计算机学会）顶级会议列表收录的会议不是特别多，目前比较受认可的是IEEE BigData会议等。其它会议虽然被CCF收录的少，但发展也特别快，所以也列出来供读者参考。本文中关于各大会议的图片均来自会议官网。由于会议组委会可能会对会议安排做出调整，因此会议的相关信息可能会有变化，请读者投稿或者参会时以会议官网提供的最新信息为准。本文作者为黄星宇，审校为龙佰超和朱旺。
+一、会议介绍 1.1 IEEE BigData（IEEE大数据国际会议） 投稿截止日期：2024年9月3日
+录用通知日期：2024年10月27日
+会议时间/地点：2024年12月15日至18日，华盛顿，美国
+会议链接：https://www3.cs.stonybrook.edu/~ieeebigdata2024/index.html
+IEEE BigData全称为IEEE International Conference on Big Data,是由IEEE主办的一个国际会议,旨在探讨和交流大数据领域的最新研究成果、技术进展、应用案例和未来趋势。该会议吸引了全球的学者、研究人员、工程师以及行业专家共同讨论大数据科学、工程和应用的各个方面。会议内容广泛，包括大数据的基础理论与应用、数据挖掘与机器学习在大数据分析中的应用、存储、处理和分析的架构与平台，以及在收集、存储、处理和分享大数据过程中的数据隐私与安全问题。此外，会议还将深入探讨大数据在健康医疗、金融、交通、社交媒体和智能城市等特定领域的应用，为参与者提供了一个交流创新思想、分享前沿技术和讨论成功案例的综合平台。
+1.2 IEEE BigDataService（IEEE大数据计算服务与机器学习应用） 摘要截止日期：2024年3月31日
+投稿截止日期：2024年4月7日
+录用通知日期：2024年5月15日
+会议时间/地点：2024年7月15日至18日，上海，中国
+会议链接：https://ieeebigdataservice.com
+IEEE BigDataService会议旨在为大数据服务领域的学者、研究人员和行业专家提供一个交流和分享最新研究成果、进展以及实践经验的平台。该会议聚焦于大数据的收集、存储、分析、分享、转移、查询、可视化和隐私保护等关键技术和应用。通过邀请知名的学术和行业演讲人，以及举办工作坊、研讨会和论文展示等环节，推动大数据技术的发展和应用，促进从理论到实践的转化，为参会者提供了解最前沿大数据科学、技术和工具的机会。
+1.3 IEEE BigDataSecurity（IEEE云上大数据安全国际会议） 投稿截止日期：2024年3月1日
+录用通知日期：2024年3月21日
+会议时间/地点：2024年5月10日至12日，纽约市，美国
+会议链接：https://www.cloud-conf.net/datasec/2024/index.html
+IEEE BigDataSecurity 2024专注于人工智能、云计算和物联网，在保障大数据存储、传输和处理的安全与隐私方面，这些技术也受到了极大的关注。该会议还特别关注人工智能在安全性和鲁棒性方面的挑战，强调在大数据和云环境中构建可靠的AI模型的重要性。这种需求促进了从多个角度对隐私保护的关注，包括但不限于强化的深度学习方法、安全的深度学习/机器学习技术、多方计算、边缘/雾计算、能耗管理、高性能与异构资源利用、云服务模型、异构架构、远程医疗服务、资源分配优化、负载均衡以及多媒体和服务质量。
+1.4 IEEE BDCloud （IEEE大数据与云计算国际会议） 投稿截止日期：2024年7月1日
+录用通知日期：2024年8月1日
+会议时间/地点：2024年10月30日至11月2日，开封，中国
+会议链接：https://www.ieee-ispa.org/2024/bdcloud/
+IEEE BDCloud，即大数据与云计算国际会议，是一个专注于大数据分析、云计算技术以及这两个领域相互融合的交流平台。该会议旨在探讨大数据处理、云计算基础架构、数据中心技术、大数据安全与隐私保护等关键科学和工程挑战。通过邀请行业和学术界的领先专家作为演讲嘉宾，以及组织技术研讨会、专题讨论会和论文发表等活动，IEEE BDCloud促进了全球研究者、技术开发者和行业实践者之间的知识分享和合作，推动了大数据和云计算领域的技术创新和应用发展。
+1.5 IEEE DSAA（数据科学与高级分析国际会议） 投稿截止日期：2024年5月2日
+录用通知日期：2024年7月24日
+会议时间/地点：2024年10月6日至10日，圣地亚哥，美国
+会议链接：https://dsaa2024.dsaa.co/
+IEEE数据科学与高级分析国际会议（DSAA）突显了统计学、计算学及信息/智能科学间的跨学科合作，以及学术界与企业界在数据科学与分析领域的深度跨界交流。DSAA对其组织委员会、主题报告、会议论文提交以及特邀报告都设有严格的标准，确保了其论文接收率的竞争性。被Google Metrics和中国计算机学会等权威机构公认为数据科学与分析领域的领军会议，DSAA为研究者、行业专家、政府工作者、大数据解决方案开发者及用户提供了一个顶尖的交流平台。这一平台不仅分享数据科学的最新理论进展，还探讨了其在各行各业中的实践应用。DSAA欢迎提交展示数据科学与高级分析各领域创新性研究的论文，以及那些在实际应用中显著提高数据科学与分析效果，具有创新性、原创性及可复制性的实践型研究。
+1.6 BDCAT（大数据计算、应用和技术国际会议） 投稿截止日期：2024年8月10日
+录用通知日期：2024年10月7日
+会议时间/地点：2024年12月16日至19日，沙迦，阿联酋
+会议链接：https://www.uccbdcat2024.org/BDCAT/
+BDCAT 2024将在阿联酋沙迦举行，会议旨在为学术界和工业界的研究人员提供一个平台，以展示大数据计算及应用广泛领域内的新发现，会议主题分为扩展机器学习和数据挖掘、扩展数据基础架构和平台、扩展数据可视化和扩展数据应用程序。通过这四个领域的深入讨论，会议推动大数据计算技术的创新和应用，为参与者提供了解最新研究成果、交流思想和建立合作关系的机会。
+1.7 BDML（大数据与机器学习国际会议） 投稿截止日期：2024年4月20日
+录用通知日期：2024年5月20日
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/107227b0d9e85b6d91c82ecf9fac1a72/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/acc74c439c12189f4da5f0b93a54652d/" rel="bookmark">
+			前端几种下载文件的方式(url方式和文件流方式)
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		前端实现下载功能是依赖于浏览器特性，而非JS特性
+第一种 a标签 前端创建超链接，通过a标签向后端发送get请求，需要给a标签添加一个download属性
+这种写法是创造了一个a标签，把地址写到a标签里再用js调用点击，实现访问文件地址就是下载了
+代码如下:
+html &lt;a @click="downloadFile(file.url,file.originalFilename, file.id, file.fileTye)"&gt;下载&lt;/a&gt; // 参数分别是：文件的路径 文件的名字 文件的id 文件的类型 js downloadFile(url, fileName, flieId, type) { let link = document.createElement('a'); link.style.display = 'none'; link.href = baseUrl + '/xxx/xxx/xxx?flieId=' + flieId; document.body.appendChild(link); link.click(); }, 或者 &lt;a :href='"/user/downloadExcel"' &gt;下载模板&lt;/a&gt; //另一种情况是创建div标签，动态创建a标签： &lt;div name="downloadfile" "downloadExcel()"&gt;下载&lt;/div&gt; function downloadExcel() { let a = document.createElement('a') a.href ="/xxx/xxx" a.click(); } 直接下载 a标签的href属性指定下载文件的路径,需要给a标签添加一个download属性，download指定下载文件保存时的名称。
+&lt;a href="https://106.14.15.103:8000/downloadFile/test" download="test.txt"&gt;下载&lt;/a&gt; 第二种 通过window.open()下载 window.open就是打开了一个新网页直接在新网页访问文件地址了，只要访问文件地址，就能下载文件。这时候后端返回的是文件流直接渲染,不需要url再打开下载了
+downloadFile() { window.open( baseUrl + '/xxx/xxx/xxx/getTemplate?
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/acc74c439c12189f4da5f0b93a54652d/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/538a5951f8359a20b0a03e761b4cb152/" rel="bookmark">
+			【喂饭级AI教程】手把手教你在本机安装Stable Diffusion秋包【附带全套资源】
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		今天，我们将探索一个为Bilibili社区核心贡献者秋叶大佬所发布的神器——一款整合软件包。这款软件巧妙地简化了学习Python和网络知识这一通常漫长的过程。即使是编程新手，也能轻松入门并开始使用Stable Diffusion（简称SD），并且几乎不需要任何调整，就能体验到前沿的AI绘图技术。
+本文将依据秋叶的最新整合包，结合笔者整合的资源，向大家展示最基本的概念和安装方法。大家想咨询更多问题获取资料可看文末扫码获取方式！
+Stable Diffusion（SD）简介
+Stable Diffusion是一款2022年推出的先进的文本到图像生成模型，这种潜在扩散模型是由Stability AI公司与众多学者和非营利组织合作开发的。目前，SD的源代码和模型已经实现了开源，并且在Github上由AUTOMATIC1111保持着一个完整的项目更新，由全球开发者共同维护。
+尽管完整版对网络有一定要求，但国内的开发者已经发布了多个版本的封装包。开源社区对SD的普及贡献巨大。
+SD的一大亮点是其开源属性，允许在个人电脑上离线操作。它可以运行在大多数配备至少8GB显存的中端GPU上，但推荐的显存起点是12GB。
+AI训练和输出的过程本质上是软硬件结合的深度学习过程，通常会使用NVIDIA公司的显卡和相关技术，比如CUDA、CUDNN，以及Python生态中的深度学习组件，如transformers、PyTorch等。深入学习AI时，这些知识点往往是不可避免的难关。
+幸运的是，本文和秋叶整合包都将避开这些复杂的内容，使得部署和理解过程更加简单。
+SD的基础知识
+1.大模型：是通过将素材与SD的轻量模型（例如SD1.5/SD1.4/SD2.1）结合，经过深度学习炼制而成的，可以直接用于生成图片。大模型定义了最终图片的基本方向，是一切的基础。文件扩展名通常为CKPT或SAFETENSORS。
+VAE：相当于图像的滤镜，对大模型进行补充，帮助稳定色彩范围。文件扩展名通常为CKPT或SAFETENSORS。
+2.LoRA：是一种模型插件，在某个大模型基础上通过深度学习炼制的小模型。它需要与大模型结合使用，能够在一定范围内调整图片风格，或增加大模型缺失的元素。基于SD底模炼制时，更换不同大模型时的通用性较好。但如果基于特定大模型，可能会在与该大模型结合时展现出特别优秀的效果。
+3.ControlNet：是一种高级插件，为SD赋予了“视觉”，可以识别现有图片的线条或景深信息，并利用这些信息来处理图片。
+4.Stable Diffusion Web-UI（SD-WEBUI）：是由开源大师AUTOMATIC1111基于Stability AI的算法开发的软件，它允许用户在浏览器中通过图形界面操作SD。
+5.秋叶整合包：是由中国开发者秋叶开发的整合软件包。由于WEBUI本身基于GitHub，大部分时间部署需要较高的网络条件和Python环境。秋叶整合包内置了与电脑系统隔离的Python环境和Git，用户无需了解这两个软件即可运行。这极大降低了入门门槛，让更多人能够享受AI绘图的乐趣。
+软件安装与启动
+软件下载：笔者已为大家准备好了全套软件，关注本公众号&lt;AI智绘空间&gt;，回复“SD”获取网盘下载地址。
+下载完资源后，我们可以先安装启动器的运行依赖，并解压秋叶包本体。
+完成了启动器本体的解压工作后，请切勿急于启动程序，我们接下来将一步步完成模型的导入工作。
+导入核心数据：
+1. 下载模型：
+访问推荐的大模型资源库，下载您所需的模型文件。
+将下载的模型文件移动到以下目录中:“\sd-webui-aki-v4\models\Stable-diffusion”。
+2. 导入ControlNet模型：
+下载ControlNet模型文件。
+将ControlNet模型文件夹中的所有文件放置于：“\sd-webui-aki-v4\models\ControlNet”
+3. 添加LoRA模型：
+单独下载LoRA模型文件，这些文件已由笔者重新命名以方便使用。
+将所有LoRA模型文件放置在：“\sd-webui-aki-v4\extensions\sd-webui-additional-networks\models\lora”
+启动软件
+完成上述数据的解压和导入之后，您现在可以启动软件了。
+1. 在安装目录下找到启动器应用程序，通常这是一个可执行文件（.exe）。
+2. 双击启动器图标。
+3. 在启动器界面中点击“一键启动”按钮。
+4. 程序将开始运行，此时您需要稍作等待。
+5. 当程序运行一段时间后，会自动在您的默认浏览器中打开一个新的网页界面。
+6. 如果网页成功加载，表示软件已经启动成功。
+现在，您应该已经成功启动了Stable Diffusion的Web UI，并且可以开始使用AI绘图功能了。
+AI绘画SD整合包、各种模型插件、提示词、GPT人工智能学习资料都已经打包好咯，需要的小伙伴文末扫码自行获取噢~
+写在最后 AIGC技术的未来发展前景广阔，随着人工智能技术的不断发展，AIGC技术也将不断提高。未来，AIGC技术将在游戏和计算领域得到更广泛的应用，使游戏和计算系统具有更高效、更智能、更灵活的特性。同时，AIGC技术也将与人工智能技术紧密结合，在更多的领域得到广泛应用，对程序员来说影响至关重要。未来，AIGC技术将继续得到提高，同时也将与人工智能技术紧密结合，在更多的领域得到广泛应用。
+感兴趣的小伙伴，赠送全套AIGC学习资料和安装工具，包含AI绘画、AI人工智能等前沿科技教程，模型插件，具体看下方。
+一、AIGC所有方向的学习路线
+AIGC所有方向的技术点做的整理，形成各个领域的知识点汇总，它的用处就在于，你可以按照下面的知识点去找对应的学习资源，保证自己学得较为全面。
+二、AIGC必备工具
+工具都帮大家整理好了，安装就可直接上手！
+三、最新AIGC学习笔记
+当我学到一定基础，有自己的理解能力的时候，会去阅读一些前辈整理的书籍或者手写的笔记资料，这些笔记详细记载了他们对一些技术点的理解，这些理解是比较独到，可以学到不一样的思路。
+四、AIGC视频教程合集
+观看全面零基础学习视频，看视频学习是最快捷也是最有效果的方式，跟着视频中老师的思路，从基础到深入，还是很容易入门的。
+五、实战案例
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/538a5951f8359a20b0a03e761b4cb152/">Read more…</a>
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/66fe0041f8bc59e4311f6d6ff2c84714/" rel="bookmark">
+			全网最简单的Mysql 8.3 安装及环境配置教程
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		Windows系统计算机环境配置 第一篇关于环境配置的文档之MySQL 8.3（msi版本和zip版本略有不同，本文档介绍msi版本，若zip版本有需求，请在评论区留言，我后续会出相关文档。）
+前言 网上的MySQL配置教程非常多种，但我认为最简单的还是使用图形版（msi安装包），点击按钮就可以做到。之前配置MySQL 5的时候使用的配置my.ini文件的方式（zip安装包），第一次成功了但是后续就没有成功过，于是自己尝试了更为简单的方法，希望和大家分享。
+一、下载 MySQL（msi文件版本！！！）
+版本信息：
+下载链接为：https://dev.mysql.com/downloads/file/?id=526084
+点击“No thanks~”即可
+二、安装 1.双击下载完毕的msi文件
+2.如果你之前下载过，会跳出这个窗口，直接点击remove删除即可。注意：如果之前没有下载过就不会出现这个窗口！！！
+3.点击next
+4.勾选I accpet~ 然后点击next
+5.选择Tipical
+6.点击Install，稍等片刻下载完毕，点击Finish
+7.点击next
+8.选择一个合适的存放mysql数据的文件夹，注意：必须是空的，建议是小写英文字符命名，不然可能会报错。
+我这里修改的是我自己的D盘文件夹
+9.点击next
+10.设置自己的root密码，这个相当重要，不要忘记这个密码，一般设置为root。
+11.点击next
+12.MySQL 8.2版本以后自动会有自动创建Sakila数据库和World数据库的功能，建议勾选。下面是两个数据库的功能：
+（Sakila数据库是一个关于DVD租赁的样例数据库，用于展示MySQL的各种功能和特性。Sakila数据库中包含了多个表，包括电影、演员、客户、租赁记录等，可以用于练习SQL查询语句和数据建模。World数据库是一个关于世界国家和城市的样例数据库，用于展示MySQL的数据建模和查询功能。World数据库中包含了多个表，包括国家、城市、语言等，可以用于练习SQL查询语句和数据建模。）
+13.这个地方选择Execute，稍等片刻，选择Next。
+14.点击长方形按钮，并点击Finish
+15.找到前文我们自己选择的文件夹路径，打开发现系统自动新创建了data和my.ini配置文件。
+16.在系统内搜索MySQL并打开MySQL客户端输入密码，成功登录。
+三、系统变量环境配置（为了能够使用mysql的命令提示符） 1.键盘win＋R，打开【运行】，输入services.msc，回车
+2.找到MySQL83双击
+3.找到MySQL的bin路径，并记住。如图，我的是：C:\Program Files\MySQL\MySQL Server 8.3\bin
+4.左下角输入框搜索“编辑系统环境变量”并打开
+5.点击环境变量
+依次点击系统变量-path-新建-黏贴刚才的bin目录
+6.注意：三击确定！！！
+下面三张图的每一个确定都不要忘记！！！不然环境配置失败！！！
+四.验证环境变量是否配置成功 1.电脑左下角输入cmd，一定要选择“以管理员身份打开”！！！不然权限不够，运行不出来。
+2.输入mysql -V
+在这里一定要注意大小写！！！不然运行会报错。
+	</div>
+</article><article class="list__item post">
+	
+	<header class="list__header">
+		<h2 class="list__title post__title">
+			<a href="/posts/5ddb83907fc52b5c80a36083cb2c15ee/" rel="bookmark">
+			Node.js下载安装及环境配置教程【超详细】
+			</a>
+		</h2>
+		
+	</header>
+	<div class="content list__excerpt post__content clearfix">
+		一、进入官网地址下载安装包
+https://nodejs.org/zh-cn/download/
+上面的网址报404了，小伙伴们可以点击新网址下载-&gt; Node.js 中文网
+选择对应你系统的Node.js版本，这里我选择的是Windows系统、64位
+Tips：如果想下载指定版本，点击【以往的版本】，即可选择自己想要的版本下载
+二、安装程序
+（1）下载完成后，双击安装包，开始安装Node.js
+(2)直接点【Next】按钮，此处可根据个人需求修改安装路径，修改完毕后继续点击【Next】按钮
+（3）可根据自身需求进行，此处我选择默认安装，继续点击【Next】按钮
+（4）不选中，直接点击【Next】按钮
+（5）点击【Install】按钮进行安装
+（6）安装完毕，点击【Finish】按钮
+（7）测试安装是否成功，按下【win+R】键，输入cmd，打开cmd窗口 输入：node -v // 显示node.js版本
+npm -v // 显示npm版本
+--成功显示版本说明安装成功
+三、环境配置
+（1）找到安装的目录，在安装目录下新建两个文件夹【node_global】和【node_cache】
+（2）创建完毕后，使用管理员身份打开cmd命令窗口（打开方法见下方Tips），输入
+①npm config set prefix “你的路径\node_global” （复制你刚刚创建的“node_global”文件夹路径）
+npm config set prefix "D:\develop\Node.js\node_global" ②npm config set cache “你的路径\node_cache” （复制你刚刚创建的“node_cache”文件夹路径）
+npm config set cache "D:\develop\Node.js\node_cache" Tips: 使用管理员身份运行cmd的方法 ：点击左下角【开始】菜单，在搜索区域输入“命令提示符”，然后点击【以管理员身份运行】
+===============或单击鼠标右键选择【以管理员身份运行】==========================
+（3）配置环境变量
+①【此电脑】-单击右键-【属性】-【高级系统设置】-【环境变量】
+② 在【系统变量】中点击【新建】
+变量名：NODE_PATH
+变量值：C:\Program Files\nodejs\node_global\node_modules
+然后你就会发现【node_global】里多出了一个【node_modules】文件夹
+Tips: 如果输入变量值之后没有自动创建【node_modules】文件夹，就在【node_global】下手动创建一个【node_modules】文件夹，再复制你创建的【node_modules】文件夹的路径地址到变量值
+③编辑【用户变量】中的【Path】
+④将默认的 C 盘下【 AppData\Roaming\npm 】修改成 【node_global】的路径，点击确定
+	</div>
+	<div class="list__footer clearfix">
+		<a class="list__footer-readmore btn" href="/posts/5ddb83907fc52b5c80a36083cb2c15ee/">Read more…</a>
+	</div>
+</article>
+</main>
+
+<div class="pagination">
+	<a class="pagination__item pagination__item--prev btn" href="/posts/page/40/">«</a>
+	<span class="pagination__item pagination__item--current">41/71</span>
+	<a class="pagination__item pagination__item--next btn" href="/posts/page/42/">»</a>
+</div>
+
+			</div>
+			
+
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

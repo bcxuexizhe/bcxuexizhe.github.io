@@ -1,0 +1,210 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>AI大模型探索之路-训练篇2：大语言模型预训练基础认知 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7e84af0dcc49f22c171864018491088d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="AI大模型探索之路-训练篇2：大语言模型预训练基础认知">
+  <meta property="og:description" content="文章目录 前言一、预训练流程分析二、预训练两大挑战三、预训练网络通信四、预训练数据并行五、预训练模型并行六、预训练3D并行七、预训练代码示例总结 前言 在人工智能的宏伟蓝图中，大语言模型（LLM）的预训练是构筑智慧之塔的基石。预训练过程通过调整庞大参数空间以吸纳数据中蕴含的知识，为模型赋予从语言理解到文本生成等多样化能力。本文将深入探讨预训练过程中的技术细节、所面临的挑战、通信机制、并行化策略以及如何通过这些技术的融合提升预训练的效率和性能。
+一、预训练流程分析 预训练大语言模型涉及对海量参数的优化。这个过程起始于一个简单的前提：
+给定输入（X）和相应的输出（Y），模型通过不断迭代学习，不断更新修改参数，使得其生成的输出尽可能接近真实结果（Y）。
+当模型输出与实际结果之间的差距—通常由损失函数量化—减小到一个可接受的阈值时，我们可以认为预训练过程达到预期效果。在这个过程中，模型参数经历从随机初始化到精细调整的转变，逐步捕捉并内化语言的复杂规律。
+大语言模型预训练过程核心：
+1）输入 Batch 数据
+2）前向传播计算损失
+3）后向传播计算梯度
+4）优化器更新大模型参数
+5）反复迭代循环
+二、预训练两大挑战 随着模型规模向百亿甚至千亿参数迈进，预训练任务面临两大主要挑战：
+1.显存效率：模型参数量的巨大使得即便是最先进的GPU也难以单独容纳所有参数，这直接导致了显存溢出的问题。例如，一个具有1750亿参数的GPT-3模型，其参数本身就需要消耗约700GB的显存，加上Adam优化器的状态，总共需要超过2.8TB的显存
+2.计算效率：巨大的模型参数和海量的训练数据使得计算量激增，导致单机训练时间长达数年，这对于计算资源的有效利用提出了极大的挑战。
+三、预训练网络通信 网络通信是多机多GPU预训练过程中不可或缺的环节。点对点通信方式因其一对一的数据交换模式，虽然成本较低，但传输速率较慢，成为速度瓶颈。相对而言，集体通信方式通过同时进行多个进程间的数据传输，大大提升了通信速度，但相应地增加了成本。选择合适的通信方式对于提高预训练效率至关重要。
+1.点对点通信：一个进程发送数据，一个进程接收数据，速度慢，成本低。
+2.集体通信：多个进程发送数据，多个进程接收数据，速度快，成本高。
+四、预训练数据并行 1. 数据并行：数据并行是处理大规模数据集的常用策略，它通过将整个数据集分割成多个子集，每张GPU分配一部分数据独立进行模型训练。
+2. 数据并行三个提高效率的技巧
+1）梯度分桶：动机是集体通信在大张量上比在小张量上效率更高。
+2）计算与通信重叠：有了梯度分桶之后，在等待同一个桶内的梯度计算完后，就可以进行通信操作。
+3）跳过梯度同步：梯度累加，减少梯度通信的频次。
+五、预训练模型并行 当单张GPU无法装载整个模型时，模型并行成为解决之道。
+1.流水线并行
+层间划分，将不同的层划分到不同的 GPU 上；比如：前 3 层在 0 号卡上，后 3 层在 1 号卡上
+2.张量并行
+层内划分，切分一个独立的层划分到不同的 GPU 上；比如：0 号卡和 1 号卡分别计算某个层的不同部分
+六、预训练3D并行 3D并行是一种综合性策略，它结合了数据并行、张量并行和流水线并行的优势，以平衡显存利用率和计算效率。在此框架下，每种并行方法承担着不同的角色：数据并行提供高效的计算利用率，张量并行减少单个层的显存占用，而流水线并行则降低跨层通信的频率。
+1. 数据并行：计算效率高、实现简单。
+• 显存效率：每张卡上都保存了完整的模型、梯度、优化器状态，因此显存效率不高。
+• 计算效率：当增加并行度时，单卡的计算量是保持恒定的，可以实现近乎完美的线性扩展。但规约梯度的通信开销，与模型大小成正相关。
+2. 张量并行：因模型结构而异，实现难度大。
+• 显存效率：随着并行度增加，成比例地减少显存占用。是减少单层神经网络中间激活的唯一方法。
+• 计算效率：频繁的通信，限制了两个通信阶段之间的计算量，影响了计算效率，计算效率很低。
+3. 流水线并行：通信成本最低">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-25T07:43:18+08:00">
+    <meta property="article:modified_time" content="2024-04-25T07:43:18+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">AI大模型探索之路-训练篇2：大语言模型预训练基础认知</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_3" rel="nofollow">前言</a></li><li><a href="#_6" rel="nofollow">一、预训练流程分析</a></li><li><a href="#_23" rel="nofollow">二、预训练两大挑战</a></li><li><a href="#_28" rel="nofollow">三、预训练网络通信</a></li><li><a href="#_37" rel="nofollow">四、预训练数据并行</a></li><li><a href="#_48" rel="nofollow">五、预训练模型并行</a></li><li><a href="#3D_60" rel="nofollow">六、预训练3D并行</a></li><li><a href="#_85" rel="nofollow">七、预训练代码示例</a></li><li><a href="#_114" rel="nofollow">总结</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<h2><a id="_3"></a>前言</h2> 
+<p>在人工智能的宏伟蓝图中，大语言模型（LLM）的预训练是构筑智慧之塔的基石。预训练过程通过调整庞大参数空间以吸纳数据中蕴含的知识，为模型赋予从语言理解到文本生成等多样化能力。本文将深入探讨预训练过程中的技术细节、所面临的挑战、通信机制、并行化策略以及如何通过这些技术的融合提升预训练的效率和性能。</p> 
+<h2><a id="_6"></a>一、预训练流程分析</h2> 
+<p>预训练大语言模型涉及对海量参数的优化。这个过程起始于一个简单的前提：</p> 
+<blockquote> 
+ <p><strong>给定输入（X）和相应的输出（Y），模型通过不断迭代学习，不断更新修改参数，使得其生成的输出尽可能接近真实结果（Y）。</strong></p> 
+</blockquote> 
+<p>当模型输出与实际结果之间的差距—通常由损失函数量化—减小到一个可接受的阈值时，我们可以认为预训练过程达到预期效果。在这个过程中，模型参数经历从随机初始化到精细调整的转变，逐步捕捉并内化语言的复杂规律。<br> <img src="https://images2.imgbox.com/90/04/koqzvlKh_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>大语言模型预训练过程核心：</strong><br> 1）输入 Batch 数据<br> 2）前向传播计算损失<br> 3）后向传播计算梯度<br> 4）优化器更新大模型参数<br> 5）反复迭代循环<br> <img src="https://images2.imgbox.com/62/f8/KqvrkM5z_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_23"></a>二、预训练两大挑战</h2> 
+<p>随着模型规模向百亿甚至千亿参数迈进，预训练任务面临两大主要挑战：<br> <strong>1.显存效率</strong>：模型参数量的巨大使得即便是最先进的GPU也难以单独容纳所有参数，这直接导致了显存溢出的问题。例如，一个具有1750亿参数的GPT-3模型，其参数本身就需要消耗约700GB的显存，加上Adam优化器的状态，总共需要超过2.8TB的显存<br> <strong>2.计算效率</strong>：巨大的模型参数和海量的训练数据使得计算量激增，导致单机训练时间长达数年，这对于计算资源的有效利用提出了极大的挑战。</p> 
+<h2><a id="_28"></a>三、预训练网络通信</h2> 
+<p>网络通信是多机多GPU预训练过程中不可或缺的环节。点对点通信方式因其一对一的数据交换模式，虽然成本较低，但传输速率较慢，成为速度瓶颈。相对而言，集体通信方式通过同时进行多个进程间的数据传输，大大提升了通信速度，但相应地增加了成本。选择合适的通信方式对于提高预训练效率至关重要。<br> <strong>1.点对点通信</strong>：一个进程发送数据，一个进程接收数据，速度慢，成本低。<br> <img src="https://images2.imgbox.com/5f/ce/wWQpOIlL_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>2.集体通信</strong>：多个进程发送数据，多个进程接收数据，速度快，成本高。</p> 
+<p><img src="https://images2.imgbox.com/71/19/4S0qXZi5_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_37"></a>四、预训练数据并行</h2> 
+<p><strong>1. 数据并行</strong>：数据并行是处理大规模数据集的常用策略，它通过将整个数据集分割成多个子集，每张GPU分配一部分数据独立进行模型训练。</p> 
+<p><img src="https://images2.imgbox.com/ac/27/4LJdQLvH_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>2. 数据并行三个提高效率的技巧</strong><br> 1）梯度分桶：动机是集体通信在大张量上比在小张量上效率更高。<br> 2）计算与通信重叠：有了梯度分桶之后，在等待同一个桶内的梯度计算完后，就可以进行通信操作。<br> 3）跳过梯度同步：梯度累加，减少梯度通信的频次。<br> <img src="https://images2.imgbox.com/a5/03/l02dNg6Y_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="_48"></a>五、预训练模型并行</h2> 
+<p>当单张GPU无法装载整个模型时，模型并行成为解决之道。</p> 
+<p><strong>1.流水线并行</strong><br> 层间划分，将不同的层划分到不同的 GPU 上；比如：前 3 层在 0 号卡上，后 3 层在 1 号卡上<br> <img src="https://images2.imgbox.com/fb/ac/slknsoaQ_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>2.张量并行</strong><br> 层内划分，切分一个独立的层划分到不同的 GPU 上；比如：0 号卡和 1 号卡分别计算某个层的不同部分<br> <img src="https://images2.imgbox.com/e6/46/44Sj4Pxs_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3D_60"></a>六、预训练3D并行</h2> 
+<p>3D并行是一种综合性策略，它结合了数据并行、张量并行和流水线并行的优势，以平衡显存利用率和计算效率。在此框架下，每种并行方法承担着不同的角色：数据并行提供高效的计算利用率，张量并行减少单个层的显存占用，而流水线并行则降低跨层通信的频率。</p> 
+<p><strong>1. 数据并行：计算效率高、实现简单。</strong><br> • 显存效率：每张卡上都保存了完整的模型、梯度、优化器状态，因此显存效率不高。<br> • 计算效率：当增加并行度时，单卡的计算量是保持恒定的，可以实现近乎完美的线性扩展。但规约梯度的通信开销，与模型大小成正相关。</p> 
+<p><strong>2. 张量并行：因模型结构而异，实现难度大。</strong><br> • 显存效率：随着并行度增加，成比例地减少显存占用。是减少单层神经网络中间激活的唯一方法。<br> • 计算效率：频繁的通信，限制了两个通信阶段之间的计算量，影响了计算效率，计算效率很低。</p> 
+<p><strong>3. 流水线并行：通信成本最低</strong><br> • 显存效率：减少的显存与流水线并行度成正比。但流水线并行不会减少每层中间激活的显存占用。<br> • 计算效率：成本更低的点对点（P2P）通信。通信量与流水线各个阶段边界的激活值大小成正比。<br> <img src="https://images2.imgbox.com/70/1a/oLIBHUjM_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>4. 3D并行实例</strong><br> <a href="https://bigscience.huggingface.co/blog/bloom" rel="nofollow">Bloom-176B</a>模型的预训练实施了这种3D并行策略，在NVIDIA A100 GPU上实现了对数万亿Token的训练工作。<br> <img src="https://images2.imgbox.com/e2/53/QXDJgxlQ_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>5. 3D 并行训练框架</strong><br> 同时支持数据并行 、流水线并行、张量并行的3D并行训练框架：<strong>Microsoft DeepSpeed</strong> 和<strong>NVIDIA Megatron</strong><br> 1）<strong>Microsoft DeepSpeed</strong>：微软开发的优化库，专门用于简化和提高深度学习分布式训练的效率。它通过结合数据并行和其他并行技术，如流水线并行，实现了一种基于3D并行的训练方法。<br> 2）<strong>NVIDIA Megatron</strong>：由NVIDIA的研究团队开发的一个专为大型Transformer模型设计的训练框架。</p> 
+<h2><a id="_85"></a>七、预训练代码示例</h2> 
+<p>预训练代码简单示例：</p> 
+<pre><code class="prism language-python">
+<span class="token keyword">import</span> torch
+<span class="token keyword">from</span> transformers <span class="token keyword">import</span> AutoTokenizer<span class="token punctuation">,</span> AutoModelForMaskedLM
+
+<span class="token comment"># 加载预训练模型和分词器</span>
+model_name <span class="token operator">=</span> <span class="token string">"bert-base-uncased"</span>
+tokenizer <span class="token operator">=</span> AutoTokenizer<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_name<span class="token punctuation">)</span>
+model <span class="token operator">=</span> AutoModelForMaskedLM<span class="token punctuation">.</span>from_pretrained<span class="token punctuation">(</span>model_name<span class="token punctuation">)</span>
+
+<span class="token comment"># 准备输入数据</span>
+input_text <span class="token operator">=</span> <span class="token string">"This is an example sentence."</span>
+inputs <span class="token operator">=</span> tokenizer<span class="token punctuation">(</span>input_text<span class="token punctuation">,</span> return_tensors<span class="token operator">=</span><span class="token string">"pt"</span><span class="token punctuation">)</span>
+
+<span class="token comment"># 进行前向传播</span>
+outputs <span class="token operator">=</span> model<span class="token punctuation">(</span><span class="token operator">**</span>inputs<span class="token punctuation">)</span>
+
+<span class="token comment"># 提取预测结果</span>
+predictions <span class="token operator">=</span> outputs<span class="token punctuation">.</span>logits
+
+<span class="token comment"># 输出预测结果</span>
+<span class="token keyword">print</span><span class="token punctuation">(</span>predictions<span class="token punctuation">)</span>
+
+</code></pre> 
+<hr> 
+<h2><a id="_114"></a>总结</h2> 
+<p>预训练大语言模型是一项既富有挑战又极具价值的工作。随着模型规模的不断扩大和数据量的激增，如何高效地进行预训练已经成为了AI研究的核心议题。3D并行作为一种先进的预训练框架，不仅解决了单一GPU资源限制的问题，还通过合理的资源分配和优化手段显著提高了预训练的性能。未来的预训练技术将继续沿着这条道路前进，不断探索新的边界，并将机器学习模型推向前所未有的高度。</p> 
+<p>👉系列篇章：<a href="https://xundaomalu.blog.csdn.net/article/details/138107946" rel="nofollow">AI大模型探索之路-训练篇1：大语言模型微调基础认知</a><br> 🔖更多专栏系列文章：<a href="https://blog.csdn.net/xiaobing259/category_12628007.html?spm=1001.2014.3001.5482"><strong>AIGC-AI大模型探索之路</strong></a></p> 
+<blockquote> 
+ <p><strong>文章若有瑕疵，恳请不吝赐教；若有所触动或助益，还望各位老铁多多关注并给予支持。</strong></p> 
+</blockquote>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b5b2cfc17eeba4905ffe3da56fe0c982/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">我们该如何看待AIGC（人工智能）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/5242cd2f61665d07196aa965552bd0f6/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【C&#43;&#43;干货基地】深度理解C&#43;&#43;中的高效内存管理方式 new &amp; delete</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

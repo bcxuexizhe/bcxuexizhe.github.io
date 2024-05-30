@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>stable diffusion comfyui的api使用教程 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ab032721aa4b7af091100d71cffc32be/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="stable diffusion comfyui的api使用教程">
+  <meta property="og:description" content="一、为什么要使用comfyui的api?对比webui的api，它有什么好处？ 1、自带队列
+2、支持websocket
+3、无需关心插件是否有开放api接口，只要插件在浏览器中可以正常使用，接口就一定可以使用
+4、开发人员只需关心绘图流程的搭建
+5、切换模型、进度查询soeasy
+6、轻松实现图片生成时的渐变效果
+7、支持中断绘图任务
+8、无需繁琐的base64图片转换
+其实我们之前一直都是用web-ui的api,最近web-ui被我们给废弃掉了，主要是因为comfyui基本上解决了webui做开发所有的弊端，首先列队的问题不用去管，它自己有列队，插件这块是最方便的，用上comfyui以后就不要去管插件是怎么调用的，只要你在工作流里面用了什么插件，保存为api之后，他直接下发后台就会自动去运行，也不用去管插件具体怎么调用。如果是webui,有些比较良心的插件，直接把接口写好，然后暴露出来， 如果没写的话，你用起来就会非常的麻烦，还得去研究它是怎么去调用的。所以 ，小伙伴们，别再执着用webui的api了,那个确实反人类，假如做开发的话问题会很多，比较烦人，就像获取任务进度，还有这个线程锁，切换模型这块都非常繁琐。我为了研究那东西 ，看代码看得头都大了 ，整整研究了一个月才把代码改好。
+二、接口详解 本文主要介绍 stable diffusion API 调用，准确来说是对 stable diffusion comfyui 的 API 调用。需要apifox接口文件的可以查看：
+https://gitee.com/BTYY/wailikeji-chatgpt/blob/master/comfyui-api.md
+1、绘图接口：POST /prompt 注意：该接口只做绘图任务的下发，然后返回任务ID信息。并不会直接返回最终的结果图！
+与webui的api不同的是，comfyui的api并没有单独区分文生图、图生图的接口，而是所有的绘图任务的下发全部都使用POST /prompt。那具体是文生图、图生图、又或者是换脸、倒推关键词等，取决于你的参数！
+需要上传的参数只有两个
+请求参数 名称类型必选说明client_idstring是任务ID,由客户端生成，用于标记任务是谁发起的promptjson是任务参数 返回参数 名称类型说明prompt_idstring任务IDnumberint当前任务序号，可用于后续获取需要等待任务数的计算node_errorsjson错误信息 返回示例
+{ &#34;prompt_id&#34;: &#34;bd2cfa2c-de87-4258-89cc-d8791bc13a61&#34;, &#34;number&#34;: 501, &#34;node_errors&#34;: {} } 使用说明 client_id：任务ID,由客户端生成，用于标记任务是谁发起的,相当于告诉comfyui，该绘图任务是由用户A发起的，后续comfyui就会通过websocket将属于用户A的绘图信息推送给你
+prompt：prompt所传的是一个json数据，它是由comfyui浏览器通过保存api生成的json数据，如下图
+至于正反、提示词、模型、vae、图片尺寸、批次、提示词相关性、随机种子、采样器、降噪值等参数，只需替换json中对应的参数为用户上传的参数即可
+比如用户上传的图片尺寸是768*512，那你只需将json数据中的width改为768、height改为512即可，其他的参数也是同样的道理！
+2、websocket：/ws?client_id=XXXXXXXX client_id后面的参数即为上面/prompt接口中上传给comfyui的client_id，假如没有上传client_id，那comfyui就不知道连上该websocket的用户是谁，也就无法进行信息推送！comfyui拿到client_id后，即可知道当前是哪个用户，后续就会通过websocket将属于该用户的绘图信息精准推送给他
+注意：websocket只需做监听处理，无需通过websocket向comfyui发送任何消息
+websocket数据解析：
+主要有两种数据格式：
+1、文本数据，文本数据主要通知以下几个绘图信息：
+通知任务变更、当前执行的步骤、进度
+2、二进制数据，即图片预览信息
+（一）文本数据详解： （1）任务变更通知： { &#34;type&#34;:&#34;status&#34;, &#34;data&#34;:{ &#34;status&#34;:{ &#34;exec_info&#34;:{ &#34;queue_remaining&#34;:7 } } } } 当你收到type为status信息时，这是comfyui在告诉你，当前任务数发生变更，queue_remaining是指当前还有多少个任务需要处理。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-14T15:47:08+08:00">
+    <meta property="article:modified_time" content="2023-11-14T15:47:08+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">stable diffusion comfyui的api使用教程</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="comfyuiapiwebuiapi_0"></a>一、为什么要使用comfyui的api?对比webui的api，它有什么好处？</h3> 
+<p>1、自带队列<br> 2、支持websocket<br> 3、无需关心插件是否有开放api接口，只要插件在浏览器中可以正常使用，接口就一定可以使用<br> 4、开发人员只需关心绘图流程的搭建<br> 5、切换模型、进度查询soeasy<br> 6、轻松实现图片生成时的渐变效果<br> 7、支持中断绘图任务<br> 8、无需繁琐的base64图片转换</p> 
+<p>其实我们之前一直都是用web-ui的api,最近web-ui被我们给废弃掉了，主要是因为comfyui基本上解决了webui做开发所有的弊端，首先列队的问题不用去管，它自己有列队，插件这块是最方便的，用上comfyui以后就不要去管插件是怎么调用的，只要你在工作流里面用了什么插件，保存为api之后，他直接下发后台就会自动去运行，也不用去管插件具体怎么调用。如果是webui,有些比较良心的插件，直接把接口写好，然后暴露出来， 如果没写的话，你用起来就会非常的麻烦，还得去研究它是怎么去调用的。所以 ，小伙伴们，别再执着用webui的api了,那个确实反人类，假如做开发的话问题会很多，比较烦人，就像获取任务进度，还有这个线程锁，切换模型这块都非常繁琐。我为了研究那东西 ，看代码看得头都大了 ，整整研究了一个月才把代码改好。</p> 
+<h3><a id="_12"></a>二、接口详解</h3> 
+<p>本文主要介绍 stable diffusion API 调用，准确来说是对 stable diffusion comfyui 的 API 调用。需要apifox接口文件的可以查看：<br> <a href="https://gitee.com/BTYY/wailikeji-chatgpt/blob/master/comfyui-api.md" rel="nofollow">https://gitee.com/BTYY/wailikeji-chatgpt/blob/master/comfyui-api.md</a></p> 
+<h4><a id="1POST_prompt_16"></a>1、绘图接口：POST /prompt</h4> 
+<p>注意：该接口只做绘图任务的下发，然后返回任务ID信息。并不会直接返回最终的结果图！</p> 
+<p>与webui的api不同的是，comfyui的api并没有单独区分文生图、图生图的接口，而是所有的绘图任务的下发全部都使用POST /prompt。那具体是文生图、图生图、又或者是换脸、倒推关键词等，取决于你的参数！</p> 
+<p>需要上传的参数只有两个</p> 
+<h5><a id="_22"></a>请求参数</h5> 
+<table><thead><tr><th>名称</th><th>类型</th><th>必选</th><th>说明</th></tr></thead><tbody><tr><td>client_id</td><td>string</td><td>是</td><td>任务ID,由客户端生成，用于标记任务是谁发起的</td></tr><tr><td>prompt</td><td>json</td><td>是</td><td>任务参数</td></tr></tbody></table> 
+<h5><a id="_29"></a>返回参数</h5> 
+<table><thead><tr><th>名称</th><th>类型</th><th>说明</th></tr></thead><tbody><tr><td>prompt_id</td><td>string</td><td>任务ID</td></tr><tr><td>number</td><td>int</td><td>当前任务序号，可用于后续获取需要等待任务数的计算</td></tr><tr><td>node_errors</td><td>json</td><td>错误信息</td></tr></tbody></table> 
+<blockquote> 
+ <p>返回示例</p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"prompt_id"</span><span class="token operator">:</span> <span class="token string">"bd2cfa2c-de87-4258-89cc-d8791bc13a61"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"number"</span><span class="token operator">:</span> <span class="token number">501</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"node_errors"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="_46"></a>使用说明</h5> 
+<p>client_id：任务ID,由客户端生成，用于标记任务是谁发起的,相当于告诉comfyui，该绘图任务是由用户A发起的，后续comfyui就会通过websocket将属于用户A的绘图信息推送给你</p> 
+<p>prompt：prompt所传的是一个json数据，它是由comfyui浏览器通过保存api生成的json数据，如下图<br> <img src="https://images2.imgbox.com/c6/8a/rlu2IBEk_o.png" alt="在这里插入图片描述"></p> 
+<p>至于正反、提示词、模型、vae、图片尺寸、批次、提示词相关性、随机种子、采样器、降噪值等参数，只需替换json中对应的参数为用户上传的参数即可<br> <img src="https://images2.imgbox.com/c4/7b/0lUB0NPB_o.png" alt="在这里插入图片描述"><br> 比如用户上传的图片尺寸是768*512，那你只需将json数据中的width改为768、height改为512即可，其他的参数也是同样的道理！</p> 
+<h4><a id="2websocketwsclient_idXXXXXXXX_58"></a>2、websocket：/ws?client_id=XXXXXXXX</h4> 
+<p>client_id后面的参数即为上面/prompt接口中上传给comfyui的client_id，假如没有上传client_id，那comfyui就不知道连上该websocket的用户是谁，也就无法进行信息推送！comfyui拿到client_id后，即可知道当前是哪个用户，后续就会通过websocket将属于该用户的绘图信息精准推送给他</p> 
+<p>注意：websocket只需做监听处理，无需通过websocket向comfyui发送任何消息</p> 
+<p>websocket数据解析：<br> 主要有两种数据格式：<br> 1、文本数据，文本数据主要通知以下几个绘图信息：<br> 通知任务变更、当前执行的步骤、进度<br> 2、二进制数据，即图片预览信息</p> 
+<h5><a id="_69"></a>（一）文本数据详解：</h5> 
+<h5><a id="1_70"></a>（1）任务变更通知：</h5> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token string">"status"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"data"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+        <span class="token string-property property">"status"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+            <span class="token string-property property">"exec_info"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+                <span class="token string-property property">"queue_remaining"</span><span class="token operator">:</span><span class="token number">7</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>当你收到type为status信息时，这是comfyui在告诉你，当前任务数发生变更，queue_remaining是指当前还有多少个任务需要处理。</p> 
+<p>注意，此处的queue_remaining并不是告诉你在你的任务之前还有多少个任务需要处理！而是总的！<br> 所以，如果你也想像我一样（见下图），当还没轮到你的绘图任务时，显示还需等待多少个任务，你就需要借助comfyui的另一个接口：GET /queue：获取详细任务队列信息，正在运行的以及挂起的。该接口会返回挂起的任务信息，其中有prompt_id信息和number信息，你可以根据这number信息获取到当前任务排在第几位。具体如何调用，这里就不进行展开！</p> 
+<p><img src="https://images2.imgbox.com/14/26/EXDdDHaH_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2_90"></a>（2）当前任务开始执行：</h5> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token string">"execution_start"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"data"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+        <span class="token string-property property">"prompt_id"</span><span class="token operator">:</span><span class="token string">"3935f7c3-ec38-4d94-843f-86fe86c6d384"</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>当你收到type为execution_start信息时，这是comfyui在告诉你，你的任务id，prompt_id为“3935f7c3-ec38-4d94-843f-86fe86c6d384”的任务当前正在被执行</p> 
+<h5><a id="3_102"></a>（3）当前任务执行的步骤信息：</h5> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token string">"executing"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"data"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+        <span class="token string-property property">"node"</span><span class="token operator">:</span><span class="token string">"5"</span><span class="token punctuation">,</span>
+        <span class="token string-property property">"prompt_id"</span><span class="token operator">:</span><span class="token string">"3935f7c3-ec38-4d94-843f-86fe86c6d384"</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>当你收到type为executing信息时，这是comfyui在告诉你，你的任务id，prompt_id为“3935f7c3-ec38-4d94-843f-86fe86c6d384”的任务当前正在执行节点5的步骤，此处你可以解析到前端，显示当前执行的步骤名称，如下图所示<br> <img src="https://images2.imgbox.com/eb/d6/3FeVoTo7_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="4_115"></a>（4）当前进度信息：</h5> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token string">"progress"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"data"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+        <span class="token string-property property">"value"</span><span class="token operator">:</span><span class="token number">1</span><span class="token punctuation">,</span>
+        <span class="token string-property property">"max"</span><span class="token operator">:</span><span class="token number">10</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>当你收到type为progress信息时，这是comfyui在告诉你，当前步骤执行的进度，value是当前的步数，max是总的步数，如下图所示<br> <img src="https://images2.imgbox.com/3c/c5/wVtGcJpS_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="5_128"></a>（5）绘图结束：</h5> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"type"</span><span class="token operator">:</span><span class="token string">"executing"</span><span class="token punctuation">,</span>
+    <span class="token string-property property">"data"</span><span class="token operator">:</span><span class="token punctuation">{<!-- --></span>
+        <span class="token string-property property">"node"</span><span class="token operator">:</span><span class="token keyword">null</span><span class="token punctuation">,</span>
+        <span class="token string-property property">"prompt_id"</span><span class="token operator">:</span><span class="token string">"37099310-a790-44f4-8d13-4f4d5f69c891"</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>绘图结束时，type类型仍然是executing，和前面的（3）是一样的，区别主要在于node为null,也就是当type=executing,且node=null的时候，说明流程已经跑完，此时需要通过接口GET /history/{prompt_id}获取输出的图片信息。底下是通过history获取到的图片信息：</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+    <span class="token string-property property">"37099310-a790-44f4-8d13-4f4d5f69c891"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    	略。。。。。。。。。。
+        <span class="token string-property property">"outputs"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string-property property">"18"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token string-property property">"images"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_slqio_00001_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_slqio_00002_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_slqio_00003_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_slqio_00004_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string-property property">"22"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token string-property property">"images"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_rfvdr_00001_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_rfvdr_00002_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_rfvdr_00003_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_temp_rfvdr_00004_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"temp"</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string-property property">"24"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token string-property property">"images"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_00702_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"output"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_00703_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"output"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_00704_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"output"</span>
+                    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+                    <span class="token punctuation">{<!-- --></span>
+                        <span class="token string-property property">"filename"</span><span class="token operator">:</span> <span class="token string">"ComfyUI_00705_.png"</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"subfolder"</span><span class="token operator">:</span> <span class="token string">""</span><span class="token punctuation">,</span>
+                        <span class="token string-property property">"type"</span><span class="token operator">:</span> <span class="token string">"output"</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>outputs中的内容就是最终生成的图片信息，我们通过将图片信息进行拼接，即可获取到图片的url访问地址，<br> 例如：ComfyUI_00702_.png这张图片，其拼接后的访问地址就是：<br> <a href="http://127.0.0.1:8188/view?filename=ComfyUI_00702_.png&amp;type=output" rel="nofollow">http://127.0.0.1:8188/view?filename=ComfyUI_00702_.png&amp;type=output</a></p> 
+<p>该地址实际是使用了comfyui的view接口</p> 
+<h4><a id="3GET_view_228"></a>3、图片的在线预览接口：GET /view</h4> 
+<p>图片的在线预览接口（上传图像，生图图像，蒙蔽图像，均通过该接口预览）</p> 
+<h4><a id="_231"></a>请求参数</h4> 
+<table><thead><tr><th>名称</th><th>位置</th><th>类型</th><th>必选</th><th>说明</th></tr></thead><tbody><tr><td>filename</td><td>query</td><td>string</td><td>是</td><td>图片名称</td></tr><tr><td>type</td><td>query</td><td>string</td><td>否</td><td>图片存放位置的文件夹（input为长传图片，output为生成的图片）</td></tr><tr><td>subfolder</td><td>query</td><td>string</td><td>否</td><td>子文件夹(没有可不填)</td></tr><tr><td>preview</td><td>query</td><td>string</td><td>否</td><td>预览</td></tr><tr><td>channel</td><td>query</td><td>string</td><td>否</td><td>无</td></tr></tbody></table> 
+<p>在前面的websocket中，我们通过history获取最终的图片信息，我们将图片信息进行拼接，即可获取到图片的url访问地址，就是通过该接口获取到图片</p> 
+<h5><a id="_243"></a>（二）二进制数据详解：</h5> 
+<p>二进制数据就是在绘图过程中，如果在采样器中有开启图片预览，则comfyui会以二进制数据的方式推送给你，如果没有开启，则没有，如下：<br> <img src="https://images2.imgbox.com/2f/53/fIg0KmEj_o.gif" alt="请添加图片描述"></p> 
+<h3><a id="_247"></a>总结</h3> 
+<p>至此，stable diffusion comfyui的api的整个调用逻辑已经走完，无论是文生图、图生图、换脸、倒推关键词等，都是走相同的流程。你们在实际开发过程中也可以参考我的项目来实现，需要我的comfyui的workflow.json工作流的可以联系我获取v:<strong>ai_009966</strong></p> 
+<p>源码地址：<br> <a href="https://ext.dcloud.net.cn/plugin?id=12603" rel="nofollow">https://ext.dcloud.net.cn/plugin?id=12603</a><br> 项目体验地址：<br> <a href="https://pcai.wailikeji.com/" rel="nofollow">https://pcai.wailikeji.com/</a></p> 
+<h3><a id="vai_009966_255"></a>需要整个项目源码的联系我v:<strong>ai_009966</strong></h3>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/51cfdf4b6bd4d9f7a7d359828587a322/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Python爬虫】Python3.8分布式爬虫scrapy-redis的搭建与运行（较为全面）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8d0c7e3bf43a8477f8920ee6802160c9/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Android】配置Gradle打包apk的环境</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

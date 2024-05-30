@@ -1,0 +1,466 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【ElasticSearch】DSL查询文档 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ccac50a752f26fb7ce3ec586ef39a0e0/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【ElasticSearch】DSL查询文档">
+  <meta property="og:description" content="📝个人主页：五敷有你 🔥系列专栏：elasticsearch
+⛺️稳中求进，晒太阳
+上文种，实现了elasticsearch的数据存储功能。但elasticsearch最擅长的还是搜索和数据分析。
+1.DSL查询文档 elasticsearch的查询依然是基于JSON风格的DSL来实现的。
+1.1.DSL查询分类 Elasticsearch提供了基于JSON的DSL（Domain Specific Language）来定义查询。常见的查询类型包括：
+查询所有：查询出所有数据，一般测试用。例如：match_all
+全文检索（full text）查询：利用分词器对用户输入内容分词，然后去倒排索引库中匹配。例如：
+match_query
+multi_match_query
+精确查询：根据精确词条值查找数据，一般是查找keyword、数值、日期、boolean等类型字段。例如：
+ids
+range
+term
+地理（geo）查询：根据经纬度查询。例如：
+geo_distance
+geo_bounding_box
+复合（compound）查询：复合查询可以将上述各种查询条件组合起来，合并查询条件。例如：
+bool
+function_score
+查询的语法基本一致：
+GET /indexName/_search { &#34;query&#34;: { &#34;查询类型&#34;: { &#34;查询条件&#34;: &#34;条件值&#34; } } } 我们以查询所有为例，其中：
+查询类型为match_all
+没有查询条件
+// 查询所有 GET /indexName/_search { &#34;query&#34;: { &#34;match_all&#34;: { } } } 其它查询无非就是查询类型、查询条件的变化。
+1.2.全文检索查询 1.2.1.使用场景 全文检索查询的基本流程如下：
+对用户搜索的内容做分词，得到词条
+根据词条去倒排索引库中匹配，得到文档id
+根据文档id找到文档，返回给用户
+比较常用的场景包括：
+商城的输入框搜索
+百度输入框搜索
+例如京东：
+因为是拿着词条去匹配，因此参与搜索的字段也必须是可分词的text类型的字段。
+1.2.2.基本语法 常见的全文检索查询包括：
+match查询：单字段查询
+multi_match查询：多字段查询，任意一个字段符合条件就算符合查询条件">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-24T12:28:19+08:00">
+    <meta property="article:modified_time" content="2024-04-24T12:28:19+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【ElasticSearch】DSL查询文档</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><img alt="" height="132" src="https://images2.imgbox.com/18/87/cDlrWccK_o.png" width="124"></p> 
+<p style="text-align:center;"><strong><span style="color:#4da8ee;">       📝个人主页：</span><strong><strong><strong><span style="color:#4da8ee;"><a href="https://blog.csdn.net/m0_62645012?" title="五敷有你">五敷有你</a></span></strong></strong></strong><span style="color:#4da8ee;">      </span></strong></p> 
+<p style="text-align:center;"><strong><span style="color:#956fe7;"> 🔥系列专栏：<a href="https://blog.csdn.net/m0_62645012/article/details/138004076" title="elasticsearch">elasticsearch</a></span></strong></p> 
+<p style="text-align:center;"><span style="color:#ff9900;"><strong>⛺️稳中求进，晒太阳</strong></span></p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/62/bd/ptJAyOjm_o.gif"></p> 
+<p>上文种，实现了elasticsearch的数据存储功能。但elasticsearch最擅长的还是搜索和数据分析。</p> 
+<h2>1.DSL查询文档</h2> 
+<p>elasticsearch的查询依然是基于JSON风格的DSL来实现的。</p> 
+<h3>1.1.DSL查询分类</h3> 
+<p>Elasticsearch提供了基于JSON的DSL（<a href="https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl.html" rel="nofollow" title="Domain Specific Language">Domain Specific Language</a>）来定义查询。常见的查询类型包括：</p> 
+<ul><li> <p><strong>查询所有</strong>：查询出所有数据，一般测试用。例如：match_all</p> </li><li> <p><strong>全文检索（full text）查询</strong>：利用分词器对用户输入内容分词，然后去倒排索引库中匹配。例如：</p> 
+  <ul><li> <p>match_query</p> </li><li> <p>multi_match_query</p> </li></ul></li><li> <p><strong>精确查询</strong>：根据精确词条值查找数据，一般是查找keyword、数值、日期、boolean等类型字段。例如：</p> 
+  <ul><li> <p>ids</p> </li><li> <p>range</p> </li><li> <p>term</p> </li></ul></li><li> <p><strong>地理（geo）查询</strong>：根据经纬度查询。例如：</p> 
+  <ul><li> <p>geo_distance</p> </li><li> <p>geo_bounding_box</p> </li></ul></li><li> <p><strong>复合（compound）查询</strong>：复合查询可以将上述各种查询条件组合起来，合并查询条件。例如：</p> 
+  <ul><li> <p>bool</p> </li><li> <p>function_score</p> </li></ul></li></ul> 
+<p></p> 
+<p>查询的语法基本一致：</p> 
+<pre><code class="hljs">GET /indexName/_search
+{
+  "query": {
+    "查询类型": {
+      "查询条件": "条件值"
+    }
+  }
+}</code></pre> 
+<p>我们以查询所有为例，其中：</p> 
+<ul><li> <p>查询类型为match_all</p> </li><li> <p>没有查询条件</p> </li></ul> 
+<pre><code class="hljs">// 查询所有
+GET /indexName/_search
+{
+  "query": {
+    "match_all": {
+    }
+  }
+}</code></pre> 
+<p>其它查询无非就是<strong>查询类型</strong>、<strong>查询条件</strong>的变化。</p> 
+<p></p> 
+<h3>1.2.全文检索查询</h3> 
+<p></p> 
+<h4>1.2.1.使用场景</h4> 
+<p>全文检索查询的基本流程如下：</p> 
+<ul><li> <p>对用户搜索的内容做分词，得到词条</p> </li><li> <p>根据词条去倒排索引库中匹配，得到文档id</p> </li><li> <p>根据文档id找到文档，返回给用户</p> </li></ul> 
+<p>比较常用的场景包括：</p> 
+<ul><li> <p>商城的输入框搜索</p> </li><li> <p>百度输入框搜索</p> </li></ul> 
+<p>例如京东：</p> 
+<p><img alt="" height="218" src="https://images2.imgbox.com/b2/ee/RsdYXQr8_o.png" width="1200"></p> 
+<p></p> 
+<p>因为是拿着词条去匹配，因此参与搜索的字段也必须是可分词的text类型的字段。</p> 
+<p></p> 
+<h4>1.2.2.基本语法</h4> 
+<p>常见的全文检索查询包括：</p> 
+<ul><li> <p>match查询：单字段查询</p> </li><li> <p>multi_match查询：多字段查询，任意一个字段符合条件就算符合查询条件</p> </li></ul> 
+<p>match查询语法如下：</p> 
+<pre><code class="hljs">GET /indexName/_search
+{
+  "query": {
+    "match": {
+      "FIELD": "TEXT"
+    }
+  }
+}</code></pre> 
+<p>mulit_match语法如下：</p> 
+<pre><code class="hljs">GET /indexName/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "TEXT",
+      "fields": ["FIELD1", " FIELD12"]
+    }
+  }
+}</code></pre> 
+<p></p> 
+<h4>1.2.3.示例</h4> 
+<p>match查询示例：</p> 
+<p><img alt="" height="446" src="https://images2.imgbox.com/e6/4e/uB5N8t2Z_o.png" width="1200"></p> 
+<p></p> 
+<p>multi_match查询示例：</p> 
+<p><img alt="" height="322" src="https://images2.imgbox.com/b5/46/Fod12FtP_o.png" width="1200"></p> 
+<p></p> 
+<p>可以看到，两种查询结果是一样的，为什么？</p> 
+<p>因为我们将brand、name、business值都利用copy_to复制到了all字段中。因此你根据三个字段搜索，和根据all字段搜索效果当然一样了。</p> 
+<p><span style="color:#ff9900;"><strong>但是，搜索字段越多，对查询性能影响越大，因此建议采用copy_to，然后单字段查询的方式。</strong></span></p> 
+<p></p> 
+<h4>1.2.4.总结</h4> 
+<p>match和multi_match的区别是什么？</p> 
+<ul><li> <p>match：根据一个字段查询</p> </li><li> <p>multi_match：根据多个字段查询，参与查询字段越多，查询性能越差</p> </li></ul> 
+<p></p> 
+<h3>1.3.精准查询</h3> 
+<p>精确查询一般是查找keyword、数值、日期、boolean等类型字段。所以<strong>不会</strong>对搜索条件分词。常见的有：</p> 
+<ul><li> <p>term：根据词条精确值查询</p> </li><li> <p>range：根据值的范围查询</p> </li></ul> 
+<p></p> 
+<h4>1.3.1.term查询</h4> 
+<p>因为精确查询的字段搜是不分词的字段，因此查询的条件也必须是<strong>不分词</strong>的词条。查询时，用户输入的内容跟自动值完全匹配时才认为符合条件。如果用户输入的内容过多，反而搜索不到数据。</p> 
+<p></p> 
+<p>语法说明：</p> 
+<pre><code class="hljs">// term查询
+GET /indexName/_search
+{
+  "query": {
+    "term": {
+      "FIELD": {
+        "value": "VALUE"
+      }
+    }
+  }
+}</code></pre> 
+<p></p> 
+<p>示例：</p> 
+<p>当我搜索的是精确词条时，能正确查询出结果：</p> 
+<p><img alt="" height="551" src="https://images2.imgbox.com/88/d5/PNevLE6L_o.png" width="1200"></p> 
+<p>但是，当我搜索的内容不是词条，而是多个词语形成的短语时，反而搜索不到：</p> 
+<p><img alt="" height="497" src="https://images2.imgbox.com/dd/8a/GpQ9URCn_o.png" width="1200"></p> 
+<p></p> 
+<p></p> 
+<h4>1.3.2.range查询</h4> 
+<p>范围查询，一般应用在对数值类型做范围过滤的时候。比如做价格范围过滤。</p> 
+<p></p> 
+<p>基本语法：</p> 
+<pre><code class="hljs">// range查询
+GET /indexName/_search
+{
+  "query": {
+    "range": {
+      "FIELD": {
+        "gte": 10, // 这里的gte代表大于等于，gt则代表大于
+        "lte": 20 // lte代表小于等于，lt则代表小于
+      }
+    }
+  }
+}</code></pre> 
+<p></p> 
+<p>示例：</p> 
+<p><img alt="" height="541" src="https://images2.imgbox.com/e7/d1/enUdi6hV_o.png" width="1200"></p> 
+<p></p> 
+<p></p> 
+<h4>1.3.3.总结</h4> 
+<p>精确查询常见的有哪些？</p> 
+<ul><li> <p>term查询：根据词条精确匹配，一般搜索keyword类型、数值类型、布尔类型、日期类型字段</p> </li><li> <p>range查询：根据数值范围查询，可以是数值、日期的范围</p> </li></ul> 
+<p></p> 
+<h3 style="background-color:transparent;">1.4.地理坐标查询</h3> 
+<p>常见的使用场景包括：</p> 
+<ul><li> <p>携程：搜索我附近的酒店</p> </li><li> <p>滴滴：搜索我附近的出租车</p> </li><li> <p>微信：搜索我附近的人</p> </li></ul> 
+<p></p> 
+<p></p> 
+<h4>1.4.1.矩形范围查询</h4> 
+<p>矩形范围查询，也就是geo_bounding_box查询，查询坐标落在某个矩形范围的所有文档：</p> 
+<p>查询时，需要指定矩形的<strong>左上</strong>、<strong>右下</strong>两个点的坐标，然后画出一个矩形，落在该矩形内的都是符合条件的点。</p> 
+<p>语法如下：</p> 
+<pre><code class="hljs">// geo_bounding_box查询
+GET /indexName/_search
+{
+  "query": {
+    "geo_bounding_box": {
+      "FIELD": {
+        "top_left": { // 左上点
+          "lat": 31.1,
+          "lon": 121.5
+        },
+        "bottom_right": { // 右下点
+          "lat": 30.9,
+          "lon": 121.7
+        }
+      }
+    }
+  }
+}</code></pre> 
+<p></p> 
+<p></p> 
+<p>这种并不符合“附近的人”这样的需求，所以我们就不做了。</p> 
+<p></p> 
+<h4>1.4.2.附近查询</h4> 
+<p>附近查询，也叫做距离查询（geo_distance）：查询到指定中心点小于某个距离值的所有文档。</p> 
+<p></p> 
+<p>换句话来说，在地图上找一个点作为圆心，以指定距离为半径，画一个圆，落在圆内的坐标都算符合条件：</p> 
+<p>语法说明：</p> 
+<pre>// geo_distance 查询
+GET /indexName/_search
+{
+  "query": {
+    "geo_distance": {
+      "distance": "15km", // 半径
+      "FIELD": "31.21,121.5" // 圆心
+    }
+  }
+}</pre> 
+<p></p> 
+<p>示例：</p> 
+<p>我们先搜索陆家嘴附近3km的酒店：</p> 
+<p><img alt="" height="429" src="https://images2.imgbox.com/34/c3/Rur0C9R5_o.png" width="1200"></p> 
+<p>可以发现，搜索到的酒店数量有5家。</p> 
+<p></p> 
+<h3>1.5.复合查询</h3> 
+<p>复合（compound）查询：复合查询可以将其它简单查询组合起来，实现更复杂的搜索逻辑。常见的有两种：</p> 
+<ul><li> <p>fuction score：算分函数查询，可以控制文档相关性算分，控制文档排名</p> </li><li> <p>bool query：布尔查询，利用逻辑关系组合多个其它的查询，实现复杂搜索</p> </li></ul> 
+<p></p> 
+<h4>1.5.1.相关性算分</h4> 
+<p>当我们利用match查询时，文档结果会根据与搜索词条的关联度打分（_score），返回结果时按照分值降序排列。</p> 
+<p>例如，我们搜索 "虹桥如家"，结果如下：</p> 
+<pre><code class="hljs">[
+  {
+    "_score" : 17.850193,
+    "_source" : {
+      "name" : "虹桥如家酒店真不错",
+    }
+  },
+  {
+    "_score" : 12.259849,
+    "_source" : {
+      "name" : "外滩如家酒店真不错",
+    }
+  },
+  {
+    "_score" : 11.91091,
+    "_source" : {
+      "name" : "迪士尼如家酒店真不错",
+    }
+  }
+]</code></pre> 
+<p></p> 
+<p>在elasticsearch中，早期使用的打分算法是TF-IDF算法，公式如下：</p> 
+<p><img alt="" height="235" src="https://images2.imgbox.com/07/49/47hqzBz5_o.png" width="493"></p> 
+<p></p> 
+<p>在后来的5.1版本升级中，elasticsearch将算法改进为BM25算法，公式如下：</p> 
+<p><img alt="" height="141" src="https://images2.imgbox.com/21/27/zKvWgZ6c_o.png" width="490"></p> 
+<p></p> 
+<p></p> 
+<p>TF-IDF算法有一各缺陷，就是词条频率越高，文档得分也会越高，单个词条对文档影响较大。而BM25则会让单个词条的算分有一个上限，曲线更加平滑：</p> 
+<p><img alt="" height="399" src="https://images2.imgbox.com/91/0b/g6Xo83HN_o.png" width="577"></p> 
+<p></p> 
+<p>小结：elasticsearch会根据词条和文档的相关度做打分，算法由两种：</p> 
+<ul><li> <p>TF-IDF算法</p> </li><li> <p>BM25算法，elasticsearch5.1版本后采用的算法</p> </li></ul> 
+<p></p> 
+<h4>1.5.2.算分函数查询</h4> 
+<p>根据相关度打分是比较合理的需求，但<strong>合理的不一定是产品经理需要</strong>的。</p> 
+<p>以百度为例，你搜索的结果中，并不是相关度越高排名越靠前，而是谁掏的钱多排名就越靠前。</p> 
+<p>要想认为控制相关性算分，就需要利用elasticsearch中的function score 查询了。</p> 
+<h5>1）语法说明</h5> 
+<p><img alt="" height="292" src="https://images2.imgbox.com/42/90/w5k56KYO_o.png" width="684"></p> 
+<p></p> 
+<p>function score 查询中包含四部分内容：</p> 
+<ul><li> <p><strong>原始查询</strong>条件：query部分，基于这个条件搜索文档，并且基于BM25算法给文档打分，<strong>原始算分</strong>（query score)</p> </li><li> <p><strong>过滤条件</strong>：filter部分，符合该条件的文档才会重新算分</p> </li><li> <p><strong>算分函数</strong>：符合filter条件的文档要根据这个函数做运算，得到的<strong>函数算分</strong>（function score），有四种函数</p> 
+  <ul><li> <p>weight：函数结果是常量</p> </li><li> <p>field_value_factor：以文档中的某个字段值作为函数结果</p> </li><li> <p>random_score：以随机数作为函数结果</p> </li><li> <p>script_score：自定义算分函数算法</p> </li></ul></li><li> <p><strong>运算模式</strong>：算分函数的结果、原始查询的相关性算分，两者之间的运算方式，包括：</p> 
+  <ul><li> <p>multiply：相乘</p> </li><li> <p>replace：用function score替换query score</p> </li><li> <p>其它，例如：sum、avg、max、min</p> </li></ul></li></ul> 
+<p></p> 
+<p>function score的运行流程如下：</p> 
+<ul><li> <p>1）根据<strong>原始条件</strong>查询搜索文档，并且计算相关性算分，称为<strong>原始算分</strong>（query score）</p> </li><li> <p>2）根据<strong>过滤条件</strong>，过滤文档</p> </li><li> <p>3）符合<strong>过滤条件</strong>的文档，基于<strong>算分函数</strong>运算，得到<strong>函数算分</strong>（function score）</p> </li><li> <p>4）将<strong>原始算分</strong>（query score）和<strong>函数算分</strong>（function score）基于<strong>运算模式</strong>做运算，得到最终结果，作为相关性算分。</p> </li></ul> 
+<p></p> 
+<p>因此，其中的关键点是：</p> 
+<ul><li> <p>过滤条件：决定哪些文档的算分被修改</p> </li><li> <p>算分函数：决定函数算分的算法</p> </li><li> <p>运算模式：决定最终算分结果</p> </li></ul> 
+<p></p> 
+<h5>2）示例</h5> 
+<p>需求：给“如家”这个品牌的酒店排名靠前一些</p> 
+<p>翻译一下这个需求，转换为之前说的四个要点：</p> 
+<ul><li> <p>原始条件：不确定，可以任意变化</p> </li><li> <p>过滤条件：brand = "如家"</p> </li><li> <p>算分函数：可以简单粗暴，直接给固定的算分结果，weight</p> </li><li> <p>运算模式：比如求和</p> </li></ul> 
+<p>因此最终的DSL语句如下：</p> 
+<pre><code class="hljs">GET /hotel/_search
+{
+  "query": {
+    "function_score": {
+      "query": {  .... }, // 原始查询，可以是任意条件
+      "functions": [ // 算分函数
+        {
+          "filter": { // 满足的条件，品牌必须是如家
+            "term": {
+              "brand": "如家"
+            }
+          },
+          "weight": 2 // 算分权重为2
+        }
+      ],
+      "boost_mode": "sum" // 加权模式，求和
+    }
+  }
+}</code></pre> 
+<p></p> 
+<p>测试，在未添加算分函数时，如家得分如下：</p> 
+<p><img alt="" height="200" src="https://images2.imgbox.com/ef/64/HkEeSbcJ_o.png" width="593"></p> 
+<p>添加了算分函数后，如家得分就提升了：</p> 
+<p><img alt="" height="245" src="https://images2.imgbox.com/24/bd/xEYAxhG3_o.png" width="604"></p> 
+<p></p> 
+<h5>3）小结</h5> 
+<p>function score query定义的三要素是什么？</p> 
+<ul><li> <p>过滤条件：哪些文档要加分</p> </li><li> <p>算分函数：如何计算function score</p> </li><li> <p>加权方式：function score 与 query score如何运算</p> </li></ul> 
+<p></p> 
+<h4>1.5.3.布尔查询</h4> 
+<p>布尔查询是一个或多个查询子句的组合，每一个子句就是一个<strong>子查询</strong>。子查询的组合方式有：</p> 
+<ul><li> <p>must：必须匹配每个子查询，类似“与”</p> </li><li> <p>should：选择性匹配子查询，类似“或”</p> </li><li> <p>must_not：必须不匹配，<strong>不参与算分</strong>，类似“非”</p> </li><li> <p>filter：必须匹配，<strong>不参与算分</strong></p> </li></ul> 
+<p></p> 
+<p>比如在搜索酒店时，除了关键字搜索外，我们还可能根据品牌、价格、城市等字段做过滤：</p> 
+<p>每一个不同的字段，其查询的条件、方式都不一样，必须是多个不同的查询，而要组合这些查询，就必须用bool查询了。</p> 
+<p>需要注意的是，搜索时，参与<strong>打分的字段越多，查询的性能也越差</strong>。因此这种多条件查询时，建议这样做：</p> 
+<ul><li> <p>搜索框的关键字搜索，是全文检索查询，使用must查询，参与算分</p> </li><li> <p>其它过滤条件，采用filter查询。不参与算分</p> </li></ul> 
+<p></p> 
+<h5>1）语法示例：</h5> 
+<pre><code class="hljs">GET /hotel/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+        {"term": {"city": "上海" }}
+      ],
+      "should": [
+        {"term": {"brand": "皇冠假日" }},
+        {"term": {"brand": "华美达" }}
+      ],
+      "must_not": [
+        { "range": { "price": { "lte": 500 } }}
+      ],
+      "filter": [
+        { "range": {"score": { "gte": 45 } }}
+      ]
+    }
+  }
+}</code></pre> 
+<p></p> 
+<h5>2）示例</h5> 
+<p>需求：搜索名字包含“如家”，价格不高于400，在坐标31.21,121.5周围10km范围内的酒店。</p> 
+<p>分析：</p> 
+<ul><li> <p>名称搜索，属于全文检索查询，应该参与算分。放到must中</p> </li><li> <p>价格不高于400，用range查询，属于过滤条件，不参与算分。放到must_not中</p> </li><li> <p>周围10km范围内，用geo_distance查询，属于过滤条件，不参与算分。放到filter中</p> </li></ul> 
+<p></p> 
+<p><img alt="" height="631" src="https://images2.imgbox.com/da/55/raXSy3KW_o.png" width="1200"></p> 
+<p></p> 
+<p></p> 
+<h5>3）小结</h5> 
+<p>bool查询有几种逻辑关系？</p> 
+<ul><li> <p>must：必须匹配的条件，可以理解为“与”</p> </li><li> <p>should：选择性匹配的条件，可以理解为“或”</p> </li><li> <p>must_not：必须不匹配的条件，不参与打分</p> </li><li> <p>filter：必须匹配的条件，不参与打分</p> </li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4792cac344b38dbc3062f32fe57e09fb/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【预测】小米汽车电子电气架构的猜想</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9f480a4dce1ed04889f79b13e415a430/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Seal^_^【送书活动第2期】——《Flink入门与实战》</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

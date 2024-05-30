@@ -1,0 +1,355 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>RabbitMQ深入 —— 死信队列 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b0fd4e3d9a47cc6eed172aa237d2e3af/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="RabbitMQ深入 —— 死信队列">
+  <meta property="og:description" content="前言 前面荔枝梳理了RabbitMQ中的普通队列、交换机以及相关的知识，在这篇文章中荔枝将会梳理RabbitMQ的一个重要的队列 —— 死信队列，主要了解消息流转到死信队列的三种的方式以及相应的实现demo。希望能帮助到有需要的小伙伴~~~
+文章目录 前言
+死信队列
+1 基本概念 2 设置消息时间TTL过期的死信队列
+3 队列达到最大长度发生死信 4 消息被拒引发死信
+总结
+死信队列 1 基本概念 死信就是无法被消费的消息，一般来说，producer将消息投递到broker或者直接到queue里了，consumer从queue取出消息进行消费，但某些时候由于特定的原因导致queue中的某些消息无法被消费，这样的消息如果没有后续的处理就变成了死信，有死信自然就有了死信队列。
+应用场景：为了保证订单业务的消息数据不丢失，需要使用到RabbitMQ的死信队列机制，当消息
+消费发生异常时，将消息投入死信队列中。比如说：用户在商城下单成功并点击去支付后在指定时间未支付时自动失效。
+死信具有一定的延迟性，它可以作为延迟消息来处理。
+死信出现的原因：
+消息TTL过期队列达到最大长度（队列满了，无法再添加数据到mq中）消息被拒绝(basic.reject或basic.nack)并且requeue=false.I 2 设置消息时间TTL过期的死信队列 首先我们在消费者Consumer1中声明普通交换机、死信交换机、普通队列和死信队列之间的关系，同时在声明之后令Consumer1拒收消息，在RabbitMQ中观察消息生产者发出消息的流转情况。
+设置死信队列的消费者1
+在死信队列中我们设置了普通交换机、死信交换机、普通队列和死信队列。同时在正常队列中通过channel信道对象中的queueDeclare方法中的一个Map类型的参数，设置了死信交换机和普通交换机之间的关系，配置好TTL、RoutingKey并声明其死信交换机。
+package com.crj.rabbitmq.deadQueue; import com.crj.rabbitmq.utils.RabbitMqUtil; import com.rabbitmq.client.BuiltinExchangeType; import com.rabbitmq.client.Channel; import com.rabbitmq.client.DeliverCallback; import java.util.HashMap; import java.util.Map; /** * 死信队列 * 消费者1：需要声明死信队列和普通队列 */ public class Consumer { //普通交换机名称 public static final String NORMAL_EXCHANGE = &#34;normal&#34;; //死信交换机名称 public static final String DEAD_EXCHANGE = &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-09-18T21:28:23+08:00">
+    <meta property="article:modified_time" content="2023-09-18T21:28:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">RabbitMQ深入 —— 死信队列</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2 id="%E5%89%8D%E8%A8%80">前言</h2> 
+<blockquote> 
+ <p>        前面荔枝梳理了RabbitMQ中的普通队列、交换机以及相关的知识，在这篇文章中荔枝将会梳理RabbitMQ的一个重要的队列 —— 死信队列，主要了解消息流转到死信队列的三种的方式以及相应的实现demo。希望能帮助到有需要的小伙伴~~~</p> 
+</blockquote> 
+<hr> 
+<h3 id="%E6%96%87%E7%AB%A0%E7%9B%AE%E5%BD%95">文章目录</h3> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97-toc" style="margin-left:0px;"><a href="#%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97" rel="nofollow">死信队列</a></p> 
+<p id="1%20%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%C2%A0-toc" style="margin-left:40px;"><a href="#1%20%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%C2%A0" rel="nofollow">1 基本概念 </a></p> 
+<p id="2%20%E8%AE%BE%E7%BD%AE%E6%B6%88%E6%81%AF%E6%97%B6%E9%97%B4TTL%E8%BF%87%E6%9C%9F%E7%9A%84%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97-toc" style="margin-left:40px;"><a href="#2%20%E8%AE%BE%E7%BD%AE%E6%B6%88%E6%81%AF%E6%97%B6%E9%97%B4TTL%E8%BF%87%E6%9C%9F%E7%9A%84%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97" rel="nofollow">2 设置消息时间TTL过期的死信队列</a></p> 
+<p id="3%20%E9%98%9F%E5%88%97%E8%BE%BE%E5%88%B0%E6%9C%80%E5%A4%A7%E9%95%BF%E5%BA%A6%E5%8F%91%E7%94%9F%E6%AD%BB%E4%BF%A1%C2%A0-toc" style="margin-left:40px;"><a href="#3%20%E9%98%9F%E5%88%97%E8%BE%BE%E5%88%B0%E6%9C%80%E5%A4%A7%E9%95%BF%E5%BA%A6%E5%8F%91%E7%94%9F%E6%AD%BB%E4%BF%A1%C2%A0" rel="nofollow">3 队列达到最大长度发生死信 </a></p> 
+<p id="4%20%E6%B6%88%E6%81%AF%E8%A2%AB%E6%8B%92%E5%BC%95%E5%8F%91%E6%AD%BB%E4%BF%A1-toc" style="margin-left:40px;"><a href="#4%20%E6%B6%88%E6%81%AF%E8%A2%AB%E6%8B%92%E5%BC%95%E5%8F%91%E6%AD%BB%E4%BF%A1" rel="nofollow">4 消息被拒引发死信</a></p> 
+<p id="%E6%80%BB%E7%BB%93-toc" style="margin-left:0px;"><a href="#%E6%80%BB%E7%BB%93" rel="nofollow">总结</a></p> 
+<hr> 
+<h2 id="%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97">死信队列</h2> 
+<h3 id="1%20%E5%9F%BA%E6%9C%AC%E6%A6%82%E5%BF%B5%C2%A0">1 基本概念 </h3> 
+<p>     死信就是<strong>无法被消费的消息</strong>，一般来说，producer将消息投递到broker或者直接到queue里了，consumer从queue取出消息进行消费，但某些时候由于特定的原因导致queue中的某些消息无法被消费，这样的消息如果没有后续的处理就变成了死信，有死信自然就有了死信队列。</p> 
+<p><strong>应用场景：</strong>为了保证订单业务的消息数据不丢失，需要使用到RabbitMQ的死信队列机制，当消息<br> 消费发生异常时，将消息投入死信队列中。比如说：用户在商城下单成功并点击去支付后在指定时间未支付时自动失效。</p> 
+<blockquote> 
+ <p>死信具有一定的延迟性，它可以作为延迟消息来处理。</p> 
+</blockquote> 
+<p><strong>死信出现的原因：</strong></p> 
+<ul><li>消息TTL过期</li><li>队列达到最大长度（队列满了，无法再添加数据到mq中）</li><li>消息被拒绝(basic.reject或basic.nack)并且requeue=false.I </li></ul> 
+<h3 id="2%20%E8%AE%BE%E7%BD%AE%E6%B6%88%E6%81%AF%E6%97%B6%E9%97%B4TTL%E8%BF%87%E6%9C%9F%E7%9A%84%E6%AD%BB%E4%BF%A1%E9%98%9F%E5%88%97">2 设置消息时间TTL过期的死信队列</h3> 
+<p>首先我们在消费者Consumer1中声明普通交换机、死信交换机、普通队列和死信队列之间的关系，同时在声明之后令Consumer1拒收消息，在RabbitMQ中观察消息生产者发出消息的流转情况。</p> 
+<p><strong>设置死信队列的消费者1</strong></p> 
+<p>        在死信队列中我们设置了普通交换机、死信交换机、普通队列和死信队列。同时在正常队列中通过channel信道对象中的queueDeclare方法中的一个Map类型的参数，设置了死信交换机和普通交换机之间的关系，配置好TTL、RoutingKey并声明其死信交换机。</p> 
+<pre><code class="language-java">package com.crj.rabbitmq.deadQueue;
+
+import com.crj.rabbitmq.utils.RabbitMqUtil;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.DeliverCallback;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 死信队列
+ * 消费者1：需要声明死信队列和普通队列
+ */
+public class Consumer {
+    //普通交换机名称
+    public static final String NORMAL_EXCHANGE = "normal";
+    //死信交换机名称
+    public static final String DEAD_EXCHANGE = "dead";
+    //普通队列的名称
+    public static final String NORMAL_QUEUE = "normalQueue";
+    //死信队列的名称
+    public static final String DEAD_QUEUE = "deadQueue";
+
+    public static void main(String[] args) throws Exception {
+        //声明通道
+        Channel channel = RabbitMqUtil.getChannel();
+        //声明普通交换机和死信交换机
+        channel.exchangeDeclare(NORMAL_EXCHANGE, BuiltinExchangeType.DIRECT);
+        channel.exchangeDeclare(DEAD_EXCHANGE,BuiltinExchangeType.DIRECT);
+        /**
+         * 声明普通队列和死信队列
+         */
+        //创建一个hashmap对象来配置连接死信队列的参数
+        Map&lt;String, Object&gt; arguments = new HashMap&lt;&gt;();
+        //设置过期时间
+        arguments.put("x-message-ttl",10000);
+        //正常队列设置死信交换机
+        arguments.put("x-dead-letter-exchange",DEAD_EXCHANGE);
+        //设置死信RoutingKey
+        arguments.put("x-dead-letter-routing-key","dead1");
+        //声明普通队列
+        channel.queueDeclare(NORMAL_QUEUE,false,false,false,arguments);
+        //死信队列
+        channel.queueDeclare(DEAD_QUEUE,false,false,false,null);
+
+        //绑定队列和交换机
+        channel.queueBind(NORMAL_QUEUE,NORMAL_EXCHANGE,"normal");
+        channel.queueBind(DEAD_QUEUE,DEAD_QUEUE,"dead");
+
+        //接收消息
+        DeliverCallback deliverCallback = (consumerTag, message)-&gt;{
+            System.out.println("Consumer1接收到的信息："+new String(message.getBody(),"UTF-8"));
+            System.out.println("接收队列："+DEAD_QUEUE+"接收键："+message.getEnvelope().getRoutingKey());
+        };
+        //消费者开始消费消息
+        channel.basicConsume(DEAD_QUEUE,true,deliverCallback,(consumerTag)-&gt;{});
+    }
+}
+</code></pre> 
+<blockquote> 
+ <p>需要注意的是，这里在正常队列中设置过期时间TTL一般不太常用，我们通常会在publish处设置消息的TTL，因此这里arguments对象有关 "x-message-ttl" 参数的配置可以注释掉。</p> 
+</blockquote> 
+<p><strong>实际处理消息的消费者2</strong></p> 
+<p>在处理死信队列消息的消费者处，我们只需要设置消费者接收消息是来自死信队列即可。 </p> 
+<pre><code class="language-java">package com.crj.rabbitmq.deadQueue;
+
+import com.crj.rabbitmq.utils.RabbitMqUtil;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.DeliverCallback;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 死信队列
+ * 消费者1：需要声明死信队列和普通队列
+ */
+public class Consumer2 {
+    //死信队列的名称
+    public static final String DEAD_QUEUE = "deadQueue";
+
+    public static void main(String[] args) throws Exception {
+        //声明通道
+        Channel channel = RabbitMqUtil.getChannel();
+        System.out.println("等待接收消息");
+        //接收消息
+        DeliverCallback deliverCallback = (consumerTag, message)-&gt;{
+            System.out.println("Consumer2接收到的信息："+new String(message.getBody(),"UTF-8"));
+            System.out.println("接收队列："+DEAD_QUEUE+"接收键："+message.getEnvelope().getRoutingKey());
+        };
+        //消费者开始消费消息
+        channel.basicConsume(DEAD_QUEUE,true,deliverCallback,(consumerTag)-&gt;{});
+    }
+}
+</code></pre> 
+<p>​​​​<strong>生产者</strong></p> 
+<p>在这里我们借助AMQP. BasicProperties对象的build方法来设置相应的死信TTL。</p> 
+<pre><code class="language-java">package com.crj.rabbitmq.deadQueue;
+
+import com.crj.rabbitmq.utils.RabbitMqUtil;
+import com.rabbitmq.client.AMQP;
+import com.rabbitmq.client.Channel;
+
+public class Publish {
+    public static final String NORMAL_EXCHANGE = "normal";
+    public static final String NORMAL_QUEUE = "normalQueue";
+
+    public static void main(String[] args) throws Exception {
+        Channel channel = RabbitMqUtil.getChannel();
+        //在Consumer已经声明过交换机了，所以在这里不能声明
+        //死信消息，设置TTL
+        AMQP.BasicProperties properties = new AMQP.BasicProperties().builder().expiration("10000").build();
+
+        for (int i = 0; i &lt; 11; i++) {
+            String message = "info"+i;
+            channel.basicPublish(NORMAL_EXCHANGE,"normal",properties,message.getBytes());
+        }
+    }
+}
+</code></pre> 
+<p>未运行Consumer2前我们看到普通队列在我们设置的TTL：10s之后将消息流转到死信队列中。</p> 
+<p><img alt="" height="301" src="https://images2.imgbox.com/f6/6e/3tDc0urW_o.png" width="906">最后启动Consumer2后确实也收到了死信队列中的消息<img alt="" height="360" src="https://images2.imgbox.com/59/ca/0aUmpo6v_o.png" width="740"></p> 
+<h3 id="3%20%E9%98%9F%E5%88%97%E8%BE%BE%E5%88%B0%E6%9C%80%E5%A4%A7%E9%95%BF%E5%BA%A6%E5%8F%91%E7%94%9F%E6%AD%BB%E4%BF%A1%C2%A0">3 队列达到最大长度发生死信 </h3> 
+<p>在这一部分中我们需要注释掉之前在生产者中设置的消息的TTL，同时在消费者1中开启正常队列的最大消息堆积容量。 </p> 
+<pre><code class="language-java">arguments.put("x-max-length",6);
+</code></pre> 
+<p> 这样子我们就可以模拟队列达到最大长度后产生死信的情况了。</p> 
+<h3 id="4%20%E6%B6%88%E6%81%AF%E8%A2%AB%E6%8B%92%E5%BC%95%E5%8F%91%E6%AD%BB%E4%BF%A1">4 消息被拒引发死信</h3> 
+<p>        要想开启消费者拒收消息的功能，首先需要在消息接收的basicConsumer方法中关<strong>闭自动应答</strong>，同时自行设置手动应答的逻辑。在下面接收消息的回调函数中，在basicAck中设置应答，在basicReject实现消息拒收。</p> 
+<pre><code class="language-java">package com.crj.rabbitmq.deadQueue;
+
+import com.crj.rabbitmq.utils.RabbitMqUtil;
+import com.rabbitmq.client.BuiltinExchangeType;
+import com.rabbitmq.client.Channel;
+import com.rabbitmq.client.DeliverCallback;
+
+import java.util.HashMap;
+import java.util.Map;
+
+/**
+ * 死信队列
+ * 消费者1：需要声明死信队列和普通队列
+ */
+public class Consumer {
+    //普通交换机名称
+    public static final String NORMAL_EXCHANGE = "normal";
+    //死信交换机名称
+    public static final String DEAD_EXCHANGE = "dead";
+    //普通队列的名称
+    public static final String NORMAL_QUEUE = "normalQueue";
+    //死信队列的名称
+    public static final String DEAD_QUEUE = "deadQueue";
+
+    public static void main(String[] args) throws Exception {
+        //声明通道
+        Channel channel = RabbitMqUtil.getChannel();
+        //声明普通交换机和死信交换机
+        channel.exchangeDeclare(NORMAL_EXCHANGE, BuiltinExchangeType.DIRECT);
+        channel.exchangeDeclare(DEAD_EXCHANGE,BuiltinExchangeType.DIRECT);
+        /**
+         * 声明普通队列和死信队列
+         */
+        //创建一个hashmap对象来配置连接死信队列的参数
+        Map&lt;String, Object&gt; arguments = new HashMap&lt;&gt;();
+
+        //正常队列设置死信交换机
+        arguments.put("x-dead-letter-exchange",DEAD_EXCHANGE);
+        //设置死信RoutingKey
+        arguments.put("x-dead-letter-routing-key","dead1");
+
+        //声明普通队列
+        channel.queueDeclare(NORMAL_QUEUE,false,false,false,arguments);
+        //死信队列
+        channel.queueDeclare(DEAD_QUEUE,false,false,false,null);
+
+        //绑定队列和交换机
+        channel.queueBind(NORMAL_QUEUE,NORMAL_EXCHANGE,"normal");
+        channel.queueBind(DEAD_QUEUE,DEAD_EXCHANGE,"dead1");
+
+        System.out.println("等待接收消息》》》》》》》》》》》");
+        //接收消息
+        DeliverCallback deliverCallback = (consumerTag, message)-&gt;{
+            String msg = new String(message.getBody(),"UTF-8");
+            if (msg.equals("info5")){
+                System.out.println("Consumer1接收的消息是："+msg+"：此消息是被拒绝的");
+                //这里第二个参数设置了是否要将拒收的消息塞回原队列
+                channel.basicReject(message.getEnvelope().getDeliveryTag(), false);
+            }else {
+                System.out.println("Consumer1接收到的信息："+new String(message.getBody(),"UTF-8"));
+                //成功应答，这里设置不批量操作
+                channel.basicAck(message.getEnvelope().getDeliveryTag(), false);
+            }
+        };
+        //开启手动应答
+        //消费者开始消费消息
+        channel.basicConsume(DEAD_QUEUE,false,deliverCallback,(consumerTag)-&gt;{});
+    }
+}
+</code></pre> 
+<hr> 
+<h2 id="%E6%80%BB%E7%BB%93">总结</h2> 
+<blockquote> 
+ <p>        时间过期、消息被拒、队列容量限制这三个机制会引发消息被转发死信队列，那么死信队列除了在这三种情况下继续保存消息之外，还有什么作用呢？下一篇文章荔枝会梳理延时队列，相信看完下一篇文章大家能有所收获~</p> 
+</blockquote> 
+<p>今朝已然成为过去，明日依然向往未来！我是荔枝，在技术成长之路上与您相伴~~~</p> 
+<p>如果博文对您有帮助的话，可以给荔枝一键三连嘿，您的支持和鼓励是荔枝最大的动力！</p> 
+<p>如果博文内容有误，也欢迎各位大佬在下方评论区批评指正！！！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f428e3b384c01d8eea1f94ec6f4d1a6a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">2023 Google 开发者大会：Web平台新动向</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/6860af57359c35ccd31039b229cbad32/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Python】让Anaconda不再下载慢下载失败，Anaconda的下载源更换为国内源（保姆级图文）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

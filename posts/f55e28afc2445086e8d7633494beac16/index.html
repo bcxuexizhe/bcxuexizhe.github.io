@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL中replace into详解、批量更新、不存在插入存在则更新、replace into的坑 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f55e28afc2445086e8d7633494beac16/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL中replace into详解、批量更新、不存在插入存在则更新、replace into的坑">
+  <meta property="og:description" content="文章目录 一、replace into原理二、`replace into`的三种形式三、replace into 使用案例3.1、replace into values3.1.1、只有主键且主键冲突3.1.2、有主键有唯一索引且主键冲突3.1.3、有主键有唯一索引且唯一索引冲突(有坑)3.1.4、有主键有唯一索引且与一条主键冲突与另一条唯一键冲突(有坑) 3.2、replace into select3.3、replace into set3.3.1、唯一索引不重复3.3.2、唯一索引重复 四、replace into与on duplicate key update的区别五、replace into的坑5.1、replace into与自动更新时间的坑5.2、replace into用唯一索引更新时会导致自增值&#43;15.3、replace into同时有主键或唯一索引冲突时可能会删除多条记录 官网地址：https://dev.mysql.com/doc/refman/8.0/en/replace.html
+以下内容基于mysql 8.0版本进行讲解。
+replace into与on duplicate key update在一定程度上都能实现无记录时插入，有记录时更新这个需求。但是强烈推荐使用on duplicate key update 原因见下方两者的区别。replace into的坑太多，若要使用请详细阅读本文。
+一、replace into原理 replace into 跟 insert 功能类似，不同点在于：replace into 首先尝试插入数据到表中， 1. 如果发现表中已经有此行数据（根据主键或者唯一索引判断）则先删除此行数据，然后插入新的数据。 2. 否则，直接插入新数据。
+要注意的是：插入数据的表必须有主键或者是唯一索引！否则的话，replace into与insert into功能一致，会直接插入数据，这将导致表中出现重复的数据。
+如果归纳一下 REPLACE INTO 语句的执行规则，基本会有以下几种情况：
+当表没有主键和唯一键时，REPLACE INTO 相当于普通的 INSERT 操作；binlog 记录事件为 INSERT；返回影响行数为 INSERT 的数量。当表有主键没有唯一键时，REPLACE INTO 插入记录与主键冲突时会进行 DELETE&#43;INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE&#43;INSERT 的数量；如果主键自增，则 AUTO_INCREMENT 值不变。当表有唯一键没有主键时，REPLACE INTO 插入记录与唯一键冲突时会进行 DELETE&#43;INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE&#43;INSERT 的数量。当表同时存在主键和唯一键时，REPLACE INTO 插入记录与主键冲突的时候进行 DELETE&#43;INSERT 操作；binlog 记录事件为 DELETE&#43;INSERT；返回影响行数为 DELETE&#43;INSERT 的数量。如果主键自增，则 AUTO_INCREMENT 值不变。当表同时存在主键和唯一键时，REPLACE INTO 插入记录与唯一键冲突的时候进行 DELETE&#43;INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE&#43;INSERT 的数量。如果主键自增，则新插入的这条记录的主键会变成最新 AUTO_INCREMENT 的值，而对应的 AUTO_INCREMENT 值会 &#43;1。当表同时存在主键和唯一键时，REPLACE INTO 插入记录与一条记录主键和一条记录唯一键都冲突的时候进行 DELETE&#43;INSERT 操作；binlog 记录事件为 DELETE&#43;UPDATE；返回影响行数为 DELETE*2&#43;INSERT 的数量。 第五点会有副作用：见本文《3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-19T16:26:32+08:00">
+    <meta property="article:modified_time" content="2024-03-19T16:26:32+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL中replace into详解、批量更新、不存在插入存在则更新、replace into的坑</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#replace_into_7" rel="nofollow">一、replace into原理</a></li><li><a href="#replace_into_57" rel="nofollow">二、`replace into`的三种形式</a></li><li><a href="#replace_into__73" rel="nofollow">三、replace into 使用案例</a></li><li><ul><li><a href="#31replace_into_values_74" rel="nofollow">3.1、replace into values</a></li><li><ul><li><a href="#311_75" rel="nofollow">3.1.1、只有主键且主键冲突</a></li><li><a href="#312_99" rel="nofollow">3.1.2、有主键有唯一索引且主键冲突</a></li><li><a href="#313_116" rel="nofollow">3.1.3、有主键有唯一索引且唯一索引冲突(有坑)</a></li><li><a href="#314_139" rel="nofollow">3.1.4、有主键有唯一索引且与一条主键冲突与另一条唯一键冲突(有坑)</a></li></ul> 
+   </li><li><a href="#32replace_into_select_161" rel="nofollow">3.2、replace into select</a></li><li><a href="#33replace_into_set_168" rel="nofollow">3.3、replace into set</a></li><li><ul><li><a href="#331_183" rel="nofollow">3.3.1、唯一索引不重复</a></li><li><a href="#332_192" rel="nofollow">3.3.2、唯一索引重复</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#replace_intoon_duplicate_key_update_212" rel="nofollow">四、replace into与on duplicate key update的区别</a></li><li><a href="#replace_into_244" rel="nofollow">五、replace into的坑</a></li><li><ul><li><a href="#51replace_into_245" rel="nofollow">5.1、replace into与自动更新时间的坑</a></li><li><a href="#52replace_into1_280" rel="nofollow">5.2、replace into用唯一索引更新时会导致自增值+1</a></li><li><a href="#53replace_into_283" rel="nofollow">5.3、replace into同时有主键或唯一索引冲突时可能会删除多条记录</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<p>官网地址：<a href="https://dev.mysql.com/doc/refman/8.0/en/replace.html" rel="nofollow">https://dev.mysql.com/doc/refman/8.0/en/replace.html</a></p> 
+<p>以下内容基于mysql 8.0版本进行讲解。</p> 
+<p>replace into与on duplicate key update在一定程度上都能实现无记录时插入，有记录时更新这个需求。但是<mark>强烈推荐使用on duplicate key update</mark> 原因见下方两者的区别。replace into的坑太多，若要使用请详细阅读本文。</p> 
+<h2><a id="replace_into_7"></a>一、replace into原理</h2> 
+<p>replace into 跟 insert 功能类似，不同点在于：replace into 首先尝试插入数据到表中， 1. 如果发现表中已经有此行数据（根据主键或者唯一索引判断）则先删除此行数据，然后插入新的数据。 2. 否则，直接插入新数据。</p> 
+<p>要注意的是：<mark>插入数据的表必须有主键或者是唯一索引！否则的话，replace into与insert into功能一致，会直接插入数据，这将导致表中出现重复的数据。</mark></p> 
+<p>如果归纳一下 REPLACE INTO 语句的执行规则，基本会有以下几种情况：</p> 
+<ol><li>当表没有主键和唯一键时，REPLACE INTO 相当于普通的 INSERT 操作；binlog 记录事件为 INSERT；返回影响行数为 INSERT 的数量。</li><li>当表有主键没有唯一键时，REPLACE INTO 插入记录与主键冲突时会进行 DELETE+INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE+INSERT 的数量；如果主键自增，则 AUTO_INCREMENT 值不变。</li><li>当表有唯一键没有主键时，REPLACE INTO 插入记录与唯一键冲突时会进行 DELETE+INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE+INSERT 的数量。</li><li>当表同时存在主键和唯一键时，REPLACE INTO 插入记录与主键冲突的时候进行 DELETE+INSERT 操作；binlog 记录事件为 DELETE+INSERT；返回影响行数为 DELETE+INSERT 的数量。如果主键自增，则 AUTO_INCREMENT 值不变。</li><li>当表同时存在主键和唯一键时，REPLACE INTO 插入记录与唯一键冲突的时候进行 DELETE+INSERT 操作；binlog 记录事件为 UPDATE；返回影响行数为 DELETE+INSERT 的数量。如果主键自增，则新插入的这条记录的主键会变成最新 AUTO_INCREMENT 的值，而对应的 <code>AUTO_INCREMENT 值会 +1</code>。</li><li><mark>当表同时存在主键和唯一键时，REPLACE INTO 插入记录与一条记录主键和一条记录唯一键都冲突的时候进行 DELETE+INSERT 操作；binlog 记录事件为 DELETE+UPDATE；返回影响行数为 DELETE*2+INSERT 的数量。</mark></li></ol> 
+<p>第五点会有副作用：见本文《3.1.3、有主键有唯一索引且唯一索引冲突(有坑)》<br> 第六点会有副作用：见本文《3.1.4、有主键有唯一索引且与一条主键冲突与另一条唯一键冲突(有坑)》</p> 
+<p><strong>总结</strong></p> 
+<blockquote> 
+ <p>以下总结replace into时可能会遇到的场景<br> pk：主键 uk：唯一索引</p> 
+</blockquote> 
+<ul><li><strong><code>无pk无uk</code></strong></li></ul> 
+<table><thead><tr><th>场景</th><th>replace into时相当于</th><th>replace into在binlog中的表现形式</th><th>返回影响行数</th></tr></thead><tbody><tr><td>无pk无uk</td><td>insert</td><td>insert</td><td>insert行数</td></tr></tbody></table> 
+<ul><li><strong><code>只有pk</code></strong></li></ul> 
+<table><thead><tr><th>场景</th><th>replace into时相当于</th><th>replace into在binlog中的表现形式</th><th>返回影响行数</th></tr></thead><tbody><tr><td>pk冲突</td><td>delete+insert</td><td>update</td><td>delete+insert行数</td></tr><tr><td>pk不冲突</td><td>insert</td><td>insert</td><td>insert行数</td></tr></tbody></table> 
+<ul><li><strong><code>只有uk</code></strong></li></ul> 
+<table><thead><tr><th>场景</th><th>replace into时相当于</th><th>replace into在binlog中的表现形式</th><th>返回影响行数</th></tr></thead><tbody><tr><td>uk冲突</td><td>delete+insert</td><td>update</td><td>delete+insert行数</td></tr></tbody></table> 
+<ul><li><strong><code>有pk有uk</code></strong></li></ul> 
+<table><thead><tr><th>场景</th><th>replace into时相当于</th><th>replace into在binlog中的表现形式</th><th>返回影响行数</th></tr></thead><tbody><tr><td>pk冲突 uk不冲突</td><td>delete + insert</td><td>delete + insert</td><td>delete+insert行数</td></tr><tr><td>pk不冲突 uk冲突</td><td>delete + insert</td><td>update</td><td>delete+insert行数</td></tr><tr><td>pk冲突 uk冲突</td><td>delete + insert</td><td>delete+insert</td><td>delete+insert行数</td></tr><tr><td>pk不冲突 uk不冲突</td><td>insert</td><td>insert</td><td>insert行数</td></tr></tbody></table> 
+<h2><a id="replace_into_57"></a>二、<code>replace into</code>的三种形式</h2> 
+<pre><code>1. replace into tbl_name(col_name, ...) values(...)
+
+2. replace into tbl_name(col_name, ...) select ...
+
+3. replace into tbl_name set col_name=value, ...
+</code></pre> 
+<p>第一种形式相似于insert into的用法，</p> 
+<p>第二种replace select的用法也相似于insert select，这种用法并不必定要求列名匹配，事实上，MYSQL甚至不关心select返回的列名，它需要的是列的位置。例如，replace into tb1( name, title, mood) select rname, rtitle, rmood from tb2; 这个例子使用replace into从 tb2中将全部数据导入tb1中。</p> 
+<p>第三种replace set用法相似于update set用法，使用一个例如“SET col_name = col_name + 1”的赋值，则对位于右侧的列名称的引用会被做为DEFAULT(col_name)处理。所以，该赋值至关于SET col_name = DEFAULT(col_name) + 1。</p> 
+<p>前两种形式用的多些。其中 “into” 关键字能够省略，不过最好加上 “into”，这样意思更加直观。另外，对于那些没有给予值的列，MySQL 将自动为这些列赋上默认值。</p> 
+<h2><a id="replace_into__73"></a>三、replace into 使用案例</h2> 
+<h3><a id="31replace_into_values_74"></a>3.1、replace into values</h3> 
+<h4><a id="311_75"></a>3.1.1、只有主键且主键冲突</h4> 
+<blockquote> 
+ <p>当只有主键且主键冲突时，会执行delete+insert操作</p> 
+</blockquote> 
+<p>如下sql:</p> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30)  not null comment '姓名',
+	update_time timestamp on update CURRENT_TIMESTAMP comment '更新时间'
+) comment '测试表';
+
+insert into user_test(name,update_time) value ('zhangsan','2000-01-01 00:00:00');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/75/85/0Eua5Pn1_o.png" alt="在这里插入图片描述"><br> 此时执行replace into</p> 
+<pre><code>replace into user_test(id,name) value (1,'zhangsan');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f5/49/vzbPCKlp_o.png" alt="在这里插入图片描述"><br> 上图可以看出执行replace into之后，返回的受影响条数是2，且update_time的字段被更新为空了。由此证明replace into时当只有主键且主键冲突时执行了delete+insert操作。</p> 
+<p><mark>注意：</mark> 当时间字段设置自动更新后，若没有设置默认值，replace into更新时需要手动赋予时间字段，否则会插入为空。</p> 
+<h4><a id="312_99"></a>3.1.2、有主键有唯一索引且主键冲突</h4> 
+<blockquote> 
+ <p>当有主键有唯一索引且主键冲突时，会执行delete+insert操作</p> 
+</blockquote> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30) unique not null comment '姓名',
+	update_time timestamp on update current_timestamp comment '更新时间'
+) comment '测试表';
+
+insert into user_test(name,update_time) value ('zhangsan','2000-01-01 00:00:00');
+
+replace into user_test(id,name) value (1,'lisi');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a8/4f/5aY6cqDD_o.png" alt="在这里插入图片描述"><br> 上图可以看出执行replace into之后，返回的受影响条数是2，且update_time的字段被更新为空了。由此证明replace into时当有主键有唯一索引且主键冲突时执行了delete+insert操作。</p> 
+<h4><a id="313_116"></a>3.1.3、有主键有唯一索引且唯一索引冲突(有坑)</h4> 
+<blockquote> 
+ <p>当有主键有唯一索引且唯一索引冲突时，会执行delete+insert操作，且AUTO_INCREMENT自增1</p> 
+</blockquote> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30) unique not null comment '姓名',
+	update_time timestamp on update current_timestamp comment '更新时间'
+) comment '测试表';
+
+insert into user_test(name,update_time) value ('zhangsan','2000-01-01 00:00:00');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b3/37/ZOCXeYkg_o.png" alt="在这里插入图片描述"><br> 此时执行replace into语句</p> 
+<pre><code>replace into user_test(name) value ('zhangsan');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/05/71/N37jsos0_o.png" alt="在这里插入图片描述"><br> 上图可以看出执行replace into之后，返回的受影响条数是2，且update_time的字段被更新为空了。由此证明replace into时当有主键有唯一索引且唯一索引冲突时执行了delete+insert操作。</p> 
+<p><mark>注意：</mark> <code>唯一索引冲突时会带来副作用，主键id被改变了。</code>由于主键设置了自增，所以当唯一索引冲突时导致AUTO_INCREMENT的值自增1。</p> 
+<h4><a id="314_139"></a>3.1.4、有主键有唯一索引且与一条主键冲突与另一条唯一键冲突(有坑)</h4> 
+<blockquote> 
+ <p>当有主键与唯一索引时，若replace into与其中一条主键冲突、与另一条记录唯一索引冲突，此时执行delete+insert操作。注意：此时受影响的条数是3，且会删除两条数据，可能会有坑</p> 
+</blockquote> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30) unique not null comment '姓名',
+	update_time timestamp on update current_timestamp comment '更新时间'
+) comment '测试表';
+
+insert into user_test(id,name,update_time) values
+(1,'zhangsan','2000-01-01 00:00:00'),
+(2,'lisi','2000-01-01 00:00:00');
+
+replace into user_test(id,name) value (1,'lisi');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f4/84/SGlZ7dgE_o.png" alt="在这里插入图片描述"><br> 上图可以看出执行replace into之后，返回的受影响条数是3。</p> 
+<p><mark>注意：</mark> 在该场景下会删除2条数据，然后插入1条数据，所以可能会造成坑，需要特别注意。</p> 
+<h3><a id="32replace_into_select_161"></a>3.2、replace into select</h3> 
+<p>语法类似insert into select</p> 
+<pre><code>示例：
+replace into t(id, update_time) select 1, now();
+replace into tb1( name, title, mood) select rname, rtitle, rmood from tb2;
+</code></pre> 
+<h3><a id="33replace_into_set_168"></a>3.3、replace into set</h3> 
+<p>表结构如下：</p> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30) unique not null comment '姓名',
+	age int default 2 comment '年龄',
+	sex varchar(10) comment '性别：男、女'
+) comment '测试表';
+</code></pre> 
+<p><img src="https://images2.imgbox.com/09/c3/TF9LSHb7_o.png" alt="在这里插入图片描述"></p> 
+<p>其中： name为唯一索引，age默认值是2</p> 
+<h4><a id="331_183"></a>3.3.1、唯一索引不重复</h4> 
+<p>执行以下sql插入第一条数据</p> 
+<pre><code>replace into user_test set name = 'zhangsan',age = age+1, sex = '男';
+</code></pre> 
+<p><img src="https://images2.imgbox.com/41/16/jgqDOQo2_o.png" alt="在这里插入图片描述"></p> 
+<p>可以看到age=3是因为age=default(age)+1，默认age=2然后又+1所以是3；若age字段建表时没有设置默认值则上述sql执行完后age为null。</p> 
+<h4><a id="332_192"></a>3.3.2、唯一索引重复</h4> 
+<p>接着上面的示例，运行以下sql</p> 
+<pre><code>replace into user_test set name = 'zhangsan',age = age+1;
+</code></pre> 
+<p><img src="https://images2.imgbox.com/15/96/fShS8hip_o.png" alt="在这里插入图片描述"></p> 
+<p>我们看到id=1的数据被删除了，新增了一条id=2的数据；它的sex字段的值没有继承第一条数据的值，age属性的值也只是由默认值决定，与上一条的值无关。</p> 
+<p><strong>由此证明结论：</strong></p> 
+<ol><li>在没有唯一键/主键重复时，replace into所做的事情就是新添加一个条目，条目各个属性的值与运行的语句内容有关。</li><li>在有唯一键/主键重复时，replace into所做的事情就是</li></ol> 
+<ul><li>直接删除掉那条重复的旧条目</li><li>然后新添加一个条目。</li></ul> 
+<p><strong>新条目各个属性的值只取决于运行的语句内容，与被删除的旧条目的值无关。</strong></p> 
+<h2><a id="replace_intoon_duplicate_key_update_212"></a>四、replace into与on duplicate key update的区别</h2> 
+<blockquote> 
+ <p>on duplicate key update更多内容参见《<a href="https://blog.csdn.net/weixin_49114503/article/details/136479860">MySQL中ON DUPLICATE KEY UPDATE的介绍与使用、批量更新、存在即更新不存在则插入</a> – 五月天的尾巴》</p> 
+</blockquote> 
+<blockquote> 
+ <p>replace into与on duplicate key update在一定程度上都能实现无记录时插入，有记录时更新这个需求。但是<mark>强烈推荐使用on duplicate key update</mark> 原因如下：</p> 
+ <ol><li>replace into在唯一索引冲突时，会删除原记录，然后新增一条记录，如果主键id是自增的会导致主键被改变； 而on duplicate key update在唯一索引冲突时是更新原记录，主键不变。</li><li>replace into唯一索引冲突时会导致主键自增值增加，但由于 binlog 事件记录为 UPDATE 会导致主从环境中表的 AUTO-INCREMENT 值不同，从库执行 UPDATE 事件并不会导致 AUTO-INCREMENT 值增加，所以从库表的 AUTO-INCREMENT 值会小于等于当前表的最新记录主键，当发生主从切换时向新的主库插入记录就会报 duplicate key 错误。</li></ol> 
+ <p>鉴于此，很多使用 REPLACE INTO 的场景，实际上需要的是 INSERT INTO … ON DUPLICATE KEY UPDATE（虽然也会增加自增值，但是不会出现从库表的 AUTO-INCREMENT 值会比当前表的最新记录主键小的情况），与 ‘REPLACE INTO …’ 不同，它只是更新重复行上的值，没有删除，也就不会导致原有主键值的变化。</p> 
+</blockquote> 
+<p>1：replace into<br> 2：on duplicate key update</p> 
+<p>一，两者在数据库中无记录时都执行插入操作；在数据库中有记录时都执行“更新”操作。<br> 二，二者在判断有无记录时，都是根据表里的主键或唯一索引。<br> 三，<mark>检索到存在记录时，1是先删除原记录，再插入新记录；而2是保持原记录不变，更新指定的字段。</mark></p> 
+<p>如表中有如下记录，其中id是自增主键，col1是唯一索引：<br> (id, col1, col2,col3)= (1, a,b,c)</p> 
+<p>执行<br> replace into tabelname(col1, col2) values (a,d)<br> 则表中数据变为<br> (id, col1, col2,col3)= (2, a,d,null)<br> 原记录完全删除，id发生自增。</p> 
+<p>执行<br> insert into tablename(col1) values (a)<br> on duplicate key update col2=d<br> 则表中数据变位<br> (id, col1, col2,col3)= (1, a,d,c)<br> col3保持不变，id未自增，不过在插入下一条记录时，id会跳跃。</p> 
+<h2><a id="replace_into_244"></a>五、replace into的坑</h2> 
+<h3><a id="51replace_into_245"></a>5.1、replace into与自动更新时间的坑</h3> 
+<p>replace into在有主键或唯一索引冲突时，会执行delete+insert操作，若字段设置了自动更新，需要手动设置时间或者字段设置默认时间，否则时间字段会插入为空</p> 
+<p>如下sql:</p> 
+<pre><code>drop table if exists user_test;
+create table user_test(
+	id int primary key auto_increment comment '主键',
+	name varchar(30)  not null comment '姓名',
+	update_time timestamp on update CURRENT_TIMESTAMP comment '更新时间'
+) comment '测试表';
+
+insert into user_test(name,update_time) value ('zhangsan','2000-01-01 00:00:00');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b3/c9/Xba1OLhx_o.png" alt="在这里插入图片描述"><br> 此时执行replace into</p> 
+<pre><code>replace into user_test(id,name) value (1,'zhangsan');
+</code></pre> 
+<p><img src="https://images2.imgbox.com/9b/cc/p3HVv37X_o.png" alt="在这里插入图片描述"><br> 上图可以看出执行replace into之后，update_time的字段被更新为空了。</p> 
+<p><strong>解决方案</strong></p> 
+<pre><code class="prism language-bash"><span class="token comment"># 方案一：建表时设置字段有默认时间</span>
+create table user_test<span class="token punctuation">(</span>
+	<span class="token function">id</span> int primary key auto_increment comment <span class="token string">'主键'</span>,
+	name varchar<span class="token punctuation">(</span><span class="token number">30</span><span class="token punctuation">)</span>  not null comment <span class="token string">'姓名'</span>,
+	update_time timestamp default current_timestamp on update CURRENT_TIMESTAMP comment <span class="token string">'更新时间'</span>
+<span class="token punctuation">)</span> comment <span class="token string">'测试表'</span><span class="token punctuation">;</span>
+
+<span class="token comment"># 方案二：replace into时手动设置时间</span>
+replace into user_test values<span class="token punctuation">(</span><span class="token number">1</span>,<span class="token string">'zhangsan'</span>,now<span class="token punctuation">(</span><span class="token punctuation">))</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="52replace_into1_280"></a>5.2、replace into用唯一索引更新时会导致自增值+1</h3> 
+<p>见本文《3.1.3、有主键有唯一索引且唯一索引冲突(有坑)》</p> 
+<h3><a id="53replace_into_283"></a>5.3、replace into同时有主键或唯一索引冲突时可能会删除多条记录</h3> 
+<p><mark>注意：使用replace into时只能用主键更新或者唯一键更新，二选其一。若同时都冲突了，可能会导致异常</mark></p> 
+<p>见本文《3.1.4、有主键有唯一索引且与一条主键冲突与另一条唯一键冲突(有坑)》</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/0c1783cf9174763c7f443e5b97709ff0/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Android识别模拟器，判断是模拟器还是真机</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/47c8fcccd7ab94ddce8782e55be70749/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">深入理解 package.json 文件与 package-lock.json 文件</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

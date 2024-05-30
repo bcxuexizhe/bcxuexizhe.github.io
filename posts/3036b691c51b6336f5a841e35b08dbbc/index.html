@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【Hadoop】YARN容量调度器详解 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3036b691c51b6336f5a841e35b08dbbc/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【Hadoop】YARN容量调度器详解">
+  <meta property="og:description" content="🦄 个人主页——🎐开着拖拉机回家_Linux,Java基础学习,大数据运维-CSDN博客 🎐✨🍁
+🪁🍁🪁🍁🪁🍁🪁🍁 🪁🍁🪁🍁🪁🍁🪁 🪁🍁🪁🍁🪁🍁🪁🍁🪁🍁🪁🍁
+目录
+一、CapacityScheduler简介
+二、CapacityScheduler特性
+三、CapacityScheduler配置
+四、YARN WEB UI 参数详解
+一、CapacityScheduler简介 Hadoop YARN的核心组件是ResourceManager，负责集群资源管理与调度，而ResourceManager组件的核心是调度器，负责统筹集群资源，满足应用的资源需求。调度器不仅需要优化整个集群的资源布局，避免热点等问题对应用的影响，最大程度利用集群资源；还要能协调好大量应用在集群的运行，基于多租户（队列）公平性、应用优先级等策略解决好资源竞争等问题；也要能满足个别应用在节点依赖、放置策略等方面的特殊需求。
+YARN调度器是可拔插的插件，主要有FIFOScheduler、FairScheduler和CapacityScheduler三类。
+FIFOScheduler：是最简单的调度器，不支持多租户（所有应用都提交到Default队列），不考虑集群的资源分布（节点上堆叠调度），只支持以FIFO（First In，First Out）策略依次调度应用，无其他控制与调度特性。只适用于及其简单的场景，因此很少应用于正式生产。FairScheduler：是CDH（Cloudera Distributed Hadoop）的默认调度器，与HDP（Hortonworks Data Platform）合并后的CDP（Cloudera Data Platform）不再使用（迁移到CapacityScheduler），Apache Hadoop社区也建议迁移到CapacityScheduler。FairScheduler支持较为完善的多租户管理与资源调度能力，包括多级队列、配额管理、ACL控制、弹性资源共享、租户间公平性调度策略、租户内应用调度策略、资源预留、抢占、异步调度等，然而在Apache Hadoop社区的发展相比CapacityScheduler仍稍显落后，核心调度未考虑整个集群的资源布局，也不支持Node Labels（分区调度）、Node Attributes（节点打标调度）、Placement Constraints（放置约束）等调度特性。CapacityScheduler：是Apache Hadoop社区、HDP（Hortonworks Data Platform）及合并后CDP（Cloudera Data Platform）的默认调度器，具有最完善的多租户管理与资源调度能力，不仅包含了FairScheduler的全部能力，还能协调好整个集群的资源布局（基于Global Scheduling），减少热点概率，最大程度利用集群资源，还支持Node Labels（分区调度）Node Attributes（节点打标调度）、Placement Constraints（放置约束）等调度特性。 下面重点对CapacityScheduler进行介绍，其他调度器的使用说明请参考社区文档。
+二、CapacityScheduler特性 分层队列——支持分层队列，以确保在允许其他队列使用空闲资源之前，在组织的子队列之间共享资源，从而提供更多的控制和可预测性。 容量保证——队列被分配了网格容量的一小部分，在某种意义上，一定容量的资源将供它们使用。提交到队列的所有应用程序都可以访问分配给队列的容量。管理员可以对分配给每个队列的容量配置软限制和可选的硬限制，就是可以使用其他队列的剩余资源，也可以严格限制不能超出限制。安全性——每个队列都有严格的acl，它控制哪些用户可以向各个队列提交应用程序。此外，还有安全防护措施，以确保用户不能查看和/或修改来自其他用户的应用程序。此外，还支持每个队列和系统管理员角色。弹性资源共享——可以将空闲资源分配给超出其容量的任何队列。当队列配置资源有空闲时，可以分配给其他有资源需求的队列。当再次需要这些资源时可以抢夺回这些资源。这确保了资源以可预测和弹性的方式对队列可用，从而防止集群中人为的资源孤岛，从而有助于利用率。多租户——提供了一组全面的限制，以防止单个应用程序、用户和队列独占队列或整个集群的资源，以确保集群不会不堪重负。可操作性 运行时配置——管理员可以在运行时以安全的方式更改队列定义和属性(如容量、acl)，以尽量减少对用户的干扰。此外，还为用户和管理员提供了一个控制台，以查看系统中各种队列的当前资源分配情况。管理员可以在运行时添加额外的队列，但不能在运行时删除队列，除非队列已停止并且没有挂起/正在运行的应用程序。取消应用程序——管理员可以在运行时停止队列，以确保在现有应用程序运行到完成时，没有新的应用程序可以提交。如果队列处于STOPPED状态，则不能将新的应用程序提交给它自己或它的任何子队列。现有的应用程序将继续完成，因此可以正常地耗尽队列。管理员还可以启动已停止的队列。 基于资源的调度——支持资源密集型应用程序，其中应用程序可以选择指定比默认值更高的资源需求，从而容纳具有不同资源需求的应用程序。目前，内存是支持的资源需求。优先级调度——该功能允许应用程序以不同的优先级提交和调度。整数值越大，优先级越高。目前，应用程序优先级仅支持FIFO排序策略。绝对资源配置——管理员可以为队列指定绝对资源，而不是提供基于百分比的值。这为管理员提供了更好的控制，以便为给定队列配置所需的资源量。 三、CapacityScheduler配置 Ambari 2.7.4配置页面
+配置队列层级如下：
+root ├── acc └── ipva ├── bzv2 └── default Ambari-queue-manager配置如下：
+capacity-scheduler.xml 配置文件
+&lt;configuration xmlns:xi=&#34;http://www.w3.org/2001/XInclude&#34;&gt; &lt;!-- 设置所有提交的job中ApplicationMaster的资源比例上限，该参数通常用于限制处于活动状态的job数量。--&gt; &lt;property&gt; &lt;name&gt;yarn.scheduler.capacity.maximum-am-resource-percent&lt;/name&gt; &lt;value&gt;0.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-07T08:59:38+08:00">
+    <meta property="article:modified_time" content="2023-11-07T08:59:38+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【Hadoop】YARN容量调度器详解</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p class="img-center"><img alt="" height="534" id="h3Xxk" src="https://images2.imgbox.com/b1/bc/7ncfNgzK_o.png" width="950"></p> 
+<blockquote> 
+ <p id="RXlFu" style="text-align:center;">🦄<span style="color:#fe2c24;"> <strong>个人主页</strong>—</span>—🎐<a href="https://blog.csdn.net/qq_35995514?type=blog" title="开着拖拉机回家_Linux,Java基础学习,大数据运维-CSDN博客">开着拖拉机回家_Linux,Java基础学习,大数据运维-CSDN博客</a> 🎐✨🍁</p> 
+ <p id="u68fd9b7c" style="text-align:center;">🪁🍁🪁🍁🪁🍁🪁🍁 🪁🍁🪁🍁🪁🍁🪁 🪁🍁🪁🍁🪁🍁🪁🍁🪁🍁🪁🍁</p> 
+ <p></p> 
+</blockquote> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="PthZ4-toc" style="margin-left:0px;"><a href="#PthZ4" rel="nofollow">一、CapacityScheduler简介</a></p> 
+<p id="xtna8-toc" style="margin-left:0px;"><a href="#xtna8" rel="nofollow">二、CapacityScheduler特性</a></p> 
+<p id="socqm-toc" style="margin-left:0px;"><a href="#socqm" rel="nofollow">三、CapacityScheduler配置</a></p> 
+<p id="t6hfj-toc" style="margin-left:0px;"><a href="#t6hfj" rel="nofollow">四、YARN WEB UI 参数详解</a></p> 
+<hr id="hr-toc"> 
+<h2 style="background-color:transparent;"><span style="color:#956fe7;">一、CapacityScheduler简介</span></h2> 
+<hr id="DfjvC"> 
+<blockquote> 
+ <p id="u4bb2340d">Hadoop YARN的核心组件是ResourceManager，负责集群资源管理与调度，而ResourceManager组件的核心是调度器，负责统筹集群资源，满足应用的资源需求。调度器不仅需要优化整个集群的资源布局，避免热点等问题对应用的影响，最大程度利用集群资源；还要能协调好大量应用在集群的运行，基于多租户（队列）公平性、应用优先级等策略解决好资源竞争等问题；也要能满足个别应用在节点依赖、放置策略等方面的特殊需求。</p> 
+</blockquote> 
+<p id="uaac7f73d">YARN调度器是可拔插的插件，主要有FIFOScheduler、FairScheduler和CapacityScheduler三类。</p> 
+<ul><li id="u6ffb3191"><span style="color:#ff9900;"><strong>FIFOScheduler</strong></span>：是最简单的调度器，不支持多租户（所有应用都提交到Default队列），不考虑集群的资源分布（节点上堆叠调度），只支持以FIFO（First In，First Out）策略依次调度应用，无其他控制与调度特性。只适用于及其简单的场景，因此很少应用于正式生产。</li><li id="u9b714cf0"><span style="color:#ff9900;"><strong>FairScheduler</strong></span>：是CDH（Cloudera Distributed Hadoop）的默认调度器，与HDP（Hortonworks Data Platform）合并后的CDP（Cloudera Data Platform）不再使用（迁移到CapacityScheduler），Apache Hadoop社区也建议迁移到CapacityScheduler。FairScheduler支持较为完善的多租户管理与资源调度能力，包括多级队列、配额管理、ACL控制、弹性资源共享、租户间公平性调度策略、租户内应用调度策略、资源预留、抢占、异步调度等，然而在Apache Hadoop社区的发展相比CapacityScheduler仍稍显落后，核心调度未考虑整个集群的资源布局，也不支持Node Labels（分区调度）、Node Attributes（节点打标调度）、Placement Constraints（放置约束）等调度特性。</li><li id="u97f5bef8"><span style="color:#ff9900;"><strong>CapacityScheduler</strong></span>：是Apache Hadoop社区、HDP（Hortonworks Data Platform）及合并后CDP（Cloudera Data Platform）的默认调度器，具有最完善的多租户管理与资源调度能力，不仅包含了FairScheduler的全部能力，还能协调好整个集群的资源布局（基于Global Scheduling），减少热点概率，最大程度利用集群资源，还支持Node Labels（分区调度）Node Attributes（节点打标调度）、Placement Constraints（放置约束）等调度特性。</li></ul> 
+<p id="u7532450f">下面重点对CapacityScheduler进行介绍，其他调度器的使用说明请参考社区文档。</p> 
+<hr id="Ajjbb"> 
+<h2 id="xtna8"><span style="color:#956fe7;">二、CapacityScheduler特性</span></h2> 
+<hr id="uiDz1"> 
+<ul><li id="u8f3e575a"><span style="color:#ff9900;"><strong>分层队列</strong></span>——支持分层队列，以确保在允许其他队列使用空闲资源之前，在组织的子队列之间共享资源，从而提供更多的控制和可预测性。</li></ul> 
+<ul><li id="u8096caef"><span style="color:#ff9900;"><strong>容量保证</strong></span>——队列被分配了网格容量的一小部分，在某种意义上，一定容量的资源将供它们使用。提交到队列的所有应用程序都可以访问分配给队列的容量。管理员可以对分配给每个队列的容量配置软限制和可选的硬限制，就是可以使用其他队列的剩余资源，也可以严格限制不能超出限制。</li><li id="u9571001a"><span style="color:#ff9900;"><strong>安全性</strong></span>——每个队列都有严格的acl，它控制哪些用户可以向各个队列提交应用程序。此外，还有安全防护措施，以确保用户不能查看和/或修改来自其他用户的应用程序。此外，还支持每个队列和系统管理员角色。</li><li id="uea0dd89a"><span style="color:#ff9900;"><strong>弹性资源共享</strong></span>——可以将空闲资源分配给超出其容量的任何队列。当队列配置资源有空闲时，可以分配给其他有资源需求的队列。当再次需要这些资源时可以抢夺回这些资源。这确保了资源以可预测和弹性的方式对队列可用，从而防止集群中人为的资源孤岛，从而有助于利用率。</li><li id="u55aa3aea"><span style="color:#ff9900;"><strong>多租户</strong></span>——提供了一组全面的限制，以防止单个应用程序、用户和队列独占队列或整个集群的资源，以确保集群不会不堪重负。</li><li id="u02a62ae4"><strong>可操作性</strong></li></ul> 
+<ul><li> 
+  <ul><li id="u37460ef0"><strong>运行时配置—</strong>—管理员可以在运行时以安全的方式更改队列定义和属性(如容量、acl)，以尽量减少对用户的干扰。此外，还为用户和管理员提供了一个控制台，以查看系统中各种队列的当前资源分配情况。管理员可以在运行时添加额外的队列，但不能在运行时删除队列，除非队列已停止并且没有挂起/正在运行的应用程序。</li><li id="u6a3ed182"><strong>取消应用程序</strong>——管理员可以在运行时停止队列，以确保在现有应用程序运行到完成时，没有新的应用程序可以提交。如果队列处于STOPPED状态，则不能将新的应用程序提交给它自己或它的任何子队列。现有的应用程序将继续完成，因此可以正常地耗尽队列。管理员还可以启动已停止的队列。</li></ul></li></ul> 
+<ul><li id="u66794c8e"><span style="color:#ff9900;"><strong>基于资源的调度</strong></span>——支持资源密集型应用程序，其中应用程序可以选择指定比默认值更高的资源需求，从而容纳具有不同资源需求的应用程序。目前，内存是支持的资源需求。</li><li id="u64ae3222"><span style="color:#ff9900;"><strong>优先级调度</strong></span>——该功能允许应用程序以不同的优先级提交和调度。整数值越大，优先级越高。目前，应用程序优先级仅支持FIFO排序策略。</li><li id="u5edc9d16"><span style="color:#ff9900;"><strong>绝对资源配置</strong></span>——管理员可以为队列指定绝对资源，而不是提供基于百分比的值。这为管理员提供了更好的控制，以便为给定队列配置所需的资源量。</li></ul> 
+<hr id="ckMeX"> 
+<h2 id="socqm"><span style="color:#956fe7;">三、CapacityScheduler配置</span></h2> 
+<hr id="FhvI0"> 
+<p id="u660b1bd7">Ambari 2.7.4配置页面</p> 
+<p class="img-center"><img alt="" height="705" id="u96eedeaf" src="https://images2.imgbox.com/a5/d5/FIoEkSES_o.png" width="1200"></p> 
+<p id="u7d4f48c3">配置队列层级如下：</p> 
+<pre id="Rk3kT"><code>root
+├── acc
+└── ipva
+├── bzv2
+└── default</code></pre> 
+<p id="uad3c44de">Ambari-queue-manager配置如下：</p> 
+<p class="img-center"><img alt="" height="897" id="u1492f017" src="https://images2.imgbox.com/be/0b/OfiAVR4J_o.png" width="1200"></p> 
+<p id="u98c78787"><strong>capacity-scheduler.xml 配置文件</strong></p> 
+<pre id="DN3U2"><code class="language-XML"> 
+  &lt;configuration  xmlns:xi="http://www.w3.org/2001/XInclude"&gt;
+    &lt;!-- 设置所有提交的job中ApplicationMaster的资源比例上限，该参数通常用于限制处于活动状态的job数量。--&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.maximum-am-resource-percent&lt;/name&gt;
+      &lt;value&gt;0.2&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!-- 最多可运行的应用数，默认10000 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.maximum-applications&lt;/name&gt;
+      &lt;value&gt;10000&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!--  队列本地延迟设置，根据机架感知，对于有nodemanager的客户端，会优先考虑向本地的nodemanager派发task，该值用于配置，默认尝试次数为40次 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.node-locality-delay&lt;/name&gt;
+      &lt;value&gt;40&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!-- 该配置指定调度器使用的资源计算器，资源计算器用于在调度器中比较资源。默认值是 org.apache.hadoop.yarn.util.resource.DefaultResourseCalculator，只使用内存进行比较
+    DominantResourceCalculator 用 Dominant-resource比较多维度资源，如内存，CPU等--&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.resource-calculator&lt;/name&gt;
+      &lt;value&gt;org.apache.hadoop.yarn.util.resource.DefaultResourceCalculator&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!--  访问控制,控制谁可以管理(包括提交和取消)该队列的任务,表示任何人  --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.acl_administer_queue&lt;/name&gt;
+      &lt;value&gt;*&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- 限定哪些用户/用户组可向给定队列中提交应用程序  --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.acl_submit_applications&lt;/name&gt;
+      &lt;value&gt;*&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- acc 队列资源比例 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.capacity&lt;/name&gt;
+      &lt;value&gt;60&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!--  acc 队列最大资源比例 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.maximum-capacity&lt;/name&gt;
+      &lt;value&gt;70&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- 指定队列内单个用户的最小资源比例（相对于队列保障资源），队列内单个用户的资源限制=max（队列保障资源/用户数, 队列保障资源 * minimumUserLimitPercent / 100）， 默认值：100。 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.minimum-user-limit-percent&lt;/name&gt;
+      &lt;value&gt;100&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!-- 指定队列内应用调度策略，包括Fifo与Fair两种，Fifo即先入先出调度，对所有应用按优先级从高到低、提交时间从前往后的顺序排序，
+	   Fair是公平调度，对所有应用按资源使用比例从小到大、提交时间从前往后的顺序排序。默认值：Fifo， 一般应用场景配置成Fair更合适。 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.ordering-policy&lt;/name&gt;
+      &lt;value&gt;fifo&lt;/value&gt;
+    &lt;/property&gt;
+    
+    &lt;!-- acc 队列优先级 ，默认值0 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.priority&lt;/name&gt;
+      &lt;value&gt;0&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- 指定队列状态，默认值：RUNNING。通常不需要配置，只有在需要删除队列的时候，修改指定队列的状态为STOPPED，待队列下应用全部结束后队列将会被自动删除。 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.state&lt;/name&gt;
+      &lt;value&gt;RUNNING&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- acc 队列内单个用户的资源上限因子，队列内单个用户最大可用资源=min（队列最大资源, yarn.scheduler.capacity.xx.capacity * userLimitFactor），默认值：1.0。  --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acc.user-limit-factor&lt;/name&gt;
+      &lt;value&gt;1.5&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- root 队列可以访问的label列表，默认不配置，访问所有无标签的  --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.accessible-node-labels&lt;/name&gt;
+      &lt;value&gt;*&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- 为队列指定一个管理员，该管理员可控制该队列的所有应用程序，比如杀死任意一个应用程序等。 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acl_administer_queue&lt;/name&gt;
+      &lt;value&gt;yarn,spark,hive&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- 限定用户/用户组可向给定队列中提交应用程序。需要注意的是，该属性具有继承性，即如果一个用户可以向某个队列中提交应用程序，则它可以向它的所有子队列中提交应用程序 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.acl_submit_applications&lt;/name&gt;
+      &lt;value&gt;yarn,ambari-qa&lt;/value&gt;
+    &lt;/property&gt;
+	
+    &lt;!-- bz2 队列 与acc 类似  --&gt;
+	  &lt;!-- ipva 队列 与acc 类似  --&gt;
+	  &lt;!-- 省略部分  --&gt;
+   
+    &lt;!-- root根下的 子队列 --&gt;
+    &lt;property&gt;
+      &lt;name&gt;yarn.scheduler.capacity.root.queues&lt;/name&gt;
+      &lt;value&gt;acc,bz2,default,ipva&lt;/value&gt;
+    &lt;/property&gt;
+    
+  &lt;/configuration&gt;</code></pre> 
+<p id="ud3f14e4e"><strong>关键参数说明：</strong></p> 
+<p id="u757ef16a"><strong><span style="color:#be191c;">yarn.scheduler.capacity.root.acc.capacity</span>：</strong>队列资源容量的百分比，用浮点数表示(如12.5)或者是作为绝对资源队列的最小容量。在各层级上所有队列的百分比之和必须等于100。</p> 
+<p id="u6d4cd448"><span style="color:#be191c;"><strong>yarn.scheduler.capacity.root.acc.maximum-capacity</strong>：</span>最大队列容量，以百分比(%)表示为浮点数，或以绝对资源队列最大容量表示。这限制了队列中应用程序的弹性。1)取值范围为0 ~ 100。2)管理员需要确保绝对最大容量&gt;=每个队列的绝对容量。此外，将此值设置为-1将最大容量设置为100%。</p> 
+<p id="uba4004cb"><strong><span style="color:#be191c;">yarn.scheduler.capacity.root.acc.user-limit-factor</span></strong>： 这个参数配置为允许单个用户最多能获取的队列资源（即yarn.scheduler.capacity..capacity的值）的倍数，值是一个浮点值。也就是说如果把这个参数设置为大于1时，用户使用的资源可以超过队列资源。如果该值为2.0，则单个用户使用的最多资源量可以是该队列容量的2倍，但无论配置为多大都不能超过队列的最大资源（即yarn.scheduler.capacity..maximum-capacity的值）。默认值为1，确保单个用户无论集群有多空闲，永远不会占用超过队列配置的资源量。</p> 
+<hr id="xYmsE"> 
+<h2 id="t6hfj"><span style="color:#956fe7;">四、YARN WEB UI 参数详解</span></h2> 
+<hr id="gX7ph"> 
+<p id="u517b5ee5">如下图 点击 Scheduler可以看到在 Ambari 页面上配置的层级队列</p> 
+<p id="u40e59554"></p> 
+<p class="img-center"><img alt="" height="584" id="u9b39dda2" src="https://images2.imgbox.com/48/40/hSmnaSeO_o.png" width="1200"></p> 
+<p id="ucd5f3630">如下是acc 队列的使用情况，不用 队列使用不用的颜色显示</p> 
+<p class="img-center"><img alt="" height="583" id="ud3cd548e" src="https://images2.imgbox.com/ed/c4/H7kaXBGn_o.png" width="1200"></p> 
+<p id="uc988cb0e"></p> 
+<p class="img-center"><img alt="" height="573" id="u0c3e9e26" src="https://images2.imgbox.com/11/c6/byoOTdMf_o.png" width="1013"></p> 
+<p id="ubdbd35ef"><strong>资源说明</strong></p> 
+<ul><li id="ua944e906">总内存资源： 101.25*1024 = 103680M</li><li id="uceb753b4">acc队列容量：103680*60% = 62208M</li><li id="uf97d20af">acc队列容量最大：103680*70% = 72575M</li></ul> 
+<table id="Xgck0"><tbody><tr><td> <p id="ua3d1f4e4" style="text-align:center;"><strong>显示</strong></p> </td><td> <p id="u14e760d3" style="text-align:center;"><strong>解释</strong></p> </td></tr><tr><td> <p id="u25d2149e"><strong>Queue State: RUNNING</strong></p> </td><td> <p id="u0cedb7fa">队列状态 RUNNING</p> </td></tr><tr><td> <p id="uce62c4ab"><strong>Used Capacity : 78.2%</strong></p> </td><td> <p id="ua75cbf0e">已使用资源占队列配置值的百分比48640/62208=78.2%</p> </td></tr><tr><td> <p id="ue4bb256f"><strong>Effective Capacity: memory:62208, vCores:36&gt; (60.0%)</strong></p> </td><td> <p id="ucd9acef6">有效容量，表示队列实际可用的内存和虚拟核心资源</p> <p id="ue8ecc293">分别为 62208 MB 和 36 个。</p> </td></tr><tr><td> <p id="ub4fefbe9"><strong>Effective Max Capacity: 72575, vCores:41&gt; (70.0%)</strong></p> </td><td> <p id="ucbdc6b7e">有效最大容量，表示队列实际可用的内存和虚拟核心资源分别为 72575 MB 和 41 个。</p> </td></tr><tr><td> <p id="uff6592f3"><strong>Absolute Used Capacity: 46.9%</strong></p> </td><td> <p id="u5cbd3d0c">已使用绝对容量 48640/103680=46.9%</p> </td></tr><tr><td> <p id="u350e2a51"><strong>Absolute Configured Capacity: 60.0%</strong></p> </td><td> <p id="ud8ae8544">表示队列在整个集群中占据配置容量60%。</p> </td></tr><tr><td> <p id="u3b4d1f0f"><strong>Absolute Configured Max Capacity: 70.0%</strong></p> </td><td> <p id="u1e573d19">表示队列在整个集群中占据最大配置容量70%。</p> </td></tr><tr><td> <p id="ub48d652a"><strong>Used Resources: &lt;48640, vCores:15&gt;</strong></p> </td><td> <p id="u485d8377">acc 队列使用 资源</p> </td></tr><tr><td> <p id="u7f1b0000"><strong>Configured Max Application Master Limit: 20.0</strong></p> </td><td> <p id="uea12509d">AppMaster 限制使用资源 20%</p> </td></tr><tr><td> <p id="ud4a1a5ca"><strong>Max Application Master Resources: &lt;memory:14848, vCores:1&gt;</strong></p> </td><td> <p id="uf2f2441d">表示每个 Application Master 最多可以使用 2560 MB 内存和 1 个虚拟核心资源</p> </td></tr><tr><td> <p id="ub42d8eea"><strong>Used Application Master Resources: &lt;memory:1024, vCores:1&gt;</strong></p> </td><td> <p id="ud0593025">AppMaster 资源使用 1核1G</p> </td></tr><tr><td> <p id="ud0196328"><strong>Max Application Master Resources Per User: &lt;memory:14848, vCores:1&gt;</strong></p> </td><td> <p id="ue851f00d">表示每个用户的 Application Master 最多可以使用 <strong>14848</strong>MB 内存和 1 个虚拟核心资源。</p> </td></tr><tr><td> <p id="u1ceba49a"><strong>Num Schedulable Applications: 1</strong></p> </td><td> <p id="u4115833f">调度的App调用个数为 1</p> </td></tr><tr><td> <p id="ub85c8473"><strong>Num Non-Schedulable Applications: 0</strong></p> </td><td> <p id="u0f26bcc8">没有被调度的app应用个数</p> </td></tr><tr><td> <p id="uf200bc77"><strong>Num Containers: 3</strong></p> </td><td> <p id="uf524bb3e">容器运行 个数3</p> </td></tr><tr><td> <p id="ub69ebc2b"><strong>Max Applications: 6000</strong></p> </td><td> <p id="udffa5ae9">最大应用数量 6000</p> </td></tr><tr><td> <p id="u4f53ea47"><strong>Max Applications Per User: 6000</strong></p> </td><td> <p id="u85aa66fb">每个user最多可以运行的应用数量 6000</p> </td></tr><tr><td> <p id="u60b34192"><strong>Configured Minimum User Limit Percent: 100%</strong></p> </td><td> <p id="ubc779bbe">每个user最多可以使用队列资源的百分比</p> </td></tr><tr><td> <p id="uf8a925b3"><strong>Configured User Limit Factor: 1.5</strong></p> </td><td> <p id="uef85b2b8">最多能获取的队列资源的1.5倍</p> </td></tr><tr><td> <p id="uc15aeb1a"><strong>Accessible Node Labels: *</strong></p> </td><td> <p id="u3fdca7cb">标签策略 为匹配所有</p> </td></tr><tr><td> <p id="ufc3204cf"><strong>Ordering Policy: FifoOrderingPolicy</strong></p> </td><td> <p id="ue30e8436">队列内部任务采用策略Fifo</p> </td></tr></tbody></table> 
+<p id="u896a3e4f">参考文章：</p> 
+<hr id="NIRUj"> 
+<p id="ua45a1640"><a href="https://help.aliyun.com/zh/emr/emr-on-ecs/user-guide/yarn-schedulers" rel="nofollow" title="什么是YARN调度器_开源大数据平台E-MapReduce-阿里云帮助中心">什么是YARN调度器_开源大数据平台E-MapReduce-阿里云帮助中心</a></p> 
+<p id="u07192722"><a href="https://blog.csdn.net/2201_75761617/article/details/131654989" title="【深入浅出 Yarn 架构与实现】 Yarn 三种调度器_yarn调度器-CSDN博客">【深入浅出 Yarn 架构与实现】 Yarn 三种调度器_yarn调度器-CSDN博客</a></p> 
+<p id="uc4ea619a"><a href="https://www.cnblogs.com/gentlemanhai/p/9407063.html" rel="nofollow" title="yarn web ui 参数详解 - gentleman_hai - 博客园">yarn web ui 参数详解 - gentleman_hai - 博客园</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/17aeb2cba1aa1b8bc1fe63ea29e3a01d/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【JavaSE语法】类和对象（一）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/2025f4b808ac12cdcc7e1d14166883e5/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">JWT简介&amp; JWT结构&amp; JWT示例&amp; 前端添加JWT令牌功能&amp; 后端程序</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

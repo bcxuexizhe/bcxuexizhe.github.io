@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>图文详解Redis中常见的缓存问题及解决方案：缓存更新策略，缓存穿透，缓存雪崩，缓存击穿 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/f9f60d90dac8af6739baee7af43af0e3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="图文详解Redis中常见的缓存问题及解决方案：缓存更新策略，缓存穿透，缓存雪崩，缓存击穿">
+  <meta property="og:description" content="目录
+一.缓存技术与Redis
+Redis作为缓存的原因
+二.缓存更新策略
+场景示例
+三.缓存问题
+缓存穿透
+解决方案：缓存空对象
+解决方案：布隆过滤
+缓存雪崩
+解决方案
+缓存击穿
+解决方案：互斥锁
+解决方案：逻辑过期
+一.缓存技术与Redis 缓存是计算机中的一种技术，用于存储临时数据，以便在后续访问相同数据时能够更快地获取。在数据被缓存后，将会被存储在一个临时的快速存储介质中，例如计算机内存或专门的高速缓存存储器中。
+缓存可以减少对慢速存储介质（如硬盘或网络）的访问次数，从而提高系统的响应速度和性能。当需要访问某个数据时，计算机首先会检查缓存中是否存在该数据。如果存在，就可以直接从缓存中获取，而无需访问慢速存储介质。如果缓存中不存在该数据，计算机则会从慢速存储介质中读取，并将数据存入缓存中，以便后续的访问。
+Redis作为缓存的原因 对于Web开发来说，缓存的实现是必要的。首先，频繁的直接操作数据库是不好的，一是速度慢效率低，二是可能会带来很多隐形的问题。
+为了解决这些问题，我们就可以通过Redis来实现对数据的缓存操作，我们知道Redis的读写操作是非常快的，基本上都在微秒级别，在数据请求和数据库之间，我们加上一层Redis的数据存储，将Redis作为数据的缓存区域，就可以大大提高系统整体的运行速度和性能。
+将Redis作为缓存在Web系统中是已经是非常常见的做法，主要由以下几个原因：
+性能高效：Redis是基于内存的数据库，读写速度非常快。它的数据结构设计和高效的持久化方式使得它在缓存场景下表现优秀，能够快速地响应大量请求。数据结构丰富：Redis支持多种数据结构，如字符串、哈希表、列表、集合、有序集合等，这使得它适用于各种不同的缓存需求。持久化支持：虽然Redis是内存数据库，但它支持将内存中的数据定期或者实时地持久化到磁盘上，确保数据的安全性和可靠性。高可用性：Redis支持主从复制和哨兵模式，可以构建高可用性的集群架构，提供数据的备份和故障转移功能，保证系统的稳定运行。丰富的功能：除了作为缓存外，Redis还提供了许多其他功能，如发布订阅、事务、Lua脚本等，可以满足各种不同的业务需求。 二.缓存更新策略 当我们将数据放入缓存之后，我们就需要考虑数据的存储策略，因为我们的缓存并不是无限大的，当我们不断的将新数据放入缓存，缓存所剩余的空间就会越来越小，面对这样的情况，我们有俩种解决方案：
+增加缓存空间的大小合理规划数据的存储，合理更新缓存中的数据 第一种方案在一定程度上确实可以缓解我们的压力，但是这是解决不了根本问题的，因为数据是无限的，我们不可能将数据库中的数据完全同步在缓存空间中，这样也会失去缓存空间原本的意义。因此，合理规划数据的存储就成了最正确的选择，也就是选择缓存更新策略。
+常见的缓存更新策略包括：
+缓存失效策略：当数据更新时，直接将缓存中对应的数据删除，下次访问时重新加载最新数据到缓存中。这种策略简单直接，但可能会导致缓存雪崩问题（大量缓存同时失效，导致数据库压力增大），因此可以考虑在删除缓存时加上随机的失效时间，使得缓存失效的时间分散开来，减少雪崩的概率。定期刷新策略：定期地（例如每隔一段时间）刷新缓存中的数据，保持缓存数据与数据库中的数据同步。这种策略能够一定程度上减轻缓存失效带来的压力，但可能导致缓存中的数据不是最新的。基于事件驱动的主动更新策略：当数据更新时，发布一个事件通知缓存系统，使得缓存系统能够及时更新对应的缓存数据。这种策略能够保证缓存数据的及时更新，但需要在系统中引入事件机制。读写分离策略：将缓存中的数据与数据库中的数据分开存储，读操作优先从缓存中获取数据，写操作则更新数据库并删除或者更新缓存中的数据。这种策略可以有效减轻数据库的压力，但需要保证缓存中的数据与数据库中的数据保持一致。淘汰策略：当缓存空间不足时，根据一定的策略淘汰一部分缓存数据，以腾出空间存储新的数据。常见的淘汰策略包括最近最少使用（LRU）和最少使用（LFU）等。 对于缓存更新策略的探索一直是企业发展中必须直视的难题，相关的技术和理论也在不断的发展，至于如何选择缓存更新策略，则需要根据具体的业务场景来定制。
+比如在对一致性需求要求较低的业务场景下，我们就可以合理使用淘汰策略，当空间不足的时候淘汰掉一部分缓存数据，将新的缓存数据存入；而在对一致性需求要求较高的业务场景下，我们往往可以结合多种缓存更新策略，将他们组合起来使用，以得到更高效的运作方式。这些策略看似简单，但研究起来其中却大有门道。
+场景示例 假如我们现在有一个查询关键数据的业务需要执行，对数据的一致性也有所要求。我们可以做出如下策略：在进行查询业务的时候，在修改数据库的数据的同时更新缓存，然后对于缓存的数据，我们也给出一个时间限制，当超过时间限制的时候，我们就让这块数据在缓存中失效，删除这块缓存数据。
+对于这样的缓存更新策略，我们还有些许问题需要考虑：
+操作缓存是删除缓存还是更新缓存？如何保证缓存和数据库中数据的一致性？ 如果是每一次操作数据库的时候我们都对缓存中的数据进行更新，就会导致出现很多无重复操作，因此我们一般选择在更新数据库的时候让缓存失效，查询的时候再更新缓存。而我们为了保证缓存和数据库的一致性，往往需要引入事务机制，对于一些分布式的方案我们往往还需要诸如TCC这样的分布式解决方案。除了以上的问题，我们往往还得考虑缓存和数据库操作的线程安全问题... ...
+因此，根据具体的业务流程来具体定制并仔细推敲是我们在选择缓存更新策略前必须要执行的一步。
+三.缓存问题 前面介绍了缓存在企业开发中的基础用法和策略，而对于缓存技术所带来的一些问题也同样成为了面试中的的高频问题，常见的缓存问题诸如缓存穿透，缓存雪崩，缓存击穿等。
+缓存穿透 缓存穿透是指客户端请求的数据在缓存中和数据库中都不存在，这样的缓存永远都不会生效，而这些请求最后都会到数据库中，造成了性能的极大损耗。严重的甚至直接会导致系统的崩溃。
+笔者这里给出图示：
+解决方案：缓存空对象 当查询的数据在数据库中不存在时，我们将这个空结果作为一个空值(null)缓存到Redis中，对于这个空值(null)，我们设置一段时间(TTL)后这个空值(null)失效过期。这样就可以大大的减轻数据库的压力，即使有恶意请求发起不存在的查询，在Redis中也会查询到对应的空结果并返回，这个值虽然没有意义，但是却可以避免进一步向数据库发起请求。
+对于这样的解决方案
+优点：实现简单，维护方便缺点：会造成额外的内存消耗，并且可能会造成短期的数据不一致 这里做出解释：假如空值(null)还没有过期的时候用户来查询这个值的，与此同时我们在数据库中插入了用户想要查询的值，用户就会从Redis中拿到这个空值(null)，而非用户想要查询的值，也就是缺点中所说的短期的数据不一致。
+解决方案：布隆过滤 在缓存查询之前，先使用布隆过滤器判断该查询是否有可能存在于数据库中。如果布隆过滤器认为查询不存在，直接返回，避免真正去查询数据库，从而减轻数据库压力。这里的布隆过滤器并不是说真的记录了所有的数据，它只是通过一定的算法，对于数据库中的数据进行了哈希，使得它有能力去判断这个数据在数据库中是否存在。
+对于这样的解决方案
+优点：内存占用少，没有多余的key缺点：实现复杂，存在误判可能 缓存雪崩 缓存雪崩是指在同一时间段，大量的缓存key同时失效或者Redis服务宕机，导致大量请求同时到达数据库，从而给数据库带来非常大的压力。
+为了解决或者避免这样的问题，我们做出相对应的对策，既然大量key同时失效就会导致雪崩，那我们就可以对于key的失效时间做出干预，使用随机的TTL来限制key的失效时间，避免他们同一时间失效；或者增加Redis的集群服务；又或者给业务添加多级缓存... ...
+解决方案 我们做出总结如下：
+设置不同的缓存失效时间：可以在缓存失效时间上加上一个随机值，使得缓存失效的时间分散开来，避免大量缓存同时失效。
+使用多级缓存：可以将缓存分为多级，如本地缓存、分布式缓存等，不同级别的缓存设置不同的失效时间，当一级缓存失效时，可以尽量从其他级别的缓存中获取数据，减少对数据库的直接访问。
+缓存预热：在系统启动或者数据更新时，预先将热点数据加载到缓存中，避免在高并发时才去加载数据导致缓存失效。
+使用限流措施：在缓存失效后，可以对数据库的访问进行限流，避免大量请求同时访问数据库，可以采用队列等方式进行排队处理。
+使用集群模式：利用Redis集群的高可用性，通过哨兵模式在主机宕机后立刻在从机中选择一台机器来顶替主机的工作。
+使用备份缓存：可以设置备份缓存，当主缓存失效时，可以从备份缓存中获取数据，保证系统的稳定性。
+缓存击穿 缓存击穿是指针对某个热点数据，它的key失效了，由于缓存中没有该数据，导致大量的请求直接打到数据库上，造成数据库瞬时压力过大的现象。与缓存雪崩不同的是，缓存击穿是针对某个特定的缓存键（Key）失效导致的问题，而不是整个缓存层失效。
+举个例子来说，前些天小米汽车发布了，对于发售那一刻，全国各地大量的请求数据同时来访问小米汽车这一个商品，而这里的小米汽车也就是我们所说的热点数据key。
+缓存击穿通常发生在如下场景下：某个热点数据的缓存过期，此时有大量的请求同时访问这个热点数据，由于缓存中没有该数据，每个请求都直接访问数据库，造成数据库瞬时压力过大。
+在前文中，我们有说到缓存的更新策略，对于缓存中不存在的数据，我们会查询数据库然后重新载入缓存。而如果这个流程发生在一个热点数据的情景下，就可能会发生缓存击穿的问题。笔者这里给出一个图示例子：
+如上图所示，在短时间内就会有大量的请求同时访问数据库中的某个热点数据。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-22T09:30:00+08:00">
+    <meta property="article:modified_time" content="2024-04-22T09:30:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">图文详解Redis中常见的缓存问题及解决方案：缓存更新策略，缓存穿透，缓存雪崩，缓存击穿</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p class="img-center"><img alt="" height="287" src="https://images2.imgbox.com/40/0e/vlemmpgC_o.gif" width="539"></p> 
+<hr> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E4%B8%80.%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF%E4%B8%8ERedis-toc" style="margin-left:0px;"><a href="#%E4%B8%80.%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF%E4%B8%8ERedis" rel="nofollow">一.缓存技术与Redis</a></p> 
+<p id="Redis%E4%BD%9C%E4%B8%BA%E7%BC%93%E5%AD%98%E7%9A%84%E5%8E%9F%E5%9B%A0-toc" style="margin-left:40px;"><a href="#Redis%E4%BD%9C%E4%B8%BA%E7%BC%93%E5%AD%98%E7%9A%84%E5%8E%9F%E5%9B%A0" rel="nofollow">Redis作为缓存的原因</a></p> 
+<p id="%E4%BA%8C.%E7%BC%93%E5%AD%98%E6%9B%B4%E6%96%B0%E7%AD%96%E7%95%A5-toc" style="margin-left:0px;"><a href="#%E4%BA%8C.%E7%BC%93%E5%AD%98%E6%9B%B4%E6%96%B0%E7%AD%96%E7%95%A5" rel="nofollow">二.缓存更新策略</a></p> 
+<p id="%E5%9C%BA%E6%99%AF%E7%A4%BA%E4%BE%8B-toc" style="margin-left:40px;"><a href="#%E5%9C%BA%E6%99%AF%E7%A4%BA%E4%BE%8B" rel="nofollow">场景示例</a></p> 
+<p id="%E4%B8%89.%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98-toc" style="margin-left:0px;"><a href="#%E4%B8%89.%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98" rel="nofollow">三.缓存问题</a></p> 
+<p id="%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F-toc" style="margin-left:40px;"><a href="#%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F" rel="nofollow">缓存穿透</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E7%BC%93%E5%AD%98%E7%A9%BA%E5%AF%B9%E8%B1%A1-toc" style="margin-left:80px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E7%BC%93%E5%AD%98%E7%A9%BA%E5%AF%B9%E8%B1%A1" rel="nofollow">解决方案：缓存空对象</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4-toc" style="margin-left:80px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4" rel="nofollow">解决方案：布隆过滤</a></p> 
+<p id="%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9-toc" style="margin-left:40px;"><a href="#%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9" rel="nofollow">缓存雪崩</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88-toc" style="margin-left:80px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" rel="nofollow">解决方案</a></p> 
+<p id="%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF-toc" style="margin-left:40px;"><a href="#%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF" rel="nofollow">缓存击穿</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E4%BA%92%E6%96%A5%E9%94%81-toc" style="margin-left:80px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E4%BA%92%E6%96%A5%E9%94%81" rel="nofollow">解决方案：互斥锁</a></p> 
+<p id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E9%80%BB%E8%BE%91%E8%BF%87%E6%9C%9F-toc" style="margin-left:80px;"><a href="#%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E9%80%BB%E8%BE%91%E8%BF%87%E6%9C%9F" rel="nofollow">解决方案：逻辑过期</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="%E4%B8%80.%E7%BC%93%E5%AD%98%E6%8A%80%E6%9C%AF%E4%B8%8ERedis" style="background-color:transparent;">一.缓存技术与Redis</h2> 
+<p>缓存是计算机中的一种技术，用于存储临时数据，以便在后续访问相同数据时能够更快地获取。在数据被缓存后，将会被存储在一个临时的快速存储介质中，例如计算机内存或专门的高速缓存存储器中。</p> 
+<p>缓存可以减少对慢速存储介质（如硬盘或网络）的访问次数，从而提高系统的响应速度和性能。当需要访问某个数据时，计算机首先会检查缓存中是否存在该数据。如果存在，就可以直接从缓存中获取，而无需访问慢速存储介质。如果缓存中不存在该数据，计算机则会从慢速存储介质中读取，并将数据存入缓存中，以便后续的访问。</p> 
+<h3 id="Redis%E4%BD%9C%E4%B8%BA%E7%BC%93%E5%AD%98%E7%9A%84%E5%8E%9F%E5%9B%A0" style="background-color:transparent;">Redis作为缓存的原因</h3> 
+<p>对于<strong>Web开发</strong>来说，缓存的实现是必要的。首先，频繁的直接操作数据库是不好的，一是速度慢效率低，二是可能会带来很多隐形的问题。</p> 
+<p>为了解决这些问题，我们就可以通过Redis来实现对数据的缓存操作，我们知道<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">Redis</span></strong></span>的读写操作是非常快的，基本上都在微秒级别，在数据请求和数据库之间，我们加上一层<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">Redis</span></strong></span>的数据存储，将<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">Redis</span></strong></span>作为数据的缓存区域，就可以大大提高系统整体的运行速度和性能。</p> 
+<p>将<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">Redis</span></strong></span>作为缓存在<strong>Web系统</strong>中是已经是非常常见的做法，主要由以下几个原因：</p> 
+<ol><li><strong>性能高效</strong>：Redis是基于内存的数据库，读写速度非常快。它的数据结构设计和高效的持久化方式使得它在缓存场景下表现优秀，能够快速地响应大量请求。</li><li><strong>数据结构丰富</strong>：Redis支持多种数据结构，如字符串、哈希表、列表、集合、有序集合等，这使得它适用于各种不同的缓存需求。</li><li><strong>持久化支持</strong>：虽然Redis是内存数据库，但它支持将内存中的数据定期或者实时地持久化到磁盘上，确保数据的安全性和可靠性。</li><li><strong>高可用性</strong>：Redis支持主从复制和哨兵模式，可以构建高可用性的集群架构，提供数据的备份和故障转移功能，保证系统的稳定运行。</li><li><strong>丰富的功能</strong>：除了作为缓存外，Redis还提供了许多其他功能，如发布订阅、事务、Lua脚本等，可以满足各种不同的业务需求。</li></ol> 
+<h2 id="%E4%BA%8C.%E7%BC%93%E5%AD%98%E6%9B%B4%E6%96%B0%E7%AD%96%E7%95%A5">二.缓存更新策略</h2> 
+<p>当我们将数据放入缓存之后，我们就需要考虑数据的存储策略，因为我们的缓存并不是无限大的，当我们不断的将新数据放入缓存，缓存所剩余的空间就会越来越小，面对这样的情况，我们有俩种解决方案：</p> 
+<ol><li>增加缓存空间的大小</li><li>合理规划数据的存储，合理更新缓存中的数据</li></ol> 
+<p>第一种方案在一定程度上确实可以缓解我们的压力，但是这是解决不了根本问题的，因为数据是无限的，我们不可能将数据库中的数据完全同步在缓存空间中，这样也会失去缓存空间原本的意义。因此，合理规划数据的存储就成了最正确的选择，也就是选择缓存更新策略。</p> 
+<p>常见的缓存更新策略包括：</p> 
+<ol><li><strong>缓存失效策略</strong>：当数据更新时，直接将缓存中对应的数据删除，下次访问时重新加载最新数据到缓存中。这种策略简单直接，但可能会导致缓存雪崩问题（大量缓存同时失效，导致数据库压力增大），因此可以考虑在删除缓存时加上随机的失效时间，使得缓存失效的时间分散开来，减少雪崩的概率。</li><li><strong>定期刷新策略</strong>：定期地（例如每隔一段时间）刷新缓存中的数据，保持缓存数据与数据库中的数据同步。这种策略能够一定程度上减轻缓存失效带来的压力，但可能导致缓存中的数据不是最新的。</li><li><strong>基于事件驱动的主动更新策略</strong>：当数据更新时，发布一个事件通知缓存系统，使得缓存系统能够及时更新对应的缓存数据。这种策略能够保证缓存数据的及时更新，但需要在系统中引入事件机制。</li><li><strong>读写分离策略</strong>：将缓存中的数据与数据库中的数据分开存储，读操作优先从缓存中获取数据，写操作则更新数据库并删除或者更新缓存中的数据。这种策略可以有效减轻数据库的压力，但需要保证缓存中的数据与数据库中的数据保持一致。</li><li><strong>淘汰策略</strong>：当缓存空间不足时，根据一定的策略淘汰一部分缓存数据，以腾出空间存储新的数据。常见的淘汰策略包括最近最少使用（LRU）和最少使用（LFU）等。</li></ol> 
+<p>对于缓存更新策略的探索一直是企业发展中必须直视的难题，相关的技术和理论也在不断的发展，至于如何选择缓存更新策略，则需要根据具体的业务场景来定制。</p> 
+<p>比如在对<span style="color:#be191c;"><strong><span style="background-color:#f9eda6;">一致性需求要求较低</span></strong></span>的业务场景下，我们就可以合理使用淘汰策略，当空间不足的时候淘汰掉一部分缓存数据，将新的缓存数据存入；而在对<span style="color:#be191c;"><strong><span style="background-color:#f9eda6;">一致性需求要求较高</span></strong></span>的业务场景下，我们往往可以结合多种缓存更新策略，将他们组合起来使用，以得到更高效的运作方式。这些策略看似简单，但研究起来其中却大有门道。</p> 
+<h3 id="%E5%9C%BA%E6%99%AF%E7%A4%BA%E4%BE%8B">场景示例</h3> 
+<blockquote> 
+ <p>假如我们现在有一个查询关键数据的业务需要执行，对数据的一致性也有所要求。我们可以做出如下策略：在进行查询业务的时候，在修改数据库的数据的同时更新缓存，然后对于缓存的数据，我们也给出一个时间限制，当超过时间限制的时候，我们就让这块数据在缓存中失效，删除这块缓存数据。</p> 
+</blockquote> 
+<p>对于这样的缓存更新策略，我们还有些许问题需要考虑：</p> 
+<ol><li>操作缓存是删除缓存还是更新缓存？</li><li>如何保证缓存和数据库中数据的一致性？</li></ol> 
+<p> 如果是每一次操作数据库的时候我们都对缓存中的数据进行更新，就会导致出现很多无重复操作，因此我们一般选择在更新数据库的时候让缓存失效，查询的时候再更新缓存。而我们为了保证缓存和数据库的一致性，往往需要引入事务机制，对于一些分布式的方案我们往往还需要诸如TCC这样的分布式解决方案。除了以上的问题，我们往往还得考虑缓存和数据库操作的线程安全问题... ...</p> 
+<p>因此，根据具体的业务流程来具体定制并仔细推敲是我们在选择缓存更新策略前必须要执行的一步。</p> 
+<h2 id="%E4%B8%89.%E7%BC%93%E5%AD%98%E9%97%AE%E9%A2%98">三.缓存问题</h2> 
+<p>前面介绍了缓存在企业开发中的基础用法和策略，而对于缓存技术所带来的一些问题也同样成为了面试中的的高频问题，常见的缓存问题诸如缓存穿透，缓存雪崩，缓存击穿等。</p> 
+<h3 id="%E7%BC%93%E5%AD%98%E7%A9%BF%E9%80%8F">缓存穿透</h3> 
+<p>缓存穿透是指客户端请求的数据在缓存中和数据库中都不存在，这样的缓存永远都不会生效，而这些请求最后都会到数据库中，造成了性能的极大损耗。严重的甚至直接会导致系统的崩溃。</p> 
+<p>笔者这里给出图示：</p> 
+<p><img alt="" height="405" src="https://images2.imgbox.com/fc/62/9tBtdYCc_o.png" width="468"></p> 
+<h4 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E7%BC%93%E5%AD%98%E7%A9%BA%E5%AF%B9%E8%B1%A1">解决方案：缓存空对象</h4> 
+<p>当查询的数据在数据库中不存在时，我们将这个<strong>空结果</strong>作为一个<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">空值(null)</span></strong></span>缓存到<strong>Redis</strong>中，对于这个<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">空值(null)</span></strong></span>，我们设置<strong>一段时间(TTL)</strong>后这个<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">空值(null)</span></strong></span>失效过期。这样就可以大大的减轻数据库的压力，即使有恶意请求发起不存在的查询，在<strong>Redis</strong>中也会查询到对应的空结果并返回，这个值虽然没有意义，但是却可以避免进一步向数据库发起请求。</p> 
+<p><img alt="" height="467" src="https://images2.imgbox.com/a0/6d/92Ms9QON_o.png" width="569"></p> 
+<p>对于这样的解决方案</p> 
+<ul><li>优点：实现简单，维护方便</li><li>缺点：会造成额外的内存消耗，并且可能会造成短期的数据不一致</li></ul> 
+<p>这里做出解释：假如<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">空值(null)</span></strong></span>还没有过期的时候用户来查询这个值的，与此同时我们在数据库中插入了用户想要查询的值，用户就会从Redis中拿到这个<span style="color:#be191c;"><strong><span style="background-color:#ffd7b9;">空值(null)</span></strong></span>，而非用户想要查询的值，也就是缺点中所说的短期的数据不一致。</p> 
+<h4 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E5%B8%83%E9%9A%86%E8%BF%87%E6%BB%A4">解决方案：布隆过滤</h4> 
+<p>在缓存查询之前，先使用布隆过滤器判断该查询是否有可能存在于数据库中。如果布隆过滤器认为查询不存在，直接返回，避免真正去查询数据库，从而减轻数据库压力。这里的布隆过滤器并不是说真的记录了所有的数据，它只是通过一定的算法，对于数据库中的数据进行了哈希，使得它有能力去判断这个数据在数据库中是否存在。</p> 
+<p><img alt="" height="527" src="https://images2.imgbox.com/e7/9f/SIjU7lh0_o.png" width="601"></p> 
+<p>对于这样的解决方案</p> 
+<ul><li>优点：内存占用少，没有多余的key</li><li>缺点：实现复杂，存在误判可能</li></ul> 
+<h3 id="%E7%BC%93%E5%AD%98%E9%9B%AA%E5%B4%A9">缓存雪崩</h3> 
+<p>缓存雪崩是指在同一时间段，大量的缓存key同时失效或者Redis服务宕机，导致大量请求同时到达数据库，从而给数据库带来非常大的压力。</p> 
+<p><img alt="" height="403" src="https://images2.imgbox.com/76/c8/5w3a17nX_o.png" width="380"></p> 
+<p>为了解决或者避免这样的问题，我们做出相对应的对策，既然大量key同时失效就会导致雪崩，那我们就可以对于key的失效时间做出干预，使用随机的TTL来限制key的失效时间，避免他们同一时间失效；或者增加Redis的集群服务；又或者给业务添加多级缓存... ...</p> 
+<h4 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" style="background-color:transparent;">解决方案</h4> 
+<p>我们做出总结如下：</p> 
+<ol><li> <p><strong>设置不同的缓存失效时间</strong>：可以在缓存失效时间上加上一个随机值，使得缓存失效的时间分散开来，避免大量缓存同时失效。</p> </li><li> <p><strong>使用多级缓存</strong>：可以将缓存分为多级，如本地缓存、分布式缓存等，不同级别的缓存设置不同的失效时间，当一级缓存失效时，可以尽量从其他级别的缓存中获取数据，减少对数据库的直接访问。</p> </li><li> <p><strong>缓存预热</strong>：在系统启动或者数据更新时，预先将热点数据加载到缓存中，避免在高并发时才去加载数据导致缓存失效。</p> </li><li> <p><strong>使用限流措施</strong>：在缓存失效后，可以对数据库的访问进行限流，避免大量请求同时访问数据库，可以采用队列等方式进行排队处理。</p> </li><li> <p><strong>使用集群模式</strong>：利用Redis集群的高可用性，通过哨兵模式在主机宕机后立刻在从机中选择一台机器来顶替主机的工作。</p> </li><li> <p><strong>使用备份缓存</strong>：可以设置备份缓存，当主缓存失效时，可以从备份缓存中获取数据，保证系统的稳定性。</p> </li></ol> 
+<h3 id="%E7%BC%93%E5%AD%98%E5%87%BB%E7%A9%BF">缓存击穿</h3> 
+<p>缓存击穿是指针对某个热点数据，它的<strong>key</strong>失效了，由于缓存中没有该数据，导致大量的请求直接打到数据库上，造成数据库瞬时压力过大的现象。与缓存雪崩不同的是，缓存击穿是针对某个特定的缓存键（<strong>Key</strong>）失效导致的问题，而不是整个缓存层失效。</p> 
+<p>举个例子来说，前些天小米汽车发布了，对于发售那一刻，全国各地大量的请求数据同时来访问小米汽车这一个商品，而这里的小米汽车也就是我们所说的热点数据<strong>key</strong>。</p> 
+<p>缓存击穿通常发生在如下场景下：某个热点数据的缓存过期，此时有大量的请求同时访问这个热点数据，由于缓存中没有该数据，每个请求都直接访问数据库，造成数据库瞬时压力过大。</p> 
+<p>在前文中，我们有说到缓存的更新策略，对于缓存中不存在的数据，我们会查询数据库然后重新载入缓存。而如果这个流程发生在一个热点数据的情景下，就可能会发生缓存击穿的问题。笔者这里给出一个图示例子：</p> 
+<p><img alt="" height="774" src="https://images2.imgbox.com/c4/51/PGsgPaXr_o.png" width="1200"></p> 
+<p>如上图所示，在短时间内就会有大量的请求同时访问数据库中的某个热点数据。</p> 
+<h4 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E4%BA%92%E6%96%A5%E9%94%81">解决方案：互斥锁</h4> 
+<p>互斥锁解决缓存击穿问题的理念是避免大量的请求同时重建缓存数据，在重建缓存数据之前，先加上一个锁，当线程来重建缓存数据的时候就会来获取这个锁，获取成功就说明当前还没有线程在重建缓存数据，那么该线程就来重建缓存数据；获取失败就说明当前已有别的线程正在重建缓存数据，那么该线程就进行阻塞等待。这样就可以避免大量数据同时请求数据库来重建缓存。</p> 
+<p>笔者这里还是给出图示：</p> 
+<p><img alt="" height="655" src="https://images2.imgbox.com/76/5c/kpIpheNn_o.png" width="581"></p> 
+<p>对于互斥锁的解决方案有以下特性</p> 
+<ul><li>优点：额外的内存消耗，可以保证数据的一致性，实现简单</li><li>缺点：线程需要等待导致性能受影响，且可能有死锁风险</li></ul> 
+<h4 id="%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88%EF%BC%9A%E9%80%BB%E8%BE%91%E8%BF%87%E6%9C%9F" style="background-color:transparent;">解决方案：逻辑过期</h4> 
+<p>在解决缓存穿透问题时，逻辑过期是一种常用的方法。逻辑过期指的是在缓存中设置一个较长的过期时间，但在获取缓存数据时，先进行一次快速的检查，如果发现缓存数据应该已经过期（比如根据某个规则判断数据是否存在），则立即返回一个默认值或者空值，同时异步更新缓存。这样可以避免恶意请求直接访问数据库，减轻数据库的压力。</p> 
+<p>逻辑过期的优点是可以避免频繁地查询数据库，减轻数据库的负载，并且能够在一定程度上解决缓存穿透问题。但需要注意的是，逻辑过期只是一种应对策略，实际使用时需要根据具体情况综合考虑，并且需要确保异步更新缓存的操作是可靠的。</p> 
+<p>笔者这里还是给出图示：</p> 
+<p><img alt="" height="498" src="https://images2.imgbox.com/02/8f/P6xLGN1V_o.png" width="674"></p> 
+<p>对于逻辑过期的解决方案，它有以下特性：</p> 
+<ul><li>优点：线程无需等待，性能较好</li><li>缺点：不能保证数据的一致性，有额外的内存消耗，实现复杂</li></ul> 
+<hr> 
+<hr> 
+<hr> 
+<p><img alt="" height="23" src="https://images2.imgbox.com/8d/c7/y3P9ROWW_o.png" width="23"><strong> 本次的分享就到此为止了，希望我的分享能给您带来帮助，创作不易也欢迎大家三连支持，你们的点赞就是博主更新最大的动力！</strong><img alt="" height="23" src="https://images2.imgbox.com/70/70/4aQAoe3W_o.png" width="23"><strong>如有不同意见，欢迎评论区积极讨论交流，让我们一起学习进步！</strong><img alt="" height="23" src="https://images2.imgbox.com/b8/18/YeNngriM_o.png" width="23"><strong>有相关问题也可以私信博主，评论区和私信都会认真查看的，我们下次再见</strong><img alt="" height="23" src="https://images2.imgbox.com/23/86/tmqFld5J_o.png" width="23"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/1eacc761b070bdb7d9dae9ff626d9c7b/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Android Studio超级详细讲解下载、安装配置教程（建议收藏）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/2c2e09499759ea37d76790eee36390a8/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">AIGC的崛起：定义未来内容创作的新纪元</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

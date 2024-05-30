@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>ClickHouse - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/431fce03ced70d56c9ebc70ed3daa1b6/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="ClickHouse">
+  <meta property="og:description" content="1 .ClickHouse 的特点 ClickHouse 是俄罗斯的 Yandex 于 2016 年开源的列式存储数据库（DBMS），使用 C&#43;&#43; 语言编写，主要用于在线分析处理查询（OLAP），能够使用 SQL 查询实时生成分析数据报告。
+OLAP（On-line Analytical Processing，联机分析处理）是在基于数据仓库多维模型的基础上实现的面向分析的各类操作的集合。可以比较下其与传统的OLTP（On-line Transaction Processing，联机事务处理）的区别来看一下它的特点：
+1. 列式存储 以下面的表为例：
+1）采用行式存储时，数据在磁盘上的组织结构为：
+好处是想查某个人所有的属性时，可以通过一次磁盘查找加顺序读取就可以。但是当想查所有人的年龄时，需要不停的查找，或者全表扫描才行，遍历的很多数据都是不需要的。
+行式新增比较快，直接往后面添加，列式有个寻址的过程
+2）采用列式存储时，数据在磁盘上的组织结构为：
+这时想查所有人的年龄只需把年龄那一列拿出来就可以了
+3）列式储存的好处：
+对于列的聚合，计数，求和等统计操作原因优于行式存储。
+由于某一列的数据类型都是相同的，针对于数据存储更容易进行数据压缩。
+2. 多样化引擎 ClickHouse 和 MySQL 类似，把表级的存储引擎插件化，根据表的不同需求可以设定不同 的存储引擎。目前包括合并树、日志、接口和其他四大类 20 多种引擎。
+3. 高吞吐写入能力 ClickHouse 采用类 LSM Tree的结构。
+LSM-Tree：Log-Structured Merge Tree，翻译成中文是：日志结构合并树。LSM-tree 核心是将写入操作与合并操作分离，通过将数据写入日志文件和内存缓存，然后定期进行合并操作来提高写入和查询的性能。
+数据写入后定期在后台 Compaction。通过类 LSM tree 的结构，ClickHouse 在数据导入时全部是顺序 append 写，(是随机写的6000倍)，写入后数据段不可更改，(更新的用版本号标记，查询时返回新的，合并时删除老的)，在后台 compaction 时也是多个段 merge sort（归并排序） 后顺序写回磁盘。顺序写的特性，充分利用了磁盘的吞吐能力，即便在 HDD 上也有着优异的写入性能。
+官方公开 benchmark 测试显示能够达到 50MB-200MB/s 的写入吞吐能力，按照每行 100Byte 估算，大约相当于 50W-200W 条/s 的写入速度。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-20T17:29:50+08:00">
+    <meta property="article:modified_time" content="2024-05-20T17:29:50+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">ClickHouse</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="1_ClickHouse__0"></a>1 .ClickHouse 的特点</h2> 
+<p>ClickHouse 是俄罗斯的 Yandex 于 2016 年开源的<mark>列式存储数据库</mark>（DBMS），使用 C++ 语言编写，主要用于<mark>在线分析处理查询</mark>（OLAP），能够使用 <mark>SQL 查询</mark>实时生成分析数据报告。</p> 
+<p>OLAP（On-line Analytical Processing，联机分析处理）是在基于数据仓库多维模型的基础上实现的<mark>面向分析</mark>的各类操作的集合。可以比较下其与传统的OLTP（On-line Transaction Processing，<strong>联机事务处理</strong>）的区别来看一下它的特点：</p> 
+<p><img src="https://images2.imgbox.com/89/b9/DYnZBX9L_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="1__7"></a>1. 列式存储</h3> 
+<p>以下面的表为例：</p> 
+<p><img src="https://images2.imgbox.com/1e/f2/YuMOuZRr_o.png" alt="在这里插入图片描述"></p> 
+<p>1）采用<strong>行式存储</strong>时，数据在磁盘上的组织结构为：<br> <img src="https://images2.imgbox.com/59/6b/4Z7KTiiN_o.png" alt="在这里插入图片描述"></p> 
+<p>好处是想查某个人所有的属性时，可以通过一次磁盘查找加顺序读取就可以。但是当想查所有人的年龄时，需要不停的查找，或者全表扫描才行，遍历的很多数据都是不需要的。</p> 
+<p>行式新增比较快，直接往后面添加，列式有个寻址的过程</p> 
+<p>2）采用<strong>列式存储</strong>时，数据在磁盘上的组织结构为：<br> <img src="https://images2.imgbox.com/6f/09/WNLf7pW0_o.png" alt="在这里插入图片描述"><br> 这时想查所有人的年龄只需把年龄那一列拿出来就可以了</p> 
+<p>3）列式储存的好处：</p> 
+<p>对于列的<mark>聚合，计数，求和</mark>等统计操作原因优于行式存储。</p> 
+<p>由于某一列的数据类型都是相同的，针对于数据存储更容易进行<mark>数据压缩</mark>。</p> 
+<h3><a id="2__30"></a>2. 多样化引擎</h3> 
+<p>ClickHouse 和 MySQL 类似，把表级的存储引擎插件化，根据表的不同需求可以设定不同 的存储引擎。目前包括<strong>合并树、日志、接口</strong>和<strong>其他</strong>四大类 20 多种引擎。</p> 
+<h3><a id="3__34"></a>3. 高吞吐写入能力</h3> 
+<p>ClickHouse 采用类 LSM Tree的结构。</p> 
+<p>LSM-Tree：Log-Structured Merge Tree，翻译成中文是：日志结构合并树。LSM-tree 核心是<strong>将写入操作与合并操作分离，通过将数据写入日志文件和内存缓存，然后定期进行合并操作来提高写入和查询的性能</strong>。</p> 
+<p>数据写入后定期在后台 Compaction。通过类 LSM tree 的结构，ClickHouse 在数据导入时全部是<mark>顺序 append</mark> 写，(是随机写的6000倍)，<strong>写入后数据段不可更改</strong>，(更新的用版本号标记，查询时返回新的，合并时删除老的)，在后台 compaction 时也是多个段 merge sort（归并排序） 后顺序写回磁盘。顺序写的特性，充分利用了磁盘的吞吐能力，即便在 HDD 上也有着优异的写入性能。</p> 
+<p>官方公开 benchmark 测试显示能够达到 50MB-200MB/s 的写入吞吐能力，按照每行 100Byte 估算，大约相当于 50W-200W 条/s 的写入速度。</p> 
+<h3><a id="4_44"></a>4.数据分区与线程级并行</h3> 
+<p>分区的目的：避免全局扫描</p> 
+<p>ClickHouse 将数据划分为多个 partition，每个 partition 再进一步划分为多个 index granularity(索引粒度)，然后通过多个 CPU核心分别处理其中的一部分来实现并行数据处理。</p> 
+<p>单个查询多线程同时执行，在这种设计下，<mark>单条 Query 就能利用整机所有 CPU</mark>。</p> 
+<p>极致的并行处理能力，极大的降低了查询延时。 所以，ClickHouse 即使对于大量数据的查询也能够化整为零平行处理。但是有一个弊端 就是对于单条查询使用多 cpu，就不利于同时并发多条查询。所以对于高 qps (Queries Per Second每秒钟的查询次数)的查询业务， ClickHouse 并不是强项。</p> 
+<p>clickhouse不适合做初始存储，适合做已经处理过的大量的，字段特别多的宽表</p> 
+<h2><a id="2__56"></a>2 数据类型</h2> 
+<h3><a id="1__57"></a>1. 整型</h3> 
+<p>固定长度的整型，包括有符号整型或无符号整型。</p> 
+<p>整型范围（-2n-1~2n-1-1）：</p> 
+<p>Int8 - [-128 : 127]<br> Int16 - [-32768 : 32767]<br> Int32 - [-2147483648 : 2147483647]<br> Int64 - [-9223372036854775808 : 9223372036854775807]</p> 
+<p>无符号整型范围（0~2n-1）：</p> 
+<p>UInt8 - [0 : 255] UInt16 - [0 : 65535]<br> UInt16 - [0 : 65535]<br> UInt32 - [0 : 4294967295]<br> UInt64 - [0 : 18446744073709551615]</p> 
+<h3><a id="2__75"></a>2. 浮点型</h3> 
+<p>Float32 - float<br> Float64 – double</p> 
+<p>建议尽可能以整数形式存储数据。</p> 
+<p>例如，将固定精度的数字转换为整数值，如时间用毫秒为单位表示，因为<strong>浮点型进行计算时可能引起四舍五入的误差</strong>。</p> 
+<h3><a id="3__84"></a>3. 布尔型</h3> 
+<p><strong>没有单独的类型来存储布尔值</strong>。可以使用 UInt8 类型，取值限制为 0 或 1。</p> 
+<h3><a id="4__Decimal__88"></a>4. Decimal 型</h3> 
+<p>有符号的浮点数，<strong>可在加、减和乘法运算过程中保持精度</strong>。对于除法，最低有效数字会被丢弃（不舍入）。</p> 
+<p>有三种声明：</p> 
+<p>➢ Decimal32(s)，相当于 Decimal(9-s,s)，有效位数为 1~9<br> ➢ Decimal64(s)，相当于 Decimal(18-s,s)，有效位数为 1~18<br> ➢ Decimal128(s)，相当于 Decimal(38-s,s)，有效位数为 1~38</p> 
+<h3><a id="5__98"></a>5. 字符串</h3> 
+<p>1）String</p> 
+<p>字符串可以<strong>任意长度</strong>的。它可以包含任意的字节集，包含空字节。</p> 
+<p>2）FixedString(N)</p> 
+<p><strong>固定长度 N</strong> 的字符串，N 必须是严格的正自然数。当服务端读取长度小于 N 的字符 串时候，通过在字符串末尾添加空字节来达到 N 字节长度。 当服务端读取长度大于 N 的 字符串时候，将返回错误消息。 与 String 相比，极少会使用 FixedString，因为使用起来不是很方便。</p> 
+<h3><a id="6__108"></a>6. 枚举类型</h3> 
+<p>包括 Enum8 和 Enum16 类型。<strong>Enum 保存 ‘string’= integer 的对应关系</strong>。</p> 
+<p>Enum8 用 ‘String’= Int8 对描述。 Enum16 用 ‘String’= Int16 对描述。</p> 
+<h3><a id="7___114"></a>7. 时间类型</h3> 
+<p>目前 ClickHouse 有三种时间类型</p> 
+<p>➢ Date 接受年-月-日的字符串比如 ‘2019-12-16’<br> ➢ Datetime 接受年-月-日 时:分:秒的字符串比如 ‘2019-12-16 20:50:10<br> ➢ Datetime64 接受年-月-日 时:分:秒.亚秒的字符串比如‘2019-12-16 20:50:10.66’</p> 
+<h3><a id="8___122"></a>8. 数组</h3> 
+<p>Array(T)：由 T 类型元素组成的数组。<br> T 可以是任意类型，包含数组类型。 <strong>但不推荐使用多维数组</strong>，ClickHouse 对多维数组 的支持有限。</p> 
+<p>例如，不能在 MergeTree 表中存储多维数组。</p> 
+<h2><a id="3_129"></a>3.表引擎</h2> 
+<h3><a id="1__131"></a>1. 表引擎的使用</h3> 
+<p>表引擎是 ClickHouse 的一大特色。可以说， <strong>表引擎决定了如何存储表的数据</strong>。包括：<br> ➢ 数据的存储方式和位置，写到哪里以及从哪里读取数据。<br> ➢ 支持哪些查询以及如何支持。<br> ➢ 并发数据访问。<br> ➢ 索引的使用（如果存在）。<br> ➢ 是否可以执行多线程请求。<br> ➢ 数据复制参数。</p> 
+<p>表引擎的使用方式就是必须显式在创建表时定义该表使用的引擎，以及引擎使用的相关参数。<br> 特别注意：引擎的名称大小写敏感</p> 
+<h3><a id="2_TinyLog_144"></a>2. TinyLog</h3> 
+<p>以列文件的形式保存在磁盘上，<strong>不支持索引，没有并发控制</strong>。一般保存少量数据的小表， 生产环境上作用有限。</p> 
+<h3><a id="3_Memory_148"></a>3. Memory</h3> 
+<p>内存引擎，数据以<strong>未压缩的原始形式</strong>直接保存在内存当中，服务器重启数据就会消失。 读写操作不会相互阻塞，<strong>不支持索引</strong>。简单查询下有非常非常高的性能表现（超过 10G/s）。</p> 
+<p>一般用到它的地方不多，除了用来测试，就是在需要非常高的性能，同时数据量又不太大（上限大概 1 亿行）的场景。</p> 
+<h3><a id="4_MergeTree_154"></a>4. MergeTree</h3> 
+<p>ClickHouse 中最强大的表引擎当属 MergeTree（合并树）引擎及该系列（*MergeTree） 中的其他引擎，<strong>支持索引和分区</strong>，地位可以相当于 innodb 之于 Mysql。而且基于 MergeTree， 还衍生除了很多小弟，也是非常有特色的引擎。</p> 
+<pre><code class="prism language-mysql">create table t_order_mt( 
+	id UInt32,
+	sku_id String, 
+	total_amount Decimal(16,2), 
+	create_time Datetime 
+) engine =MergeTree 
+	partition by toYYYYMMDD(create_time) 
+	primary key (id) 
+	order by (id,sku_id);
+</code></pre> 
+<p><img src="https://images2.imgbox.com/09/87/opolHH4p_o.png" alt="在这里插入图片描述"></p> 
+<p>ClickHouse 的primary key<strong>不会加唯一约束</strong></p> 
+<p>MergeTree 其实还有很多参数(绝大多数用默认值即可)，但是这三个参数是更加重要的， 也涉及了关于 MergeTree 的很多概念。</p> 
+<h4><a id="41_partition_by__177"></a>4.1 partition by 分区(可选)</h4> 
+<p><strong>1）作用</strong></p> 
+<p>分区的目的主要是<strong>降低扫描的范围，优化查询速度</strong>（分目录：本地磁盘）</p> 
+<p><strong>2）如果不填</strong></p> 
+<p>只会使用一个分区（目录名：all）</p> 
+<p><strong>3）分区目录</strong></p> 
+<p>MergeTree 是以列文件+索引文件+表定义文件组成的，但是如果设定了分区那么这些文 件就会保存到不同的分区目录中。</p> 
+<p><strong>4）并行</strong></p> 
+<p>分区后，面对涉及跨分区的查询统计，ClickHouse 会<strong>以分区为单位</strong>并行处理。</p> 
+<p><strong>5）数据写入与分区合并</strong></p> 
+<p>任何一个批次的数据写入都会产生一个<strong>临时分区</strong>，不会纳入任何一个已有的分区。写入后的某个时刻（大概 10-15 分钟后），ClickHouse 会<mark>自动执行合并操作</mark>（等不及也可以手动 通过 optimize 执行），把临时分区的数据，合并到已有分区中。</p> 
+<p>例如：</p> 
+<p>再次执行上面的插入操作</p> 
+<p><img src="https://images2.imgbox.com/64/6e/xtqd5h6A_o.png" alt="在这里插入图片描述"></p> 
+<p>查看数据并没有纳入任何分区，手动 optimize 之后再次查询</p> 
+<pre><code class="prism language-mysql">hadoop102 :) optimize table t_order_mt final;
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c1/98/3Tw9zCOp_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="42_primary_key__215"></a>4.2 primary key 主键(可选)</h4> 
+<p>ClickHouse 中的主键，和其他数据库不太一样，它只提供了数据的一级索引，但是却不是唯一约束。这就意味着是可以存在相同 primary key 的数据的。</p> 
+<p>主键的设定主要依据是查询语句中的 where 条件。</p> 
+<p>根据条件通过<strong>对主键</strong>进行某种形式的<strong>二分查找</strong>，能够定位到对应的 index granularity(索引粒度),避免了全表扫描。</p> 
+<p>index granularity(索引粒度)：指在<strong>稀疏索引</strong>中<strong>两个相邻索引对应数据的间隔</strong>。ClickHouse 中的 MergeTree 默认是 8192。官方不建议修改这个值，除非该列存在 大量重复值，比如在一个分区中几万行才有一个不同数据。</p> 
+<p>稀疏索引：</p> 
+<p><img src="https://images2.imgbox.com/03/22/jc9HDJUO_o.png" alt="在这里插入图片描述"></p> 
+<p>稀疏索引的好处就是可以用很少的索引数据，定位更多的数据，代价就是只能定位到索 引粒度的第一行，然后再进行进行一点扫描。</p> 
+<h4><a id="43_order_by_232"></a>4.3 order by（必选）</h4> 
+<p>order by 设定了分区内的数据按照哪些字段顺序进行有序保存。</p> 
+<p>order by 是 MergeTree 中唯一一个必填项，甚至比 primary key 还重要，因为当用户不设置主键的情况，很多处理会依照 order by 的字段进行处理。</p> 
+<p>要求：<mark>主键必须是 order by 字段的前缀字段</mark>。</p> 
+<p>比如 order by 字段是 (id,sku_id) 那么主键必须是 id 或者(id,sku_id)</p> 
+<h4><a id="44__242"></a>4.4 二级索引</h4> 
+<pre><code class="prism language-sql"><span class="token keyword">create</span> <span class="token keyword">table</span> t_order_mt2<span class="token punctuation">(</span> 
+	id UInt32<span class="token punctuation">,</span>
+	sku_id String<span class="token punctuation">,</span> 
+	total_amount <span class="token keyword">Decimal</span><span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">,</span> 
+	create_time <span class="token keyword">Datetime</span>
+    <span class="token keyword">INDEX</span> a total_amount <span class="token keyword">TYPE</span> minmax GRANULARITY <span class="token number">5</span>
+<span class="token punctuation">)</span> <span class="token keyword">engine</span> <span class="token operator">=</span>MergeTree 
+	<span class="token keyword">partition</span> <span class="token keyword">by</span> toYYYYMMDD<span class="token punctuation">(</span>create_time<span class="token punctuation">)</span> 
+	<span class="token keyword">primary</span> <span class="token keyword">key</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span> 
+	<span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token punctuation">(</span>id<span class="token punctuation">,</span>sku_id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>其中 GRANULARITY N 是设定二级索引对于一级索引粒度的粒度。</p> 
+<h4><a id="45__TTL_259"></a>4.5 数据 TTL</h4> 
+<p>TTL 即 Time To Live，MergeTree 提供了可以管理数据表或者列的生命周期的功能。</p> 
+<p><strong>1）列级别 TTL</strong></p> 
+<pre><code class="prism language-mysql">create table t_order_mt2( 
+	id UInt32,
+	sku_id String, 
+	total_amount Decimal(16,2) TTL create_time+interval 10 SECOND,
+	create_time Datetime
+) engine =MergeTree 
+	partition by toYYYYMMDD(create_time) 
+	primary key (id) 
+	order by (id,sku_id);
+</code></pre> 
+<p>手动合并，查看效果到期后，指定的字段数据归 0</p> 
+<p><strong>2）表级 TTL</strong></p> 
+<p>下面的这条语句是数据会在 create_time 之后 10 秒丢失</p> 
+<pre><code class="prism language-sql"><span class="token keyword">alter</span> <span class="token keyword">table</span> t_order_mt3 <span class="token keyword">MODIFY</span> TTL create_time <span class="token operator">+</span> <span class="token keyword">INTERVAL</span> <span class="token number">10</span> <span class="token keyword">SECOND</span><span class="token punctuation">;</span> 
+</code></pre> 
+<p>涉及判断的字段必须是 Date 或者 Datetime 类型，推荐使用分区的日期字段。</p> 
+<p>能够使用的时间周期： - SECOND - MINUTE - HOUR - DAY - WEEK - MONTH - QUARTER - YEAR</p> 
+<h3><a id="5_ReplacingMergeTree_291"></a>5. ReplacingMergeTree</h3> 
+<p>ReplacingMergeTree 是 MergeTree 的一个变种，它存储特性完全继承 MergeTree，只是 多了一个<mark>去重</mark>的功能。 尽管 MergeTree 可以设置主键，但是 primary key 其实没有唯一约束 的功能。如果你想处理掉重复的数据，可以借助这个 ReplacingMergeTree。</p> 
+<p><strong>1）去重时机</strong></p> 
+<p>数据的去重<mark>只会在合并的过程中出现</mark>。合并会在未知的时间在后台进行，所以你无法预先作出计划。有一些数据可能仍未被处理。</p> 
+<p><strong>2）去重范围</strong></p> 
+<p>如果表经过了分区，去重<mark>只会在分区内部进行去重</mark>，不能执行跨分区的去重。</p> 
+<p>所以 ReplacingMergeTree 能力有限， ReplacingMergeTree 适用于在后台清除重复的数 据以节省空间，但是它不保证没有重复的数据出现</p> 
+<p><strong>3）案例演示</strong></p> 
+<pre><code class="prism language-sql"><span class="token keyword">create</span> <span class="token keyword">table</span> t_order_rmt<span class="token punctuation">(</span> 
+	id UInt32<span class="token punctuation">,</span>
+	sku_id String<span class="token punctuation">,</span> 
+	total_amount <span class="token keyword">Decimal</span><span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>
+	create_time <span class="token keyword">Datetime</span>
+<span class="token punctuation">)</span>  <span class="token keyword">engine</span> <span class="token operator">=</span>ReplacingMergeTree<span class="token punctuation">(</span>create_time<span class="token punctuation">)</span>
+	<span class="token keyword">partition</span> <span class="token keyword">by</span> toYYYYMMDD<span class="token punctuation">(</span>create_time<span class="token punctuation">)</span> 
+	<span class="token keyword">primary</span> <span class="token keyword">key</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span> 
+	<span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token punctuation">(</span>id<span class="token punctuation">,</span>sku_id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>ReplacingMergeTree() 填入的参数为版本字段，重复数据保留版本字段值最大的。</p> 
+<p>如果不填版本字段，默认按照插入顺序保留最后一条。</p> 
+<p><img src="https://images2.imgbox.com/f4/c1/FPKkw62c_o.png" alt="在这里插入图片描述"></p> 
+<p>手动合并</p> 
+<pre><code class="prism language-mysql">OPTIMIZE TABLE t_order_rmt FINAL;
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a8/2c/N0qtJija_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>4）通过测试得到结论</strong></p> 
+<p>➢ 实际上是使用 order by 字段作为唯一键<br> ➢ 去重不能跨分区<br> ➢ 只有同一批插入或合并分区时才会进行去重 ➢ 认定重复的数据保留，版本字段值最大的<br> ➢ 如果版本字段相同则按插入顺序保留最后一笔</p> 
+<h3><a id="6_SummingMergeTree_341"></a>6. SummingMergeTree</h3> 
+<p>对于不查询明细，只关心以维度进行汇总聚合结果的场景。如果只使用普通的MergeTree 的话，无论是存储空间的开销，还是查询时临时聚合的开销都比较大。</p> 
+<p>ClickHouse 为了这种场景，提供了一种能够“预聚合”的引擎 SummingMergeTree</p> 
+<pre><code class="prism language-sql"><span class="token keyword">create</span> <span class="token keyword">table</span> t_order_rmt<span class="token punctuation">(</span> 
+	id UInt32<span class="token punctuation">,</span>
+	sku_id String<span class="token punctuation">,</span> 
+	total_amount <span class="token keyword">Decimal</span><span class="token punctuation">(</span><span class="token number">16</span><span class="token punctuation">,</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token punctuation">,</span>
+	create_time <span class="token keyword">Datetime</span>
+<span class="token punctuation">)</span>  <span class="token keyword">engine</span> <span class="token operator">=</span>SummingMergeTree<span class="token punctuation">(</span>total_amount<span class="token punctuation">)</span>
+	<span class="token keyword">partition</span> <span class="token keyword">by</span> toYYYYMMDD<span class="token punctuation">(</span>create_time<span class="token punctuation">)</span> 
+	<span class="token keyword">primary</span> <span class="token keyword">key</span> <span class="token punctuation">(</span>id<span class="token punctuation">)</span> 
+	<span class="token keyword">order</span> <span class="token keyword">by</span> <span class="token punctuation">(</span>id<span class="token punctuation">,</span>sku_id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e1/f2/4EhOKJ6n_o.png" alt="在这里插入图片描述"></p> 
+<p>手动合并</p> 
+<pre><code class="prism language-mysql">OPTIMIZE TABLE t_order_rmt FINAL;
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f8/06/LQKnyHjN_o.png" alt="在这里插入图片描述"></p> 
+<p>通过结果可以得到以下结论</p> 
+<p>➢ 以 SummingMergeTree（）中指定的列作为汇总数据列<br> ➢ 可以填写多列必须数字列，如果不填，以所有非维度列且为数字列的字段为汇总数 据列<br> ➢ 以 order by 的列为准，作为维度列<br> ➢ 其他的列按插入顺序保留第一行<br> ➢ 不在一个分区的数据不会被聚合<br> ➢ 只有在同一批次插入或分片合并时才会进行聚合</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b7de486ea6d7e9399fcefd28ffeaf60d/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">数据仓库之ClickHouse</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/75a4f6df83a99c84dcce4e8ed5fd2a60/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Linux】进程信号及相关函数/系统调用的简单认识与使用</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

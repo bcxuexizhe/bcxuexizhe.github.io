@@ -1,0 +1,146 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MySQL的表级锁 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/b993b5133c105c4c2e5a10b0c9a1ff28/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MySQL的表级锁">
+  <meta property="og:description" content="📝个人主页：五敷有你 🔥系列专栏：面经
+⛺️稳中求进，晒太阳
+表级锁 介绍 对于表锁，分为两类：
+表共享读锁表独占写锁 语法 1. 加锁：lock tables 表名... read/write
+2. 释放锁：unlock tables /客户端断开。
+特点： 1)读锁：不影响所有客户端的读，但会阻止所有客户端的写。
+如图加了读锁后，进行操作。
+结果显示，加了读锁不会影响所有客户端的读，但是会阻塞客户端的写。
+2）写锁：会阻塞其他客户端的读，又会阻塞 其他客户端的写。
+如图加了写锁，进行操作。
+结果显示：加了写锁不会影响本客户端的写和读，但其他客户端无法读写。
+元数据锁（meta data lock，MDL） MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。MDL锁主要作用是维 护表元数据的数据一致性，在表上有活动事务的时候，不可以对元数据进行写入操作。为了避免DML与 DDL冲突，保证读写的正确性。
+这里的元数据，大家可以简单理解为就是一张表的表结构。 也就是说，某一张表涉及到未提交的事务 时，是不能够修改这张表的表结构的。
+意向锁 为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，使得表锁不用检查每行 数据是否加锁，使用意向锁来减少表锁的检查。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-11T08:00:00+08:00">
+    <meta property="article:modified_time" content="2024-05-11T08:00:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MySQL的表级锁</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p><img alt="" height="132" src="https://images2.imgbox.com/28/c0/i1gUoJLj_o.png" width="124"></p> 
+<p style="text-align:center;"></p> 
+<p style="text-align:center;"><strong><span style="color:#4da8ee;">       📝个人主页：<a href="https://blog.csdn.net/m0_62645012?" title="五敷有你">五敷有你</a>      </span></strong></p> 
+<p style="text-align:center;"><strong><span style="color:#956fe7;"> 🔥系列专栏：<a href="https://blog.csdn.net/m0_62645012/category_12632093.html" title="面经">面经</a></span></strong></p> 
+<p style="text-align:center;"><span style="color:#ff9900;"><strong>⛺️稳中求进，晒太阳</strong></span><img alt="" src="https://images2.imgbox.com/2b/b7/6qLxUWcW_o.gif"></p> 
+<h3>表级锁</h3> 
+<h4>介绍</h4> 
+<p>对于表锁，分为两类：</p> 
+<ul><li>表共享读锁</li><li>表独占写锁</li></ul> 
+<h4>语法</h4> 
+<p>1. 加锁：lock tables 表名... read/write</p> 
+<p>2. 释放锁：unlock tables /客户端断开。</p> 
+<h4>特点：</h4> 
+<p>1)读锁：不影响所有客户端的读，但会阻止所有客户端的写。</p> 
+<p>如图加了读锁后，进行操作。</p> 
+<p><img alt="" height="440" src="https://images2.imgbox.com/4a/76/7DgXmPQV_o.png" width="1200"></p> 
+<p><span style="color:#ff9900;"><strong>结果显示，加了读锁不会影响所有客户端的读，但是会阻塞客户端的写。</strong></span></p> 
+<p></p> 
+<p>2）写锁：会阻塞其他客户端的读，又会阻塞 其他客户端的写。</p> 
+<p>如图加了写锁，进行操作。</p> 
+<p><img alt="" height="423" src="https://images2.imgbox.com/88/30/reJrI1Ac_o.png" width="1200"></p> 
+<p><span style="color:#ff9900;"><strong>结果显示：加了写锁不会影响本客户端的写和读，但其他客户端无法读写。</strong></span></p> 
+<p></p> 
+<h4>元数据锁（meta data lock，MDL）</h4> 
+<p>        MDL加锁过程是系统自动控制，无需显式使用，在访问一张表的时候会自动加上。<span style="color:#ff9900;"><strong>MDL锁主要作用是维 护表元数据的数据一致性</strong></span>，在表上有活动事务的时候，不可以对元数据进行写入操作。为了避免DML与 DDL冲突，保证读写的正确性。</p> 
+<p>        这里的<span style="color:#ff9900;"><strong>元数据，大家可以简单理解为就是一张表的表结构</strong></span>。 也就是说，某一张表涉及到未提交的事务 时，是不能够修改这张表的表结构的。</p> 
+<h4>意向锁</h4> 
+<p>        <span style="color:#fe2c24;"><strong>为了避免DML在执行时，加的行锁与表锁的冲突，在InnoDB中引入了意向锁，</strong></span>使得表锁不用检查每行 数据是否加锁，使用意向锁来减少表锁的检查。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/a301ee4d41a56ccf9ef0a2d3e7d0ebbc/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【研发日记】Matlab/Simulink避坑指南(十二)——Initialize Function执行Bug</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/6ca406fe4a54bce1315d36502a8bc7e4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【redis】Redis五种常用数据类型和内部编码,以及对String字符串类型的总结</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

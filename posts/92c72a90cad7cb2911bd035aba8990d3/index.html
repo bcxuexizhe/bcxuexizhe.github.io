@@ -1,0 +1,688 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Kafka 3.x.x 入门到精通（03）——Kafka基础生产消息 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/92c72a90cad7cb2911bd035aba8990d3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Kafka 3.x.x 入门到精通（03）——Kafka基础生产消息">
+  <meta property="og:description" content="Kafka 3.x.x 入门到精通（03）——对标尚硅谷Kafka教程 2. Kafka基础2.1 集群部署2.2 集群启动2.3 创建主题2.4 生产消息2.4.1 生产消息的基本步骤2.4.2 生产消息的基本代码2.4.3 发送消息2.4.3.1 拦截器2.4.3.1.1 增加拦截器类2.4.3.1.2 配置拦截器 2.4.3.2 回调方法2.4.3.3 异步发送2.4.3.4 同步发送 2.4.4 消息分区2.4.4.1 指定分区2.4.4.2 未指定分区⚠️2.4.4.3 分区器2.4.4.3.1 增加分区器类2.4.4.3.2 配置分区器 2.4.5 消息可靠性2.4.5.1 ACK = 02.4.5.2 ACK = 12.4.5.3 ACK = -1（ALL）(默认) 2.4.6 消息去重 &amp; 有序2.4.6.1数据重试2.4.6.2数据乱序2.4.6.3 数据幂等性2.4.6.4数据事务2.4.6.4.1 普通数据发送流程2.4.6.4.2 事务数据发送流程2.4.6.4.3 事务提交流程2.4.6.4.4 事务操作代码 2.4.6.5 数据传输语义 我自己的一个小总结： 本文档参看的视频是：
+尚硅谷Kafka教程，2024新版kafka视频，零基础入门到实战黑马程序员Kafka视频教程，大数据企业级消息队列kafka入门到精通小朋友也可以懂的Kafka入门教程，还不快来学https://zhuanlan.zhihu.com/p/375538383kafka高级特性之生产者,消费者 本文档参看的文档是：
+尚硅谷官方文档，并在基础上修改 完善！非常感谢尚硅谷团队！！！！ 在这之前大家可以看我以下几篇文章，循序渐进：
+❤️Kafka 3.x.x 入门到精通（01）——对标尚硅谷Kafka教程
+❤️Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程
+2. Kafka基础 2.1 集群部署 ❤️Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程
+2.2 集群启动 ❤️Kafka 3.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-26T21:29:21+08:00">
+    <meta property="article:modified_time" content="2024-04-26T21:29:21+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Kafka 3.x.x 入门到精通（03）——Kafka基础生产消息</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night-eighties">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>Kafka 3.x.x 入门到精通（03）——对标尚硅谷Kafka教程</h4> 
+ <ul><li><a href="#2_Kafka_24" rel="nofollow">2. Kafka基础</a></li><li><ul><li><a href="#21__25" rel="nofollow">2.1 集群部署</a></li><li><a href="#22__27" rel="nofollow">2.2 集群启动</a></li><li><a href="#23__29" rel="nofollow">2.3 创建主题</a></li><li><a href="#24__35" rel="nofollow">2.4 生产消息</a></li><li><ul><li><a href="#241__39" rel="nofollow">2.4.1 生产消息的基本步骤</a></li><li><a href="#242__100" rel="nofollow">2.4.2 生产消息的基本代码</a></li><li><a href="#243__158" rel="nofollow">2.4.3 发送消息</a></li><li><ul><li><a href="#2431__159" rel="nofollow">2.4.3.1 拦截器</a></li><li><ul><li><a href="#24311__173" rel="nofollow">2.4.3.1.1 增加拦截器类</a></li><li><a href="#24312__229" rel="nofollow">2.4.3.1.2 配置拦截器</a></li></ul> 
+     </li><li><a href="#2432__274" rel="nofollow">2.4.3.2 回调方法</a></li><li><a href="#2433__322" rel="nofollow">2.4.3.3 异步发送</a></li><li><a href="#2434__379" rel="nofollow">2.4.3.4 同步发送</a></li></ul> 
+    </li><li><a href="#244__433" rel="nofollow">2.4.4 消息分区</a></li><li><ul><li><a href="#2441__434" rel="nofollow">2.4.4.1 指定分区</a></li><li><a href="#2442__462" rel="nofollow">2.4.4.2 未指定分区⚠️</a></li><li><a href="#2443__487" rel="nofollow">2.4.4.3 分区器</a></li><li><ul><li><a href="#24431__496" rel="nofollow">2.4.4.3.1 增加分区器类</a></li><li><a href="#24432__550" rel="nofollow">2.4.4.3.2 配置分区器</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#245__604" rel="nofollow">2.4.5 消息可靠性</a></li><li><ul><li><a href="#2451_ACK__0_617" rel="nofollow">2.4.5.1 ACK = 0</a></li><li><a href="#2452_ACK__1_631" rel="nofollow">2.4.5.2 ACK = 1</a></li><li><a href="#2453_ACK__1ALL_641" rel="nofollow">2.4.5.3 ACK = -1（ALL）(默认)</a></li></ul> 
+    </li><li><a href="#246____661" rel="nofollow">2.4.6 消息去重 &amp; 有序</a></li><li><ul><li><a href="#2461_662" rel="nofollow">2.4.6.1数据重试</a></li><li><a href="#2462_681" rel="nofollow">2.4.6.2数据乱序</a></li><li><a href="#2463__700" rel="nofollow">2.4.6.3 数据幂等性</a></li><li><a href="#2464_748" rel="nofollow">2.4.6.4数据事务</a></li><li><ul><li><a href="#24641__754" rel="nofollow">2.4.6.4.1 普通数据发送流程</a></li><li><a href="#24642__762" rel="nofollow">2.4.6.4.2 事务数据发送流程</a></li><li><a href="#24643__770" rel="nofollow">2.4.6.4.3 事务提交流程</a></li><li><a href="#24644__786" rel="nofollow">2.4.6.4.4 事务操作代码</a></li></ul> 
+     </li><li><a href="#2465__840" rel="nofollow">2.4.6.5 数据传输语义</a></li></ul> 
+   </li></ul> 
+   </li><li><a href="#_852" rel="nofollow">我自己的一个小总结：</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<p><img src="https://images2.imgbox.com/7f/04/IVTLfagD_o.jpg" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/c7/12/cse7OblN_o.png" alt="在这里插入图片描述"></p> 
+<p>本文档参看的视频是：</p> 
+<ul><li>尚硅谷Kafka教程，2024新版kafka视频，零基础入门到实战</li><li><a href="https://www.bilibili.com/video/BV19y4y1b7Uo/?spm_id_from=333.337.search-card.all.click&amp;vd_source=9beb0a2f0cec6f01c2433a881b54152c" rel="nofollow">黑马程序员Kafka视频教程，大数据企业级消息队列kafka入门到精通</a></li><li><a href="https://www.bilibili.com/video/BV1vx411f7hA/?spm_id_from=333.337.search-card.all.click&amp;vd_source=9beb0a2f0cec6f01c2433a881b54152c" rel="nofollow">小朋友也可以懂的Kafka入门教程，还不快来学</a></li><li>https://zhuanlan.zhihu.com/p/375538383</li><li><a href="https://www.bilibili.com/video/BV1UD421J7cB/?spm_id_from=333.337.search-card.all.click&amp;vd_source=9beb0a2f0cec6f01c2433a881b54152c" rel="nofollow">kafka高级特性之生产者,消费者</a></li></ul> 
+<p>本文档参看的文档是：</p> 
+<ul><li>尚硅谷官方文档，并在基础上修改 完善！非常感谢尚硅谷团队！！！！</li></ul> 
+<p>在这之前大家可以看我以下几篇文章，循序渐进：</p> 
+<p>❤️<a href="https://blog.csdn.net/weixin_46225503/article/details/137877580?spm=1001.2014.3001.5501">Kafka 3.x.x 入门到精通（01）——对标尚硅谷Kafka教程</a></p> 
+<p>❤️<a href="https://blog.csdn.net/weixin_46225503/article/details/138154589?spm=1001.2014.3001.5501">Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程</a></p> 
+<p><img src="https://images2.imgbox.com/25/87/QwlkpvxO_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="2_Kafka_24"></a>2. Kafka基础</h2> 
+<h3><a id="21__25"></a>2.1 集群部署</h3> 
+<p>❤️<a href="https://blog.csdn.net/weixin_46225503/article/details/138154589?spm=1001.2014.3001.5501">Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程</a></p> 
+<h3><a id="22__27"></a>2.2 集群启动</h3> 
+<p>❤️<a href="https://blog.csdn.net/weixin_46225503/article/details/138154589?spm=1001.2014.3001.5501">Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程</a></p> 
+<h3><a id="23__29"></a>2.3 创建主题</h3> 
+<p>❤️<a href="https://blog.csdn.net/weixin_46225503/article/details/138154589?spm=1001.2014.3001.5501">Kafka 3.x.x 入门到精通（02）——对标尚硅谷Kafka教程</a></p> 
+<p><img src="https://images2.imgbox.com/c5/1e/MjG6YKrc_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="24__35"></a>2.4 生产消息</h3> 
+<blockquote> 
+ <p>Topic主题已经创建好了，接下来我们就可以向<strong>该主题生产消息</strong>了，这里我们采用Java代码通过<code>Kafka Producer API</code>的方式生产数据。</p> 
+</blockquote> 
+<h4><a id="241__39"></a>2.4.1 生产消息的基本步骤</h4> 
+<p><strong>（一）创建Map类型的配置对象，根据场景增加相应的配置属性。</strong></p> 
+<p><strong>（二）创建待发送数据</strong></p> 
+<p><font color="red"><strong>在kafka中传递的数据我们称之为消息（message）或记录(record)，所以Kafka发送数据前，需要将待发送的数据封装为指定的数据模型：</strong></font></p> 
+<blockquote> 
+ <p>下面的代码，我们很熟悉吧~ 包括topic、key、value<br> <img src="https://images2.imgbox.com/d5/99/6XnHbOwT_o.png" alt="在这里插入图片描述"><br> 但是！ 其实对于表述一份完整的Record 是不完整的！那完整的是什么样的呢~~</p> 
+</blockquote> 
+<p>like this~<br> <img src="https://images2.imgbox.com/0f/6d/fulBRA4X_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/c9/b7/DrXYYUzF_o.png" alt="在这里插入图片描述"></p> 
+<p><font color="bluee"><strong>相关属性必须在构建数据模型时指定，其中主题和value的值是必须要传递的。如果配置中开启了自动创建主题，那么Topic主题可以不存在。value就是我们需要真正传递的数据了，而Key可以用于数据的分区定位。</strong></font></p> 
+<p><strong>（三）创建生产者对象，发送生产的数据：</strong></p> 
+<p>根据前面提供的配置信息创建生产者对象，通过这个生产者对象向Kafka服务器节点发送数据，而具体的发送是由生产者对象创建时，内部构建的多个组件实现的，多个组件的关系有点类似于生产者消费者模式。</p> 
+<p><img src="https://images2.imgbox.com/85/1b/eMf1dUPQ_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>(1) 数据生产者（KafkaProducer）：生产者对象，用于对我们的数据进行必要的转换和处理，将处理后的数据放入到数据收集器中，类似于生产者消费者模式下的生产者。这里我们简单介绍一下内部的数据转换处理：</strong></p> 
+<ul><li>如果配置拦截器栈（interceptor.classes），那么将数据进行拦截处理。某一个拦截器出现异常并不会影响后续的拦截器处理。</li><li>因为发送的数据为KV数据，所以需要根据配置信息中的序列化对象对数据中Key和Value分别进行序列化处理。</li><li>计算数据所发送的分区位置。</li><li>将数据追加到数据收集器中。</li></ul> 
+<p><strong>(2) 数据收集器（RecordAccumulator）：用于收集，转换我们产生的数据，类似于生产者消费者模式下的缓冲区。为了优化数据的传输，Kafka并不是生产一条数据就向Broker发送一条数据，而是通过合并单条消息，进行批量（批次）发送，提高吞吐量，减少带宽消耗。</strong></p> 
+<ul><li>默认情况下，一个发送批次的数据容量为16K，这个可以通过参数batch.size进行改善。</li><li>批次是和分区进行绑定的。也就是说发往同一个分区的数据会进行合并，形成一个批次。</li><li>如果当前批次能容纳数据，那么直接将数据追加到批次中即可，如果不能容纳数据，那么会产生新的批次放入到当前分区的批次队列中，这个队列使用的是Java的双端队列Deque。旧的批次关闭不再接收新的数据，等待发送</li></ul> 
+<p><strong>(3) 数据发送器（Sender）：线程对象，用于从收集器对象中获取数据，向服务节点发送。类似于生产者消费者模式下的消费者。因为是线程对象，所以启动后会不断轮询获取数据收集器中已经关闭的批次数据。对批次进行整合后再发送到Broker节点中</strong></p> 
+<ul><li> <p>因为<strong>数据真正发送的地方是<code>Broker节点</code>，不是<code>分区</code></strong>。所以需要将从数据收集器中收集到的批次数据按照可用Broker节点重新组合成<strong>List集合</strong>。</p> </li><li> <p>将<strong>组合后的<code>&lt;节点，List&lt;批次&gt;&gt;</code>的数据封装成客户端请求（请求键为：Produce）发送到网络客户端对象的缓冲区</strong>，由网络客户端对象通过网络发送给Broker节点。</p> </li><li> <p>Broker节点获取客户端请求，并根据请求键进行后续的数据处理：向分区中增加数据。</p> </li></ul> 
+<p><img src="https://images2.imgbox.com/7b/2a/6qF3jYUA_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/63/3a/Hx6M5sHD_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="242__100"></a>2.4.2 生产消息的基本代码</h4> 
+<p><img src="https://images2.imgbox.com/3b/c6/GukLwWMm_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token comment">// TODO 配置属性集合</span>
+<span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 配置属性：Kafka服务器集群地址</span>
+configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 配置属性：Kafka生产的数据为KV对，所以在生产数据进行传输前需要分别对K,V进行对应的序列化操作</span>
+configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+        <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+        <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+        <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+        <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 创建Kafka生产者对象，建立Kafka连接</span>
+<span class="token comment">//      构造对象时，需要传递配置参数</span>
+<span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 准备数据,定义泛型</span>
+<span class="token comment">//      构造对象时需要传递 【Topic主题名称】，【Key】，【Value】三个参数</span>
+<span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>
+        <span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key1"</span><span class="token punctuation">,</span> <span class="token string">"value1"</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 生产（发送）数据</span>
+producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">// TODO 关闭生产者连接</span>
+producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/11/ae/F8xcODlW_o.png" alt="在这里插入图片描述"></p> 
+<p><strong>两个线程</strong></p> 
+<p>在生产者客户端中，主要通过两个线程协调运行:主线程和Sender线程</p> 
+<p><strong>主线程</strong><br> 主线程负责创建消息，然后将消息传递给拦截器、序列化器和分区器，最后将消息缓存到消息累加器<br> <strong>Sender线程</strong></p> 
+<p>sender线程负责从消息累加器中获取消息，然后进行组装成<code>&lt;Node, List&lt; ProducerBatch&gt;&gt;</code>, -&gt; <code>&lt;Node,Request&gt; </code>-&gt;<code>Map&lt;Nodeld, Deque&lt;Request&gt;&gt;</code>这样的形式发送到对应的broker中</p> 
+<p><strong>ProducerBatch</strong></p> 
+<p>ProducerBatch包含多个ProducerRecord,目的是为了消息更加紧凑，提高吞吐量</p> 
+<p><strong>BufferPool</strong></p> 
+<p>因为kafka内部是通过ByteBuffer创建和释放内存，ByteBuffer的创建 是很消耗资源的，为了解决这个问题，Kafka封装了BufferPool实现ByteBuffer重复使用，当然并不是所有大小的ByteBuffer都可以缓存 到BufferPoll中的，可以通过配置batch.size，如果小于等于这个大小则可以被缓存到pool中，默认16kb.ProducerBatch 也和这个参数关联。</p> 
+<p><img src="https://images2.imgbox.com/30/18/NrBXzYNf_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="243__158"></a>2.4.3 发送消息</h4> 
+<h5><a id="2431__159"></a>2.4.3.1 拦截器</h5> 
+<p>生产者API在数据准备好发送给Kafka服务器之前，允许我们对生产的数据进行统一的处理，比如校验，整合数据等等。这些处理我们是可以通过Kafka提供的拦截器完成。因为拦截器不是生产者必须配置的功能，所以大家可以根据实际的情况自行选择使用。</p> 
+<p>但是要注意，这里的<strong>拦截器是可以配置多个的</strong>。执行时，<strong>会按照声明顺序执行完一个后，再执行下一个。并且某一个拦截器如果出现异常，只会跳出当前拦截器逻辑，并不会影响后续拦截器的处理</strong>。所以开发时，需要将拦截器的这种处理方法考虑进去。</p> 
+<p><img src="https://images2.imgbox.com/8b/83/heK7mm3c_o.png" alt="在这里插入图片描述"></p> 
+<p>接下来，我们来演示一下拦截器的操作</p> 
+<p><img src="https://images2.imgbox.com/90/3a/7uKI0dOY_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24311__173"></a>2.4.3.1.1 增加拦截器类</h6> 
+<p>(1) 实现生产者拦截器接口ProducerInterceptor</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token class-name">ProducerInterceptor</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token class-name">ProducerRecord</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token class-name">RecordMetadata</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * TODO 自定义数据拦截器
+ *      1. 实现Kafka提供的生产者接口ProducerInterceptor
+ *      2. 定义数据泛型 &lt;K, V&gt;
+ *      3. 重写方法
+ *         onSend
+ *         onAcknowledgement
+ *         close
+ *         configure
+ */</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">KafkaInterceptorMock</span> <span class="token keyword">implements</span> <span class="token class-name">ProducerInterceptor</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> <span class="token punctuation">{<!-- --></span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> <span class="token function">onSend</span><span class="token punctuation">(</span><span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> record<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>	
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onAcknowledgement</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> metadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> exception<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">configure</span><span class="token punctuation">(</span><span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">&gt;</span></span> configs<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p>(2) 实现接口中的方法，根据业务功能重写具体的方法</p> 
+<table><thead><tr><th align="left">方法名</th><th align="left">作用</th></tr></thead><tbody><tr><td align="left">onSend</td><td align="left">数据发送前，会执行此方法，进行数据发送前的预处理</td></tr><tr><td align="left">onAcknowledgement</td><td align="left">数据发送后，获取应答时，会执行此方法</td></tr><tr><td align="left">close</td><td align="left">生产者关闭时，会执行此方法，完成一些资源回收和释放的操作</td></tr><tr><td align="left">configure</td><td align="left">创建生产者对象的时候，会执行此方法，可以根据场景对生产者对象的配置进行统一修改或转换。</td></tr></tbody></table> 
+<p><img src="https://images2.imgbox.com/33/d0/ajvpXwHR_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24312__229"></a>2.4.3.1.2 配置拦截器</h6> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>common<span class="token punctuation">.</span>serialization<span class="token punctuation">.</span></span><span class="token class-name">StringSerializer</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">Future</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProducerInterceptorTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">INTERCEPTOR_CLASSES_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">KafkaInterceptorMock</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">final</span> <span class="token class-name">Future</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">RecordMetadata</span><span class="token punctuation">&gt;</span></span> send <span class="token operator">=</span> producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span> <span class="token class-name">Exception</span> e <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">finally</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span> producer <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/88/20/bxYkqCe6_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2432__274"></a>2.4.3.2 回调方法</h5> 
+<p><font color="bluee"><strong>Kafka发送数据时，可以同时传递回调对象（Callback）用于对数据的发送结果进行对应处理，具体代码实现采用匿名类或Lambda表达式都可以。</strong></font></p> 
+<p><img src="https://images2.imgbox.com/59/a5/7nUES5nj_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">KafkaProducerASynTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 循环生产数据</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// TODO 创建数据</span>
+            <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 发送数据</span>
+            producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token comment">// TODO 回调对象</span>
+                <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> recordMetadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    <span class="token comment">// TODO 当数据发送成功后，会回调此方法</span>
+                    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"数据发送成功："</span> <span class="token operator">+</span> recordMetadata<span class="token punctuation">.</span><span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/6e/3c/QWvZog3d_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/c3/20/Qla0nqZ6_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2433__322"></a>2.4.3.3 异步发送</h5> 
+<p><font color="bluee"><strong>Kafka发送数据时，底层的实现类似于生产者消费者模式。对应的，底层会由主线程代码作为生产者向缓冲区中放数据，而数据发送线程会从缓冲区中获取数据进行发送。Broker接收到数据后进行后续处理。</strong></font></p> 
+<p><font color="dark"><strong>如果Kafka通过主线程代码将一条数据放入到缓冲区后，无需等待数据的后续发送过程，就直接发送一下条数据的场合，我们就称之为异步发送。</strong></font></p> 
+<p><img src="https://images2.imgbox.com/08/50/QeqprQUq_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/53/bd/TbJtYFsl_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">KafkaProducerASynTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 循环生产数据</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// TODO 创建数据</span>
+            <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 发送数据</span>
+            producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token comment">// TODO 回调对象</span>
+                <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> recordMetadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    <span class="token comment">// TODO 当数据发送成功后，会回调此方法</span>
+                    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"数据发送成功："</span> <span class="token operator">+</span> recordMetadata<span class="token punctuation">.</span><span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 发送当前数据</span>
+            <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"发送数据"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a3/07/SJhBXEuE_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/19/e4/NFsLnQZe_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/70/6a/yjamPJmn_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2434__379"></a>2.4.3.4 同步发送</h5> 
+<p><font color="bluee"><strong>Kafka发送数据时，底层的实现类似于生产者消费者模式。对应的，底层会由主线程代码作为生产者向缓冲区中放数据，而数据发送线程会从缓冲区中获取数据进行发送。Broker接收到数据后进行后续处理。</strong></font></p> 
+<p><font color="dark"><strong>如果Kafka通过主线程代码将一条数据放入到缓冲区后，需等待数据的后续发送操作的应答状态，才能发送一下条数据的场合，我们就称之为同步发送。所以这里的所谓同步，就是生产数据的线程需要等待发送线程的应答（响应）结果。</strong></font></p> 
+<p>代码实现上，采用的是JDK1.5增加的JUC并发编程的Future接口的get方法实现。</p> 
+<p><img src="https://images2.imgbox.com/c6/93/ZQFeYNSQ_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">KafkaProducerASynTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">Exception</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>
+                <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span>
+                <span class="token string">"org.apache.kafka.common.serialization.StringSerializer"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 循环生产数据</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// TODO 创建数据</span>
+            <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 发送数据</span>
+            producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token comment">// TODO 回调对象</span>
+                <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> recordMetadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    <span class="token comment">// TODO 当数据发送成功后，会回调此方法</span>
+                    <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"数据发送成功："</span> <span class="token operator">+</span> recordMetadata<span class="token punctuation">.</span><span class="token function">timestamp</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token punctuation">}</span>
+            <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 发送当前数据</span>
+            <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"发送数据"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/0c/2c/kMpufbry_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/3c/39/bWcJpS5j_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="244__433"></a>2.4.4 消息分区</h4> 
+<h5><a id="2441__434"></a>2.4.4.1 指定分区</h5> 
+<p><strong>Kafka中Topic是对数据逻辑上的分类，而Partition才是数据真正存储的物理位置。所以在生产数据时，如果只是指定Topic的名称，其实Kafka是不知道将数据发送到哪一个Broker节点的。我们可以在构建数据传递Topic参数的同时，也可以指定数据存储的分区编号。</strong></p> 
+<p><img src="https://images2.imgbox.com/2d/cf/FnSHbx9S_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-java"><span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token number">0</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token keyword">final</span> <span class="token class-name">Future</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">RecordMetadata</span><span class="token punctuation">&gt;</span></span> send <span class="token operator">=</span> producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> recordMetadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span> e <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"数据发送成功："</span> <span class="token operator">+</span> record<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">","</span> <span class="token operator">+</span> record<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/7a/1f/6KEcpKbB_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2442__462"></a>2.4.4.2 未指定分区⚠️</h5> 
+<p>指定分区传递数据是没有任何问题的。Kafka会进行基本简单的校验，比如是否为空，是否小于0之类的，但是你的分区是否存在就无法判断了，所以需要从Kafka中获取集群元数据信息，此时会因为长时间获取不到元数据信息而出现超时异常。所以如果不能确定分区编号范围的情况，不指定分区还是一个不错的选择。</p> 
+<p><font color="dark"><strong>如果不指定分区，Kafka会根据集群元数据中的主题分区来通过算法来计算分区编号并设定：</strong></font></p> 
+<ul><li><strong>(1) 如果指定了分区，直接使用</strong></li><li><strong>(2) 如果指定了自己的分区器，通过分区器计算分区编号，如果有效，直接使用</strong></li><li><strong>(3) 如果指定了数据Key，且使用Key选择分区的场合，采用<code>murmur2非加密散列算法</code>（类似于hash）计算数据Key序列化后的值的散列值，然后对主题分区数量模运算取余，最后的结果就是分区编号</strong></li></ul> 
+<p><img src="https://images2.imgbox.com/be/45/xjex2xtB_o.png" alt="在这里插入图片描述"></p> 
+<ul><li><strong>(4) 如果未指定数据Key，或不使用Key选择分区，那么Kafka会采用优化后的<code>粘性分区策略</code>进行分区选择：</strong> 
+  <ul><li>没有分区数据加载状态信息时，会从分区列表中随机选择一个分区。<br> <img src="https://images2.imgbox.com/d6/65/b8nTvR6y_o.png" alt="在这里插入图片描述"></li><li>如果存在分区数据加载状态信息时，根据分区数据队列加载状态，通过随机数获取一个权重值<br> <img src="https://images2.imgbox.com/3e/90/d3jQ9rCm_o.png" alt="在这里插入图片描述"></li><li>根据这个权重值在队列加载状态中进行二分查找法，查找权重值的索引值<br> <img src="https://images2.imgbox.com/a7/9f/yrrUJItd_o.png" alt="在这里插入图片描述"></li><li>将这个索引值加1就是当前设定的分区。<br> <img src="https://images2.imgbox.com/6d/c5/LaNsWPk4_o.png" alt="在这里插入图片描述"></li><li>增加数据后，会根据当前粘性分区中生产的数据量进行判断，是不是需要切换其他的分区。判断地标准就是大于等于批次大小（16K）的2倍，或大于一个批次大小（16K）且需要切换。如果满足条件，下一条数据就会放置到其他分区。</li></ul> </li></ul> 
+<p><img src="https://images2.imgbox.com/c5/ac/0oB35Q2v_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2443__487"></a>2.4.4.3 分区器</h5> 
+<p>在某些场合中，指定的数据我们是需要根据自身的业务逻辑发往指定的分区的。所以需要自己定义分区编号规则，而不是采用Kafka自动设置就显得尤其必要了。Kafka早期版本中提供了两个分区器，不过在当前kafka版本中已经不推荐使用了。</p> 
+<p><img src="https://images2.imgbox.com/4c/3c/RBHiAbYT_o.png" alt="在这里插入图片描述"><br> <strong>接下来我们就说一下当前版本Kafka中如何定义我们自己的分区规则：分区器</strong></p> 
+<p><img src="https://images2.imgbox.com/a5/9d/k5i3Gjck_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24431__496"></a>2.4.4.3.1 增加分区器类</h6> 
+<p>首先我们需要创建一个类，然后实现Kafka提供的分区类接口Partitioner，接下来重写方法。这里我们只关注partition方法即可，因为此方法的返回结果就是需要的分区编号。</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token class-name">Partitioner</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>common<span class="token punctuation">.</span></span><span class="token class-name">Cluster</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * TODO 自定义分区器实现步骤：
+ *      1. 实现Partitioner接口
+ *      2. 重写方法
+ *         partition : 返回分区编号，从0开始
+ *         close
+ *         configure
+ */</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">KafkaPartitionerMock</span> <span class="token keyword">implements</span> <span class="token class-name">Partitioner</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">/**
+     * 分区算法 - 根据业务自行定义即可
+     * @param topic The topic name
+     * @param key The key to partition on (or null if no key)
+     * @param keyBytes The serialized key to partition on( or null if no key)
+     * @param value The value to partition on or null
+     * @param valueBytes The serialized value to partition on or null
+     * @param cluster The current cluster metadata
+     * @return 分区编号，从0开始
+     */</span>
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">int</span> <span class="token function">partition</span><span class="token punctuation">(</span><span class="token class-name">String</span> topic<span class="token punctuation">,</span> <span class="token class-name">Object</span> key<span class="token punctuation">,</span> <span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span> keyBytes<span class="token punctuation">,</span> <span class="token class-name">Object</span> value<span class="token punctuation">,</span> <span class="token keyword">byte</span><span class="token punctuation">[</span><span class="token punctuation">]</span> valueBytes<span class="token punctuation">,</span> <span class="token class-name">Cluster</span> cluster<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">configure</span><span class="token punctuation">(</span><span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token operator">?</span><span class="token punctuation">&gt;</span></span> configs<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/99/aa/WFHTTxyO_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24432__550"></a>2.4.4.3.2 配置分区器</h6> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>common<span class="token punctuation">.</span>serialization<span class="token punctuation">.</span></span><span class="token class-name">StringSerializer</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">Future</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProducerPartitionTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">PARTITIONER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">KafkaPartitionerMock</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">1</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">final</span> <span class="token class-name">Future</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">RecordMetadata</span><span class="token punctuation">&gt;</span></span> send <span class="token operator">=</span> producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">,</span> <span class="token keyword">new</span> <span class="token class-name">Callback</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onCompletion</span><span class="token punctuation">(</span><span class="token class-name">RecordMetadata</span> recordMetadata<span class="token punctuation">,</span> <span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                        <span class="token keyword">if</span> <span class="token punctuation">(</span> e <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+                            <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"数据发送成功："</span> <span class="token operator">+</span> record<span class="token punctuation">.</span><span class="token function">key</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">","</span> <span class="token operator">+</span> record<span class="token punctuation">.</span><span class="token function">value</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+                        <span class="token punctuation">}</span>
+                    <span class="token punctuation">}</span>
+                <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span> <span class="token class-name">Exception</span> e <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">finally</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span> producer <span class="token operator">!=</span> <span class="token keyword">null</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<p><img src="https://images2.imgbox.com/71/83/wjhHoBRq_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="245__604"></a>2.4.5 消息可靠性</h4> 
+<p>对于生产者发送的数据，我们有的时候是不关心数据是否已经发送成功的，我们只要发送就可以了。在这种场景中，消息可能会因为某些故障或问题导致丢失，我们将这种情况称之为消息不可靠。虽然消息数据可能会丢失，但是在某些需要高吞吐，低可靠的系统场景中，这种方式也是可以接受的，甚至是必须的。</p> 
+<p>但是在更多的场景中，我们是需要确定数据是否已经发送成功了且Kafka正确接收到数据的，也就是要保证数据不丢失，这就是所谓的消息可靠性保证。</p> 
+<p>而这个确定的过程一般是通过Kafka给我们返回的响应确认结果（Acknowledgement）来决定的，这里的响应确认结果我们也可以简称为ACK应答。根据场景，Kafka提供了3种应答处理，可以通过配置对象进行配置</p> 
+<p><img src="https://images2.imgbox.com/8c/c0/U3FymmZ4_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/73/a9/87evJsB3_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2451_ACK__0_617"></a>2.4.5.1 ACK = 0</h5> 
+<blockquote> 
+ <p>效率最高，可靠性低</p> 
+</blockquote> 
+<p>当生产数据时，生产者对象将数据通过网络客户端将数据发送到网络数据流中的时候，Kafka就对当前的数据请求进行了响应（确认应答），如果是同步发送数据，此时就可以发送下一条数据了。如果是异步发送数据，回调方法就会被触发。</p> 
+<p><img src="https://images2.imgbox.com/1b/5a/F0VwMpnq_o.png" alt="在这里插入图片描述"></p> 
+<p>通过图形，明显可以看出，这种应答方式，数据已经走网络给Kafka发送了，但这其实并不能保证Kafka能正确地接收到数据，在传输过程中如果网络出现了问题，那么数据就丢失了。也就是说这种应答确认的方式，数据的可靠性是无法保证的。不过相反，因为无需等待Kafka服务节点的确认，通信效率倒是比较高的，也就是系统吞吐量会非常高。</p> 
+<p><img src="https://images2.imgbox.com/96/18/Wst1BK7b_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2452_ACK__1_631"></a>2.4.5.2 ACK = 1</h5> 
+<p>当生产数据时，Kafka Leader副本将数据接收到并写入到了日志文件后，就会对当前的数据请求进行响应（确认应答），如果是同步发送数据，此时就可以发送下一条数据了。如果是异步发送数据，回调方法就会被触发。</p> 
+<p><img src="https://images2.imgbox.com/50/3d/4MioFwxC_o.png" alt="在这里插入图片描述"><br> 通过图形，可以看出，这种应答方式，数据已经存储到了分区Leader副本中，那么数据相对来讲就比较安全了，也就是可靠性比较高。之所以说相对来讲比较安全，就是因为现在只有一个节点存储了数据，而数据并没有来得及进行备份到follower副本，那么一旦当前存储数据的broker节点出现了故障，数据也依然会丢失。</p> 
+<p><img src="https://images2.imgbox.com/c6/22/GSpBm2kp_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2453_ACK__1ALL_641"></a>2.4.5.3 ACK = -1（ALL）(默认)</h5> 
+<blockquote> 
+ <p>效率最低，可靠性最高，最安全</p> 
+</blockquote> 
+<p>当生产数据时，Kafka Leader副本和Follower副本都已经将数据接收到并写入到了日志文件后，再对当前的数据请求进行响应（确认应答），如果是同步发送数据，此时就可以发送下一条数据了。如果是异步发送数据，回调方法就会被触发。<br> <img src="https://images2.imgbox.com/02/fd/kktAehrR_o.png" alt="在这里插入图片描述"></p> 
+<p>通过图形，可以看出，这种应答方式，数据已经同时存储到了分区Leader副本和follower副本中，那么数据已经非常安全了，可靠性也是最高的。此时，如果Leader副本出现了故障，那么follower副本能够开始起作用，因为数据已经存储了，所以数据不会丢失。</p> 
+<p>不过这里需要注意，如果假设我们的分区有5个follower副本，编号为1，2，3，4，5<br> <img src="https://images2.imgbox.com/19/27/txzHYVhp_o.png" alt="在这里插入图片描述"></p> 
+<p>但是此时只有3个副本处于和Leader副本之间处于数据同步状态，那么此时分区就存在一个同步副本列表，我们称之为In Syn Replica，简称为ISR。此时，Kafka只要保证ISR中所有的4个副本接收到了数据，就可以对数据请求进行响应了。无需5个副本全部收到数据。<br> <img src="https://images2.imgbox.com/9c/c5/G4SYd4k4_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/52/e0/d1L4HH90_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="246____661"></a>2.4.6 消息去重 &amp; 有序</h4> 
+<h5><a id="2461_662"></a>2.4.6.1数据重试</h5> 
+<p>由于网络或服务节点的故障，Kafka在传输数据时，可能会导致数据丢失，所以我们才会设置ACK应答机制，尽可能提高数据的可靠性。但其实在某些场景中，数据的丢失并不是真正地丢失，而是“虚假丢失”，比如咱们将ACK应答设置为1，也就是说一旦Leader副本将数据写入文件后，Kafka就可以对请求进行响应了。<br> <img src="https://images2.imgbox.com/aa/d2/Gntglobs_o.png" alt="在这里插入图片描述"></p> 
+<p>此时，如果假设由于网络故障的原因，Kafka并没有成功将ACK应答信息发送给Producer，那么此时对于Producer来讲，以为kafka没有收到数据，所以就会一直等待响应，一旦超过某个时间阈值，就会发生超时错误，也就是说在Kafka Producer眼里，数据已经丢了<br> <img src="https://images2.imgbox.com/ec/7a/FifG9iYW_o.png" alt="在这里插入图片描述"></p> 
+<p>所以在这种情况下，kafka Producer会尝试对超时的请求数据进行<strong>重试(retry)操作</strong>。通过重试操作尝试将数据再次发送给Kafka。<br> <img src="https://images2.imgbox.com/6b/a7/f4ozkUle_o.png" alt="在这里插入图片描述"></p> 
+<p>如果此时发送成功，那么Kafka就又收到了数据，而这两条数据是一样的，也就是说，导致了数据的重复。<br> <img src="https://images2.imgbox.com/45/cd/dgXphHBp_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>可能导致数据重复</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/8e/7b/2MqhcicW_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2462_681"></a>2.4.6.2数据乱序</h5> 
+<p>数据重试(retry)功能除了可能会导致数据重复以外，还可能会导致数据乱序。假设我们需要将编号为1，2，3的三条连续数据发送给Kafka。每条数据会对应于一个连接请求<br> <img src="https://images2.imgbox.com/f0/e2/TqEKrjvL_o.png" alt="在这里插入图片描述"></p> 
+<p>此时，如果第一个数据的请求出现了故障，而第二个数据和第三个数据的请求正常，那么Broker就收到了第二个数据和第三个数据，并进行了应答。<br> <img src="https://images2.imgbox.com/a0/6b/5XPtvs44_o.png" alt="在这里插入图片描述"></p> 
+<p>为了保证数据的可靠性，此时，Kafka Producer会将第一条数据重新放回到缓冲区的第一个。进行重试操作<br> <img src="https://images2.imgbox.com/c2/da/zdW2jq6k_o.png" alt="在这里插入图片描述"></p> 
+<p>如果重试成功，Broker收到第一条数据，你会发现。数据的顺序已经被打乱了。<br> <img src="https://images2.imgbox.com/d8/fa/2mDBFAUr_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>数据乱序</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/48/31/JiG7K9IM_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2463__700"></a>2.4.6.3 数据幂等性</h5> 
+<p>为了解决Kafka传输数据时，所产生的数据重复和乱序问题，Kafka引入了幂等性操作，所谓的幂等性，<font color="dark"><strong>就是Producer同样的一条数据，无论向Kafka发送多少次，kafka都只会存储一条</strong></font>。注意，这里的同样的一条数据，指的不是内容一致的数据，而是指的不断重试的数据。</p> 
+<p>默认幂等性是不起作用的，所以如果想要使用幂等性操作，只需要在生产者对象的配置中开启幂等性配置即可</p> 
+<table><thead><tr><th align="left">配置项</th><th align="left">配置值</th><th align="left">说明</th></tr></thead><tbody><tr><td align="left">enable.idempotence</td><td align="left">true</td><td align="left">开启幂等性</td></tr><tr><td align="left">max.in.flight.requests.per.connection</td><td align="left">小于等于5</td><td align="left">每个连接的在途请求数，不能大于5，取值范围为[1,5]</td></tr><tr><td align="left">acks</td><td align="left">all(-1)</td><td align="left">确认应答，固定值，不能修改</td></tr><tr><td align="left">retries</td><td align="left">&gt;0</td><td align="left">重试次数，推荐使用Int最大值</td></tr></tbody></table> 
+<p><strong>kafka是如何实现数据的幂等性操作呢，我们这里简单说一下流程：</strong></p> 
+<p>(1) 开启幂等性后，为了保证数据不会重复，那么就需要给每一个请求批次的数据增加唯一性标识，kafka中，这个标识采用的是连续的序列号数字<code>sequencenum</code>，但是不同的生产者Producer可能序列号是一样的，所以仅仅靠<code>seqnum</code>还无法唯一标记数据，所以还需要同时对生产者进行区分，所以Kafka采用申请<code>生产者ID（producerid）</code>的方式对生产者进行区分。这样，在发送数据前，我们就需要提前申请<code>producerid</code>以及序列号<code>sequencenum</code></p> 
+<p><img src="https://images2.imgbox.com/f6/ed/FKwTIcSX_o.png" alt="在这里插入图片描述"></p> 
+<p>(2) Broker中会给每一个分区记录生产者的生产状态：采用队列的方式缓存最近的5个批次数据。队列中的数据按照<code>seqnum</code>进行升序排列。这里的数字5是<font color="dark"><strong>经过压力测试，均衡空间效率和时间效率所得到的值，所以为固定值，无法配置且不能修改。</strong></font><br> <img src="https://images2.imgbox.com/55/52/7VpIgz99_o.png" alt="在这里插入图片描述"></p> 
+<p>(3) 如果Borker当前新的请求批次数据在缓存的5个旧的批次中存在相同的，如果有相同的，那么说明有重复，当前批次数据不做任何处理。<br> <img src="https://images2.imgbox.com/92/5c/Zfrqj9yJ_o.png" alt="在这里插入图片描述"></p> 
+<p>(4) <strong>如果Broker当前的请求批次数据在缓存中没有相同的，那么判断当前新的请求批次的序列号是否为缓存的最后一个批次的序列号加1，如果是，说明是连续的，顺序没乱。那么继续，如果不是，那么说明数据已经乱了，发生异常。</strong><br> <img src="https://images2.imgbox.com/41/88/plNWd7bP_o.png" alt="在这里插入图片描述"></p> 
+<p>(5) Broker根据异常返回响应，通知<code>Producer进行重试</code>。Producer重试前，需要在缓冲区中将数据重新排序，保证正确的顺序后。再进行重试即可。</p> 
+<p>(6) 如果请求批次不重复，且有序，那么更新缓冲区中的批次数据。将当前的批次放置再队列的结尾，将队列的第一个移除，保证队列中缓冲的数据最多5个。<br> <img src="https://images2.imgbox.com/e8/12/SKP136xL_o.png" alt="在这里插入图片描述"></p> 
+<p>从上面的流程可以看出，Kafka的<font color="dark"><strong>幂等性是通过消耗时间和性能的方式提升了数据传输的有序和去重</strong></font>，在一些对数据敏感的业务中是十分重要的。但是通过原理，咱们也能明白，这种幂等性还是有缺陷的：</p> 
+<ul><li>幂等性的producer<strong>仅做到单分区上的幂等性</strong>，即<strong>单分区消息有序不重复，多分区无法保证幂等性</strong>。</li><li>只能保持生产者单个会话的幂等性，<strong>无法实现跨会话的幂等性</strong>，也就是说如果一个producer挂掉再重启，那么重启前和重启后的producer对象会被当成两个独立的生产者，从而获取两个不同的独立的生产者ID，导致broker端无法获取之前的状态信息，所以无法实现跨会话的幂等。要想解决这个问题，可以采用后续的事务功能。</li><li><img src="https://images2.imgbox.com/4e/72/xEkcGnVo_o.png" alt="在这里插入图片描述"></li><li>但是可以利用事务，去解决无法实现跨会话的幂等性。</li></ul> 
+<p><img src="https://images2.imgbox.com/70/78/u4f7O1wP_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2464_748"></a>2.4.6.4数据事务</h5> 
+<p>对于幂等性的缺陷，kafka可以采用事务的方式解决跨会话的幂等性。基本的原理就是通过<font color="bluee"><strong>事务功能管理生产者ID</strong>，<strong>保证事务开启后，生产者对象总能获取一致的生产者ID。</strong></font></p> 
+<p>为了实现事务，Kafka引入了**事务协调器（TransactionCoodinator）**负责事务的处理，所有的事务逻辑包括分派<code>PID</code>等都是由<code>TransactionCoodinator</code>负责实施的。<code>TransactionCoodinator </code>会将事务状态持久化到该主题中。</p> 
+<p>事务基本的实现思路就是通过配置的事务ID，将生产者ID进行绑定，然后存储在Kafka专门管理事务的内部主题 <code>__transaction_state</code>中，而<strong>内部主题的操作是由 <code>TransactionCoodinator</code> 对象完成的，这个协调器对象有点类似于咱们数据发送时的那个副本Leader</strong>。其实这种设计是很巧妙的，因为kafka将<strong>事务ID和生产者ID</strong>看成了消息数据，然后将数据发送到一个内部主题中。这样，使用事务处理的流程和咱们自己发送数据的流程是很像的。接下来，我们就把这两个流程简单做一个对比。</p> 
+<h6><a id="24641__754"></a>2.4.6.4.1 普通数据发送流程</h6> 
+<p><img src="https://images2.imgbox.com/a4/e4/byqrYb83_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/1f/8d/flC0Vu41_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24642__762"></a>2.4.6.4.2 事务数据发送流程</h6> 
+<p><img src="https://images2.imgbox.com/0d/17/ELrYafpa_o.png" alt="在这里插入图片描述"><br> <font color="dark"><strong>通过两张图大家可以看到，基本的事务操作和数据操作是很像的，不过要注意，我们这里只是简单对比了数据发送的过程，其实它们的区别还在于数据发送后的提交过程。普通的数据操作，只要数据写入了日志，那么对于消费者来讲。数据就可以读取到了，但是事务操作中，如果数据写入了日志，但是没有提交的话，其实数据默认情况下也是不能被消费者看到的。只有提交后才能看见数据。</strong></font></p> 
+<p><img src="https://images2.imgbox.com/8f/90/ajPHfzBw_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24643__770"></a>2.4.6.4.3 事务提交流程</h6> 
+<p>Kafka中的事务是分布式事务，所以采用的也是二阶段提交</p> 
+<ul><li> <p>第一个阶段提交事务协调器会告诉生产者事务已经提交了，所以也称之预提交操作，事务协调器会修改事务为预提交状态<br> <img src="https://images2.imgbox.com/30/22/7kLoXgYv_o.png" alt="在这里插入图片描述"></p> </li><li> <p>第二个阶段提交事务协调器会向分区Leader节点中发送数据标记，通知Broker事务已经提交，然后事务协调器会修改事务为完成提交状态<br> <img src="https://images2.imgbox.com/d1/8b/Wr4zIz4v_o.png" alt="在这里插入图片描述"></p> </li></ul> 
+<p>特殊情况下，事务已经提交成功，但还是读取不到数据，那是因为当前提交成功只是一阶段提交成功，事务协调器会继续向各个Partition发送marker信息，此操作会无限重试，直至成功。<br> 但是不同的Broker可能无法全部同时接收到marker信息，此时有的Broker上的数据还是无法访问，这也是正常的，因为kafka的事务不能保证强一致性，只能保证最终数据的一致性，无法保证中间的数据是一致的。不过对于常规的场景这里已经够用了，事务协调器会不遗余力的重试，直至成功。</p> 
+<p><img src="https://images2.imgbox.com/8e/d2/Z0vfHzem_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="24644__786"></a>2.4.6.4.4 事务操作代码</h6> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>atguigu<span class="token punctuation">.</span>test</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>clients<span class="token punctuation">.</span>producer<span class="token punctuation">.</span></span><span class="token operator">*</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>kafka<span class="token punctuation">.</span>common<span class="token punctuation">.</span>serialization<span class="token punctuation">.</span></span><span class="token class-name">StringSerializer</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">Future</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">ProducerTransactionTest</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token class-name">Map</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Object</span><span class="token punctuation">&gt;</span></span> configMap <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">HashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span><span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">BOOTSTRAP_SERVERS_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"localhost:9092"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">KEY_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">VALUE_SERIALIZER_CLASS_CONFIG</span><span class="token punctuation">,</span> <span class="token class-name">StringSerializer</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">.</span><span class="token function">getName</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 配置幂等性</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">ENABLE_IDEMPOTENCE_CONFIG</span><span class="token punctuation">,</span> <span class="token boolean">true</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 配置事务ID</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">TRANSACTIONAL_ID_CONFIG</span><span class="token punctuation">,</span> <span class="token string">"my-tx-id"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 配置事务超时时间</span>
+        configMap<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span> <span class="token class-name">ProducerConfig</span><span class="token punctuation">.</span><span class="token constant">TRANSACTION_TIMEOUT_CONFIG</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 创建生产者对象</span>
+        <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> producer <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">KafkaProducer</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span>configMap<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// TODO 初始化事务</span>
+        producer<span class="token punctuation">.</span><span class="token function">initTransactions</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// TODO 启动事务</span>
+            producer<span class="token punctuation">.</span><span class="token function">beginTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 生产数据</span>
+            <span class="token keyword">for</span> <span class="token punctuation">(</span> <span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">;</span> i<span class="token operator">++</span> <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+                <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> record <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ProducerRecord</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token string">"test"</span><span class="token punctuation">,</span> <span class="token string">"key"</span> <span class="token operator">+</span> i<span class="token punctuation">,</span> <span class="token string">"value"</span> <span class="token operator">+</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+                <span class="token keyword">final</span> <span class="token class-name">Future</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">RecordMetadata</span><span class="token punctuation">&gt;</span></span> send <span class="token operator">=</span> producer<span class="token punctuation">.</span><span class="token function">send</span><span class="token punctuation">(</span>record<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            <span class="token comment">// TODO 提交事务</span>
+            producer<span class="token punctuation">.</span><span class="token function">commitTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span> <span class="token class-name">Exception</span> e <span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token comment">// TODO 终止事务</span>
+            producer<span class="token punctuation">.</span><span class="token function">abortTransaction</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token comment">// TODO 关闭生产者对象</span>
+        producer<span class="token punctuation">.</span><span class="token function">close</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/7b/43/h5yh8PiF_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="2465__840"></a>2.4.6.5 数据传输语义</h5> 
+<table><thead><tr><th align="left">传输语义</th><th align="left">说明</th><th align="left">例子</th></tr></thead><tbody><tr><td align="left">at most once</td><td align="left">最多一次：不管是否能接收到，数据最多只传一次。这样数据可能会丢失，</td><td align="left">Socket， ACK=0</td></tr><tr><td align="left">at least once</td><td align="left">最少一次：消息不会丢失，如果接收不到，那么就继续发，所以会发送多次，直到收到为止，有可能出现数据重复</td><td align="left">ACK=1</td></tr><tr><td align="left">Exactly once</td><td align="left">精准一次：消息只会一次，不会丢，也不会重复。</td><td align="left">幂等+事务+ACK=-1</td></tr></tbody></table> 
+<p><img src="https://images2.imgbox.com/fc/84/6YvUsD8J_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_852"></a>我自己的一个小总结：</h3> 
+<p><img src="https://images2.imgbox.com/3c/ab/TBhppsej_o.png" alt="在这里插入图片描述"></p> 
+<p>首先，我们从上图中可以看出，<code>RecordAccumulator</code> 会由业务线程写入、Sender 线程读取，这是一个非常明显的生产者-消费者模式，所以我们需要保证 <code>RecordAccumulator</code> 是线程安全的。<br> <code>RecordAccumulator</code> 中维护了一个 <code>ConcurrentMap&lt;TopicPartition, Deque&lt;ProducerBatch&gt;&gt;</code> 类型的集合，其中的 Key 是 <code>TopicPartition</code> 用来表示目标 <code>partition</code>，Value 是 <code>ArrayDeque&lt;ProducerBatch&gt; </code>队列，用来缓冲发往目标 partition 的消息。 这里的 <strong>ArrayDeque 并不是线程安全的集合，后面我们会看到加锁的相关操作。</strong></p> 
+<p>在每个 <code>ProducerBatch</code> 中都维护了一个 <code>MemoryRecordsBuilder</code> 对象，<code>MemoryRecordsBuilder</code> 才是真正存储 message 的地方。</p> 
+<blockquote> 
+ <p>RecordAccumulator 、ProducerBatch、MemoryRecordsBuilder 这三个核心类要明确</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/04/10/ayFPct3Q_o.png" alt="在这里插入图片描述"></p> 
+<p>其中需要关注的是，所有标识长度的字段都是 varint（或 varlong），也就是变长字段，timestamp 和 offset 都是 delta 值，也就是偏移量。另外，就是 attribute 字段中的所有位都废弃了，并添加 header 扩展。</p> 
+<p>除了基础的 Record 格式之外，V2 版本中还定义了一个 Record Batch 的结构.</p> 
+<p><img src="https://images2.imgbox.com/13/f7/1grGc9fe_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4066d175d95361b97a9e97e7c49ff403/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Linux快速部署大语言模型LLaMa3，Web可视化j交互（Ollama&#43;Open Web UI）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/57d55007bd62aab4c5811f59c2bfe66f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Leetcode】vector刷题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

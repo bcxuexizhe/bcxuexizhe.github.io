@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>zookeeper未授权访问（CVE-2014-0085）漏洞修复建议 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0148bb602229e47f78f92500ad792e84/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="zookeeper未授权访问（CVE-2014-0085）漏洞修复建议">
+  <meta property="og:description" content="一、环境搭建安装docker sudo systemctl start docker 拉取zookeeper镜像
+sudo docker pull wurstmeister/zookeeper 启动zookeeper
+sudo docker run \ -d \ --restart=always \ --log-driver json-file \ --log-opt max-size=100m \ --log-opt max-file=2 \ --name zookeeper \ -p 2181:2181 \ -v /etc/localtime:/etc/localtime \ wurstmeister/zookeeper 二、进入容器 1.登录服务器执行docker ps查看是zookeeper是否为容器运行，如果不是容器运行请跳到第三步骤
+2.使用命令进入容器docker exec -it 容器ID /bin/bash
+三.使用find / -name zoo.cfg命令查找文件，看看文件位置 1.进入zookeeper目录找到zoo.cfg文件，常见路径为/opt/zookeeper-3.4.13/conf/zoo.cfg
+具体路径以zookeeper安装路径为准
+2.使用vi编辑器打开zoo.cfg文件，在文件中添加四字命令白名单，添加命令如下
+4lw.commands.whitelist=xxxx,xxxx,xxxx xxxx为需要设置的四字命令，添加多命令请使用逗号进行隔开，请根据系统所需进行命令设置，请勿添加envi命令，如系统有使用此命令的需求请使用其他修复方法
+四.配置服务ACL限制IP访问 1.登录zookeeper
+要找到zkCli.sh脚本文件，需要定位到Zookeeper的安装目录。在大多数情况下，如果您是按照标准流程安装的Zookeeper，那么该脚本应该位于$ZK_HOME/bin目录下，其中$ZK_HOME代表Zookeeper的安装路径。例如，如果Zookeeper安装在/opt/zookeeper-3.4.9，则脚本将位于/opt/zookeeper-3.4.9/bin目录下。
+2.使用下面命令登录zookeeper命令中ip为容器ip如果直接安装在服务器上请使用服务器ip
+./zkCli.sh -server 172.17.0.2:2181 3.使用getAcl /查看当前权限（默认所有人可访问）
+4.设置权限记得一定要将本机和需要连接的ip添加进去
+setAcl / ip:172.0.0.1:cdrwa,ip:192.168.110.241:cdrwa,ip:192.168.100.241:cdrwa,ip:192.168.110.242:cdrwa cdrwa每个参数代表的意思">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-28T14:33:01+08:00">
+    <meta property="article:modified_time" content="2024-01-28T14:33:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">zookeeper未授权访问（CVE-2014-0085）漏洞修复建议</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>一、环境搭建安装docker</h2> 
+<pre><code>sudo systemctl start docker</code></pre> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/f8/d5/iPXCW1mR_o.png" alt="a084b6a657134f9e9f1fef022069c896.png"></p> 
+<p> </p> 
+<p>拉取zookeeper镜像</p> 
+<pre><code>sudo docker pull wurstmeister/zookeeper</code></pre> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/ec/b9/Y2maZ6KJ_o.png" alt="6def12bd87ff45de93890ed1f61f56f2.png"> </p> 
+<p>启动zookeeper</p> 
+<pre><code>sudo docker run \
+-d \
+--restart=always \
+--log-driver json-file \
+--log-opt max-size=100m \
+--log-opt max-file=2  \
+--name zookeeper \
+-p 2181:2181 \
+-v /etc/localtime:/etc/localtime \
+wurstmeister/zookeeper</code></pre> 
+<pre style="text-align:center;"> </pre> 
+<p> </p> 
+<p> </p> 
+<h2>二、进入容器</h2> 
+<p>1.登录服务器执行docker ps查看是zookeeper是否为容器运行，如果不是容器运行请跳到第三步骤</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/c2/fd/i9ygQwFX_o.png" alt="c92a68f5cbc347bba1278bdc7a49b3bb.png"></p> 
+<p> </p> 
+<p>2.使用命令进入容器docker exec -it 容器ID /bin/bash</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/d5/aa/shZv5e3x_o.png" alt="c74a39ebdfc84fb99a51a23900aa244a.png"></p> 
+<p> </p> 
+<h2>三.使用find / -name zoo.cfg命令查找文件，看看文件位置</h2> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/9f/72/kd45dib4_o.png" alt="cdfae326d3eb42449e9ef971363d7dfa.png"></p> 
+<p>1.进入zookeeper目录找到zoo.cfg文件，常见路径为/opt/zookeeper-3.4.13/conf/zoo.cfg</p> 
+<p>具体路径以zookeeper安装路径为准</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/ab/9b/4hBwLckq_o.png" alt="713f9b32365040e886eed1f473e595f5.png"></p> 
+<p> </p> 
+<p>2.使用vi编辑器打开zoo.cfg文件，在文件中添加四字命令白名单，添加命令如下</p> 
+<pre><code>4lw.commands.whitelist=xxxx,xxxx,xxxx</code></pre> 
+<p>xxxx为需要设置的四字命令，添加多命令请使用逗号进行隔开，请根据系统所需进行命令设置，请勿添加envi命令，如系统有使用此命令的需求请使用其他修复方法</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/23/ed/qpdXkNWM_o.png" alt="710f46d68645473db50a33813f385873.png"></p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/1b/b1/wluxShGF_o.png" alt="ef7f246b0e72450181536d25926c1c73.png"></p> 
+<h2>四.配置服务ACL限制IP访问</h2> 
+<p>1.登录zookeeper</p> 
+<p>要找到zkCli.sh脚本文件，需要定位到Zookeeper的安装目录。在大多数情况下，如果您是按照标准流程安装的Zookeeper，那么该脚本应该位于<code>$ZK_HOME/bin</code>目录下，其中<code>$ZK_HOME</code>代表Zookeeper的安装路径。例如，如果Zookeeper安装在<code>/opt/zookeeper-3.4.9</code>，则脚本将位于<code>/opt/zookeeper-3.4.9/bin</code>目录下。</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/41/ff/HBDDy089_o.png" alt="fcba7e67d74c4116b6a2802af502c991.png"></p> 
+<p>2.使用下面命令登录zookeeper命令中ip为容器ip如果直接安装在服务器上请使用服务器ip</p> 
+<pre><code>./zkCli.sh -server 172.17.0.2:2181</code></pre> 
+<p> </p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/a3/a9/s6pr1o9f_o.png" alt="6560c31b58864a5183b5a7e6b54739ea.png"></p> 
+<p> </p> 
+<p>3.使用getAcl /查看当前权限（默认所有人可访问）</p> 
+<p style="text-align:center;"><img src="https://images2.imgbox.com/d0/2b/QoHxkxX0_o.png" alt="fc540dc4f22240e09db1bbb374a78f13.png"></p> 
+<p>4.设置权限记得一定要将本机和需要连接的ip添加进去</p> 
+<pre><code>setAcl / ip:172.0.0.1:cdrwa,ip:192.168.110.241:cdrwa,ip:192.168.100.241:cdrwa,ip:192.168.110.242:cdrwa</code></pre> 
+<p>cdrwa每个参数代表的意思</p> 
+<ul><li> <p><code>c</code>：创建（Create）</p> </li><li> <p><code>d</code>：删除（Delete）</p> </li><li> <p><code>r</code>：读取（Read）</p> </li><li> <p><code>w</code>：写入（Write）</p> </li><li> <p><code>a</code>：访问（Access）</p> </li></ul> 
+<pre> </pre> 
+<p> </p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b424ddeafcfd8796f024a24187df2e1a/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Qt WebEngine模块使用（开发环境安装和程序开发）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/371758eeca465eaf7465d0dda81f7946/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">轻量化的yolov8部署到安卓Android手机端</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

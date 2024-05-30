@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>超详细 mysql 主键索引、唯一索引、普通索引、联合索引的区别与实例说明 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a0204cf4683fa756a44a38d02b70dfbe/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="超详细 mysql 主键索引、唯一索引、普通索引、联合索引的区别与实例说明">
+  <meta property="og:description" content="文章目录 前言（1）功能区别1 主键索引2 唯一索引3 普通索引4 联合索引 （2）使用条件1 索引列的数值2 数据类型选择3 数据表复杂且量大 （3）索引实例1 创建索引（alter | create）2 删除索引3 查询效果（a） explain 字段说明（b） 索引实例 （4）失效场景1 创建索引失败2 索引不生效 前言 我们很多项目都有可能会使用到mysql，当遇到表格数据量很庞大时，导致慢查询，查询效率就会特别低。 这时往往会采用索引来提高查询效率，但是盲目使用索引则极有可能达不到期望的效果。 因此，我们需要先理解，索引的功能区别，与使用索引的条件，以及索引的失效场景。 （1）功能区别 1 主键索引 主键也是一种索引，且是我们最常用的索引，使用方法为`primary key(ColumnList)`。 一张表只允许一个主键索引，且主键列的值不允许重复，不允许为空`NULL`。 2 唯一索引 使用方法是`unique index IndexName(ColumnList)`。 一张表格可以有多个唯一索引，唯一索引列的值不允许重复，但允许为空`NULL`。 3 普通索引 使用方式为`index IndexName(ColumnList)` 一张表格可以有多个普通索引，普通索引列的值允许重复，允许为空`NULL`。 4 联合索引 实际上，所有的索引都可以由多个字段列创建，这就叫联合索引。 但联合索引的功能区别也跟单列索引的功能区别一致。 （2）使用条件 1 索引列的数值 索引列、或者组成索引列的数值尽可能唯一。 唯一的数值索引，在查询的时候可以更快的定位数据记录。 2 数据类型选择 整型（int）的索引列查询效率要比字符串（char、varchar、text）高。 3 数据表复杂且量大 索引的创建会对应维护一张索引表，因此在采用索引时候应该是因为数据表复杂且量大。 （3）索引实例 1 创建索引（alter | create） 2 删除索引 3 查询效果 （a） explain 字段说明 标识符explain，常被我们用于测试操作语句效率情况。其中需要额外注意的是这些字段：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-07-31T10:39:23+08:00">
+    <meta property="article:modified_time" content="2023-07-31T10:39:23+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">超详细 mysql 主键索引、唯一索引、普通索引、联合索引的区别与实例说明</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#_1" rel="nofollow">前言</a></li><li><a href="#1_7" rel="nofollow">（1）功能区别</a></li><li><ul><li><a href="#1__8" rel="nofollow">1 主键索引</a></li><li><a href="#2__13" rel="nofollow">2 唯一索引</a></li><li><a href="#3__18" rel="nofollow">3 普通索引</a></li><li><a href="#4__23" rel="nofollow">4 联合索引</a></li></ul> 
+   </li><li><a href="#2_28" rel="nofollow">（2）使用条件</a></li><li><ul><li><a href="#1__29" rel="nofollow">1 索引列的数值</a></li><li><a href="#2__34" rel="nofollow">2 数据类型选择</a></li><li><a href="#3__39" rel="nofollow">3 数据表复杂且量大</a></li></ul> 
+   </li><li><a href="#3_43" rel="nofollow">（3）索引实例</a></li><li><ul><li><a href="#1_alter__create_44" rel="nofollow">1 创建索引（alter | create）</a></li><li><a href="#2__47" rel="nofollow">2 删除索引</a></li><li><a href="#3__49" rel="nofollow">3 查询效果</a></li><li><ul><li><a href="#a_explain__50" rel="nofollow">（a） explain 字段说明</a></li><li><a href="#b__61" rel="nofollow">（b） 索引实例</a></li></ul> 
+   </li></ul> 
+   </li><li><a href="#4_68" rel="nofollow">（4）失效场景</a></li><li><ul><li><a href="#1__69" rel="nofollow">1 创建索引失败</a></li><li><a href="#2__80" rel="nofollow">2 索引不生效</a></li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="_1"></a>前言</h3> 
+<pre><code>我们很多项目都有可能会使用到mysql，当遇到表格数据量很庞大时，导致慢查询，查询效率就会特别低。
+这时往往会采用索引来提高查询效率，但是盲目使用索引则极有可能达不到期望的效果。
+因此，我们需要先理解，索引的功能区别，与使用索引的条件，以及索引的失效场景。
+</code></pre> 
+<h3><a id="1_7"></a>（1）功能区别</h3> 
+<h4><a id="1__8"></a>1 主键索引</h4> 
+<pre><code>主键也是一种索引，且是我们最常用的索引，使用方法为`primary key(ColumnList)`。
+一张表只允许一个主键索引，且主键列的值不允许重复，不允许为空`NULL`。
+</code></pre> 
+<h4><a id="2__13"></a>2 唯一索引</h4> 
+<pre><code>使用方法是`unique index IndexName(ColumnList)`。
+一张表格可以有多个唯一索引，唯一索引列的值不允许重复，但允许为空`NULL`。
+</code></pre> 
+<h4><a id="3__18"></a>3 普通索引</h4> 
+<pre><code>使用方式为`index IndexName(ColumnList)`
+一张表格可以有多个普通索引，普通索引列的值允许重复，允许为空`NULL`。
+</code></pre> 
+<h4><a id="4__23"></a>4 联合索引</h4> 
+<pre><code>实际上，所有的索引都可以由多个字段列创建，这就叫联合索引。
+但联合索引的功能区别也跟单列索引的功能区别一致。
+</code></pre> 
+<h3><a id="2_28"></a>（2）使用条件</h3> 
+<h4><a id="1__29"></a>1 索引列的数值</h4> 
+<pre><code>索引列、或者组成索引列的数值尽可能唯一。
+唯一的数值索引，在查询的时候可以更快的定位数据记录。
+</code></pre> 
+<h4><a id="2__34"></a>2 数据类型选择</h4> 
+<pre><code>整型（int）的索引列查询效率要比字符串（char、varchar、text）高。
+</code></pre> 
+<h4><a id="3__39"></a>3 数据表复杂且量大</h4> 
+<pre><code>索引的创建会对应维护一张索引表，因此在采用索引时候应该是因为数据表复杂且量大。
+</code></pre> 
+<h3><a id="3_43"></a>（3）索引实例</h3> 
+<h4><a id="1_alter__create_44"></a>1 创建索引（alter | create）</h4> 
+<p><img src="https://images2.imgbox.com/83/67/k4WPrl2b_o.png" alt="创建唯一索引方式1"><br> <img src="https://images2.imgbox.com/aa/dc/RyguwbLe_o.png" alt="创建唯一索引方式2"></p> 
+<h4><a id="2__47"></a>2 删除索引</h4> 
+<p><img src="https://images2.imgbox.com/58/e5/kINixSYw_o.png" alt="删除唯一索引"></p> 
+<h4><a id="3__49"></a>3 查询效果</h4> 
+<h5><a id="a_explain__50"></a>（a） explain 字段说明</h5> 
+<p>标识符<code>explain</code>，常被我们用于测试操作语句效率情况。其中需要额外注意的是这些字段：<br> <img src="https://images2.imgbox.com/fe/74/uZHbSUXU_o.png" alt="explain"></p> 
+<ul><li><code>type</code>：指查询语句的查询范围，<code>ALL</code>是全表查找； 
+  <ul><li>其中查询效率，由快到慢依次是：<code>const &gt; eq_ref &gt; ref &gt; range &gt; index &gt; all</code>。</li></ul> </li><li><code>possible_keys</code>：指查询语句可能会用到的索引列表，<code>NULL</code>表示没有使用索引；</li><li><code>ref</code>：指查询语句的关联的列，<code>NULL</code>是没有关联的列；</li><li><code>rows</code>：指有多少条记录被查询了；</li><li><code>filtered</code>：指查询的记录过滤的比例；</li><li><code>Extra</code>：指优化器查询记录的时候，采用的优化方式。 
+  <ul><li>其中查询效率，由快到慢依次是：<code>Using index &gt; Using where &gt; Using index condition &gt; Using filesort &gt; Using temporary</code>，其他的额外信息并没有太大的差距，主要看查询语句的整体。</li></ul> </li></ul> 
+<h5><a id="b__61"></a>（b） 索引实例</h5> 
+<ul><li>不使用索引<br> <img src="https://images2.imgbox.com/53/c2/BU8WXLu0_o.png" alt="不使用索引"></li><li>使用单列索引<br> <img src="https://images2.imgbox.com/84/6d/rH4XsmUI_o.png" alt="使用主键索引"></li><li>使用联合索引<br> <img src="https://images2.imgbox.com/21/58/1k18U1HR_o.png" alt="使用联合索引"></li></ul> 
+<h3><a id="4_68"></a>（4）失效场景</h3> 
+<h4><a id="1__69"></a>1 创建索引失败</h4> 
+<ul><li>创建主键索引失败</li></ul> 
+<pre><code>主键索引，一张表只允许存在一个，且列的值不允许重复，不允许为空。
+如果创建失败，多半是这三个条件有一个不满足。
+</code></pre> 
+<ul><li>创建唯一索引失败</li></ul> 
+<pre><code>唯一索引，一张表中允许存在多个，且列的值不允许重复，但允许为空。
+如果创建失败，多半是列的值存在重复。
+</code></pre> 
+<h4><a id="2__80"></a>2 索引不生效</h4> 
+<ul><li>联合索引没有生效<br> <img src="https://images2.imgbox.com/e6/77/fn3Cayl7_o.png" alt="联合索引不生效"></li></ul> 
+<pre><code>联合索引，会采用左匹配的方式，activeUserID进行匹配时，会采用索引查找，效率依然很快；
+但如果使用 tieToUserID进行匹配，则不会触发索引，而依然使用全表遍历，导致索引失效。
+</code></pre>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/92c0ce771de5f835a262a8c8d2fc5b55/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Redis—相关背景</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/70b44d115c7868be4ef3efaacf445510/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">足够详细的java邮件发送功能（基于QQ邮箱，包含踩过的坑及解决办法！！）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

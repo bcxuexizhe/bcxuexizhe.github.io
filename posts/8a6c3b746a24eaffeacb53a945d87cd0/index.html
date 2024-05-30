@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>mysql中主键索引和联合索引的原理解析 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/8a6c3b746a24eaffeacb53a945d87cd0/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="mysql中主键索引和联合索引的原理解析">
+  <meta property="og:description" content="mysql中主键索引和联合索引的原理解析 一、主键索引二、什么是联合索引? 对应的B&#43;树是如何生成的?1、建立索引方式2、什么是最左前缀原则?3、回表4、为什么要遵守最左前缀原则才能利用到索引?5、什么是覆盖索引?6、索引扫描底层原理7、order by为什么会导致索引消失？8、有哪些情况会导致索引失效?9、索引设计原则1、选择合适的列作为索引2、避免使用过多的索引 三、InnoDB 与MyISAM 的区别 一、主键索引 主键索引：按照主键数据从小到大按照从左到右进行排序，叶节点只存储数据区；
+接着将上面的页生成出来，页只存储索引和指针，指针指向数据域，当通过主键查找数据时，从B&#43;树的头部开始寻址数据、读取数据。
+上面为索引页
+下面为数据页
+查询select * from table where a=6，会从上到下走法，找索引
+查询select * from table where a&lt;6，会从上到下走法，找索引；
+原因：先找a=6是走索引的，找到a=6数据后，将左边的数据全部返回即可。
+为了方便把前面数据给你采用双向指针
+查询select * from table where b=6，会从左到右走法，全表扫描，因为b未有命中索引。
+二、什么是联合索引? 对应的B&#43;树是如何生成的? 联合索引：将数据库表中多个字段组成一个索引。bcd联合索引；bcd三个字段进行排序
+1、建立索引方式 create index idx_t1_bcd on t1(b,c,d);bcd三个字段进行排序
+2、什么是最左前缀原则? 复合索引，也叫联合索引，用户可以在多个列上建立索引,这种索引叫做复合索引。
+当我们创建一个组合索引的时候，如(k1,k2,k3)，相当于创建了(k1)、
+(k1,k2)和(k1,k2,k3)三个索引，这就是最左匹配原则。
+select * from table where k1=A and k2=B and k3=C 3、回表 select * from t1 where b=1 and c=1 and d=1执行逻辑：
+通过联合索引找到一条数据的3个字段，但是select * 查找多个字段，所以需要存储主键字段，通过主键字段去主键索引里面找到完整的这条数据，并将这条数据返回。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-12T09:52:36+08:00">
+    <meta property="article:modified_time" content="2024-04-12T09:52:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">mysql中主键索引和联合索引的原理解析</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atelier-sulphurpool-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/95/73/BoylUC4B_o.gif" alt="在这里插入图片描述"></p> 
+<hr> 
+<p></p> 
+<div class="toc"> 
+ <h4>mysql中主键索引和联合索引的原理解析</h4> 
+ <ul><li><a href="#_4" rel="nofollow">一、主键索引</a></li><li><a href="#_B_30" rel="nofollow">二、什么是联合索引? 对应的B+树是如何生成的?</a></li><li><ul><li><a href="#1_34" rel="nofollow">1、建立索引方式</a></li><li><a href="#2_38" rel="nofollow">2、什么是最左前缀原则?</a></li><li><a href="#3_48" rel="nofollow">3、回表</a></li><li><a href="#4_61" rel="nofollow">4、为什么要遵守最左前缀原则才能利用到索引?</a></li><li><a href="#5_84" rel="nofollow">5、什么是覆盖索引?</a></li><li><a href="#6_97" rel="nofollow">6、索引扫描底层原理</a></li><li><a href="#7order_by_110" rel="nofollow">7、order by为什么会导致索引消失？</a></li><li><a href="#8_118" rel="nofollow">8、有哪些情况会导致索引失效?</a></li><li><a href="#9_131" rel="nofollow">9、索引设计原则</a></li><li><ul><li><a href="#1_137" rel="nofollow">1、选择合适的列作为索引</a></li><li><a href="#2_148" rel="nofollow">2、避免使用过多的索引</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#InnoDB_MyISAM__156" rel="nofollow">三、InnoDB 与MyISAM 的区别</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_4"></a>一、主键索引</h2> 
+<p><strong><font class="text-color-01" color="#f44336"><strong>主键索引</strong>：按照主键数据从小到大按照从左到右进行排序，叶节点只存储数据区；<br> 接着将上面的页生成出来，页只存储索引和指针，指针指向数据域，当通过主键查找数据时，从B+树的头部开始寻址数据、读取数据。</font></strong></p> 
+<p><img src="https://images2.imgbox.com/ab/20/uGvTCw8W_o.png" alt="在这里插入图片描述"><br> <strong><font class="text-color-01" color="#f44336">上面为索引页<br> 下面为数据页</font></strong></p> 
+<p>查询select * from table where a=6，会从上到下走法，找索引</p> 
+<p><img src="https://images2.imgbox.com/8b/55/UT7UyMYv_o.png" alt=""></p> 
+<p>查询select * from table where a&lt;6，会从上到下走法，找索引；<br> 原因：先找a=6是走索引的，找到a=6数据后，将左边的数据全部返回即可。</p> 
+<p><img src="https://images2.imgbox.com/c3/3d/n4t7wrUP_o.png" alt=""></p> 
+<p>为了方便把前面数据给你采用双向指针</p> 
+<p><font class="bg-color-121">查询select * from table where b=6，会从左到右走法，全表扫描，因为b未有命中索引。</font></p> 
+<p><img src="https://images2.imgbox.com/ea/bd/t8AQUcYJ_o.png" alt=""></p> 
+<h2><a id="_B_30"></a>二、什么是联合索引? 对应的B+树是如何生成的?</h2> 
+<p><font class="text-color-01" color="#f44336"><strong><strong>联合索引</strong>：将数据库表中多个字段组成一个索引。bcd联合索引；bcd三个字段进行排序</strong></font></p> 
+<h3><a id="1_34"></a>1、建立索引方式</h3> 
+<p><font class="text-color-01" color="#f44336"><strong>create index idx_t1_bcd on t1(b,c,d);bcd三个字段进行排序</strong></font></p> 
+<h3><a id="2_38"></a>2、什么是最左前缀原则?</h3> 
+<p><font class="text-color-01" color="#f44336"><strong>复合索引，也叫联合索引，用户可以在多个列上建立索引,这种索引叫做复合索引。<br> 当我们创建一个组合索引的时候，如(k1,k2,k3)，相当于创建了(k1)、<br> (k1,k2)和(k1,k2,k3)三个索引，这就是最左匹配原则。</strong></font></p> 
+<pre><code class="prism language-python">select <span class="token operator">*</span> <span class="token keyword">from</span> table where k1<span class="token operator">=</span>A <span class="token keyword">and</span> k2<span class="token operator">=</span>B <span class="token keyword">and</span> k3<span class="token operator">=</span>C
+</code></pre> 
+<h3><a id="3_48"></a>3、回表</h3> 
+<p><img src="https://images2.imgbox.com/be/01/tkp7Dy3x_o.png" alt="在这里插入图片描述"></p> 
+<p><font class="text-color-01" color="#f44336">select * from t1 where b=1 and c=1 and d=1执行逻辑：<br> 通过联合索引找到一条数据的3个字段，但是select * 查找多个字段，所以需要存储主键字段，通过主键字段去主键索引里面找到完整的这条数据，并将这条数据返回。</font></p> 
+<p><strong><font class="text-color-01" color="#f44336">通过主键再去主键索引里面找数据的过程叫做回表</font></strong></p> 
+<p><img src="https://images2.imgbox.com/d6/9f/ZYmMFtuL_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/25/4b/Zqy2ywHg_o.png" alt=""></p> 
+<h3><a id="4_61"></a>4、为什么要遵守最左前缀原则才能利用到索引?</h3> 
+<p>explain select * from t1 where c=1 and d=1 and b=1 ;<br> <mark><font class="text-color-01" color="#f44336"><strong>最左前缀原则和后面条件的顺序没有关系</strong></font></mark></p> 
+<p><img src="https://images2.imgbox.com/a1/ba/czn378ya_o.png" alt=""></p> 
+<p><strong><font class="text-color-01" color="#f44336">不符合最左匹配原则：<code>*11</code></font></strong><br> <img src="https://images2.imgbox.com/ee/2e/XKQhlzvo_o.png" alt=""></p> 
+<p><strong><font class="text-color-01" color="#f44336">符合最左匹配原则:<code>1*1</code></font></strong><br> <img src="https://images2.imgbox.com/7d/8e/b01aVHOY_o.png" alt=""></p> 
+<p>b=1：走联合索引 (需要回表1次)<br> <img src="https://images2.imgbox.com/90/3c/eoEQitJE_o.png" alt=""></p> 
+<p><strong><font class="text-color-01" color="#f44336">b&gt;1:不走联合索引（因为需要回表很多次）</font></strong><br> <img src="https://images2.imgbox.com/6d/cd/T235pW5I_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/a1/03/PAeWzPL0_o.png" alt=""></p> 
+<p><mark>拿到主键会到主键索引里面拿数据（回表7次）</mark></p> 
+<h3><a id="5_84"></a>5、什么是覆盖索引?</h3> 
+<p><mark><font class="text-color-01" color="#f44336"><strong>查询的字段正好在联合索引字段里面，不需要回表</strong></font></mark></p> 
+<p>select b from t1 where b&gt;1;(不需要回表了，直接从联合索引字段中将该字段取出来)<br> <img src="https://images2.imgbox.com/f4/06/yT7IN80N_o.png" alt=""></p> 
+<p>select a,b,c,d from t1 where b&gt;1;<br> <mark><font class="text-color-01" color="#f44336"><strong>同样的也符合联合索引，也不需要回表，因为a字段（主键）在联合索引中。</strong></font></mark><br> <img src="https://images2.imgbox.com/52/04/uOO6FyKb_o.png" alt=""></p> 
+<p>select a,b,c,d,e from t1 where b&gt;1;<br> <mark><font class="text-color-01" color="#f44336"><strong>不走联合索引，需要回表，因为e字段不在联合索引中，需要回表很多次</strong></font></mark><br> <img src="https://images2.imgbox.com/8d/3e/onkFMbby_o.png" alt=""></p> 
+<h3><a id="6_97"></a>6、索引扫描底层原理</h3> 
+<p>从bcd索引的叶子节点开始遍历<br> 主键索引存储的是8条完整的数据<br> 联合索引中存储的是8条不完整的数据，并且b字段在联合索引中，不会去回表到主键索引中。</p> 
+<p><font class="text-color-01" color="#f44336">从叶子节点开始扫描不需要符合最左匹配原则。</font><br> <img src="https://images2.imgbox.com/56/9a/ZBp0IDgV_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/98/4b/MQQkzsF0_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/ad/14/TluFzQjT_o.png" alt=""></p> 
+<h3><a id="7order_by_110"></a>7、order by为什么会导致索引消失？</h3> 
+<p>因为走全表扫描效率更高，不需要回表<br> 走索引会回表多次，效率低<br> <img src="https://images2.imgbox.com/e2/19/fxHvZryg_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/fc/9c/8jR8wrJS_o.png" alt=""></p> 
+<h3><a id="8_118"></a>8、有哪些情况会导致索引失效?</h3> 
+<p><strong>1、索引列使用!=、not、is null、is not null查询的时候，由于索引数据的检索效率非常低，因此Mysql引擎会判断不走索引。</strong><br> <strong>2、使用like通配符匹配后缀%xxx的时候，由于这种方式不符合索引的最左匹配原则，所以也不会走索引。</strong></p> 
+<ul><li><strong>但是反过来，如果通配符匹配的是前缀xxx%，符合最左匹配，也会走索引。</strong></li></ul> 
+<p><strong>3、对索引列上进行函数运算、导致mysql无法识别索引列，就不会走索引了。</strong><br> <img src="https://images2.imgbox.com/37/c9/svRp4trB_o.png" alt=""></p> 
+<p><strong>4、使用or连接查询的时候，or语句前后没有同时使用索引，那么索引会失效。只有or左右查询字段都是索引列的时候，才会生效。</strong></p> 
+<p><strong>5、当索引列存在隐式转化的时候， 比如索引列是字符串类型，但是在sql查询中没有使用引号。</strong></p> 
+<h3><a id="9_131"></a>9、索引设计原则</h3> 
+<p>查询更快、占用空间更小</p> 
+<h4><a id="1_137"></a>1、选择合适的列作为索引</h4> 
+<ul><li>1.<font class="text-color-01" color="#f44336">经常作为查询条件（where子句）、排序条件（order by子句） 分组条件（group by子句）的列建立索引</font>。</li><li>2、区分度低的字段，例如性别，不要建立索引</li><li>3、更新频繁字段不适合创建索引</li><li>4、对于定义为text、image和bit的数据类型的列不要建立索引</li><li>5、定义有外键的数据列一定要建立索引。</li><li>6、数据量较小的表，索引效果较差，没有必要在此列建立索引</li><li>7、尽量使用扩展索引，不要新建索引。比如表中已经有a的索引，现在要加(a,b)的索引，那么只需要修改原来的索引即可。</li><li>8、使用短索引，如果对长字符串列进行索引，应该指定一个前缀长度，这样能够节省大量索引空间，如果搜索词<br> 超过索引前缀长度，则使用索引排除不匹配的行，然后检查其余行是否可能匹配。</li></ul> 
+<h4><a id="2_148"></a>2、避免使用过多的索引</h4> 
+<ul><li>1、每个索引都需要占用额外的磁盘空间</li><li>2、更新表（update、insert、delete操作时），所有的索引都需要被更新</li><li>3、维护索引需要成本</li></ul> 
+<h2><a id="InnoDB_MyISAM__156"></a>三、InnoDB 与MyISAM 的区别</h2> 
+<p><img src="https://images2.imgbox.com/15/17/HroeRq7L_o.png" alt=""></p> 
+<p><img src="https://images2.imgbox.com/dc/2e/yfeBCj8c_o.png" alt=""><br> <strong>聚簇索引</strong>:将数据存储与索引放到了一块、并且是按照一定的顺序组织的，找到索引也就找到了数据，数据的物理存放顺序与索引顺序是一致的，即:只要索引是相邻的，那么对应的数据一定也是相邻地存放在磁盘上的。<br> <strong>非聚簇索引</strong>:叶子节点不存储数据、存储的是数据行地址，也就是说根据索引查找到数据行的位置再取磁盘查找数据，这个就有点类似一本树的目录，比如我们要找第三章第一节，那我们先在这个目录里面找，找到对应的页码后再去对应的页码看文章。</p> 
+<p>优势:<br> 1、查询通过聚簇索引可以直接获取数据，相比非聚簇索引需要第二次查询(非覆盖索引的情况下)效率要高<br> 2、聚簇索引对于范围查询的效率很高，因为其数据是按照大小排列的<br> 3、聚簇索引适合用在排序的场合，非聚簇索引不适合</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9941b431559d5a638e7e61cece50d448/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Flink数据流动全观察：代理技术实现细节记录与分析（附完整源码）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/818a8931bfea646efeb12f3c219de524/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">适用于Android的30种最佳免费黑客应用程序和工具_droidsheep</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

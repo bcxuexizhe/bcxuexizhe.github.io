@@ -1,0 +1,208 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>使用api和rpc的一个综合使用 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/4be6d3184867faf82ea43b4927281926/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="使用api和rpc的一个综合使用">
+  <meta property="og:description" content="type ( LoginRequest { Username string `json:&#34;username&#34;` Password string `json:&#34;password&#34;` } RegistRequest { Username string `json:&#34;username&#34;` Password string `json:&#34;password&#34;` } RegistResponse { UserId uint `json:&#34;userId&#34;` Err string `json:&#34;err&#34;` } ) @server ( prefix: /api/users ) service users { @handler login post /login (LoginRequest) returns (string) @handler register post /regist (RegistRequest) returns (RegistResponse) } type ( UserInfoRequest { Id uint `json:&#34;id&#34;` } UserInfoResponse { Username string `json:&#34;username&#34;` } ) @server ( prefix: /api/users jwt: Auth //开启jwt认证 ) service users { @handler userInfo get /info (UserInfoRequest) returns (UserInfoResponse) } 首先是api文档，然后通过命令">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-21T22:26:10+08:00">
+    <meta property="article:modified_time" content="2024-05-21T22:26:10+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">使用api和rpc的一个综合使用</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <pre><code>type (
+	LoginRequest {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	RegistRequest {
+		Username string `json:"username"`
+		Password string `json:"password"`
+	}
+	RegistResponse {
+		UserId uint   `json:"userId"`
+		Err    string `json:"err"`
+	}
+)
+
+@server (
+	prefix: /api/users
+)
+service users {
+	@handler login
+	post /login (LoginRequest) returns (string)
+
+	@handler register
+	post /regist (RegistRequest) returns (RegistResponse)
+}
+
+type (
+	UserInfoRequest {
+		Id uint `json:"id"`
+	}
+	UserInfoResponse {
+		Username string `json:"username"`
+	}
+)
+
+@server (
+	prefix: /api/users
+	jwt:    Auth //开启jwt认证
+)
+service users {
+	@handler userInfo
+	get /info (UserInfoRequest) returns (UserInfoResponse)
+}
+
+</code></pre> 
+<p>首先是api文档，然后通过命令</p> 
+<pre>//goctl api go -api user.api -dir .</pre> 
+<p>去生成对应的go项目</p> 
+<p>在etc/users.yaml中添加myslq的链接信息和jwt</p> 
+<p><img alt="" height="535" src="https://images2.imgbox.com/64/87/fwVRWk2j_o.png" width="1200"></p> 
+<p>在config/config.go中添加相应的配置内容</p> 
+<p><img alt="" height="451" src="https://images2.imgbox.com/79/f5/schkgtiO_o.png" width="1018"></p> 
+<p></p> 
+<p>在svc中配置数据库的初始化和Context信息</p> 
+<p><img alt="" height="675" src="https://images2.imgbox.com/3d/ef/oFgsu2Rz_o.png" width="1200"></p> 
+<p></p> 
+<p>最后就是logic/loginlogic.go中对于具体服务的一个处理</p> 
+<p><img alt="" height="856" src="https://images2.imgbox.com/31/45/wx9g0Yp7_o.png" width="1200"></p> 
+<p>在login中进行token的生成，其他的响应根据业务写出相应的代码</p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p>然后是rpc的引入，首先是写一个和前面的api比较相似的proto</p> 
+<pre><code>syntax = "proto3";
+
+package user;
+
+
+option go_package="./user";
+
+message LoginRequest{
+  string Username=1;
+  string Password=2;
+}
+
+message LoginResponse{
+  uint32 UserId =1;
+  string Token=2;
+}
+
+
+message RegisterRequest{
+  string username=1;
+  string password=2;
+}
+
+message RegisterResponse{
+  uint32 user_id=1;
+  string err=2;
+}
+
+service user{
+  rpc UserLogin(LoginRequest) returns(LoginResponse);
+  rpc UserRegister(RegisterRequest)returns(RegisterResponse);
+}
+
+//goctl rpc protoc user.proto --go_out=./types --go-grpc_out=./types --zrpc_out=.
+</code></pre> 
+<p>然后通过命令去生成对应的go文件，同时将所有的处理业务从api转移到proto中，</p> 
+<p>最后api通过etcd获取rpc所对应的服务，最终处理请求</p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/34a2a69b6f9e54719f31bfa579344099/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">在 Visual Studio Code 中集成 ESLint新手教程</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/8242c00cf129cd8f22982bb414d9a402/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Hadoop 安装及目录结构</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

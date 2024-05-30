@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【SpringBoot篇】基于Redis分布式锁的 误删问题 和 原子性问题 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/7598168e1bc4ddba96e83c6cd2d0d922/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【SpringBoot篇】基于Redis分布式锁的 误删问题 和 原子性问题">
+  <meta property="og:description" content="文章目录 🍔Redis的分布式锁🛸误删问题🎈解决方法🔎代码实现 🛸原子性问题🌹Lua脚本 ⭐利用Java代码调用Lua脚本改造分布式锁🔎代码实现 🍔Redis的分布式锁 Redis的分布式锁是通过利用Redis的原子操作和特性来实现的。在分布式环境中，多个应用程序或服务可能同时访问共享资源，为了保证数据的一致性和避免冲突，可以使用分布式锁来进行同步控制。
+以下是一种常见的使用Redis实现分布式锁的方式：
+获取锁：当一个应用程序需要获取锁时，它可以通过执行以下操作在Redis中设置一个特定的键值对： SET lock_key unique_value NX PX lock_timeout 这里的lock_key是锁的唯一标识，unique_value是唯一的值，可以是随机生成的UUID，NX表示只有当键不存在时才会设置成功，PX表示设置键的过期时间。通过设置过期时间，即使获取锁的应用程序崩溃或异常退出，锁也会在一段时间后自动释放，避免出现死锁。
+释放锁：当应用程序完成对共享资源的操作后，它可以通过执行以下操作释放锁： if GET lock_key == unique_value then DELETE lock_key end 应用程序首先获取锁的当前值，然后比较是否与自己持有的唯一值相等，如果相等则删除该键，表示释放锁。这样可以确保只有持有锁的应用程序才能释放锁，避免误释放其他应用程序的锁。
+需要注意的是，分布式锁并不是绝对安全和可靠的。在高并发的环境中，可能存在竞争条件和死锁等问题。因此，在实际使用中，需要考虑更复杂的场景和解决方案。
+🛸误删问题 遇到下面的情况的话，会出现Redis分布式锁的误删问题
+这种情况下。线程1首先获取锁，但是发生了阻塞，于是线程2拿到了执行权，在线程2执行的过程中，线程1苏醒了，继续执行，到后面，线程1执行到了删除锁的操作，此时就会把本应该属于线程2的锁删除，这样子就造成了误删问题
+🎈解决方法 就是在每个线程释放锁的时候，去判断一下当前这把锁是否属于自己，如果属于自己，则不进行锁的删除，假设还是上边的情况，线程1卡顿，锁自动释放，线程2进入到锁的内部执行逻辑，此时线程1反应过来，然后删除锁，但是线程1，一看当前这把锁不是属于自己，于是不进行删除锁逻辑，当线程2走到删除锁逻辑时，如果没有卡过自动释放锁的时间点，则判断当前这把锁是属于自己的，于是删除这把锁。
+🔎代码实现 public class SimpleRedisLock implements ILock { private String name; private StringRedisTemplate stringRedisTemplate; public SimpleRedisLock(String name, StringRedisTemplate stringRedisTemplate) { this.name = name; this.stringRedisTemplate = stringRedisTemplate; } private static final String KEY_PREFIX = &#34;lock:&#34;; //使用uuid，在获取锁的时候存入线程标识 private static final String ID_PREFIX = UUID.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-10T15:36:26+08:00">
+    <meta property="article:modified_time" content="2024-05-10T15:36:26+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【SpringBoot篇】基于Redis分布式锁的 误删问题 和 原子性问题</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#Redis_3" rel="nofollow">🍔Redis的分布式锁</a></li><li><a href="#_27" rel="nofollow">🛸误删问题</a></li><li><ul><li><a href="#_31" rel="nofollow">🎈解决方法</a></li><li><a href="#_36" rel="nofollow">🔎代码实现</a></li></ul> 
+  </li><li><a href="#_80" rel="nofollow">🛸原子性问题</a></li><li><ul><li><ul><li><a href="#Lua_92" rel="nofollow">🌹Lua脚本</a></li></ul> 
+   </li><li><a href="#JavaLua_132" rel="nofollow">⭐利用Java代码调用Lua脚本改造分布式锁</a></li><li><a href="#_169" rel="nofollow">🔎代码实现</a></li></ul> 
+ </li></ul> 
+</div> 
+<br> 
+<img src="https://images2.imgbox.com/41/1f/QqyGcXrJ_o.png" alt="在这里插入图片描述"> 
+<p></p> 
+<h2><a id="Redis_3"></a>🍔Redis的分布式锁</h2> 
+<p>Redis的分布式锁是通过利用Redis的原子操作和特性来实现的。在分布式环境中，多个应用程序或服务可能同时访问共享资源，为了保证数据的一致性和避免冲突，可以使用分布式锁来进行同步控制。</p> 
+<p>以下是一种常见的使用Redis实现分布式锁的方式：</p> 
+<ol><li>获取锁：当一个应用程序需要获取锁时，它可以通过执行以下操作在Redis中设置一个特定的键值对：</li></ol> 
+<pre><code class="prism language-bash">SET lock_key unique_value NX PX lock_timeout
+</code></pre> 
+<p>这里的lock_key是锁的唯一标识，unique_value是唯一的值，可以是随机生成的UUID，NX表示只有当键不存在时才会设置成功，PX表示设置键的过期时间。通过设置过期时间，即使获取锁的应用程序崩溃或异常退出，锁也会在一段时间后自动释放，避免出现死锁。</p> 
+<ol start="2"><li>释放锁：当应用程序完成对共享资源的操作后，它可以通过执行以下操作释放锁：</li></ol> 
+<pre><code class="prism language-bash"><span class="token keyword">if</span> GET lock_key <span class="token operator">==</span> unique_value <span class="token keyword">then</span>
+    DELETE lock_key
+end
+</code></pre> 
+<p>应用程序首先获取锁的当前值，然后比较是否与自己持有的唯一值相等，如果相等则删除该键，表示释放锁。这样可以确保只有持有锁的应用程序才能释放锁，避免误释放其他应用程序的锁。</p> 
+<hr> 
+<p>需要注意的是，分布式锁并不是绝对安全和可靠的。在高并发的环境中，可能存在竞争条件和死锁等问题。因此，在实际使用中，需要考虑更复杂的场景和解决方案。</p> 
+<h2><a id="_27"></a>🛸误删问题</h2> 
+<p>遇到下面的情况的话，会出现Redis分布式锁的误删问题<br> <img src="https://images2.imgbox.com/de/fc/UJJDQTdi_o.png" alt="在这里插入图片描述"><br> 这种情况下。<code>线程1</code>首先获取锁，但是发生了阻塞，于是<code>线程2</code>拿到了执行权，在<code>线程2</code>执行的过程中，<code>线程1</code>苏醒了，继续执行，到后面，<code>线程1</code>执行到了删除锁的操作，此时就会把本应该属于<code>线程2</code>的锁删除，这样子就造成了误删问题</p> 
+<h3><a id="_31"></a>🎈解决方法</h3> 
+<p>就是在每个<code>线程释放锁的时候，去判断一下当前这把锁是否属于自己</code>，如果属于自己，则不进行锁的删除，假设还是上边的情况，线程1卡顿，锁自动释放，线程2进入到锁的内部执行逻辑，此时线程1反应过来，然后删除锁，但是线程1，一看当前这把锁不是属于自己，于是不进行删除锁逻辑，当线程2走到删除锁逻辑时，如果没有卡过自动释放锁的时间点，则判断当前这把锁是属于自己的，于是删除这把锁。</p> 
+<p><img src="https://images2.imgbox.com/5f/28/eFWam3Oz_o.jpg" alt="请添加图片描述"></p> 
+<h3><a id="_36"></a>🔎代码实现</h3> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SimpleRedisLock</span> <span class="token keyword">implements</span> <span class="token class-name">ILock</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token class-name">String</span> name<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">StringRedisTemplate</span> stringRedisTemplate<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">SimpleRedisLock</span><span class="token punctuation">(</span><span class="token class-name">String</span> name<span class="token punctuation">,</span> <span class="token class-name">StringRedisTemplate</span> stringRedisTemplate<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>name <span class="token operator">=</span> name<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>stringRedisTemplate <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">KEY_PREFIX</span> <span class="token operator">=</span> <span class="token string">"lock:"</span><span class="token punctuation">;</span>
+    <span class="token comment">//使用uuid，在获取锁的时候存入线程标识</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">ID_PREFIX</span> <span class="token operator">=</span> <span class="token constant">UUID</span><span class="token punctuation">.</span><span class="token function">randomUUID</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"-"</span><span class="token punctuation">;</span>
+
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">tryLock</span><span class="token punctuation">(</span><span class="token keyword">long</span> timeoutSec<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 获取线程标示</span>
+        <span class="token class-name">String</span> threadId <span class="token operator">=</span> <span class="token constant">ID_PREFIX</span> <span class="token operator">+</span> <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 获取锁</span>
+        <span class="token class-name">Boolean</span> success <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">setIfAbsent</span><span class="token punctuation">(</span><span class="token constant">KEY_PREFIX</span> <span class="token operator">+</span> name<span class="token punctuation">,</span> threadId<span class="token punctuation">,</span> timeoutSec<span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">SECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Boolean</span><span class="token punctuation">.</span><span class="token constant">TRUE</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>success<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">//这里不能是return success；否则  因为public后面的boolean是基本类型，而Boolean是引用类型，如果直接返回success，是一个自动拆箱的过程，可能回发生空指针异常</span>
+    <span class="token punctuation">}</span>
+
+   	<span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 获取线程标示</span>
+        <span class="token class-name">String</span> threadId <span class="token operator">=</span> <span class="token constant">ID_PREFIX</span> <span class="token operator">+</span> <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 获取锁中的标示</span>
+        <span class="token class-name">String</span> id <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span><span class="token constant">KEY_PREFIX</span> <span class="token operator">+</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 判断标示是否一致</span>
+        <span class="token keyword">if</span><span class="token punctuation">(</span>threadId<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>id<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// 释放锁</span>
+            stringRedisTemplate<span class="token punctuation">.</span><span class="token function">delete</span><span class="token punctuation">(</span><span class="token constant">KEY_PREFIX</span> <span class="token operator">+</span> name<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h2><a id="_80"></a>🛸原子性问题</h2> 
+<p><mark>上面我们解决了误删问题<br> 在误删问题的情况下，遇到下面的情况的话，会出现Redis分布式锁的原子性问题</mark></p> 
+<p><img src="https://images2.imgbox.com/3d/71/z5YLfVIt_o.png" alt="在这里插入图片描述"><br> 这种情况下，线程1先执行一段，线程1先判断锁标识，判断成功，标识是属于线程1的，<mark>后面就在线程1正准备删除锁释放的过程中，突然线程1的锁过期了</mark>，线程1发生阻塞<br> 这个时候线程2开始执行，在线程2执行过程中，线程1阻塞结束了，会执行删除锁的操作，相当于判断锁标识并没有起到作用（因为之前一句判断过了），于是就把线程2的锁给删除掉了，又一次发生了误删操作<br> 这个时候线程3趁虚而入，执行业务<br> 这就是删锁时的原子性问题，之所以有这个问题，<code>是因为判断锁标识和删除锁是2个动作，这2个动作中间产生了阻塞</code><br> 那么我们就要让这2个操作一起执行，中间不能出现间隔</p> 
+<h4><a id="Lua_92"></a>🌹Lua脚本</h4> 
+<p>Redis提供了Lua脚本功能，在一个脚本中编写多条Redis命令，确保多条命令执行时的原子性。Lua是一种编程语言，它的基本语法大家可以参考网站：https://www.runoob.com/lua/lua-tutorial.html，这里重点介绍Redis提供的调用函数，我们可以使用lua去操作redis，又能保证他的原子性，这样就可以实现拿锁比锁删锁是一个原子性动作了，作为Java程序员这一块并不作一个简单要求，并不需要大家过于精通，只需要知道他有什么作用即可。</p> 
+<p>这里重点介绍Redis提供的调用函数，语法如下：</p> 
+<pre><code class="prism language-bash">redis.call<span class="token punctuation">(</span><span class="token string">'命令名称'</span>, <span class="token string">'key'</span>, <span class="token string">'其它参数'</span>, <span class="token punctuation">..</span>.<span class="token punctuation">)</span>
+</code></pre> 
+<p>例如，我们要执行set name jack，则脚本是这样：</p> 
+<pre><code class="prism language-bash"><span class="token comment"># 执行 set name jack</span>
+redis.call<span class="token punctuation">(</span><span class="token string">'set'</span>, <span class="token string">'name'</span>, <span class="token string">'jack'</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>例如，我们要先执行set name Rose，再执行get name，则脚本如下：</p> 
+<pre><code class="prism language-bash"><span class="token comment"># 先执行 set name jack</span>
+redis.call<span class="token punctuation">(</span><span class="token string">'set'</span>, <span class="token string">'name'</span>, <span class="token string">'Rose'</span><span class="token punctuation">)</span>
+<span class="token comment"># 再执行 get name</span>
+<span class="token builtin class-name">local</span> name <span class="token operator">=</span> redis.call<span class="token punctuation">(</span><span class="token string">'get'</span>, <span class="token string">'name'</span><span class="token punctuation">)</span>
+<span class="token comment"># 返回</span>
+<span class="token builtin class-name">return</span> name
+</code></pre> 
+<p>写好脚本以后，需要用Redis命令来调用脚本，调用脚本的常见命令如下：</p> 
+<p><img src="https://images2.imgbox.com/6d/60/D3Bq6aik_o.png" alt="在这里插入图片描述"></p> 
+<p>例如，我们要执行 redis.call(‘set’, ‘name’, ‘jack’) 这个脚本，语法如下：</p> 
+<p><img src="https://images2.imgbox.com/6c/61/pFLixrHf_o.png" alt="在这里插入图片描述"></p> 
+<p>如果脚本中的key、value不想写死，可以作为参数传递。key类型参数会放入KEYS数组，其它参数会放入ARGV数组，在脚本中可以从KEYS和ARGV数组获取这些参数：</p> 
+<p><img src="https://images2.imgbox.com/02/45/aPR9CNdi_o.png" alt="在这里插入图片描述"></p> 
+<hr> 
+<h3><a id="JavaLua_132"></a>⭐利用Java代码调用Lua脚本改造分布式锁</h3> 
+<p>接下来我们来回一下我们释放锁的逻辑：</p> 
+<p>释放锁的业务流程是这样的</p> 
+<p>​ 1、获取锁中的线程标示</p> 
+<p>​ 2、判断是否与指定的标示（当前线程标示）一致</p> 
+<p>​ 3、如果一致则释放锁（删除）</p> 
+<p>​ 4、如果不一致则什么都不做</p> 
+<p>如果用Lua脚本来表示则是这样的：</p> 
+<p>最终我们操作redis的拿锁比锁删锁的lua脚本就会变成这样</p> 
+<pre><code class="prism language-lua"><span class="token comment">-- 这里的 KEYS[1] 就是锁的key，这里的ARGV[1] 就是当前线程标示</span>
+<span class="token comment">-- 获取锁中的标示，判断是否与当前线程标示一致</span>
+<span class="token keyword">if</span> <span class="token punctuation">(</span>redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'GET'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span> ARGV<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">then</span>
+  <span class="token comment">-- 一致，则删除锁</span>
+  <span class="token keyword">return</span> redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'DEL'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+<span class="token comment">-- 不一致，则直接返回</span>
+<span class="token keyword">return</span> <span class="token number">0</span>
+</code></pre> 
+<p>lua脚本本身并不需要大家花费太多时间去研究，只需要知道如何调用，大致是什么意思即可，所以在笔记中并不会详细的去解释这些lua表达式的含义。</p> 
+<p>我们的RedisTemplate中，可以利用execute方法去执行lua脚本，参数对应关系就如下图<br> <img src="https://images2.imgbox.com/df/71/fRM0tGXU_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/34/58/GKx7KDPm_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="_169"></a>🔎代码实现</h3> 
+<p>我们先写入lua这个脚本<br> <img src="https://images2.imgbox.com/74/df/G98277sk_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-lua"><span class="token comment">-- 比较线程标示与锁中的标示是否一致</span>
+<span class="token keyword">if</span><span class="token punctuation">(</span>redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'get'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token operator">==</span>  ARGV<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span> <span class="token keyword">then</span>
+    <span class="token comment">-- 释放锁 del key</span>
+    <span class="token keyword">return</span> redis<span class="token punctuation">.</span><span class="token function">call</span><span class="token punctuation">(</span><span class="token string">'del'</span><span class="token punctuation">,</span> KEYS<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token keyword">end</span>
+<span class="token keyword">return</span> <span class="token number">0</span>
+</code></pre> 
+<p>然后我们来调用这个脚本<br> <img src="https://images2.imgbox.com/1f/ad/prkisTqn_o.png" alt="在这里插入图片描述"><br> 下面是完整代码</p> 
+<pre><code class="prism language-java"><span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">SimpleRedisLock</span> <span class="token keyword">implements</span> <span class="token class-name">ILock</span> <span class="token punctuation">{<!-- --></span>
+
+    <span class="token keyword">private</span> <span class="token class-name">String</span> name<span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token class-name">StringRedisTemplate</span> stringRedisTemplate<span class="token punctuation">;</span>
+
+    <span class="token keyword">public</span> <span class="token class-name">SimpleRedisLock</span><span class="token punctuation">(</span><span class="token class-name">String</span> name<span class="token punctuation">,</span> <span class="token class-name">StringRedisTemplate</span> stringRedisTemplate<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>name <span class="token operator">=</span> name<span class="token punctuation">;</span>
+        <span class="token keyword">this</span><span class="token punctuation">.</span>stringRedisTemplate <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">KEY_PREFIX</span> <span class="token operator">=</span> <span class="token string">"lock:"</span><span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">String</span> <span class="token constant">ID_PREFIX</span> <span class="token operator">=</span> <span class="token constant">UUID</span><span class="token punctuation">.</span><span class="token function">randomUUID</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">toString</span><span class="token punctuation">(</span><span class="token boolean">true</span><span class="token punctuation">)</span> <span class="token operator">+</span> <span class="token string">"-"</span><span class="token punctuation">;</span>
+    <span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token keyword">final</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">Long</span><span class="token punctuation">&gt;</span></span> <span class="token constant">UNLOCK_SCRIPT</span><span class="token punctuation">;</span>
+    <span class="token keyword">static</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token constant">UNLOCK_SCRIPT</span> <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">DefaultRedisScript</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token constant">UNLOCK_SCRIPT</span><span class="token punctuation">.</span><span class="token function">setLocation</span><span class="token punctuation">(</span><span class="token keyword">new</span> <span class="token class-name">ClassPathResource</span><span class="token punctuation">(</span><span class="token string">"unlock.lua"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token constant">UNLOCK_SCRIPT</span><span class="token punctuation">.</span><span class="token function">setResultType</span><span class="token punctuation">(</span><span class="token class-name">Long</span><span class="token punctuation">.</span><span class="token keyword">class</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">boolean</span> <span class="token function">tryLock</span><span class="token punctuation">(</span><span class="token keyword">long</span> timeoutSec<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 获取线程标示</span>
+        <span class="token class-name">String</span> threadId <span class="token operator">=</span> <span class="token constant">ID_PREFIX</span> <span class="token operator">+</span> <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 获取锁</span>
+        <span class="token class-name">Boolean</span> success <span class="token operator">=</span> stringRedisTemplate<span class="token punctuation">.</span><span class="token function">opsForValue</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+                <span class="token punctuation">.</span><span class="token function">setIfAbsent</span><span class="token punctuation">(</span><span class="token constant">KEY_PREFIX</span> <span class="token operator">+</span> name<span class="token punctuation">,</span> threadId<span class="token punctuation">,</span> timeoutSec<span class="token punctuation">,</span> <span class="token class-name">TimeUnit</span><span class="token punctuation">.</span><span class="token constant">SECONDS</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">return</span> <span class="token class-name">Boolean</span><span class="token punctuation">.</span><span class="token constant">TRUE</span><span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>success<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">//这里不能是return success；否则  因为public后面的boolean是基本类型，而Boolean是引用类型，如果直接返回success，是一个自动拆箱的过程，可能回发生空指针异常</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token annotation punctuation">@Override</span>
+    <span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">unlock</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 调用lua脚本</span>
+        stringRedisTemplate<span class="token punctuation">.</span><span class="token function">execute</span><span class="token punctuation">(</span>
+                <span class="token constant">UNLOCK_SCRIPT</span><span class="token punctuation">,</span>
+                <span class="token class-name">Collections</span><span class="token punctuation">.</span><span class="token function">singletonList</span><span class="token punctuation">(</span><span class="token constant">KEY_PREFIX</span> <span class="token operator">+</span> name<span class="token punctuation">)</span><span class="token punctuation">,</span>
+                <span class="token constant">ID_PREFIX</span> <span class="token operator">+</span> <span class="token class-name">Thread</span><span class="token punctuation">.</span><span class="token function">currentThread</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">getId</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+
+</code></pre> 
+<blockquote> 
+ <p>在技术的道路上，我们不断探索、不断前行，不断面对挑战、不断突破自我。科技的发展改变着世界，而我们作为技术人员，也在这个过程中书写着自己的篇章。让我们携手并进，共同努力，开创美好的未来！愿我们在科技的征途上不断奋进，创造出更加美好、更加智能的明天！</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/8a/44/TNDefxPR_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/51f8e5288cf3f4ed812e17562b993479/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Java数组（如果想知道Java中有关数组的知识点，那么只看这一篇就足够了！）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/524bb11d2f1b49b8cdb558eec66e3505/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">OpenAI将推出搜索产品；阿里通义千问2.5大模型发布，多项能力赶超GPT-4 | AI头条...</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

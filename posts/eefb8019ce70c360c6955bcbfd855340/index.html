@@ -1,0 +1,1314 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C语言：项目实践（贪吃蛇） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/eefb8019ce70c360c6955bcbfd855340/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C语言：项目实践（贪吃蛇）">
+  <meta property="og:description" content="前言：
+相信大家都玩过贪吃蛇这款游戏吧，贪吃蛇是久负盛名的游戏，它也和俄罗斯方块，扫雷等游戏位列经典游戏的行列，那贪吃蛇到底是怎么实现的呢？
+今天，我就用C语言带着大家一起来实现一下这款游戏，从设计到代码的实现可以帮助我们提升编程能力和逻辑能力，项目适合： C语言已经学完，有一定的代码能力，初步接触数据结构中的链表，因为贪吃蛇是基于链表来实现的。
+这里是我们在实现贪吃蛇过程中必须要使用到的一些知识点：C语⾔函数、枚举、结构体、动态内存管理、预处理指令、链表、Win32 API等，至于Win32 API没听过也不要紧，我们下面就会详细讲解到它的使用方法。
+目录 一、游戏最终目标二、Win32 API介绍1.Win32 API2.控制台程序3.控制台屏幕上的坐标COORD4.GetStdHandle5.GetConsoleCursorInfo6.SetConsoleCursorInfo7.SetConsoleCursorPosition8.GetAsyncKeyState 三、贪吃蛇游戏设计与分析1.地图2.setlocale函数3.宽字符的打印4.地图坐标5.蛇身和食物6.数据结构设计7.游戏流程设计8.核心逻辑实现分析 四、游戏开始（GameStart）1.初始化游戏主逻辑2.打印欢迎界面3.创建地图4.创建蛇身5.创建第一个食物 五、游戏运行（GameRun）1.打印帮助信息（PrintHelpInfo）2.蛇身移动（SnakeMove）3.判断下一个节点是否是食物（NextIsFood）4.吃食物（EatFood）5.不是食物（NoFood）6.撞到墙（KillByWall）7.撞到自己（KillBySelf）8.游戏结束（GameEnd） 六、完整代码实现 一、游戏最终目标 使用C语言在Windows环境的控制台中模拟实现经典小游戏贪吃蛇。
+实现基本的功能：
+贪吃蛇地图绘制蛇吃食物的功能 （上、下、左、右方向键控制蛇的动作）蛇撞墙死亡蛇撞自身死亡计算得分蛇身加速、减速暂停游戏正常退出游戏 游戏效果演示
+---
+二、Win32 API介绍 本次实现贪吃蛇会使用到的一些Win32 API知识，接下来我们就学习一下。
+1.Win32 API Windows 这个多作业系统除了协调应用程序的执行、分配内存、管理资源之外， 它同时也是⼀个很大的服务中心，调用这个服务中心的各种服务（每一种服务就是一个函数），可以帮应用程序达到开启视窗、描绘图形、使用周边设备等目的，由于这些函数服务的对象是应用程序(Application)， 所以便称之为 Application Programming Interface，简称 API 函数。WIN32 API也就是Microsoft Windows32位平台的应用程序编程接口。
+2.控制台程序 平常我们运行起来的⿊框程序其实就是控制台程序。
+我们可以使用cmd命令来设置控制台窗口的长宽：设置控制台窗⼝的大小，30行，100列。
+mode con cols=100 lines=30 参考：mode命令
+也可以通过命令设置控制台窗口的名字：
+title 贪吃蛇 参考：title命令
+这些能在控制台窗口执行的命令，也可以调用C语言函数system来执行。例如：
+#include &lt;stdio.h&gt; int main() { //设置控制台窗⼝的⻓宽：设置控制台窗⼝的⼤⼩，30⾏，100列 system(&#34;mode con cols=100 lines=30&#34;); //设置cmd窗⼝名称 system(&#34;title 贪吃蛇&#34;); return 0; } 3.控制台屏幕上的坐标COORD COORD 是Windows API中定义的一个结构体，表示一个字符在控制台屏幕幕缓冲区上的坐标，坐标系(0，0) 的原点位于缓冲区的顶部左侧单元格。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-30T00:09:41+08:00">
+    <meta property="article:modified_time" content="2024-04-30T00:09:41+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C语言：项目实践（贪吃蛇）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><strong>前言：</strong><br> 相信大家都玩过贪吃蛇这款游戏吧，贪吃蛇是久负盛名的游戏，它也和俄罗斯方块，扫雷等游戏位列经典游戏的行列，那贪吃蛇到底是怎么实现的呢？<br> 今天，我就用C语言带着大家一起来实现一下这款游戏，从设计到代码的实现可以帮助我们提升编程能力和逻辑能力，<strong>项目适合：</strong> <u>C语言已经学完，有一定的代码能力，初步接触数据结构中的链表</u>，因为贪吃蛇是基于链表来实现的。<br> 这里是我们在实现贪吃蛇过程中必须要使用到的一些知识点：C语⾔函数、枚举、结构体、动态内存管理、预处理指令、链表、Win32 API等，至于Win32 API没听过也不要紧，我们下面就会详细讲解到它的使用方法。<br> </p> 
+<div class="toc"> 
+ <h4>目录</h4> 
+ <ul><li><a href="#_5" rel="nofollow">一、游戏最终目标</a></li><li><a href="#Win32_API_21" rel="nofollow">二、Win32 API介绍</a></li><li><ul><li><a href="#1Win32_API_23" rel="nofollow">1.Win32 API</a></li><li><a href="#2_25" rel="nofollow">2.控制台程序</a></li><li><a href="#3COORD_53" rel="nofollow">3.控制台屏幕上的坐标COORD</a></li><li><a href="#4GetStdHandle_69" rel="nofollow">4.GetStdHandle</a></li><li><a href="#5GetConsoleCursorInfo_79" rel="nofollow">5.GetConsoleCursorInfo</a></li><li><a href="#6SetConsoleCursorInfo_105" rel="nofollow">6.SetConsoleCursorInfo</a></li><li><a href="#7SetConsoleCursorPosition_117" rel="nofollow">7.SetConsoleCursorPosition</a></li><li><a href="#8GetAsyncKeyState_143" rel="nofollow">8.GetAsyncKeyState</a></li></ul> 
+  </li><li><a href="#_184" rel="nofollow">三、贪吃蛇游戏设计与分析</a></li><li><ul><li><a href="#1_185" rel="nofollow">1.地图</a></li><li><a href="#2setlocale_198" rel="nofollow">2.setlocale函数</a></li><li><a href="#3_225" rel="nofollow">3.宽字符的打印</a></li><li><a href="#4_251" rel="nofollow">4.地图坐标</a></li><li><a href="#5_255" rel="nofollow">5.蛇身和食物</a></li><li><a href="#6_262" rel="nofollow">6.数据结构设计</a></li><li><a href="#7_314" rel="nofollow">7.游戏流程设计</a></li><li><a href="#8_316" rel="nofollow">8.核心逻辑实现分析</a></li></ul> 
+  </li><li><a href="#GameStart_359" rel="nofollow">四、游戏开始（GameStart）</a></li><li><ul><li><a href="#1_369" rel="nofollow">1.初始化游戏主逻辑</a></li><li><a href="#2_420" rel="nofollow">2.打印欢迎界面</a></li><li><a href="#3_439" rel="nofollow">3.创建地图</a></li><li><a href="#4_482" rel="nofollow">4.创建蛇身</a></li><li><a href="#5_530" rel="nofollow">5.创建第一个食物</a></li></ul> 
+  </li><li><a href="#GameRun_570" rel="nofollow">五、游戏运行（GameRun）</a></li><li><ul><li><a href="#1PrintHelpInfo_645" rel="nofollow">1.打印帮助信息（PrintHelpInfo）</a></li><li><a href="#2SnakeMove_664" rel="nofollow">2.蛇身移动（SnakeMove）</a></li><li><a href="#3NextIsFood_713" rel="nofollow">3.判断下一个节点是否是食物（NextIsFood）</a></li><li><a href="#4EatFood_723" rel="nofollow">4.吃食物（EatFood）</a></li><li><a href="#5NoFood_747" rel="nofollow">5.不是食物（NoFood）</a></li><li><a href="#6KillByWall_783" rel="nofollow">6.撞到墙（KillByWall）</a></li><li><a href="#7KillBySelf_797" rel="nofollow">7.撞到自己（KillBySelf）</a></li><li><a href="#8GameEnd_813" rel="nofollow">8.游戏结束（GameEnd）</a></li></ul> 
+  </li><li><a href="#_842" rel="nofollow">六、完整代码实现</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_5"></a>一、游戏最终目标</h2> 
+<p>使用C语言在Windows环境的控制台中模拟实现经典小游戏贪吃蛇。<br> <strong>实现基本的功能：</strong></p> 
+<blockquote> 
+ <ul><li>贪吃蛇地图绘制</li><li>蛇吃食物的功能 （上、下、左、右方向键控制蛇的动作）</li><li>蛇撞墙死亡</li><li>蛇撞自身死亡</li><li>计算得分</li><li>蛇身加速、减速</li><li>暂停游戏</li><li>正常退出游戏</li></ul> 
+</blockquote> 
+<p><strong>游戏效果演示</strong></p> 
+<p></p> 
+<div class="csdn-video-box"> 
+ <iframe id="fEYy2kh4-1714406710846" frameborder="0" src="https://live.csdn.net/v/embed/383500" allowfullscreen="true" data-mediaembed="csdn"></iframe> 
+ <p>---</p> 
+</div> 
+<p></p> 
+<h2><a id="Win32_API_21"></a>二、Win32 API介绍</h2> 
+<p>本次实现贪吃蛇会使用到的一些Win32 API知识，接下来我们就学习一下。</p> 
+<h3><a id="1Win32_API_23"></a>1.Win32 API</h3> 
+<p>Windows 这个多作业系统除了协调应用程序的执行、分配内存、管理资源之外， 它同时也是⼀个很大的服务中心，调用这个服务中心的各种服务（每一种服务就是一个函数），可以帮应用程序达到开启视窗、描绘图形、使用周边设备等目的，由于这些函数服务的对象是应用程序(Application)， 所以便称之为 Application Programming Interface，简称 API 函数。WIN32 API也就是Microsoft Windows32位平台的应用程序编程接口。</p> 
+<h3><a id="2_25"></a>2.控制台程序</h3> 
+<p>平常我们运行起来的⿊框程序其实就是控制台程序。<br> 我们可以使用cmd命令来设置控制台窗口的长宽：设置控制台窗⼝的大小，30行，100列。</p> 
+<pre><code class="prism language-c">mode con cols<span class="token operator">=</span><span class="token number">100</span> lines<span class="token operator">=</span><span class="token number">30</span>
+</code></pre> 
+<p>参考：mode命令<br> 也可以通过命令设置控制台窗口的名字：</p> 
+<pre><code class="prism language-c">title 贪吃蛇
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c3/62/NSXo2l5L_o.png" alt="在这里插入图片描述"><br> 参考：title命令<br> 这些能在控制台窗口执行的命令，也可以调用C语言函数<code>system</code>来执行。例如：</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h&gt;</span></span>
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token comment">//设置控制台窗⼝的⻓宽：设置控制台窗⼝的⼤⼩，30⾏，100列</span>
+	<span class="token function">system</span><span class="token punctuation">(</span><span class="token string">"mode con cols=100 lines=30"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">//设置cmd窗⼝名称</span>
+	<span class="token function">system</span><span class="token punctuation">(</span><span class="token string">"title 贪吃蛇"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="3COORD_53"></a>3.控制台屏幕上的坐标COORD</h3> 
+<p>COORD 是Windows API中定义的一个结构体，表示一个字符在控制台屏幕幕缓冲区上的坐标，坐标系(0，0) 的原点位于缓冲区的顶部左侧单元格。<br> <img src="https://images2.imgbox.com/5c/55/kNDGIbtz_o.png" alt="在这里插入图片描述"><br> COORD类型的声明：</p> 
+<pre><code class="prism language-c"><span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">_COORD</span> <span class="token punctuation">{<!-- --></span>
+	SHORT X<span class="token punctuation">;</span>
+	SHORT Y<span class="token punctuation">;</span>
+<span class="token punctuation">}</span> COORD<span class="token punctuation">,</span> <span class="token operator">*</span>PCOORD<span class="token punctuation">;</span>
+</code></pre> 
+<p>给坐标赋值：</p> 
+<pre><code class="prism language-c">COORD pos <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">15</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="4GetStdHandle_69"></a>4.GetStdHandle</h3> 
+<blockquote> 
+ <p>GetStdHandle是⼀个WindowsAPI函数。它y用于从一个特定的标准设备（标准输入、标准输出或标准错误）中取得一个句柄（用来标识不同设备的数值），使用这个句柄可以操作设备。</p> 
+</blockquote> 
+<p>实例：</p> 
+<pre><code class="prism language-c">HANDLE hOutput <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+<span class="token comment">//获取标准输出的句柄(⽤来标识不同设备的数值)</span>
+hOutput <span class="token operator">=</span> <span class="token function">GetStdHandle</span><span class="token punctuation">(</span>STD_OUTPUT_HANDLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="5GetConsoleCursorInfo_79"></a>5.GetConsoleCursorInfo</h3> 
+<p>检索有关指定控制台屏幕缓冲区的光标大小和可见性的信息<br> 实例：</p> 
+<pre><code class="prism language-c">HANDLE hOutput <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+<span class="token comment">//获取标准输出的句柄(⽤来标识不同设备的数值)</span>
+hOutput <span class="token operator">=</span> <span class="token function">GetStdHandle</span><span class="token punctuation">(</span>STD_OUTPUT_HANDLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+CONSOLE_CURSOR_INFO CursorInfo<span class="token operator">=</span><span class="token punctuation">{<!-- --></span><span class="token number">0</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token function">GetConsoleCursorInfo</span><span class="token punctuation">(</span>hOutput<span class="token punctuation">,</span> <span class="token operator">&amp;</span>CursorInfo<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//获取控制台光标信息</span>
+</code></pre> 
+<p><strong>CONSOLE_CURSOR_INFO</strong><br> 这个结构体，包含有关控制台光标的信息</p> 
+<pre><code class="prism language-c"><span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">_CONSOLE_CURSOR_INFO</span> <span class="token punctuation">{<!-- --></span>
+	DWORD dwSize<span class="token punctuation">;</span>
+	BOOL  bVisible<span class="token punctuation">;</span>
+<span class="token punctuation">}</span> CONSOLE_CURSOR_INFO<span class="token punctuation">,</span> <span class="token operator">*</span>PCONSOLE_CURSOR_INFO<span class="token punctuation">;</span>
+</code></pre> 
+<blockquote> 
+ <ul><li>dwSize，由光标填充的字符单元格的百分比。 此值介于1到100之间。 光标外观会变化，范围从完全填充单元格到单元底部的水平线条。</li><li>bVisible，游标的可见性。 如果光标可见，则此成员为 TRUE。</li></ul> 
+</blockquote> 
+<pre><code class="prism language-c">CursorInfo<span class="token punctuation">.</span>bVisible <span class="token operator">=</span> false<span class="token punctuation">;</span> <span class="token comment">//隐藏控制台光标</span>
+</code></pre> 
+<h3><a id="6SetConsoleCursorInfo_105"></a>6.SetConsoleCursorInfo</h3> 
+<p>设置指定控制台屏幕缓冲区的光标的大小和可见性。<br> 实例：</p> 
+<pre><code class="prism language-c">HANDLE hOutput <span class="token operator">=</span> <span class="token function">GetStdHandle</span><span class="token punctuation">(</span>STD_OUTPUT_HANDLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//影藏光标操作</span>
+CONSOLE_CURSOR_INFO CursorInfo<span class="token punctuation">;</span>
+<span class="token function">GetConsoleCursorInfo</span><span class="token punctuation">(</span>hOutput<span class="token punctuation">,</span> <span class="token operator">&amp;</span>CursorInfo<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//获取控制台光标信息</span>
+CursorInfo<span class="token punctuation">.</span>bVisible <span class="token operator">=</span> false<span class="token punctuation">;</span> <span class="token comment">//隐藏控制台光标</span>
+<span class="token function">SetConsoleCursorInfo</span><span class="token punctuation">(</span>hOutput<span class="token punctuation">,</span> <span class="token operator">&amp;</span>CursorInfo<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//设置控制台光标状态</span>
+</code></pre> 
+<h3><a id="7SetConsoleCursorPosition_117"></a>7.SetConsoleCursorPosition</h3> 
+<p>设置指定控制台屏幕缓冲区中的光标位置，我们将想要设置的坐标信息放在COORD类型的<code>pos</code>中，调用SetConsoleCursorPosition函数将光标位置设置到指定的位置。<br> 实例：</p> 
+<pre><code class="prism language-c">COORD pos <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token number">10</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+HANDLE hOutput <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+<span class="token comment">//获取标准输出的句柄(⽤来标识不同设备的数值)</span>
+hOutput <span class="token operator">=</span> <span class="token function">GetStdHandle</span><span class="token punctuation">(</span>STD_OUTPUT_HANDLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token comment">//设置标准输出上光标的位置为pos</span>
+<span class="token function">SetConsoleCursorPosition</span><span class="token punctuation">(</span>hOutput<span class="token punctuation">,</span> pos<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>SetPos：封装一个设置光标位置的函数</p> 
+<pre><code class="prism language-c"><span class="token comment">//设置光标的坐标</span>
+<span class="token keyword">void</span> <span class="token function">SetPos</span><span class="token punctuation">(</span><span class="token keyword">short</span> x<span class="token punctuation">,</span> <span class="token keyword">short</span> y<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	COORD pos <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> x<span class="token punctuation">,</span> y <span class="token punctuation">}</span><span class="token punctuation">;</span>
+	HANDLE hOutput <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+	<span class="token comment">//获取标准输出的句柄(⽤来标识不同设备的数值)</span>
+	hOutput <span class="token operator">=</span> <span class="token function">GetStdHandle</span><span class="token punctuation">(</span>STD_OUTPUT_HANDLE<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">//设置标准输出上光标的位置为pos</span>
+	<span class="token function">SetConsoleCursorPosition</span><span class="token punctuation">(</span>hOutput<span class="token punctuation">,</span> pos<span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="8GetAsyncKeyState_143"></a>8.GetAsyncKeyState</h3> 
+<p>获取按键情况，GetAsyncKeyState的函数原型如下：</p> 
+<pre><code class="prism language-c">SHORT <span class="token function">GetAsyncKeyState</span><span class="token punctuation">(</span>
+	<span class="token keyword">int</span> vKey
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>将键盘上每个键的虚拟键值传递给函数，函数通过返回值来分辨按键的状态。<code>GetAsyncKeyState</code>的返回值是short类型，在上一次调用<code>GetAsyncKeyState</code> 函数后，如果返回的16位的short数据中，最高位是1，说明按键的状态是按下，如果最高是0，说明按键的状态是抬起；如果最低位被置为1则说明，该按键被按过，否则为0。<br> 如果我们要判断一个键是否被按过，可以检测GetAsyncKeyState返回值的最低位是否为1.<br> 参考：虚拟键码 (Winuser.h) - Win32 apps<br> 实例：检测数字键</p> 
+<pre><code>#include &lt;stdio.h&gt;
+#include &lt;windows.h&gt;
+#define KEY_PRESS(VK)  ( (GetAsyncKeyState(VK) &amp; 0x1) ? 1 : 0 )
+int main()
+{
+	while (1)
+	{
+		if (KEY_PRESS(0x30))
+		{
+			printf("0\n");
+		}
+		else if (KEY_PRESS(0x31))
+		{
+			printf("1\n");
+		}
+		else if (KEY_PRESS(0x32))
+		{
+			printf("2\n");
+		}
+		else if (KEY_PRESS(0x33))
+		{
+			printf("3\n");
+		}
+	}
+	return 0；
+}
+</code></pre> 
+<h2><a id="_184"></a>三、贪吃蛇游戏设计与分析</h2> 
+<h3><a id="1_185"></a>1.地图</h3> 
+<p>我们最终的贪吃蛇大纲要是这个样子，那我们的地图如何布置呢？<br> <img src="https://images2.imgbox.com/a2/ac/6MXUMQKd_o.png" alt="在这里插入图片描述"></p> 
+<p><img src="https://images2.imgbox.com/ac/90/YCJUgVvv_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/a1/3b/NzXMofvK_o.png" alt="在这里插入图片描述"></p> 
+<p>这里不得不讲一下控制台窗口的一些知识，如果想在控制台的窗口中指定位置输出信息，我们得知道该位置的坐标，所以首先介绍一下控制台窗口的坐标知识。<br> 控制台窗口的坐标横向的是X轴，从左向右依次增长，纵向是Y轴，从上到下依次增长。<br> <img src="https://images2.imgbox.com/d1/67/rfbBYJuv_o.png" alt="在这里插入图片描述"><br> 在游戏地图上，我们打印墙体使用宽字符：〓，打印蛇使用宽字符：㊣，打印⻝物使用宽字符：◆，普通的字符是占一个字节的，这类宽字符是占用2个字节。<br> 这里再简单的讲一下C语言的国际化特性相关的知识，过去C语言并不适合非英语国家（地区）使用。C语言最初假定字符都是单字节的。但是这些假定并不是在世界的任何地方都适用。<br> 后来为了使C语言适应国际化，C语言的标准中不断加入了国际化支持。比如：加入了宽字符的类型<code>wchar_t</code> 和宽字符的输入和输出函数，加入了<code>&lt;locale.h&gt;</code>头文件，其中提供了允许程序员针对特定地区（通常是国家或者说某种特定语言的地理区域）调整程序行为的函数。</p> 
+<h3><a id="2setlocale_198"></a>2.setlocale函数</h3> 
+<pre><code class="prism language-c"><span class="token keyword">char</span><span class="token operator">*</span> <span class="token function">setlocale</span> <span class="token punctuation">(</span><span class="token keyword">int</span> category<span class="token punctuation">,</span> <span class="token keyword">const</span> <span class="token keyword">char</span><span class="token operator">*</span> locale<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>setlocale 函数用于修改当前地区，可以针对一个类项修改，也可以针对所有类项。C语言支持针对不同的类项进行修改，下面的一个宏，<br> 指定一个类项：</p> 
+<ul><li>LC_COLLATE：影响字符串比较函数 <code>strcoll()</code> 和 <code>strxfrm()</code></li><li>LC_CTYPE：影响字符处理函数的行为。</li><li>LC_MONETARY：影响货币格式。</li><li>LC_NUMERIC：影响 <code>printf()</code> 的数字格式。</li><li>LC_TIME：影响时间格式 <code>strftime()</code> 和 <code>wcsftime()</code> 。</li><li>LC_ALL ：针对所有类项修改，将以上所有类别设置为给定的语言环境。</li></ul> 
+<p><code>setlocale</code> 的第一个参数可以是前面说明的类项中的一个，那么每次只会影响一个类项，如果第一个参数是<code>LC_ALL</code>，就会影响所有的类项。<br> C标准给第二个参数仅定义了2种可能取值：“C”（正常模式）和 " "（本地模式）。<br> 在任意程序执行开始，都会隐藏式执行调用:</p> 
+<pre><code class="prism language-c"><span class="token function">setlocale</span><span class="token punctuation">(</span>LC_ALL<span class="token punctuation">,</span> <span class="token string">"C"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>当程序运行起来后想改变地区，就只能调用<code>setlocale</code>函数。用<code>" "</code>作为第2个参数，调用<code>setlocale</code>函数就可以切换到本地模式，这种模式下程序会适应本地环境。<br> 比如：切换到我们的本地模式后就支持宽字符（汉字）的输出等。</p> 
+<pre><code class="prism language-c"><span class="token function">setlocale</span><span class="token punctuation">(</span>LC_ALL<span class="token punctuation">,</span> <span class="token string">" "</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//切换到本地环境</span>
+</code></pre> 
+<h3><a id="3_225"></a>3.宽字符的打印</h3> 
+<p>那如果想在屏幕上打印宽字符，怎么打印呢？<br> 宽字符的字面量必须加上前缀“L”，否则 C 语言会把字面量当作窄字符类型处理。前缀“L”在单引号前面，表示宽字符，对应<code>wprintf()</code> 的占位符为 <code>%lc</code> ；在双引号前面，表示宽字符串，对应<code>wprintf()</code> 的占位符为 <code>%ls</code> 。</p> 
+<pre><code>#include &lt;stdio.h&gt;
+#include&lt;locale.h&gt;
+int main() {
+	setlocale(LC_ALL, "");
+	wchar_t ch1 = L'●';
+	wchar_t ch2 = L'大';
+	wchar_t ch3 = L'佬';
+	wchar_t ch4 = L'★';
+	printf("%c%c\n", 'a', 'b');
+	wprintf(L"%lc\n", ch1);
+	wprintf(L"%lc\n", ch2);
+	wprintf(L"%lc\n", ch3);
+	wprintf(L"%lc\n", ch4);
+	return 0;
+}
+</code></pre> 
+<p>输出结果：<br> <img src="https://images2.imgbox.com/0e/5c/8VlPstSo_o.png" alt="在这里插入图片描述"><br> 从输出的结果来看，我们发现一个普通字符占一个字符的位置，但是打印一个汉字字符，占用2个字符的位置，那么我们如果要在贪吃蛇中使用宽字符，就得处理好地图上坐标的计算。<br> 普通字符和宽字符打印出宽度的展示如下：<br> <img src="https://images2.imgbox.com/01/85/SGiAchvf_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="4_251"></a>4.地图坐标</h3> 
+<p>我们假设实现一个棋盘27行，58列的棋盘（行和列可以根据自己的情况修改），再围绕地图画出墙，<br> 如下：<br> <img src="https://images2.imgbox.com/34/56/3CYUWXl4_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="5_255"></a>5.蛇身和食物</h3> 
+<p>初始化状态，假设蛇的长度是5，蛇身的每个节点是：㊣，在固定的一个坐标处，比如(24, 5)处开始出现蛇，连续5个节点。<br> <font color="red"><strong>注意：</strong></font>蛇的每个节点的x坐标必须是2的倍数，否则可能会出现蛇的一个节点有一半儿出现在墙体中，另外一半在墙外的现象，坐标不好对齐。<br> 关于食物，就是在墙体内随机生成一个坐标（x坐标必须是2的倍数），坐标不能和蛇的身体重合，然后打印：◆。</p> 
+<p><img src="https://images2.imgbox.com/26/81/kVR9weDp_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="6_262"></a>6.数据结构设计</h3> 
+<p>在游戏运行的过程中，蛇每次吃一个食物，蛇的身体就会变长一节，如果我们使用链表存储蛇的信息，那么蛇的每一节其实就是链表的每个节点。每个节点只要记录好蛇身节点在地图上的坐标就行，所以蛇节点结构如下：</p> 
+<pre><code class="prism language-c"><span class="token comment">//定义蛇身的节点</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">snakenode</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token comment">//坐标</span>
+	<span class="token keyword">int</span> x<span class="token punctuation">;</span>
+	<span class="token keyword">int</span> y<span class="token punctuation">;</span>
+	<span class="token keyword">struct</span> <span class="token class-name">snakenode</span><span class="token operator">*</span> next<span class="token punctuation">;</span><span class="token comment">//指向下一个节点的指针</span>
+<span class="token punctuation">}</span>Snakenode<span class="token punctuation">,</span> <span class="token operator">*</span> Psnakenode<span class="token punctuation">;</span>
+</code></pre> 
+<p>要管理整条贪吃蛇，我们再封装一个Snake的结构来维护整条贪吃蛇：</p> 
+<pre><code class="prism language-c"><span class="token comment">//维护蛇的相关信息</span>
+<span class="token keyword">typedef</span> <span class="token keyword">struct</span> <span class="token class-name">snake</span>
+<span class="token punctuation">{<!-- --></span>
+	Psnakenode _snake<span class="token punctuation">;</span>  <span class="token comment">//指向蛇头的指针</span>
+	Psnakenode _Food<span class="token punctuation">;</span>   <span class="token comment">//指向食物节点的指针</span>
+	<span class="token keyword">enum</span> <span class="token class-name">Dir</span> _dir<span class="token punctuation">;</span>      <span class="token comment">//蛇的方向</span>
+	<span class="token keyword">enum</span> <span class="token class-name">Status</span> _status<span class="token punctuation">;</span><span class="token comment">//蛇的状态</span>
+	<span class="token keyword">int</span> _sleep<span class="token punctuation">;</span>         <span class="token comment">//每⾛⼀步休眠时间</span>
+	<span class="token keyword">int</span> _Allgrade<span class="token punctuation">;</span>      <span class="token comment">//游戏当前获得分数</span>
+	<span class="token keyword">int</span> _grade<span class="token punctuation">;</span>         <span class="token comment">//默认每个⻝物10分</span>
+<span class="token punctuation">}</span>Snake<span class="token punctuation">,</span> <span class="token operator">*</span> Psnake<span class="token punctuation">;</span>
+</code></pre> 
+<p>蛇的方向，可以一一列举，使用枚举</p> 
+<pre><code class="prism language-c"><span class="token comment">//方向</span>
+<span class="token keyword">enum</span> <span class="token class-name">Dir</span>
+<span class="token punctuation">{<!-- --></span>
+	UP<span class="token punctuation">,</span>
+	DOWN<span class="token punctuation">,</span>
+	LEFT<span class="token punctuation">,</span>
+	RIGHT
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>游戏状态，可以一一列举，使用枚举</p> 
+<pre><code class="prism language-c"><span class="token comment">//游戏状态</span>
+<span class="token keyword">enum</span> <span class="token class-name">Status</span>
+<span class="token punctuation">{<!-- --></span>
+	OK<span class="token punctuation">,</span>
+	KILL_BYWALL<span class="token punctuation">,</span><span class="token comment">//撞到墙</span>
+	KILL_BYSELF<span class="token punctuation">,</span><span class="token comment">//撞到自己</span>
+	END_NORMAL  <span class="token comment">//正常退出</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<h3><a id="7_314"></a>7.游戏流程设计</h3> 
+<p><img src="https://images2.imgbox.com/30/a3/4et1rM2T_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="8_316"></a>8.核心逻辑实现分析</h3> 
+<p><strong>游戏主逻辑</strong><br> 程序开始就设置程序支持本地模式，然后进入游戏的主逻辑。<br> 主逻辑分为3个过程：</p> 
+<ul><li>游戏开始（GameStart）完成游戏的初始化</li><li>游戏运行（GameRun）完成游戏运行逻辑的实现</li><li>游戏结束（GameEnd）完成游戏结束的说明，实现资源释放</li></ul> 
+<pre><code>#include "Snake.h"
+void snakeTest()
+{
+	char ch;
+	do
+	{
+		system("cls");
+		//创建蛇
+		Snake snake;
+		snake._snake = NULL;
+		//初始化游戏
+		GameStart(&amp;snake);
+		//运行游戏
+		GameRun(&amp;snake);
+		//结束游戏,游戏的善后
+		GameEnd(&amp;snake);
+		Setpos(24, 14);
+		wprintf(L"再来一局吗？(Y/N)");
+		ch = getchar();
+		getchar();
+	} while (ch == 'Y' || ch == 'y');
+	Setpos(0, 27);
+}
+int main()
+{
+	//修改当前地区为本地模式，为了⽀持中⽂宽字符的打印
+	setlocale(LC_ALL, "");
+	//生成随机数函数的声明
+	srand((unsigned int)time(NULL));
+	//测试逻辑
+	snakeTest();
+	return 0;
+}
+</code></pre> 
+<h2><a id="GameStart_359"></a>四、游戏开始（GameStart）</h2> 
+<p>这个模块完成游戏的初始化任务：</p> 
+<blockquote> 
+ <ul><li>控制台窗口大小的设置</li><li>控制台窗口名字的设置</li><li>⿏标光标的隐藏</li><li>打印欢迎界面</li><li>创建地图</li><li>初始化第蛇</li><li>创建第一个⻝物</li></ul> 
+</blockquote> 
+<h3><a id="1_369"></a>1.初始化游戏主逻辑</h3> 
+<pre><code>void GameStart(Psnake Ps)
+{
+	//设置控制台相关属性
+	system("mode con cols=110 lines=30");
+	system("title 贪吃蛇");
+	//隐藏光标
+	//获取标准输出的句柄
+	HANDLE houtput = NULL;
+	houtput = GetStdHandle(STD_OUTPUT_HANDLE);
+	//创建光标结构体
+	CONSOLE_CURSOR_INFO cursor_info = { 0 };
+	//获取控制台光标信息
+	GetConsoleCursorInfo(houtput, &amp;cursor_info);
+	//修改光标信息
+	cursor_info.bVisible = false;
+	//设置光标信息
+	SetConsoleCursorInfo(houtput, &amp;cursor_info);
+	//颜色设置
+	void Color(int c)
+	{
+		SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), c);
+		//SetConsoleTextAttribute为Win32 API函数
+	}
+	//定位光标
+	void Setpos(short x, short y)
+	{
+		//获取标准输出的句柄
+		HANDLE houtput = NULL;
+		houtput = GetStdHandle(STD_OUTPUT_HANDLE);
+		//定位控制台光标位置
+		COORD pos = { x,y };
+		SetConsoleCursorPosition(houtput, pos);
+	}
+	//打印欢迎界面
+	WelcomePrint();
+	//创建地图
+	Createmap();
+	//创建蛇身
+	CreateSnakenode(Ps);
+	//创建食物
+	Createfood(Ps);
+	//设置蛇的信息
+	Ps-&gt;_Allgrade = 0;
+	Ps-&gt;_grade = 10;
+	Ps-&gt;_dir = RIGHT;
+	Ps-&gt;_sleep = 200;
+	Ps-&gt;_status = OK;
+}
+</code></pre> 
+<h3><a id="2_420"></a>2.打印欢迎界面</h3> 
+<p>在游戏正式开始之前，做一些功能提醒</p> 
+<pre><code class="prism language-c"><span class="token keyword">void</span> <span class="token function">WelcomePrint</span><span class="token punctuation">(</span><span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token function">Setpos</span><span class="token punctuation">(</span><span class="token number">40</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">wprintf</span><span class="token punctuation">(</span>L<span class="token string">"欢迎来到贪吃蛇小游戏"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">Setpos</span><span class="token punctuation">(</span><span class="token number">43</span><span class="token punctuation">,</span> <span class="token number">18</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//让按任意键继续的出现的位置好看点</span>
+	<span class="token function">system</span><span class="token punctuation">(</span><span class="token string">"pause"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">Setpos</span><span class="token punctuation">(</span><span class="token number">33</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">wprintf</span><span class="token punctuation">(</span>L<span class="token string">"按 ↑ ↓ ← → 控制蛇的移动，F3加速，F4减速"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">Setpos</span><span class="token punctuation">(</span><span class="token number">33</span><span class="token punctuation">,</span> <span class="token number">11</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">wprintf</span><span class="token punctuation">(</span>L<span class="token string">"按ESC退出游戏，按空格暂停游戏"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">Setpos</span><span class="token punctuation">(</span><span class="token number">43</span><span class="token punctuation">,</span> <span class="token number">18</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">system</span><span class="token punctuation">(</span><span class="token string">"pause"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token function">system</span><span class="token punctuation">(</span><span class="token string">"cls"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="3_439"></a>3.创建地图</h3> 
+<p>创建地图就是将墙打印出来，因为是宽字符打印，所有使用<code>wprintf</code>函数，打印格式串前使用L，打印地图的关键是要算好坐标，才能在想要的位置打印墙体。<br> 墙体打印的宽字符：</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">WALL</span> <span class="token expression">L</span><span class="token char">'〓'</span></span>
+</code></pre> 
+<p><font color="red">易错点：</font>就是坐标的计算<br> 上：（0,0）到（56,0）<br> 下：（0,26）到（56,26）<br> 左：（0,1）到（0,25）<br> 右：（56,1）到（56,25）<br> 创建地图函数CreateMap</p> 
+<pre><code>void CreateMap()
+{
+	Color(6);//设置墙的颜色为土黄色
+	//上(0,0)-(56, 0)
+	for (int i = 0; i &lt; 29; i++)
+	{
+		wprintf(L"%lc", WALL);
+	}
+	//下(0,26)-(56, 26)
+	Setpos(0, 26);
+	for (int i = 0; i &lt; 29; i++)
+	{
+		wprintf(L"%lc", WALL);
+	}
+	//左,x是0，y从1开始增⻓
+	for (int i = 1; i &lt; 26; i++)
+	{
+		Setpos(0, i);
+		wprintf(L"%lc", WALL);
+	}
+	//右,x是56，y从1开始增⻓
+	for (int i = 1; i &lt; 26; i++)
+	{
+		Setpos(56, i);
+		wprintf(L"%lc", WALL);
+	}
+}
+</code></pre> 
+<h3><a id="4_482"></a>4.创建蛇身</h3> 
+<p>蛇最开始长度为5节，每节对应链表的一个节点，蛇身的每一个节点都有自己的坐标，创建5个节点，然后将每个节点存放在链表中进行管理，创建完蛇身后，将蛇的每一节打印在屏幕上。<br> 蛇的初始位置从 (24,5) 开始。<br> 蛇⾝打印的宽字符：</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">BODY</span> <span class="token expression">L</span><span class="token char">'㊣'</span></span>
+</code></pre> 
+<p>创建蛇⾝函数：CreateSnakenode</p> 
+<pre><code>void CreateSnakenode(Psnake Ps)
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+	    //创建蛇身的节点
+		Psnakenode pcur = (Psnakenode)malloc(sizeof(Snakenode));
+		if (pcur == NULL)
+		{
+			perror("SetSnakenode::malloc");
+			return;
+		}
+		//设置坐标
+		pcur-&gt;x = 24 + i * 2;
+		pcur-&gt;y = 5;
+		pcur-&gt;next = NULL;
+		if (Ps-&gt;_snake == NULL)
+		{
+			//为空
+			Ps-&gt;_snake = pcur;
+		}
+		else
+		{
+			//不为空，使用头插法
+			pcur-&gt;next = Ps-&gt;_snake;
+			Ps-&gt;_snake = pcur;
+		}
+	}
+	//打印蛇身
+	Psnakenode prev = Ps-&gt;_snake;
+	while (prev)
+	{
+		Setpos(prev-&gt;x, prev-&gt;y);
+		wprintf(L"%lc", BODY);
+		prev = prev-&gt;next;
+	}
+}
+</code></pre> 
+<h3><a id="5_530"></a>5.创建第一个食物</h3> 
+<p>先随机生成食物的坐标，食物的x坐标必须是2的倍数，食物的坐标不能和蛇身每个节点的坐标重复，然后创建食物节点，打印食物。<br> 食物打印的宽字符:</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name">FOOD</span> <span class="token expression">L</span><span class="token char">'◆'</span></span>
+</code></pre> 
+<p>创建食物的函数：CreateFood</p> 
+<pre><code>void CreateFood(Psnake Ps)
+{
+	int x = 0, y = 0;
+qu:
+	do
+	{
+		x = rand() % 53 + 2;
+		y = rand() % 25 + 1;
+	} while (x % 2 != 0);//生成的x坐标必须是2的倍数
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		//生成的食物不能和蛇的身体重合
+		if (pcur-&gt;x == x &amp;&amp; pcur-&gt;y == y)
+			goto qu;//坐标与蛇身重合就重新生成坐标
+		pcur = pcur-&gt;next;
+	}
+	Setpos(x, y);
+	Color(223);//食物颜色设置为粉色
+	wprintf(L"%lc", FOOD);
+	Ps-&gt;_Food = (Psnakenode)malloc(sizeof(Snakenode));//给食物申请一个节点
+	if (Ps-&gt;_Food == NULL)
+	{
+		perror("Set_food::malloc");
+		return;
+	}
+	Ps-&gt;_Food-&gt;x = x;
+	Ps-&gt;_Food-&gt;y = y;
+}
+</code></pre> 
+<h2><a id="GameRun_570"></a>五、游戏运行（GameRun）</h2> 
+<p>游戏运行期间，右侧打印帮助信息，提示玩家，坐标开始位置(62, 9)。<br> 根据游戏状态检查游戏是否继续，如果是状态是OK，游戏继续，否则游戏结束。<br> 如果游戏继续，就是检测按键情况，确定蛇下一步的方向，或者是否加速减速，是否暂停或者退出游戏。<br> 需要的虚拟按键的罗列：</p> 
+<blockquote> 
+ <ul><li>上：VK_UP</li><li>下：VK_DOWN</li><li>左：VK_LEFT</li><li>右：VK_RIGHT</li><li>空格：VK_SPACE</li><li>ESC：VK_ESCAPE</li><li>F3：VK_F3</li><li>F4：VK_F4</li></ul> 
+</blockquote> 
+<p>检测按键状态，我们封装了⼀个宏</p> 
+<pre><code class="prism language-c"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">define</span> <span class="token macro-name function">KEY_PRESS</span><span class="token expression"><span class="token punctuation">(</span>VK<span class="token punctuation">)</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token function">GetAsyncKeyState</span><span class="token punctuation">(</span>VK<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token operator">&amp;</span><span class="token number">1</span><span class="token operator">?</span><span class="token number">1</span><span class="token operator">:</span><span class="token number">0</span><span class="token punctuation">)</span></span></span>
+</code></pre> 
+<p>确定了蛇的方向和速度，蛇就可以移动了。</p> 
+<pre><code>void GameRun(Psnake Ps)
+{
+	do
+	{
+		//打印帮助信息
+		PrintHelpInfo(Ps);
+		if (KEY_PRESS(VK_UP) &amp;&amp; Ps-&gt;_dir != DOWN)
+			Ps-&gt;_dir = UP;
+		else if (KEY_PRESS(VK_DOWN) &amp;&amp; Ps-&gt;_dir != UP)
+			Ps-&gt;_dir = DOWN;
+		else if (KEY_PRESS(VK_LEFT) &amp;&amp; Ps-&gt;_dir != RIGHT)
+			Ps-&gt;_dir = LEFT;
+		else if (KEY_PRESS(VK_RIGHT) &amp;&amp; Ps-&gt;_dir != LEFT)
+			Ps-&gt;_dir = RIGHT;
+		else if (KEY_PRESS(VK_SPACE))
+		{
+			//暂停游戏
+			Stop();
+		}
+		else if (KEY_PRESS(VK_ESCAPE))
+		{
+			//正常退出游戏
+			Ps-&gt;_status = END_NORMAL;
+		}
+		else if (KEY_PRESS(VK_F3))
+		{
+			//加速
+			if (Ps-&gt;_sleep &gt; 80)
+			{
+				Ps-&gt;_sleep -= 40;
+				Ps-&gt;_Allgrade += 2;
+			}
+		}
+		else if (KEY_PRESS(VK_F4))
+		{
+			//减速
+			if (Ps-&gt;_sleep &gt;= 200 &amp;&amp; Ps-&gt;_sleep &lt;= 320)
+			{
+				Ps-&gt;_sleep += 40;
+				Ps-&gt;_Allgrade -= 2;
+			}
+		}
+		//蛇走一步
+		SnakeMove(Ps);
+		//撞到墙
+		Kill_ByWall(Ps);
+		//撞到自己
+		Kill_BySelf(Ps);
+		Sleep(Ps-&gt;_sleep);
+	} while (Ps-&gt;_status == OK);
+}
+</code></pre> 
+<h3><a id="1PrintHelpInfo_645"></a>1.打印帮助信息（PrintHelpInfo）</h3> 
+<pre><code>void PrintHelpInfo(Psnake Ps)
+{
+	//打印帮助信息
+	Setpos(62, 9);
+	printf("当前蛇的总分数为：%2d", Ps-&gt;_Allgrade);
+	Setpos(62, 10);
+	printf("当前食物的分数为：%2d", Ps-&gt;_grade);
+	Color(7);//设置打印信息颜色
+	Setpos(62, 14);
+	wprintf(L"不能撞墙，不能撞到自己");
+	Setpos(62, 15);
+	wprintf(L"按 ↑ ↓ ← → 控制蛇的移动，F3加速，F4减速");
+	Setpos(62, 16);
+	wprintf(L"按ESC退出游戏，按空格暂停游戏");
+}
+</code></pre> 
+<h3><a id="2SnakeMove_664"></a>2.蛇身移动（SnakeMove）</h3> 
+<p>先创建下一个节点，根据移动方向和蛇头的坐标，蛇移动到下一个位置的坐标。<br> 确定了下一个位置后，看下一个位置是否是食物（NextIsFood），是食物就做吃食物处理（EatFood），如果不是食物则做前进一步的处理（NoFood）。<br> 蛇身移动后，判断此次移动是否会造成撞墙（KillByWall）或者撞上自己蛇身（KillBySelf），从而影响游戏的状态。</p> 
+<pre><code>void SnakeMove(Psnake Ps)
+{
+	//表示蛇即将到的下一个节点
+	Psnakenode next = (Psnakenode)malloc(sizeof(Snakenode));
+	if (next == NULL)
+	{
+		perror("SnakeMove::malloc");
+		return;
+	}
+	switch (Ps-&gt;_dir)
+	{
+	case UP:
+		next-&gt;x = Ps-&gt;_snake-&gt;x;
+		next-&gt;y = Ps-&gt;_snake-&gt;y - 1;
+		break;
+	case DOWN:
+		next-&gt;x = Ps-&gt;_snake-&gt;x;
+		next-&gt;y = Ps-&gt;_snake-&gt;y + 1;
+		break;
+	case LEFT:
+		next-&gt;x = Ps-&gt;_snake-&gt;x - 2;
+		next-&gt;y = Ps-&gt;_snake-&gt;y;
+		break;
+	case RIGHT:
+		next-&gt;x = Ps-&gt;_snake-&gt;x + 2;
+		next-&gt;y = Ps-&gt;_snake-&gt;y;
+		break;
+	}
+	//判断下一个节点是否是食物
+	int ret = NextIsFood(next, Ps);
+	if (ret)
+	{
+		//吃掉食物
+		EatFood(next, Ps);
+		Ps-&gt;_Allgrade += Ps-&gt;_grade;
+	}
+	else
+	{
+		//不是食物
+		NotFood(next, Ps);
+	}
+}
+</code></pre> 
+<h3><a id="3NextIsFood_713"></a>3.判断下一个节点是否是食物（NextIsFood）</h3> 
+<pre><code class="prism language-c"><span class="token comment">//Psnakenode next指向下一个节点的指针</span>
+<span class="token comment">//Psnake Ps维护蛇的指针</span>
+<span class="token keyword">int</span> <span class="token function">NextIsFood</span><span class="token punctuation">(</span>Psnakenode next<span class="token punctuation">,</span> Psnake Ps<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">return</span> <span class="token punctuation">(</span>next<span class="token operator">-&gt;</span>x <span class="token operator">==</span> Ps<span class="token operator">-&gt;</span>_Food<span class="token operator">-&gt;</span>x <span class="token operator">&amp;&amp;</span> next<span class="token operator">-&gt;</span>y <span class="token operator">==</span> Ps<span class="token operator">-&gt;</span>_Food<span class="token operator">-&gt;</span>y<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="4EatFood_723"></a>4.吃食物（EatFood）</h3> 
+<pre><code>//Psnakenode next指向下一个节点的指针
+//Psnake Ps维护蛇的指针
+void EatFood(Psnakenode next, Psnake Ps)
+{
+	//让食物的节点成为新的蛇头
+	Ps-&gt;_Food-&gt;next = Ps-&gt;_snake;
+	Ps-&gt;_snake = Ps-&gt;_Food;
+	//释放next节点
+	free(next);
+	//打印蛇身
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		Setpos(pcur-&gt;x, pcur-&gt;y);
+		wprintf(L"%lc", BODY);
+		pcur = pcur-&gt;next;
+	}
+	//创建新食物
+	CreateFood(Ps);
+}
+</code></pre> 
+<h3><a id="5NoFood_747"></a>5.不是食物（NoFood）</h3> 
+<p>将下一个节点头插入蛇的身体，并将之前蛇身最后一个节点打印为空格，释放掉蛇身的最后一个节点。<br> <font color="red"><strong>易错点：</strong></font>这里最容易错误的是，释放最后一个结点后，还得将倒数第二个节点的<code>next</code>指针改为<code>NULL</code>，保证蛇尾打印可以正常结束，不会越界访问。</p> 
+<pre><code>//Psnakenode next指向下一个节点的指针
+//Psnake Ps维护蛇的指针
+void NoFood(Psnakenode next, Psnake Ps)
+{
+	//头插法
+	next-&gt;next = Ps-&gt;_snake;
+	Ps-&gt;_snake = next;
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur-&gt;next-&gt;next != NULL)
+	{
+		pcur = pcur-&gt;next;
+	}
+	//把最后一个节点打印成空格
+	Setpos(pcur-&gt;next-&gt;x, pcur-&gt;next-&gt;y);
+	printf("  ");
+	//释放最后一个节点
+	free(pcur-&gt;next);
+	//将倒数第二个节点的next指针置为空
+	pcur-&gt;next = NULL;
+	//打印蛇身
+	pcur = Ps-&gt;_snake;
+	//设置蛇身颜色
+	Color(12);
+	while (pcur)
+	{
+		Setpos(pcur-&gt;x, pcur-&gt;y);
+		wprintf(L"%lc", BODY);
+		pcur = pcur-&gt;next;
+	}
+}
+</code></pre> 
+<h3><a id="6KillByWall_783"></a>6.撞到墙（KillByWall）</h3> 
+<p>判断蛇头的坐标是否和墙的坐标冲突</p> 
+<pre><code class="prism language-c"><span class="token comment">//Psnake Ps维护蛇的指针</span>
+<span class="token keyword">void</span> <span class="token function">KillByWall</span><span class="token punctuation">(</span>Psnake Ps<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>x <span class="token operator">==</span> <span class="token number">0</span> 
+	<span class="token operator">||</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>x <span class="token operator">==</span> <span class="token number">56</span> 
+	<span class="token operator">||</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>y <span class="token operator">==</span> <span class="token number">0</span> 
+	<span class="token operator">||</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>y <span class="token operator">==</span> <span class="token number">26</span><span class="token punctuation">)</span>
+		Ps<span class="token operator">-&gt;</span>_status <span class="token operator">=</span> KILL_BYWALL<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="7KillBySelf_797"></a>7.撞到自己（KillBySelf）</h3> 
+<p>判断蛇头的坐标是否和蛇身体的坐标冲突</p> 
+<pre><code class="prism language-c"><span class="token keyword">void</span> <span class="token function">KillBySelf</span><span class="token punctuation">(</span>Psnake Ps<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	Psnakenode pcur <span class="token operator">=</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>next<span class="token punctuation">;</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span>pcur<span class="token punctuation">)</span><span class="token comment">//遍历蛇头之后的节点</span>
+	<span class="token punctuation">{<!-- --></span>
+		<span class="token comment">//当有一个节点和头节点重合，就说明撞到了自己</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>pcur<span class="token operator">-&gt;</span>x <span class="token operator">==</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>x <span class="token operator">&amp;&amp;</span> pcur<span class="token operator">-&gt;</span>y <span class="token operator">==</span> Ps<span class="token operator">-&gt;</span>_snake<span class="token operator">-&gt;</span>y<span class="token punctuation">)</span>
+			Ps<span class="token operator">-&gt;</span>_status <span class="token operator">=</span> KILL_BYSELF<span class="token punctuation">;</span><span class="token comment">//改变蛇的状态</span>
+		pcur <span class="token operator">=</span> pcur<span class="token operator">-&gt;</span>next<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="8GameEnd_813"></a>8.游戏结束（GameEnd）</h3> 
+<p>游戏状态不再是OK（游戏继续）的时候，要告知游戏结束的原因，并且释放蛇身节点。</p> 
+<pre><code>void GameEnd(Psnake Ps)
+{
+	Setpos(22, 13);
+	switch (Ps-&gt;_status)
+	{
+	case KILL_BYSELF:
+		wprintf(L"您撞到了自己，游戏结束");
+		break;
+	case KILL_BYWALL:
+		wprintf(L"您撞到墙了，游戏结束");
+		break;
+	case END_NORMAL:
+		wprintf(L"您主动退出游戏，游戏结束");
+		break;
+	}
+	//释放蛇身节点
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		Psnakenode next = pcur-&gt;next;
+		free(pcur);
+		pcur = next;
+	}
+}
+</code></pre> 
+<h2><a id="_842"></a>六、完整代码实现</h2> 
+<p>分3个文件实现<br> <strong><code>Snake.h</code></strong></p> 
+<pre><code>#pragma once
+#include &lt;stdio.h&gt;
+#include &lt;time.h&gt;
+#include &lt;stdlib.h&gt;
+#include &lt;locale.h&gt;
+#include &lt;windows.h&gt;
+#include &lt;stdbool.h&gt;
+#define WALL L'〓'
+#define BODY L'㊣'
+#define FOOD L'◆'
+enum Dir
+{
+	UP,
+	DOWN,
+	LEFT,
+	RIGHT
+};
+enum Status
+{
+	OK,
+	KILL_BYWALL,//撞到墙
+	KILL_BYSELF,//撞到自己
+	END_NORMAL  //正常退出
+};
+//定义蛇身的节点
+typedef struct snakenode
+{
+	//坐标
+	int x;
+	int y;
+	struct snakenode* next;//指向下一个节点的指针
+}Snakenode, * Psnakenode;
+//维护蛇的相关信息
+typedef struct snake
+{
+	Psnakenode _snake;  //指向蛇头的指针
+	Psnakenode _Food;   //指向食物节点的指针
+	enum Dir _dir;      //蛇的方向
+	enum Status _status;//蛇的状态
+	int _sleep;         //休眠的时间越长，速度越慢，休眠的时间越短，速度越快
+	int _Allgrade;      //游戏当前获得分数
+	int _grade;         //默认每个⻝物10分
+}Snake, * Psnake;
+//初始化游戏
+void GameStart(Psnake Ps);
+//设置控制台相关属性
+void SetConsole();
+//颜色设置
+void Color(int c);
+//定位光标
+void Setpos(short x, short y);
+//打印欢迎界面
+void WelcomePrint();
+//创建地图
+void CreateMap();
+//创建蛇身
+void CreateSnakenode(Psnake Ps);
+//创建食物
+void CreateFood(Psnake Ps);
+//运行游戏
+void GameRun(Psnake Ps);
+//打印帮助信息
+void PrintHelpInfo(Psnake Ps);
+//检测蛇是否撞到墙
+void KillByWall(Psnake Ps);
+//检测蛇是否撞到自己
+void KillBySelf(Psnake Ps);
+//蛇走一步
+void SnakeMove(Psnake Ps);
+//判断下一个节点是否是食物
+int NextIsFood(Psnakenode next, Psnake Ps);
+//吃掉食物
+void EatFood(Psnakenode next, Psnake Ps);
+//不是食物
+void NoFood(Psnakenode next, Psnake Ps);
+//结束游戏,游戏的善后
+void GameEnd(Psnake Ps);
+</code></pre> 
+<p><strong><code>Snake.c</code></strong></p> 
+<pre><code>#include "Snake.h"
+//1.设置控制台相关属性
+void SetConsole()
+{
+	system("mode con cols=110 lines=30");
+	system("title 贪吃蛇");
+	//隐藏光标
+	//获取标准输出的句柄
+	HANDLE houtput = NULL;
+	houtput = GetStdHandle(STD_OUTPUT_HANDLE);
+	//创建光标结构体
+	CONSOLE_CURSOR_INFO cursor_info = { 0 };
+	//获取控制台光标信息
+	GetConsoleCursorInfo(houtput, &amp;cursor_info);
+	//修改光标信息
+	cursor_info.bVisible = false;
+	//设置光标信息
+	SetConsoleCursorInfo(houtput, &amp;cursor_info);
+}
+//2.颜色设置
+void Color(int c)
+{
+	SetConsoleTextAttribute(GetStdHandle(STD_OUTPUT_HANDLE), c);
+	//SetConsoleTextAttribute为Win32 API函数
+}
+//3.定位光标
+void Setpos(short x, short y)
+{
+	//获取标准输出的句柄
+	HANDLE houtput = NULL;
+	houtput = GetStdHandle(STD_OUTPUT_HANDLE);
+	//定位控制台光标位置
+	COORD pos = { x,y };
+	SetConsoleCursorPosition(houtput, pos);
+}
+//4.打印欢迎界面
+void WelcomePrint()
+{
+	Setpos(40, 10);
+	wprintf(L"欢迎来到贪吃蛇小游戏");
+	Setpos(43, 18);
+	system("pause");
+	Setpos(33, 10);
+	wprintf(L"按 ↑ ↓ ← → 控制蛇的移动，F3加速，F4减速");
+	Setpos(33, 11);
+	wprintf(L"按ESC退出游戏，按空格暂停游戏");
+	Setpos(43, 18);
+	system("pause");
+	system("cls");
+}
+//5.创建地图
+void CreateMap()
+{
+	Color(6);//设置墙的颜色为土黄色
+	//上(0,0)-(56, 0)
+	for (int i = 0; i &lt; 29; i++)
+	{
+		wprintf(L"%lc", WALL);
+	}
+	//下(0,26)-(56, 26)
+	Setpos(0, 26);
+	for (int i = 0; i &lt; 29; i++)
+	{
+		wprintf(L"%lc", WALL);
+	}
+	//左,x是0，y从1开始增⻓
+	for (int i = 1; i &lt; 26; i++)
+	{
+		Setpos(0, i);
+		wprintf(L"%lc", WALL);
+	}
+	//右,x是56，y从1开始增⻓
+	for (int i = 1; i &lt; 26; i++)
+	{
+		Setpos(56, i);
+		wprintf(L"%lc", WALL);
+	}
+}
+//6.创建蛇身
+void CreateSnakenode(Psnake Ps)
+{
+	for (int i = 0; i &lt; 5; i++)
+	{
+		Psnakenode pcur = (Psnakenode)malloc(sizeof(Snakenode));
+		if (pcur == NULL)
+		{
+			perror("SetSnakenode::malloc");
+			return;
+		}
+		pcur-&gt;x = 24 + i * 2;
+		pcur-&gt;y = 5;
+		pcur-&gt;next = NULL;
+		if (Ps-&gt;_snake == NULL)
+		{
+			//为空
+			Ps-&gt;_snake = pcur;
+		}
+		else
+		{
+			//不为空
+			pcur-&gt;next = Ps-&gt;_snake;
+			Ps-&gt;_snake = pcur;
+		}
+	}
+	//打印蛇身
+	Psnakenode prev = Ps-&gt;_snake;
+	while (prev)
+	{
+		Setpos(prev-&gt;x, prev-&gt;y);
+		wprintf(L"%lc", BODY);
+		prev = prev-&gt;next;
+	}
+}
+//7.创建食物
+void CreateFood(Psnake Ps)
+{
+	int x = 0, y = 0;
+qu:
+	do
+	{
+		x = rand() % 53 + 2;
+		y = rand() % 25 + 1;
+	} while (x % 2 != 0);//生成的x坐标必须是2的倍数
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		//生成的食物不能和蛇的身体重合
+		if (pcur-&gt;x == x &amp;&amp; pcur-&gt;y == y)
+			goto qu;//坐标与蛇身重合就重新生成坐标
+		pcur = pcur-&gt;next;
+	}
+	Setpos(x, y);
+	Color(223);//食物颜色设置为粉色
+	wprintf(L"%lc", FOOD);
+	Ps-&gt;_Food = (Psnakenode)malloc(sizeof(Snakenode));//给食物申请一个节点
+	if (Ps-&gt;_Food == NULL)
+	{
+		perror("Set_food::malloc");
+		return;
+	}
+	Ps-&gt;_Food-&gt;x = x;
+	Ps-&gt;_Food-&gt;y = y;
+}
+//初始化游戏
+void GameStart(Psnake Ps)
+{
+	//设置控制台相关属性
+	SetConsole();
+	//打印欢迎界面
+	WelcomePrint();
+	//创建地图
+	CreateMap();
+	//创建蛇身
+	CreateSnakenode(Ps);
+	//创建食物
+	CreateFood(Ps);
+	//设置蛇的信息
+	Ps-&gt;_Allgrade = 0;
+	Ps-&gt;_grade = 10;
+	Ps-&gt;_dir = RIGHT;
+	Ps-&gt;_sleep = 200;
+	Ps-&gt;_status = OK;
+}
+#define KEY_PRESS(VK) ((GetAsyncKeyState(VK))&amp;1?1:0)
+//暂停游戏
+void Stop()
+{
+	while (1)
+	{
+		Sleep(200);
+		if (KEY_PRESS(VK_SPACE))//当检测到空格键被按过就退出循环
+			break;
+	}
+}
+//撞到墙
+void KillByWall(Psnake Ps)
+{
+	if (Ps-&gt;_snake-&gt;x == 0 || Ps-&gt;_snake-&gt;x == 56 || Ps-&gt;_snake-&gt;y == 0 || Ps-&gt;_snake-&gt;y == 26)
+		Ps-&gt;_status = KILL_BYWALL;
+}
+//撞到自己
+void KillBySelf(Psnake Ps)
+{
+	Psnakenode pcur = Ps-&gt;_snake-&gt;next;
+	while (pcur)//遍历蛇头之后的节点
+	{
+		if (pcur-&gt;x == Ps-&gt;_snake-&gt;x &amp;&amp; pcur-&gt;y == Ps-&gt;_snake-&gt;y)//当有一个节点和头节点重合，就说明撞到了自己
+			Ps-&gt;_status = KILL_BYSELF;//改变蛇的状态
+		pcur = pcur-&gt;next;
+	}
+}
+//判断下一个节点是否是食物
+int NextIsFood(Psnakenode next, Psnake Ps)
+{
+	return (next-&gt;x == Ps-&gt;_Food-&gt;x &amp;&amp; next-&gt;y == Ps-&gt;_Food-&gt;y);
+}
+//吃掉食物
+void EatFood(Psnakenode next, Psnake Ps)
+{
+	//让食物的节点成为新的蛇头
+	Ps-&gt;_Food-&gt;next = Ps-&gt;_snake;
+	Ps-&gt;_snake = Ps-&gt;_Food;
+	//释放next节点
+	free(next);
+	//打印蛇身
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		Setpos(pcur-&gt;x, pcur-&gt;y);
+		wprintf(L"%lc", BODY);
+		pcur = pcur-&gt;next;
+	}
+	//创建新食物
+	CreateFood(Ps);
+}
+//不是食物
+void NoFood(Psnakenode next, Psnake Ps)
+{
+	next-&gt;next = Ps-&gt;_snake;
+	Ps-&gt;_snake = next;
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur-&gt;next-&gt;next != NULL)
+	{
+		pcur = pcur-&gt;next;
+	}
+	//把最后一个节点打印成空格
+	Setpos(pcur-&gt;next-&gt;x, pcur-&gt;next-&gt;y);
+	printf("  ");
+	//释放最后一个节点
+	free(pcur-&gt;next);
+	//将倒数第二个节点的next指针置为空
+	pcur-&gt;next = NULL;
+	//打印蛇身
+	pcur = Ps-&gt;_snake;
+	//设置蛇身颜色
+	Color(12);
+	while (pcur)
+	{
+		Setpos(pcur-&gt;x, pcur-&gt;y);
+		wprintf(L"%lc", BODY);
+		pcur = pcur-&gt;next;
+	}
+}
+//蛇走一步
+void SnakeMove(Psnake Ps)
+{
+	//表示蛇即将到的下一个节点
+	Psnakenode next = (Psnakenode)malloc(sizeof(Snakenode));
+	if (next == NULL)
+	{
+		perror("SnakeMove::malloc");
+		return;
+	}
+	switch (Ps-&gt;_dir)
+	{
+	case UP:
+		next-&gt;x = Ps-&gt;_snake-&gt;x;
+		next-&gt;y = Ps-&gt;_snake-&gt;y - 1;
+		break;
+	case DOWN:
+		next-&gt;x = Ps-&gt;_snake-&gt;x;
+		next-&gt;y = Ps-&gt;_snake-&gt;y + 1;
+		break;
+	case LEFT:
+		next-&gt;x = Ps-&gt;_snake-&gt;x - 2;
+		next-&gt;y = Ps-&gt;_snake-&gt;y;
+		break;
+	case RIGHT:
+		next-&gt;x = Ps-&gt;_snake-&gt;x + 2;
+		next-&gt;y = Ps-&gt;_snake-&gt;y;
+		break;
+	}
+	//判断下一个节点是否是食物
+
+	int ret = NextIsFood(next, Ps);
+	if (ret)
+	{
+		//吃掉食物
+		EatFood(next, Ps);
+		Ps-&gt;_Allgrade += Ps-&gt;_grade;
+		//next = NULL;
+	}
+	//不是食物
+	else
+	{
+		NoFood(next, Ps);
+	}
+}
+//打印帮助信息
+void PrintHelpInfo(Psnake Ps)
+{
+	//打印帮助信息
+	Setpos(62, 9);
+	printf("当前蛇的总分数为：%2d", Ps-&gt;_Allgrade);
+	Setpos(62, 10);
+	printf("当前食物的分数为：%2d", Ps-&gt;_grade);
+	Color(7);//设置打印信息颜色
+	Setpos(62, 14);
+	wprintf(L"不能撞墙，不能撞到自己");
+	Setpos(62, 15);
+	wprintf(L"按 ↑ ↓ ← → 控制蛇的移动，F3加速，F4减速");
+	Setpos(62, 16);
+	wprintf(L"按ESC退出游戏，按空格暂停游戏");
+}
+//运行游戏
+void GameRun(Psnake Ps)
+{
+	do
+	{
+		//打印帮助信息
+		PrintHelpInfo(Ps);
+		if (KEY_PRESS(VK_UP) &amp;&amp; Ps-&gt;_dir != DOWN)
+			Ps-&gt;_dir = UP;
+		else if (KEY_PRESS(VK_DOWN) &amp;&amp; Ps-&gt;_dir != UP)
+			Ps-&gt;_dir = DOWN;
+		else if (KEY_PRESS(VK_LEFT) &amp;&amp; Ps-&gt;_dir != RIGHT)
+			Ps-&gt;_dir = LEFT;
+		else if (KEY_PRESS(VK_RIGHT) &amp;&amp; Ps-&gt;_dir != LEFT)
+			Ps-&gt;_dir = RIGHT;
+		else if (KEY_PRESS(VK_SPACE))
+		{
+			//暂停游戏
+			Stop();
+		}
+		else if (KEY_PRESS(VK_ESCAPE))
+		{
+			//正常退出游戏
+			Ps-&gt;_status = END_NORMAL;
+		}
+		else if (KEY_PRESS(VK_F3))
+		{
+			//加速
+			if (Ps-&gt;_sleep &gt; 80)
+			{
+				Ps-&gt;_sleep -= 40;
+				Ps-&gt;_Allgrade += 2;
+			}
+		}
+		else if (KEY_PRESS(VK_F4))
+		{
+			//减速
+			if (Ps-&gt;_sleep &gt;= 200 &amp;&amp; Ps-&gt;_sleep &lt;= 320)
+			{
+				Ps-&gt;_sleep += 40;
+				Ps-&gt;_Allgrade -= 2;
+			}
+		}
+		//蛇走一步
+		SnakeMove(Ps);
+		//撞到墙
+		KillByWall(Ps);
+		//撞到自己
+		KillBySelf(Ps);
+		Sleep(Ps-&gt;_sleep);
+	} while (Ps-&gt;_status == OK);
+}
+//结束游戏,游戏的善后
+void GameEnd(Psnake Ps)
+{
+	Setpos(22, 13);
+	switch (Ps-&gt;_status)
+	{
+	case KILL_BYSELF:
+		wprintf(L"您撞到了自己，游戏结束");
+		break;
+	case KILL_BYWALL:
+		wprintf(L"您撞到墙了，游戏结束");
+		break;
+	case END_NORMAL:
+		wprintf(L"您主动退出游戏，游戏结束");
+		break;
+	}
+	//释放蛇身节点
+	Psnakenode pcur = Ps-&gt;_snake;
+	while (pcur)
+	{
+		Psnakenode next = pcur-&gt;next;
+		free(pcur);
+		pcur = next;
+	}
+}
+</code></pre> 
+<p><strong><code>text.c</code></strong></p> 
+<pre><code>#include "Snake.h"
+void snakeTest()
+{
+	char ch;
+	do
+	{
+		system("cls");
+		//创建蛇
+		Snake snake;
+		snake._snake = NULL;
+		//初始化游戏
+		GameStart(&amp;snake);
+		//运行游戏
+		GameRun(&amp;snake);
+		//结束游戏,游戏的善后
+		GameEnd(&amp;snake);
+		Setpos(24, 14);
+		wprintf(L"再来一局吗？(Y/N)");
+		ch = getchar();
+		getchar();
+	} while (ch == 'Y' || ch == 'y');
+	Setpos(0, 27);
+}
+int main()
+{
+	//修改当前地区为本地模式，为了⽀持中⽂宽字符的打印
+	setlocale(LC_ALL, "");
+	//生成随机数函数的声明
+	srand((unsigned int)time(NULL));
+	//测试逻辑
+	snakeTest();
+	return 0;
+}
+</code></pre> 
+<hr> 
+<p>第一次写这么长的博客，希望能给大家带来帮助呀😜！如果感觉还不错的话，麻烦一键三连哟！创作不易，谢谢宝子们！😽</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/65a597880fa479f855ce200a8d0d48c6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Python的魅力】：利用Pygame实现游戏坦克大战——含完整源码</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/70d25f91b619ae3b52048acaba8f41c4/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">人脸识别系统架构</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

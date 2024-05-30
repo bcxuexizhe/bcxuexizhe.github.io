@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>docker swarm多主机之间的端口无法访问，但能ping通 问题排查及解决 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/6e84feb026a23f202443bdc56f3ed599/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="docker swarm多主机之间的端口无法访问，但能ping通 问题排查及解决">
+  <meta property="og:description" content="已排查：1.ufw status 防火墙已关闭 2.selinux已关闭 3.netstat -ntpl :::8088 未限制ip
+问题：docker swarm多主机之间的端口无法访问，但能ping通，同一主机下的端口也可以访问。
+原因：docker overlay网络内部使用vxlan技术实现网络内部互通，通过 udp 4789 端口进行流量转发，此端口可以在swarm初始化时修改。
+解决：tcpdump每台机器物理网卡的4789端口的流量：tcpdump -i ens160 udp port 4789 -vv -X；
+在worker节点上访问manager节点的tcp 9999服务，可以看到如下报文：
+tcpdump: listening on ens160, link-type EN10MB (Ethernet), capture size 262144 bytes
+13:40:49.011232 IP (tos 0x0, ttl 64, id 25866, offset 0, flags [none], proto UDP (17), length 110)
+master-01.41787 &gt; 10.168.1.181.4789: [bad udp cksum 0x174d -&gt; 0x4773!] UDP, length 82
+0x0000: 4500 006e 650a 0000 4011 fcc6 0aa8 01aa E.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T22:17:12+08:00">
+    <meta property="article:modified_time" content="2024-05-23T22:17:12+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">docker swarm多主机之间的端口无法访问，但能ping通 问题排查及解决</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p style="margin-left:.0001pt;text-align:justify;">已排查：1.ufw status 防火墙已关闭  2.selinux已关闭   3.netstat -ntpl  :::8088 未限制ip</p> 
+<p style="margin-left:.0001pt;text-align:justify;">问题：docker swarm多主机之间的端口无法访问，但能ping通，同一主机下的端口也可以访问。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">原因：docker overlay网络内部使用vxlan技术实现网络内部互通，通过 udp 4789 端口进行流量转发，此端口可以在swarm初始化时修改。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">解决：tcpdump每台机器物理网卡的4789端口的流量：tcpdump -i ens160 udp port 4789 -vv -X；</p> 
+<p style="margin-left:.0001pt;text-align:justify;">在worker节点上访问manager节点的tcp 9999服务，可以看到如下报文：</p> 
+<p style="margin-left:.0001pt;text-align:justify;">tcpdump: listening on ens160, link-type EN10MB (Ethernet), capture size 262144 bytes</p> 
+<p style="margin-left:.0001pt;text-align:justify;">13:40:49.011232 IP (tos 0x0, ttl 64, id 25866, offset 0, flags [none], proto UDP (17), length 110)</p> 
+<p style="margin-left:.0001pt;text-align:justify;">    master-01.41787 &gt; 10.168.1.181.4789: [bad udp cksum 0x174d -&gt; 0x4773!] UDP, length 82</p> 
+<p style="margin-left:.0001pt;text-align:justify;">0x0000:  4500 006e 650a 0000 4011 fcc6 0aa8 01aa  E..ne...@.......</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><span style="color:#ff0000;">显示udp报文异常：bad udp cksum 0x174d -&gt; 0x4773，</span>原因是linux默认开启了内核计算cksum和网卡计算cksum，此处一般为网卡计算cksum错误，需要关闭网卡计算的功能；</p> 
+<p style="margin-left:.0001pt;text-align:justify;">命令 ethtool -k ens160 查看开启的情况。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>其中tx-checksumming为网卡计算cksum的配置项，需要将其关闭：</strong></strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>ethtool --offload ens160 tx off</strong></strong></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>同时需要将manager节点的此配置也关闭</strong></strong>，步骤同上；</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>最后检查是否可以连通即可</strong></strong>。</p> 
+<p style="margin-left:.0001pt;text-align:justify;"><strong><strong>开机自动关闭：修改 /root/.bashrc 文件</strong></strong>，添加如下行：</p> 
+<p style="margin-left:.0001pt;text-align:justify;"># disable ts-checksumming on boot</p> 
+<p style="margin-left:.0001pt;text-align:justify;">/sbin/ethtool --offload ens160 tx off</p> 
+<p style="margin-left:.0001pt;text-align:justify;">注意：修改/root/.bashrc 文件只会在以 root 用户身份登录时生效。对所有用户生效可以修改/etc/bashrc</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/304a3396a92af112bb9792db98dcc7ca/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">docker 网络模式</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/1c696244e0fecada6f65dba9e9ea19fa/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">C&#43;&#43;初阶学习第十弹——探索STL奥秘（五）——深入讲解vector的迭代器失效问题</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,240 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【postgresql初级使用】基于表达式或者函数的索引，字符串拼接可以使用索引了，带来不一样的优化效果 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/74cb3a83987a34c2f3e79148e0a8b1c3/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【postgresql初级使用】基于表达式或者函数的索引，字符串拼接可以使用索引了，带来不一样的优化效果">
+  <meta property="og:description" content="带表达式的索引 ​专栏内容：
+postgresql使用入门基础手写数据库toadb并发编程 个人主页：我的主页
+管理社区：开源数据库
+座右铭：天行健，君子以自强不息；地势坤，君子以厚德载物.
+文章目录 带表达式的索引概述 创建语法 场景分析 函数表达式 普通表达式 总结 结尾 概述 在postgresql 中，一个索引不仅仅是基于表的一列或多列来创建，还可以基于函数，或者一个表达式来创建。
+本文就来分享在postgresql 如何基于表达式来创建索引。
+创建语法 基于表达式创建索引，它的SQL语法如下所示：
+CREATE INDEX index_name ON table_name (expression); index_name 指定当前索引的名称 ；ON子句 指定当前索引 引用的数据表；expression 指定表达式内容；普通索引这里指定的是列名； 场景分析 在大数据时代，查询语句各式各样，过滤条件中带有函数，字符拼接等等，组成各种条件变量，下面我们按不同场景来举例说明。
+函数表达式 经常会遇到将字符串转换为小字，或者在大小写不敏感时，就可以转换为大写或者小写，再来比较。
+有一张人员信息表，名字分为first_name,last_name两部分，而名字又是大小字不敏感，所以经常转换为小写字符来比较。
+postgres=&gt; create table userInfo (uid integer primary key, first_name varchar, last_name varchar); CREATE TABLE postgres=&gt; INSERT INTO userinfo(uid, first_name, last_name) select id, &#39;firstname&#39; || id::int, &#39;lastname&#39;||id::int FROM generate_series(1, 100000) as id; INSERT 0 100000 表中插入了10万条测试数据。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-22T07:49:36+08:00">
+    <meta property="article:modified_time" content="2024-05-22T07:49:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【postgresql初级使用】基于表达式或者函数的索引，字符串拼接可以使用索引了，带来不一样的优化效果</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="_0"></a>带表达式的索引</h2> 
+<blockquote> 
+ <p>​<strong>专栏内容</strong>：</p> 
+ <ul><li><a href="https://blog.csdn.net/senllang/category_12346885.html">postgresql使用入门基础</a></li><li><a href="https://senllang.blog.csdn.net/category_12338586.html" rel="nofollow">手写数据库toadb</a></li><li><a href="https://blog.csdn.net/senllang/category_12265530.html">并发编程</a></li></ul> 
+</blockquote> 
+<blockquote> 
+ <p><strong>个人主页</strong>：<a href="https://senllang.blog.csdn.net" rel="nofollow">我的主页</a><br> <strong>管理社区</strong>：<a href="https://bbs.csdn.net/forums/a0a6ea788b3949b6a06ab4811f9eec5d">开源数据库</a><br> <strong>座右铭：天行健，君子以自强不息；地势坤，君子以厚德载物.</strong></p> 
+</blockquote> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_0" rel="nofollow">带表达式的索引</a></li><li><a href="#font_colorA0522D_font_13" rel="nofollow"><font color="#A0522D">概述 </font></a></li><li><a href="#font_colorA0522D__font_20" rel="nofollow"><font color="#A0522D"> 创建语法 </font></a></li><li><a href="#font_colorA0522D__font_34" rel="nofollow"><font color="#A0522D"> 场景分析 </font></a></li><li><ul><li><a href="#font_colorA0522D__font_40" rel="nofollow"><font color="#A0522D"> 函数表达式 </font></a></li><li><a href="#font_colorA0522D__font_91" rel="nofollow"><font color="#A0522D"> 普通表达式 </font></a></li></ul> 
+  </li><li><a href="#font_colorA0522D_font_159" rel="nofollow"><font color="#A0522D">总结 </font></a></li><li><a href="#font_colorA0522D_font_163" rel="nofollow"><font color="#A0522D">结尾 </font></a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="font_colorA0522D_font_13"></a><font color="#A0522D">概述 </font></h2> 
+<hr> 
+<p>在postgresql 中，一个索引不仅仅是基于表的一列或多列来创建，还可以基于函数，或者一个表达式来创建。</p> 
+<p>本文就来分享在postgresql 如何基于表达式来创建索引。</p> 
+<h2><a id="font_colorA0522D__font_20"></a><font color="#A0522D"> 创建语法 </font></h2> 
+<hr> 
+<p>基于表达式创建索引，它的SQL语法如下所示：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">CREATE</span> <span class="token keyword">INDEX</span> index_name 
+<span class="token keyword">ON</span> table_name <span class="token punctuation">(</span>expression<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<ul><li>index_name 指定当前索引的名称 ；</li><li><code>ON</code>子句 指定当前索引 引用的数据表；</li><li>expression 指定表达式内容；普通索引这里指定的是列名；</li></ul> 
+<h2><a id="font_colorA0522D__font_34"></a><font color="#A0522D"> 场景分析 </font></h2> 
+<hr> 
+<p>在大数据时代，查询语句各式各样，过滤条件中带有函数，字符拼接等等，组成各种条件变量，下面我们按不同场景来举例说明。</p> 
+<h3><a id="font_colorA0522D__font_40"></a><font color="#A0522D"> 函数表达式 </font></h3> 
+<p>经常会遇到将字符串转换为小字，或者在大小写不敏感时，就可以转换为大写或者小写，再来比较。</p> 
+<p>有一张人员信息表，名字分为first_name,last_name两部分，而名字又是大小字不敏感，所以经常转换为小写字符来比较。</p> 
+<pre><code class="prism language-sql">postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">create</span> <span class="token keyword">table</span> userInfo <span class="token punctuation">(</span>uid <span class="token keyword">integer</span> <span class="token keyword">primary</span> <span class="token keyword">key</span><span class="token punctuation">,</span> first_name <span class="token keyword">varchar</span><span class="token punctuation">,</span> last_name <span class="token keyword">varchar</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">TABLE</span>
+
+postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">INSERT</span> <span class="token keyword">INTO</span> userinfo<span class="token punctuation">(</span>uid<span class="token punctuation">,</span> first_name<span class="token punctuation">,</span> last_name<span class="token punctuation">)</span>
+<span class="token keyword">select</span> id<span class="token punctuation">,</span> <span class="token string">'firstname'</span> <span class="token operator">||</span> id::<span class="token keyword">int</span><span class="token punctuation">,</span> <span class="token string">'lastname'</span><span class="token operator">||</span>id::<span class="token keyword">int</span> <span class="token keyword">FROM</span> generate_series<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span> <span class="token number">100000</span><span class="token punctuation">)</span> <span class="token keyword">as</span> id<span class="token punctuation">;</span>
+<span class="token keyword">INSERT</span> <span class="token number">0</span> <span class="token number">100000</span>
+</code></pre> 
+<p>表中插入了10万条测试数据。</p> 
+<p>经常使用的SQL查询如下。</p> 
+<pre><code class="prism language-sql"><span class="token keyword">select</span> <span class="token operator">*</span> <span class="token keyword">from</span> userinfo <span class="token keyword">where</span> lower<span class="token punctuation">(</span>first_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'mar'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>其中就用到了函数转换，先将first_name转为小写，再参与条件比较。</p> 
+<p>看一下它的执行计划。</p> 
+<pre><code class="prism language-shell"><span class="token assign-left variable">postgres</span><span class="token operator">=</span><span class="token operator">&gt;</span> explain <span class="token keyword">select</span> * from userinfo where lower<span class="token punctuation">(</span>first_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'mar'</span><span class="token punctuation">;</span>
+                          QUERY PLAN
+--------------------------------------------------------------
+ Seq Scan on userinfo  <span class="token punctuation">(</span>cost<span class="token operator">=</span><span class="token number">0.00</span><span class="token punctuation">..</span><span class="token number">2324.00</span> <span class="token assign-left variable">rows</span><span class="token operator">=</span><span class="token number">500</span> <span class="token assign-left variable">width</span><span class="token operator">=</span><span class="token number">31</span><span class="token punctuation">)</span>
+   Filter: <span class="token punctuation">(</span>lower<span class="token punctuation">((</span>first_name<span class="token punctuation">)</span>::text<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'mar'</span>::text<span class="token punctuation">)</span>
+<span class="token punctuation">(</span><span class="token number">2</span> rows<span class="token punctuation">)</span>
+</code></pre> 
+<p>可以看到它使用了<code>seq scan</code>也就是顺序扫描，从表起始一条条进行遍历，如果此类查询非常频繁的话，相当损耗性能。</p> 
+<p>这里使用带有表达式的索引尝试来优化一下。</p> 
+<pre><code class="prism language-sql">postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">explain</span> <span class="token keyword">select</span> <span class="token operator">*</span> <span class="token keyword">from</span> userinfo <span class="token keyword">where</span> lower<span class="token punctuation">(</span>first_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'mar'</span><span class="token punctuation">;</span>
+                                     QUERY <span class="token keyword">PLAN</span>
+<span class="token comment">------------------------------------------------------------------------------------</span>
+ <span class="token keyword">Index</span> Scan <span class="token keyword">using</span> idx_expre_userinfo <span class="token keyword">on</span> userinfo  <span class="token punctuation">(</span>cost<span class="token operator">=</span><span class="token number">0.42</span><span class="token punctuation">.</span><span class="token number">.8</span><span class="token number">.44</span> <span class="token keyword">rows</span><span class="token operator">=</span><span class="token number">1</span> width<span class="token operator">=</span><span class="token number">31</span><span class="token punctuation">)</span>
+   <span class="token keyword">Index</span> Cond: <span class="token punctuation">(</span>lower<span class="token punctuation">(</span><span class="token punctuation">(</span>first_name<span class="token punctuation">)</span>::<span class="token keyword">text</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'mar'</span>::<span class="token keyword">text</span><span class="token punctuation">)</span>
+<span class="token punctuation">(</span><span class="token number">2</span> <span class="token keyword">rows</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>可以看到执行计划中，使用到了刚才创建的索引，而且执行估算时间也是大幅提升。</p> 
+<h3><a id="font_colorA0522D__font_91"></a><font color="#A0522D"> 普通表达式 </font></h3> 
+<p>继续使用上面的测试数据来看另外一种场景。</p> 
+<p>当我们需要查询某个用户名是否存在时，会经常使用如下SQL语句。</p> 
+<pre><code class="prism language-sql">postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">select</span> <span class="token operator">*</span> <span class="token keyword">from</span> userinfo <span class="token keyword">where</span> <span class="token punctuation">(</span>first_name <span class="token operator">||</span> <span class="token string">' '</span> <span class="token operator">||</span> last_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span><span class="token punctuation">;</span>
+ uid  <span class="token operator">|</span>  first_name   <span class="token operator">|</span>  last_name
+<span class="token comment">------+---------------+--------------</span>
+ <span class="token number">9999</span> <span class="token operator">|</span> firstname9999 <span class="token operator">|</span> lastname9999
+<span class="token punctuation">(</span><span class="token number">1</span> <span class="token keyword">row</span><span class="token punctuation">)</span>
+
+<span class="token keyword">Time</span>: <span class="token number">7.905</span> ms
+postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">explain</span> <span class="token keyword">select</span> <span class="token operator">*</span> <span class="token keyword">from</span> userinfo <span class="token keyword">where</span> <span class="token punctuation">(</span>first_name <span class="token operator">||</span> <span class="token string">' '</span> <span class="token operator">||</span> last_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span><span class="token punctuation">;</span>
+                                                QUERY <span class="token keyword">PLAN</span>
+<span class="token comment">-----------------------------------------------------------------------------------------------------------</span>
+ Seq Scan <span class="token keyword">on</span> userinfo  <span class="token punctuation">(</span>cost<span class="token operator">=</span><span class="token number">0.00</span><span class="token punctuation">.</span><span class="token number">.2574</span><span class="token number">.00</span> <span class="token keyword">rows</span><span class="token operator">=</span><span class="token number">500</span> width<span class="token operator">=</span><span class="token number">31</span><span class="token punctuation">)</span>
+   Filter: <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token punctuation">(</span>first_name<span class="token punctuation">)</span>::<span class="token keyword">text</span> <span class="token operator">||</span> <span class="token string">' '</span>::<span class="token keyword">text</span><span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span>last_name<span class="token punctuation">)</span>::<span class="token keyword">text</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span>::<span class="token keyword">text</span><span class="token punctuation">)</span>
+<span class="token punctuation">(</span><span class="token number">2</span> <span class="token keyword">rows</span><span class="token punctuation">)</span>
+
+<span class="token keyword">Time</span>: <span class="token number">0.234</span> ms
+</code></pre> 
+<p>筛选条件中，先将first_name和last_name拼接起来，再进行比较。</p> 
+<p>可以看到执行计划中使用了顺序扫描方式，执行时间也到了毫秒级，同样使用表达式索引来优化一下。</p> 
+<pre><code class="prism language-sql">postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">create</span> <span class="token keyword">index</span> idx_userinfo_name <span class="token keyword">on</span> userinfo <span class="token punctuation">(</span><span class="token punctuation">(</span>first_name <span class="token operator">||</span> <span class="token string">' '</span> <span class="token operator">||</span> last_name<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">CREATE</span> <span class="token keyword">INDEX</span>
+<span class="token keyword">Time</span>: <span class="token number">307.842</span> ms
+</code></pre> 
+<p>创建一个基于名字拼接表达式的索引。</p> 
+<p>下面再来看一下查询计划的情况。</p> 
+<pre><code class="prism language-shell"><span class="token assign-left variable">postgres</span><span class="token operator">=</span><span class="token operator">&gt;</span> explain <span class="token keyword">select</span> * from userinfo where <span class="token punctuation">(</span>first_name <span class="token operator">||</span> <span class="token string">' '</span> <span class="token operator">||</span> last_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span><span class="token punctuation">;</span>
+                                                     QUERY PLAN
+---------------------------------------------------------------------------------------------------------------------
+ Bitmap Heap Scan on userinfo  <span class="token punctuation">(</span>cost<span class="token operator">=</span><span class="token number">20.29</span><span class="token punctuation">..</span><span class="token number">778.62</span> <span class="token assign-left variable">rows</span><span class="token operator">=</span><span class="token number">500</span> <span class="token assign-left variable">width</span><span class="token operator">=</span><span class="token number">31</span><span class="token punctuation">)</span>
+   Recheck Cond: <span class="token punctuation">((</span><span class="token punctuation">((</span>first_name<span class="token punctuation">)</span>::text <span class="token operator">||</span> <span class="token string">' '</span>::text<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span>last_name<span class="token punctuation">)</span>::text<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span>::text<span class="token punctuation">)</span>
+   -<span class="token operator">&gt;</span>  Bitmap Index Scan on idx_userinfo_name  <span class="token punctuation">(</span>cost<span class="token operator">=</span><span class="token number">0.00</span><span class="token punctuation">..</span><span class="token number">20.17</span> <span class="token assign-left variable">rows</span><span class="token operator">=</span><span class="token number">500</span> <span class="token assign-left variable">width</span><span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">)</span>
+         Index Cond: <span class="token punctuation">((</span><span class="token punctuation">((</span>first_name<span class="token punctuation">)</span>::text <span class="token operator">||</span> <span class="token string">' '</span>::text<span class="token punctuation">)</span> <span class="token operator">||</span> <span class="token punctuation">(</span>last_name<span class="token punctuation">)</span>::text<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span>::text<span class="token punctuation">)</span>
+<span class="token punctuation">(</span><span class="token number">4</span> rows<span class="token punctuation">)</span>
+
+Time: <span class="token number">0.366</span> ms
+
+</code></pre> 
+<p>可以看到刚才创建的索引被使用了 <code>Bitmap Index Scan on idx_userinfo_name</code>, 采用了bitmap扫描的方式；</p> 
+<p>下面看一下执行时间的变化。</p> 
+<pre><code class="prism language-sql">postgres<span class="token operator">=</span><span class="token operator">&gt;</span> <span class="token keyword">select</span> <span class="token operator">*</span> <span class="token keyword">from</span> userinfo <span class="token keyword">where</span> <span class="token punctuation">(</span>first_name <span class="token operator">||</span> <span class="token string">' '</span> <span class="token operator">||</span> last_name<span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token string">'firstname9999 lastname9999'</span><span class="token punctuation">;</span>
+ uid  <span class="token operator">|</span>  first_name   <span class="token operator">|</span>  last_name
+<span class="token comment">------+---------------+--------------</span>
+ <span class="token number">9999</span> <span class="token operator">|</span> firstname9999 <span class="token operator">|</span> lastname9999
+<span class="token punctuation">(</span><span class="token number">1</span> <span class="token keyword">row</span><span class="token punctuation">)</span>
+
+<span class="token keyword">Time</span>: <span class="token number">0.274</span> ms
+</code></pre> 
+<p>执行时间的提升，真得令人惊㤉，提升了二十来倍。</p> 
+<h2><a id="font_colorA0522D_font_159"></a><font color="#A0522D">总结 </font></h2> 
+<hr> 
+<p>以上就是本节的全部内容，在复杂的SQL查询中，经常会用到各种表达式，字符运算，时间运算等，此时可以使用基于表达式或者函数的索引，使用索引进行优化效率。</p> 
+<h2><a id="font_colorA0522D_font_163"></a><font color="#A0522D">结尾 </font></h2> 
+<hr> 
+<blockquote> 
+ <p><strong>非常感谢大家的支持，在浏览的同时别忘了留下您宝贵的评论，如果觉得值得鼓励，请点赞，收藏，我会更加努力！</strong></p> 
+</blockquote> 
+<p>作者邮箱：study@senllang.onaliyun.com<br> 如有错误或者疏漏欢迎指出，互相学习。</p> 
+<p>注：未经同意，不得转载！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/229dc76b90237e3b56d25c4ed7bd69e8/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【微信小程序开发】小程序前后端交互--发送网络请求实战解析</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/26c6110cd8c49c6a55abaaf2a747227c/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">物体检测算法-R-CNN，SSD，YOLO</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

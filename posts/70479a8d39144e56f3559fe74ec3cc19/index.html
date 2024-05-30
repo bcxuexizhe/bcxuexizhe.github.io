@@ -1,0 +1,500 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>CTS-Camera本地测试（无需科学上网）及Android13高通平台部分fail项修改 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/70479a8d39144e56f3559fe74ec3cc19/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="CTS-Camera本地测试（无需科学上网）及Android13高通平台部分fail项修改">
+  <meta property="og:description" content="半年前在做gms认证，其他部分多多少少能找到一些资料，camera这部分卡的时间比较久，主要涉及到几个文件的修改 xxxx_sensor.xml camxtitan17context.cpp camxsettings.xml 错误多为某些配置项缺失或错误配置导致。
+目录
+本地测试方法
+部分fail项修改
+1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]
+2、android.hardware.camera2.cts.CaptureRequestTest#testAeModeAndLock[1]
+3、android.hardware.camera2.cts.CaptureRequestTest#testColorCorrectionControl[1]
+4、android.hardware.camera2.cts.BurstCaptureRawTest#testManualAutoSwitch[1]
+5、android.hardware.camera2.cts.BurstCaptureRawTest#testMetadataRoundDown[1]
+6、android.hardware.camera2.cts.BurstCaptureRawTest#testTimestamp[1]
+7、android.hardware.camera2.cts.MultiViewTest#testDualCameraPreview[1]
+8、android.hardware.camera2.cts.NativeImageReaderTest#testHeic
+9、android.hardware.camera2.cts.ZoomCaptureTest#testRawZoomCapture[1] &amp; android.hardware.camera2.cts.ZoomCaptureTest#testJpegZoomCapture[1]
+本地测试方法 1、在源码包的cts文件夹下含有各个cts测试的源码，camera通过如下命令编译：
+mmm cts/tests/camera 其他的模块大部分也可以通过这种方式本地初测。搜索下test项函数，看下在哪个包里，编译对应的包就可以了。
+2、编译完成生成的是 CtsCameraTestCases.apk,执行
+adb install CtsCameraTestCases.apk 3、进入到设置里，赋予这个apk所需的权限。
+4、查看install 的cts_test包
+adb shell pm list instrumentation #显示如下 #instrumentation:android.camera.cts/androidx.test.runner.AndroidJUnitRunner (target=android.camera.cts) 5、运行测试
+adb shell am instrument -r -e class android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1] -w android.camera.cts/androidx.test.runner.AndroidJUnitRunner android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]这个就是fail项，也可以运行一个类，android.hardware.camera2.cts.CameraDeviceTest。
+部分fail项修改 过的时间比较久了，报告找不到了，但问题有一些简要记录。
+1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1] 报错信息：setup的设备有两个，teardown的只有一个。
+这说明有crash，抓了log分析，判断为aec错误导致session dump最终导致crash，检查是否有自定义的aec相关feature。判断依据如下：
+&gt; 06-02 18:43:08.350 8136 8161 W CamX : [ WARN][STATS_AEC] caecxcontrol.cpp:541: process error pre-processing stats; marking stats as invalid &gt; 06-02 18:43:08.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-27T13:57:04+08:00">
+    <meta property="article:modified_time" content="2024-03-27T13:57:04+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">CTS-Camera本地测试（无需科学上网）及Android13高通平台部分fail项修改</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>半年前在做gms认证，其他部分多多少少能找到一些资料，camera这部分卡的时间比较久，主要涉及到几个文件的修改 xxxx_sensor.xml camxtitan17context.cpp camxsettings.xml 错误多为某些配置项缺失或错误配置导致。</p> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95-toc" style="margin-left:40px;"><a href="#%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95" rel="nofollow">本地测试方法</a></p> 
+<p id="%E9%83%A8%E5%88%86fail%E9%A1%B9%E4%BF%AE%E6%94%B9-toc" style="margin-left:40px;"><a href="#%E9%83%A8%E5%88%86fail%E9%A1%B9%E4%BF%AE%E6%94%B9" rel="nofollow">部分fail项修改</a></p> 
+<p id="1%E3%80%81android.hardware.camera2.cts.CameraDeviceTest%23testSessionParametersStateLeak%5B1%5D-toc" style="margin-left:120px;"><a href="#1%E3%80%81android.hardware.camera2.cts.CameraDeviceTest%23testSessionParametersStateLeak%5B1%5D" rel="nofollow">1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]</a></p> 
+<p id="2%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testAeModeAndLock%5B1%5D-toc" style="margin-left:120px;"><a href="#2%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testAeModeAndLock%5B1%5D" rel="nofollow">2、android.hardware.camera2.cts.CaptureRequestTest#testAeModeAndLock[1]</a></p> 
+<p id="3%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testColorCorrectionControl%5B1%5D-toc" style="margin-left:120px;"><a href="#3%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testColorCorrectionControl%5B1%5D" rel="nofollow">3、android.hardware.camera2.cts.CaptureRequestTest#testColorCorrectionControl[1]</a></p> 
+<p id="4%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testManualAutoSwitch%5B1%5D-toc" style="margin-left:120px;"><a href="#4%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testManualAutoSwitch%5B1%5D" rel="nofollow">4、android.hardware.camera2.cts.BurstCaptureRawTest#testManualAutoSwitch[1]</a></p> 
+<p id="5%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testMetadataRoundDown%5B1%5D-toc" style="margin-left:120px;"><a href="#5%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testMetadataRoundDown%5B1%5D" rel="nofollow">5、android.hardware.camera2.cts.BurstCaptureRawTest#testMetadataRoundDown[1]</a></p> 
+<p id="6%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testTimestamp%5B1%5D-toc" style="margin-left:120px;"><a href="#6%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testTimestamp%5B1%5D" rel="nofollow">6、android.hardware.camera2.cts.BurstCaptureRawTest#testTimestamp[1]</a></p> 
+<p id="7%E3%80%81android.hardware.camera2.cts.MultiViewTest%23testDualCameraPreview%5B1%5D-toc" style="margin-left:120px;"><a href="#7%E3%80%81android.hardware.camera2.cts.MultiViewTest%23testDualCameraPreview%5B1%5D" rel="nofollow">7、android.hardware.camera2.cts.MultiViewTest#testDualCameraPreview[1]</a></p> 
+<p id="8%E3%80%81android.hardware.camera2.cts.NativeImageReaderTest%23testHeic-toc" style="margin-left:120px;"><a href="#8%E3%80%81android.hardware.camera2.cts.NativeImageReaderTest%23testHeic" rel="nofollow">8、android.hardware.camera2.cts.NativeImageReaderTest#testHeic</a></p> 
+<p id="9%E3%80%81android.hardware.camera2.cts.ZoomCaptureTest%23testRawZoomCapture%5B1%5D%20%26%20android.hardware.camera2.cts.ZoomCaptureTest%23testJpegZoomCapture%5B1%5D-toc" style="margin-left:120px;"><a href="#9%E3%80%81android.hardware.camera2.cts.ZoomCaptureTest%23testRawZoomCapture%5B1%5D%20%26%20android.hardware.camera2.cts.ZoomCaptureTest%23testJpegZoomCapture%5B1%5D" rel="nofollow">9、android.hardware.camera2.cts.ZoomCaptureTest#testRawZoomCapture[1] &amp; android.hardware.camera2.cts.ZoomCaptureTest#testJpegZoomCapture[1]</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h3 id="%E6%9C%AC%E5%9C%B0%E6%B5%8B%E8%AF%95%E6%96%B9%E6%B3%95">本地测试方法</h3> 
+<p>1、在源码包的cts文件夹下含有各个cts测试的源码，camera通过如下命令编译：</p> 
+<pre><code>mmm cts/tests/camera</code></pre> 
+<p>其他的模块大部分也可以通过这种方式本地初测。搜索下test项函数，看下在哪个包里，编译对应的包就可以了。</p> 
+<p>2、编译完成生成的是 CtsCameraTestCases.apk,执行</p> 
+<pre><code>adb install CtsCameraTestCases.apk</code></pre> 
+<p>3、进入到设置里，赋予这个apk所需的权限。</p> 
+<p>4、查看install 的cts_test包</p> 
+<pre><code>adb shell
+pm list instrumentation
+
+#显示如下
+#instrumentation:android.camera.cts/androidx.test.runner.AndroidJUnitRunner (target=android.camera.cts)</code></pre> 
+<p>5、运行测试</p> 
+<pre><code>adb shell am instrument -r -e class android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1] -w android.camera.cts/androidx.test.runner.AndroidJUnitRunner</code></pre> 
+<p>android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]这个就是fail项，也可以运行一个类，android.hardware.camera2.cts.CameraDeviceTest。</p> 
+<h3 id="%E9%83%A8%E5%88%86fail%E9%A1%B9%E4%BF%AE%E6%94%B9">部分fail项修改</h3> 
+<p>过的时间比较久了，报告找不到了，但问题有一些简要记录。</p> 
+<h5 id="1%E3%80%81android.hardware.camera2.cts.CameraDeviceTest%23testSessionParametersStateLeak%5B1%5D">1、android.hardware.camera2.cts.CameraDeviceTest#testSessionParametersStateLeak[1]</h5> 
+<blockquote> 
+ <p>报错信息：setup的设备有两个，teardown的只有一个。</p> 
+</blockquote> 
+<p>这说明有crash，抓了log分析，判断为aec错误导致session dump最终导致crash，检查是否有自定义的aec相关feature。判断依据如下：</p> 
+<pre><code>&gt; 06-02 18:43:08.350 8136 8161 W CamX : [ WARN][STATS_AEC] caecxcontrol.cpp:541: process error pre-processing stats; marking stats as invalid  
+
+&gt; 06-02 18:43:08.351 8136 8161 E CamX : [ERROR][STATS_AEC] caecxmodarbitration.cpp:60: UtilQuantities2Exposure exposure calculated as zero; check gain 1.0 time 0 corr 1.0  
+
+&gt; 06-02 18:43:08.351 8136 8161 I CamX : [ DUMP][CORE ] camxsession.cpp:7648 DumpDebugInfo() + Stuck on Sequence Id: 0 Request Id: 1
+</code></pre> 
+<p>提case，高通检查后提出查看是否有参数minlineout，文件位置：</p> 
+<pre><code>/A13_HOLI/vendor/qcom/proprietary/chi-cdk/oem/qcom/sensor/xxxsensor
+#这里换成项目使用的sensor
+</code></pre> 
+<blockquote> 
+ <p>检查后发现，缺失是缺少了minlineout，加入如下位置：</p> 
+</blockquote> 
+<pre><code>&lt;exposureControlInfo&gt;
++    &lt;!--Maximum analog again supported by sensor --&gt;
++    &lt;maxAnalogGain&gt;16&lt;/maxAnalogGain&gt;
++    &lt;!--Maximum digital again supported by sensor --&gt;
++    &lt;maxDigitalGain&gt;1&lt;/maxDigitalGain&gt;
++    &lt;!--Minimum offset to be maintained between line count and frame length lines --&gt;
++    &lt;verticalOffset&gt;2&lt;/verticalOffset&gt;
++    &lt;!--Minimum line count supported by sensor --&gt;
++    &lt;minLineCount&gt;2&lt;/minLineCount&gt;
++    &lt;!--Maximum line count supported by sensor --&gt;
++    &lt;maxLineCount&gt;65533&lt;/maxLineCount&gt;
++    &lt;!--Conversion factor to convert real digital gain to register digital gain --&gt;
++    &lt;realToRegDigitalGainConversionFactor&gt;256&lt;/realToRegDigitalGainConversionFactor&gt;
++    &lt;!--Real gain to register gain equation
++        The equation must contain "realGain" in its equation
++        Ex:= 512 - (512 / realGain) --&gt;
++    &lt;realToRegGain&gt;&lt;/realToRegGain&gt;
++    &lt;!--Register gain to real gain equation
++        The equation must contain "regGain" in its equation
++        Ex:= 512 / (512 - regGain) --&gt;
++    &lt;regToRealGain&gt;&lt;/regToRealGain&gt;
++  &lt;/exposureControlInfo&gt;
+</code></pre> 
+<p><span style="color:#1c7331;">加入后复测pass</span></p> 
+<h5 id="2%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testAeModeAndLock%5B1%5D">2、android.hardware.camera2.cts.CaptureRequestTest#testAeModeAndLock[1]</h5> 
+<h5 id="3%E3%80%81android.hardware.camera2.cts.CaptureRequestTest%23testColorCorrectionControl%5B1%5D">3、android.hardware.camera2.cts.CaptureRequestTest#testColorCorrectionControl[1]</h5> 
+<h5 id="4%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testManualAutoSwitch%5B1%5D">4、android.hardware.camera2.cts.BurstCaptureRawTest#testManualAutoSwitch[1]</h5> 
+<h5 id="5%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testMetadataRoundDown%5B1%5D">5、android.hardware.camera2.cts.BurstCaptureRawTest#testMetadataRoundDown[1]</h5> 
+<h5 id="6%E3%80%81android.hardware.camera2.cts.BurstCaptureRawTest%23testTimestamp%5B1%5D">6、android.hardware.camera2.cts.BurstCaptureRawTest#testTimestamp[1]</h5> 
+<blockquote> 
+ <p>以上2-6fail项原因均与1相同，log中可以看到如下错误：</p> 
+</blockquote> 
+<pre><code>06-06 09:47:54.106 17820 17837 I Camera2ParameterizedTestCase: Camera ids in setup:[0, 1]
+06-06 09:47:54.107 17820 17837 I Camera2ParameterizedTestCase: Camera ids in tearDown:[]
+</code></pre> 
+<h5 id="7%E3%80%81android.hardware.camera2.cts.MultiViewTest%23testDualCameraPreview%5B1%5D">7、android.hardware.camera2.cts.MultiViewTest#testDualCameraPreview[1]</h5> 
+<p>此项测试的是同时打开前后摄，在高通的文档中，有针对此项的说明:</p> 
+<pre><code>//80-P9301-61.pdf
+Ensure that both the front camera and rear camera
+have different CCI bus. ISP bubble issues are seen
+if they are on the same bus due to system load.
+
+</code></pre> 
+<blockquote> 
+ <p>问题原因：资源冲突</p> 
+</blockquote> 
+<p>检查前后摄挂载的cci总线，文件位于：</p> 
+<pre><code>//A13_HOLI/vendor/qcom/proprietary/camera-devicetree/holi-camera-sensor-mtp.dtsi
+...
+&amp;cam_cci0
+...
+&amp;cam_cci1
+...
+
+</code></pre> 
+<p>以上是cci两条总线，经过检查，前摄挂在1上，后摄和副摄挂在0上，并不冲突</p> 
+<p>抓log分析如下：</p> 
+<pre><code>06-07 22:38:41.909     0     0 I CAM_ERR : CAM-ISP: cam_tfe_hw_mgr_acquire_res_tfe_csid_pxl: 1462 Can not acquire tfe csid pixel resource
+06-07 22:38:41.909     0     0 I CAM_ERR : CAM-ISP: cam_tfe_mgr_acquire_hw_for_ctx: 1795 Acquire TFE CSID IPP resource Failed dual:1
+06-07 22:38:41.909     0     0 I CAM_ERR : CAM-ISP: cam_tfe_mgr_acquire_hw: 2217 can not acquire resource
+</code></pre> 
+<blockquote> 
+ <p>说明TFE资源冲突，我们用的两个sensor一个占用两个TFE，另一个也占用两个TFE，而总共就三个TFE，所以冲突。</p> 
+</blockquote> 
+<p>修改点：</p> 
+<pre><code>//A13_HOLI/vendor/qcom/proprietary/chi-cdk/oem/qcom/sensor/xxxsensor
+#这里换成项目使用的sensor
+...
+&lt;resolutionInfo&gt;
+  &lt;resolutionData&gt;
+  ...
+    &lt;lineLengthPixelClock&gt;2512&lt;/lineLengthPixelClock&gt;
+    &lt;frameLengthLines&gt;3197&lt;/frameLengthLines&gt;
+  ...
+    &lt;outputPixelClock&gt;480000000&lt;/outputPixelClock&gt;
+  ...
+    &lt;frameRate&gt;30&lt;/frameRate&gt;
+  ...
+    &lt;resSettings&gt;
+      &lt;regSetting&gt;
+        &lt;registerAddr&gt;0x0340&lt;/registerAddr&gt;
+        &lt;registerData&gt;0x0C7D&lt;/registerData&gt;
+        &lt;regAddrType range="[1,4]"&gt;2&lt;/regAddrType&gt;
+        &lt;regDataType range="[1,4]"&gt;2&lt;/regDataType&gt;
+        &lt;operation&gt;WRITE&lt;/operation&gt;
+        &lt;delayUs&gt;0x00&lt;/delayUs&gt;
+      &lt;/regSetting&gt;
+      &lt;regSetting&gt;
+        &lt;registerAddr&gt;0x0342&lt;/registerAddr&gt;
+        &lt;registerData&gt;0x09D0&lt;/registerData&gt;
+        &lt;regAddrType range="[1,4]"&gt;2&lt;/regAddrType&gt;
+        &lt;regDataType range="[1,4]"&gt;2&lt;/regDataType&gt;
+        &lt;operation&gt;WRITE&lt;/operation&gt;
+        &lt;delayUs&gt;0x00&lt;/delayUs&gt;
+      &lt;/regSetting&gt;
+  &lt;/resolutionData&gt;
+  &lt;resolutionData&gt;
+  ...
+    &lt;outputPixelClock&gt;xxxx&lt;/outputPixelClock&gt;
+  ...
+  &lt;/resolutionData&gt;
+  ...
+&lt;/resolutionInfo&gt;
+
+其中，lineLengthPixelClock以及frameLengthLines的值对应的是寄存器0x0342以及0x0340位置的值
+修改值时，对应寄存器位置的值也要修改
+
+</code></pre> 
+<p>重点关注上面的outputPixelClock，简单来说，这个值大，占用的TFE资源就多。</p> 
+<p>第一步：验证问题点 将所有大数值对应的&lt;resolutionData&gt;删掉，看CTS测试是否通过，如果通过，则向sensor厂商的FAE要相关配置文件的更新。</p> 
+<p>验证结果：确实可以pass测试，但是相机无法使用。说明问题确实出现在这里，那么接下来就是向厂商要符合TFE数量要求的配置了。</p> 
+<p>第二步：加入对1920x1080分辨率占用1TFE的正确配置</p> 
+<p><span style="color:#1c7331;">加入后复测pass</span></p> 
+<h5 id="8%E3%80%81android.hardware.camera2.cts.NativeImageReaderTest%23testHeic">8、android.hardware.camera2.cts.NativeImageReaderTest#testHeic</h5> 
+<blockquote> 
+ <p>项目没有支持Heic图片的需求，disable本地的heic：</p> 
+</blockquote> 
+<pre><code>//vendor/qcom/proprietary/camx/build/infrastructure/android/built/settings/mannar/camxoverridesettingsprivate.txt
+; Enable Native HEIF
+;
+; Enable/Disable native HEIF
+;
+; Type: BOOL
+;
+; 0xBDFF08B8=FALSE
+; enableNativeHEIF=FALSE
+
+</code></pre> 
+<pre><code>//vendor/qcom/proprietary/camx/src/settings/common/camxsettings.xml 
+        &lt;setting&gt;
+            &lt;Name&gt;Enable Native HEIF&lt;/Name&gt;
+            &lt;Help&gt;Enable/Disable native HEIF&lt;/Help&gt;
+            &lt;VariableName&gt;enableNativeHEIF&lt;/VariableName&gt;
+            &lt;VariableType&gt;BOOL&lt;/VariableType&gt;
+            &lt;SetpropKey&gt;persist.vendor.camera.enableNativeHEIF&lt;/SetpropKey&gt;
+            &lt;DefaultValue&gt;FALSE&lt;/DefaultValue&gt;
+            &lt;Dynamic&gt;FALSE&lt;/Dynamic&gt;
+        &lt;/setting&gt;
+
+</code></pre> 
+<pre><code>//vendor/qcom/proprietary/camx/src/settings/mannar/g_camxsettings.xml 
+        &lt;setting&gt;
+            &lt;Name&gt;Enable Native HEIF&lt;/Name&gt;
+            &lt;Help&gt;Enable/Disable native HEIF&lt;/Help&gt;
+            &lt;VariableName&gt;enableNativeHEIF&lt;/VariableName&gt;
+            &lt;VariableType&gt;BOOL&lt;/VariableType&gt;
+            &lt;SetpropKey&gt;persist.vendor.camera.enableNativeHEIF&lt;/SetpropKey&gt;
+            &lt;DefaultValue&gt;FALSE&lt;/DefaultValue&gt;
+            &lt;Dynamic&gt;FALSE&lt;/Dynamic&gt;
+        &lt;/setting&gt;
+
+</code></pre> 
+<p><span style="color:#1c7331;">加入后复测pass</span></p> 
+<h5 id="9%E3%80%81android.hardware.camera2.cts.ZoomCaptureTest%23testRawZoomCapture%5B1%5D%20%26%20android.hardware.camera2.cts.ZoomCaptureTest%23testJpegZoomCapture%5B1%5D">9、android.hardware.camera2.cts.ZoomCaptureTest#testRawZoomCapture[1] &amp; android.hardware.camera2.cts.ZoomCaptureTest#testJpegZoomCapture[1]</h5> 
+<blockquote> 
+ <p>问题描述：Camera 0 result metadata must contain ACTIVE_PHYSICAL_ID</p> 
+</blockquote> 
+<p>ACTIVE_PHYSICAL_ID全称为LOGICAL_MULTI_CAMERA_ACTIVE_PHYSICAL_ID，是A10之后加入的配置，作用为当前logic camera使用了哪些pysical camera</p> 
+<p>配置位于：</p> 
+<pre><code>///vendor/qcom/proprietary/camx/src/hwl/titan17x/camxtitan17xcontext.cpp 
+如下位置：
+static const CameraMetadataTag SupportedResultKeys[] =
+...
+  LogicalMultiCameraActivePhysicalId //disable for android.hardware.camera2.cts.ZoomCaptureTest#testRawZoomCapture[1] &amp; android.hardware.camera2.cts.ZoomCaptureTest#testJpegZoomCapture[1]
+...
+改为
+  //LogicalMultiCameraActivePhysicalId
+
+</code></pre> 
+<p>在这个位置，定义了TAG支持的key，对应CaptureResult.java以及CaptureCharacteristicsKeys.java中Available的key，这里去掉，对应java文件中的key就不会再被使用。</p> 
+<p><span style="color:#1c7331;">加入后复测pass</span></p> 
+<p>10、android.hardware.camera2.cts.StillCaptureTest#testFullRawCapture[1] &amp; android.hardware.camera2.cts.StillCaptureTest#testFullRawZSLCapture[1]</p> 
+<blockquote> 
+ <p>问题描述：错误为NoiseProfile中的S值和O值范围错误，要求：S&gt;0 O≥0,而目前都是零</p> 
+</blockquote> 
+<pre><code>  java.lang.Throwable(Test failed for camera 0: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 0: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 0: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 0: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 1: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 1: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 1: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+  java.lang.Throwable(Test failed for camera 1: NoiseProfile coefficients Pair{0.0 0.0} must have: S &amp;gt; 0, O &amp;gt;= 0)
+</code></pre> 
+<p>找到如下文件：</p> 
+<pre><code>//CaptureResult.java(HOLI vendor下)
+    public static final Key&lt;android.util.Pair&lt;Double,Double&gt;[]&gt; SENSOR_NOISE_PROFILE =
+            new Key&lt;android.util.Pair&lt;Double,Double&gt;[]&gt;("android.sensor.noiseProfile", new TypeReference&lt;android.util.Pair&lt;Double,Double&gt;[]&gt;() {<!-- -->{ }});
+
+</code></pre> 
+<p>对应get方法在如下文件：</p> 
+<pre><code>//camxsensornode.cpp 以及//camxtpgnode.cpp(HOLI vendor下)
+// Channels * 2 to sensor amplification (S) and sensor readout noise (O) on each channel
+    DOUBLE noiseProfile[NumChannels * 2] = { 0 };
+    GetSensorDataObject()-&gt;GetNoiseProfile(noiseProfile, colorFilterArrangement,
+                                            sensitivity, ISO100Gain);
+
+</code></pre> 
+<p> 进而找到：</p> 
+<pre><code>VOID ImageSensorData::GetNoiseProfile(
+    DOUBLE*                pNoiseProfile,
+    ColorFilterArrangement colorFilterArrangement,
+    INT32                  sensitivity,
+    FLOAT                  ISO100Gain)
+{
+    switch (colorFilterArrangement)
+    {
+        case ColorFilterArrangement::BAYER_BGGR:
+            pNoiseProfile[0] = GetNoiseModelEntryS(sensitivity, NoiseCoefficientChannel::BAYER_B);
+            pNoiseProfile[1] = GetNoiseModelEntryO(sensitivity, ISO100Gain, NoiseCoefficientChannel::BAYER_B);
+            pNoiseProfile[2] = GetNoiseModelEntryS(sensitivity, NoiseCoefficientChannel::BAYER_Gb);
+            pNoiseProfile[3] = GetNoiseModelEntryO(sensitivity, ISO100Gain, NoiseCoefficientChannel::BAYER_Gb);
+            pNoiseProfile[4] = GetNoiseModelEntryS(sensitivity, NoiseCoefficientChannel::BAYER_Gr);
+            pNoiseProfile[5] = GetNoiseModelEntryO(sensitivity, ISO100Gain, NoiseCoefficientChannel::BAYER_Gr);
+            pNoiseProfile[6] = GetNoiseModelEntryS(sensitivity, NoiseCoefficientChannel::BAYER_R);
+            pNoiseProfile[7] = GetNoiseModelEntryO(sensitivity, ISO100Gain, NoiseCoefficientChannel::BAYER_R);
+            break;
+            ...
+    }
+}           
+</code></pre> 
+<p>以及</p> 
+<pre><code>//camximagesensordata.cpp(HOLI vendor下)
+DOUBLE ImageSensorData::GetNoiseModelEntryO(
+    INT32                   sensitivity,
+    FLOAT                   ISO100Gain,
+    NoiseCoefficientChannel channel)
+{
+    NoiseCoefficent noiseCoeff = {0.0};
+
+    GetNoiseCoeff(&amp;noiseCoeff, channel);
+
+    DOUBLE maxAnalogSensitvity = m_pSensorData-&gt;exposureControlInfo.maxAnalogGain * (100.0f / ISO100Gain);
+    DOUBLE digitalGain         = sensitivity / maxAnalogSensitvity;
+
+    digitalGain = (digitalGain &lt; 1.0) ? 1.0 : digitalGain;
+
+    CAMX_LOG_VERBOSE(CamxLogGroupSensor, "sensitivity:%d, ISO100Gain: %f, digitalGain:%lf",
+        sensitivity, ISO100Gain, digitalGain);
+
+    DOUBLE noiseModelEntryO = (noiseCoeff.gradient_O * sensitivity * sensitivity) +
+                              (noiseCoeff.offset_O * digitalGain * digitalGain);
+    return ((noiseModelEntryO &lt; 0.0) ? 0.0 : noiseModelEntryO);
+}
+
+</code></pre> 
+<p>由channel追踪</p> 
+<pre><code>//A13_HOLI/vendor/qcom/proprietary/chi-cdk/api/sensor/camxsensordriver.xsd
+    &lt;xs:simpleType name="NoiseCoefficientChannel"&gt;
+        &lt;xs:annotation&gt;
+            &lt;xs:documentation&gt;Noise Coefficient Channels&lt;/xs:documentation&gt;
+            &lt;xs:documentation&gt;Channel are in R=0, GR=1, GB=2, B=3 order&lt;/xs:documentation&gt;
+        &lt;/xs:annotation&gt;
+        &lt;xs:restriction base="xs:string"&gt;
+            &lt;xs:enumeration value="BAYER_R"/&gt;
+            &lt;xs:enumeration value="BAYER_Gr"/&gt;
+            &lt;xs:enumeration value="BAYER_Gb"/&gt;
+            &lt;xs:enumeration value="BAYER_B"/&gt;
+        &lt;/xs:restriction&gt;
+    &lt;/xs:simpleType&gt;
+
+
+</code></pre> 
+<p>以及NoiseCoefficent</p> 
+<pre><code>    &lt;xs:complexType name="NoiseCoefficent"&gt;
+        &lt;xs:sequence&gt;
+            &lt;!-- element for gradient_S --&gt;
+            &lt;xs:element name="gradient_S" type="xs:double"&gt;
+                &lt;xs:annotation&gt;
+                    &lt;xs:documentation&gt;gradient_s Sensor amplification&lt;/xs:documentation&gt;
+                &lt;/xs:annotation&gt;
+            &lt;/xs:element&gt;
+
+            &lt;!-- element for offset_S --&gt;
+            &lt;xs:element name="offset_S" type="xs:double"&gt;
+                &lt;xs:annotation&gt;
+                    &lt;xs:documentation&gt;offset_S Sensor amplification&lt;/xs:documentation&gt;
+                &lt;/xs:annotation&gt;
+            &lt;/xs:element&gt;
+
+            &lt;!-- element for gradient_O --&gt;
+            &lt;xs:element name="gradient_O" type="xs:double"&gt;
+                &lt;xs:annotation&gt;
+                    &lt;xs:documentation&gt;gradient_O sensor readout noise&lt;/xs:documentation&gt;
+                &lt;/xs:annotation&gt;
+            &lt;/xs:element&gt;
+
+            &lt;!-- element for offset_O --&gt;
+            &lt;xs:element name="offset_O" type="xs:double"&gt;
+                &lt;xs:annotation&gt;
+                    &lt;xs:documentation&gt;offset_O sensor readout noise&lt;/xs:documentation&gt;
+                &lt;/xs:annotation&gt;
+            &lt;/xs:element&gt;
+        &lt;/xs:sequence&gt;
+    &lt;/xs:complexType&gt;
+</code></pre> 
+<p>进而通过element值搜索，找到sensor的配置文件 位于:</p> 
+<pre><code>/4350_A13_HOLI/vendor/qcom/proprietary/chi-cdk/oem/qcom/sensor/xxxsensor
+#换成项目使用的sensor
+
+</code></pre> 
+<blockquote> 
+ <p>发现没有对gradient_S进行设置。修改xxx_sensor.xml，加入</p> 
+</blockquote> 
+<pre><code> ...
+    &lt;noiseCoefficent&gt;
+      &lt;gradient_S&gt;1.504952e-06&lt;/gradient_S&gt;
+      &lt;offset_S&gt;1.444901e-05&lt;/offset_S&gt;
+      &lt;gradient_O&gt;6.742849e-12&lt;/gradient_O&gt;
+      &lt;offset_O&gt;6.392815e-07&lt;/offset_O&gt;
+    &lt;/noiseCoefficent&gt;
+  &lt;/sensorDriverData&gt;//加入位置为&lt;/sensorDriverData&gt;前
+</code></pre> 
+<p><span style="color:#fe2c24;"><strong>可以发现，虽然追踪过程比较复杂，但修改只涉及到了配置文件的修改，前面的几个问题也大多如此，可以看到camera这部分大多数的fail项还是由于sensor或项目的配置引起的，遇到问题要首先考虑这点。</strong></span></p> 
+<p><span style="color:#1c7331;">加入后复测pass</span></p> 
+<p></p> 
+<p>还有几个比较顽固的fail项，提case高通也分析了很久，后面找下case记录整理后再发出来。</p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/deb413e5c774c1bcb059611d38f05bec/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">前端实现浏览器自定义滚动条</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/497c912e81e828d38b6581e27f1a91a7/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">RedisTemplate.opsForHash()用法简介并举例</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

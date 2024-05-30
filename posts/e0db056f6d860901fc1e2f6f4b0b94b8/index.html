@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>web网页端使用webSocket实现语音通话功能(SpringBoot&#43;VUE) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e0db056f6d860901fc1e2f6f4b0b94b8/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="web网页端使用webSocket实现语音通话功能(SpringBoot&#43;VUE)">
+  <meta property="og:description" content="写在前面 最近在写一个web项目，需要实现web客户端之间的语音通话，期望能够借助webSocket全双工通信的方式来实现，但是网上没有发现可以正确使用的代码。网上能找到的一个代码使用之后只能听到“嘀嘀嘀”的杂音
+解决方案：使用Json来传递数据代替原有的二进制输入输出流
+技术栈：VUE3、SpingBoot、WebSocket
+Java后端代码 pom.xml
+配置Maven所需的jar包
+&lt;dependency&gt; &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt; &lt;artifactId&gt;spring-boot-starter-websocket&lt;/artifactId&gt; &lt;/dependency&gt; WebSocketConfig.java
+webSocket配置类
+package com.shu.config; import org.springframework.context.annotation.Bean; import org.springframework.context.annotation.Configuration; import org.springframework.web.socket.server.standard.ServerEndpointExporter; @Configuration public class WebSocketConfig { /** * 注入ServerEndpointExporter， * 这个bean会自动注册使用了@ServerEndpoint注解声明的Websocket endpoint */ @Bean public ServerEndpointExporter serverEndpointExporter() { return new ServerEndpointExporter(); } } WebSocketAudioServer.java
+webSocket实现类，其中roomId是语音聊天室的id，userId是发送语音的用户id
+所以前端请求加入webSocket时候的请求样例应该是：ws://localhost:8080/audio/1/123这个请求中1是roomId，123是userId，这里建议使用ws，一般来说ws对于http，wss对应https
+package com.shu.socket; import lombok.extern.slf4j.Slf4j; import org.springframework.stereotype.Component; import jakarta.websocket.OnClose; import jakarta.websocket.OnError; import jakarta.websocket.OnMessage; import jakarta.websocket.OnOpen; import jakarta.websocket.Session; import jakarta.websocket.server.PathParam; import jakarta.websocket.server.ServerEndpoint; import java.io.BufferedInputStream; import java.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-09T12:59:33+08:00">
+    <meta property="article:modified_time" content="2024-01-09T12:59:33+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">web网页端使用webSocket实现语音通话功能(SpringBoot&#43;VUE)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="_0"></a>写在前面</h3> 
+<p>最近在写一个web项目，需要实现web客户端之间的语音通话，期望能够借助webSocket全双工通信的方式来实现，但是网上没有发现可以正确使用的代码。网上能找到的一个代码使用之后<strong>只能听到“嘀嘀嘀”的杂音</strong></p> 
+<p>解决方案：<code>使用Json来传递数据代替原有的二进制输入输出流</code></p> 
+<p>技术栈：VUE3、SpingBoot、WebSocket</p> 
+<h3><a id="Java_8"></a>Java后端代码</h3> 
+<p><code>pom.xml</code></p> 
+<p>配置Maven所需的jar包</p> 
+<pre><code class="prism language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.springframework.boot<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spring-boot-starter-websocket<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<p><code>WebSocketConfig.java</code></p> 
+<p>webSocket配置类</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>shu<span class="token punctuation">.</span>config</span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Bean</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>context<span class="token punctuation">.</span>annotation<span class="token punctuation">.</span></span><span class="token class-name">Configuration</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>web<span class="token punctuation">.</span>socket<span class="token punctuation">.</span>server<span class="token punctuation">.</span>standard<span class="token punctuation">.</span></span><span class="token class-name">ServerEndpointExporter</span></span><span class="token punctuation">;</span> 
+
+<span class="token annotation punctuation">@Configuration</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">WebSocketConfig</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">/**
+     * 	注入ServerEndpointExporter，
+     * 	这个bean会自动注册使用了@ServerEndpoint注解声明的Websocket endpoint
+     */</span>
+    <span class="token annotation punctuation">@Bean</span>
+    <span class="token keyword">public</span> <span class="token class-name">ServerEndpointExporter</span> <span class="token function">serverEndpointExporter</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token keyword">return</span> <span class="token keyword">new</span> <span class="token class-name">ServerEndpointExporter</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><code>WebSocketAudioServer.java</code></p> 
+<p>webSocket实现类，其中<code>roomId是语音聊天室的id</code>，<strong>userId是发送语音的用户id</strong></p> 
+<p>所以前端请求加入webSocket时候的<strong>请求样例</strong>应该是：<code>ws://localhost:8080/audio/1/123</code>这个请求中1是roomId，123是userId，<strong>这里建议使用ws</strong>，一般来说ws对于http，wss对应https</p> 
+<pre><code class="prism language-java"><span class="token keyword">package</span> <span class="token namespace">com<span class="token punctuation">.</span>shu<span class="token punctuation">.</span>socket</span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">lombok<span class="token punctuation">.</span>extern<span class="token punctuation">.</span>slf4j<span class="token punctuation">.</span></span><span class="token class-name">Slf4j</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">org<span class="token punctuation">.</span>springframework<span class="token punctuation">.</span>stereotype<span class="token punctuation">.</span></span><span class="token class-name">Component</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span></span><span class="token class-name">OnClose</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span></span><span class="token class-name">OnError</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span></span><span class="token class-name">OnMessage</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span></span><span class="token class-name">OnOpen</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span></span><span class="token class-name">Session</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span>server<span class="token punctuation">.</span></span><span class="token class-name">PathParam</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">jakarta<span class="token punctuation">.</span>websocket<span class="token punctuation">.</span>server<span class="token punctuation">.</span></span><span class="token class-name">ServerEndpoint</span></span><span class="token punctuation">;</span>
+
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">BufferedInputStream</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">IOException</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>io<span class="token punctuation">.</span></span><span class="token class-name">InputStream</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>nio<span class="token punctuation">.</span></span><span class="token class-name">ByteBuffer</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">ArrayList</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">HashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">List</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span></span><span class="token class-name">Map</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">ConcurrentHashMap</span></span><span class="token punctuation">;</span>
+<span class="token keyword">import</span> <span class="token import"><span class="token namespace">java<span class="token punctuation">.</span>util<span class="token punctuation">.</span>concurrent<span class="token punctuation">.</span></span><span class="token class-name">CopyOnWriteArraySet</span></span><span class="token punctuation">;</span>
+
+<span class="token comment">/**
+ * @Author:Long
+ **/</span>
+<span class="token annotation punctuation">@Component</span>
+<span class="token annotation punctuation">@Slf4j</span>
+<span class="token annotation punctuation">@ServerEndpoint</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"/audio/{roomId}/{userId}"</span><span class="token punctuation">)</span>
+<span class="token keyword">public</span> <span class="token keyword">class</span> <span class="token class-name">WebSocketAudioServer</span> <span class="token punctuation">{<!-- --></span>
+
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">ConcurrentHashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Session</span><span class="token punctuation">&gt;</span></span> sessionPool <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ConcurrentHashMap</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">,</span> <span class="token class-name">Session</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">private</span> <span class="token keyword">static</span> <span class="token class-name">CopyOnWriteArraySet</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">WebSocketAudioServer</span><span class="token punctuation">&gt;</span></span> webSocketSet <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">CopyOnWriteArraySet</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token keyword">private</span> <span class="token class-name">Session</span> webSocketsession<span class="token punctuation">;</span>
+	<span class="token keyword">private</span> <span class="token class-name">String</span> roomId<span class="token punctuation">;</span>
+	<span class="token keyword">private</span> <span class="token class-name">String</span> userId<span class="token punctuation">;</span>
+
+	<span class="token annotation punctuation">@OnOpen</span>
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onOpen</span><span class="token punctuation">(</span><span class="token annotation punctuation">@PathParam</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"roomId"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> roomId<span class="token punctuation">,</span> <span class="token annotation punctuation">@PathParam</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"userId"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> userId<span class="token punctuation">,</span>
+			<span class="token class-name">Session</span> webSocketsession<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token comment">// 接收到发送消息的人员编号</span>
+		<span class="token keyword">this</span><span class="token punctuation">.</span>roomId <span class="token operator">=</span> roomId<span class="token punctuation">;</span>
+		<span class="token keyword">this</span><span class="token punctuation">.</span>userId <span class="token operator">=</span> userId<span class="token punctuation">;</span>
+		<span class="token comment">// 加入map中，绑定当前用户和socket</span>
+		sessionPool<span class="token punctuation">.</span><span class="token function">put</span><span class="token punctuation">(</span>userId<span class="token punctuation">,</span> webSocketsession<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		webSocketSet<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">this</span><span class="token punctuation">.</span>webSocketsession <span class="token operator">=</span> webSocketsession<span class="token punctuation">;</span>
+		<span class="token comment">// 在线数加1</span>
+		<span class="token function">addOnlineCount</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span><span class="token string">"user编号:"</span> <span class="token operator">+</span> userId <span class="token operator">+</span> <span class="token string">"：加入Room:"</span> <span class="token operator">+</span> roomId <span class="token operator">+</span> <span class="token string">"语音聊天  "</span> <span class="token operator">+</span> <span class="token string">"总数为:"</span> <span class="token operator">+</span> webSocketSet<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+	<span class="token annotation punctuation">@OnClose</span>
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onClose</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+			sessionPool<span class="token punctuation">.</span><span class="token function">remove</span><span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>userId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token punctuation">}</span>
+	<span class="token punctuation">}</span>
+
+	
+	<span class="token annotation punctuation">@OnMessage</span><span class="token punctuation">(</span>maxMessageSize <span class="token operator">=</span> <span class="token number">5242880</span><span class="token punctuation">)</span>
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onMessage</span><span class="token punctuation">(</span><span class="token annotation punctuation">@PathParam</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"roomId"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> roomId<span class="token punctuation">,</span> <span class="token annotation punctuation">@PathParam</span><span class="token punctuation">(</span>value <span class="token operator">=</span> <span class="token string">"userId"</span><span class="token punctuation">)</span> <span class="token class-name">String</span> userId<span class="token punctuation">,</span>
+			<span class="token class-name">String</span> inputStream<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+
+			<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">WebSocketAudioServer</span> webSocket <span class="token operator">:</span> webSocketSet<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+				<span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+					<span class="token keyword">if</span> <span class="token punctuation">(</span>webSocket<span class="token punctuation">.</span>webSocketsession<span class="token punctuation">.</span><span class="token function">isOpen</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> webSocket<span class="token punctuation">.</span>roomId<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>roomId<span class="token punctuation">)</span>
+							<span class="token operator">&amp;&amp;</span> <span class="token operator">!</span>webSocket<span class="token punctuation">.</span>userId<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>userId<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+						webSocket<span class="token punctuation">.</span>webSocketsession<span class="token punctuation">.</span><span class="token function">getBasicRemote</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">sendText</span><span class="token punctuation">(</span>inputStream<span class="token punctuation">)</span><span class="token punctuation">;</span>
+					<span class="token punctuation">}</span>
+				<span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+					e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+				<span class="token punctuation">}</span>
+			<span class="token punctuation">}</span>
+		<span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+			e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+	<span class="token punctuation">}</span>
+
+
+	<span class="token annotation punctuation">@OnError</span>
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">onError</span><span class="token punctuation">(</span><span class="token class-name">Session</span> session<span class="token punctuation">,</span> <span class="token class-name">Throwable</span> error<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		error<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+
+	<span class="token comment">/**
+	 * 为指定用户发送消息
+	 *
+	 */</span>
+	<span class="token keyword">public</span> <span class="token keyword">void</span> <span class="token function">sendMessage</span><span class="token punctuation">(</span><span class="token class-name">String</span> message<span class="token punctuation">)</span> <span class="token keyword">throws</span> <span class="token class-name">IOException</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token comment">// 加同步锁，解决多线程下发送消息异常关闭</span>
+		<span class="token keyword">synchronized</span> <span class="token punctuation">(</span><span class="token keyword">this</span><span class="token punctuation">.</span>webSocketsession<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+			<span class="token keyword">this</span><span class="token punctuation">.</span>webSocketsession<span class="token punctuation">.</span><span class="token function">getBasicRemote</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">sendText</span><span class="token punctuation">(</span>message<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+	<span class="token punctuation">}</span>
+
+	<span class="token keyword">public</span> <span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> <span class="token function">getOnlineUser</span><span class="token punctuation">(</span><span class="token class-name">String</span> roomId<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token class-name">List</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">&gt;</span></span> userList <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">ArrayList</span><span class="token generics"><span class="token punctuation">&lt;</span><span class="token class-name">String</span><span class="token punctuation">&gt;</span></span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token class-name">WebSocketAudioServer</span> webSocketAudioServer <span class="token operator">:</span> webSocketSet<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+			<span class="token keyword">try</span> <span class="token punctuation">{<!-- --></span>
+				<span class="token keyword">if</span> <span class="token punctuation">(</span>webSocketAudioServer<span class="token punctuation">.</span>webSocketsession<span class="token punctuation">.</span><span class="token function">isOpen</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&amp;&amp;</span> webSocketAudioServer<span class="token punctuation">.</span>roomId<span class="token punctuation">.</span><span class="token function">equals</span><span class="token punctuation">(</span>roomId<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+					<span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>userList<span class="token punctuation">.</span><span class="token function">contains</span><span class="token punctuation">(</span>webSocketAudioServer<span class="token punctuation">.</span>userId<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+						userList<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>webSocketAudioServer<span class="token punctuation">.</span>userId<span class="token punctuation">)</span><span class="token punctuation">;</span>
+					<span class="token punctuation">}</span>
+				<span class="token punctuation">}</span>
+			<span class="token punctuation">}</span> <span class="token keyword">catch</span> <span class="token punctuation">(</span><span class="token class-name">Exception</span> e<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+				e<span class="token punctuation">.</span><span class="token function">printStackTrace</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+		<span class="token punctuation">}</span>
+		<span class="token keyword">return</span> userList<span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h3><a id="VUE_172"></a>VUE前端代码</h3> 
+<p><code>audioChat.vue</code></p> 
+<p>这段代码是博主从自己的vue代码中截取出来的（原本的代码太多了），可能有些部分代码有函数没写上（<strong>如果有错的话麻烦大家在评论区指出，博主会及时修改</strong>）</p> 
+<p><strong>注意事项</strong></p> 
+<p><strong>之前有博客使用二进制数据输入输出流来向后端传输数据</strong>，但是功能无法实现，后来发现那位博主的数据并没有发成功，我直接<code>在Java中使用Json来传输float数组数据，实现了语音通话功能</code>。</p> 
+<pre><code class="prism language-vue">&lt;template&gt;
+  &lt;div class="play-audio"&gt;
+    &lt;button @click="startCall" ref="start"&gt;开始对讲&lt;/el-button&gt;
+    &lt;button @click="stopCall" ref="stop"&gt;结束对讲&lt;/el-button&gt;
+  &lt;/div&gt;
+&lt;/template&gt;
+
+&lt;script setup&gt;
+// 语音聊天的变量
+const audioSocket = ref(null);
+let mediaStack;
+let audioCtx;
+let scriptNode;
+let source;
+let play;
+// 语音socket
+const connectAudioWebSocket = () =&gt; {
+  let url = "ws://localhost:8080/audio/1/123"; //roomId:1 ,userId123
+  audioSocket.value = new WebSocket(url); // 替换为实际的 WebSocket 地址
+
+  audioSocket.value.onopen = () =&gt; {
+    console.log("audioSocket connected");
+  };
+
+  audioSocket.value.onmessage = (event) =&gt; {
+    // 将接收的数据转换成与传输过来的数据相同的Float32Array
+    const jsonAudio = JSON.parse(event.data);
+
+    // let buffer = new Float32Array(event.data);
+    let buffer = new Float32Array(4096);
+    for (let i = 0; i &lt; 4096; i++) {
+      // buffer.push(parseFloat(jsonAudio[i]));
+      buffer[i] = parseFloat(jsonAudio[i]);
+    }
+
+    // 创建一个空白的AudioBuffer对象，这里的4096跟发送方保持一致，48000是采样率
+    const myArrayBuffer = audioCtx.createBuffer(1, 4096, 16000);
+    // 也是由于只创建了一个音轨，可以直接取到0
+    const nowBuffering = myArrayBuffer.getChannelData(0);
+    // 通过循环，将接收过来的数据赋值给简单音频对象
+    for (let i = 0; i &lt; 4096; i++) {
+      nowBuffering[i] = buffer[i];
+    }
+    // 使用AudioBufferSourceNode播放音频
+    const source = audioCtx.createBufferSource();
+    source.buffer = myArrayBuffer;
+    const gainNode = audioCtx.createGain();
+    source.connect(gainNode);
+    gainNode.connect(audioCtx.destination);
+    var muteValue = 1;
+    if (!play) {
+      // 是否静音
+      muteValue = 0;
+    }
+    gainNode.gain.setValueAtTime(muteValue, audioCtx.currentTime);
+    source.start();
+  };
+
+  audioSocket.value.onclose = () =&gt; {
+    console.log("audioSocket closed");
+  };
+
+  audioSocket.value.onerror = (error) =&gt; {
+    console.error("audioSocket error:", error);
+  };
+};
+// 开始对讲
+function startCall() {
+    isInChannel.value = true;
+    play = true;
+    audioCtx = new AudioContext();
+    connectAudioWebSocket();
+
+    // 该变量存储当前MediaStreamAudioSourceNode的引用
+    // 可以通过它关闭麦克风停止音频传输
+
+    // 创建一个ScriptProcessorNode 用于接收当前麦克风的音频
+    scriptNode = audioCtx.createScriptProcessor(4096, 1, 1);
+    navigator.mediaDevices
+      .getUserMedia({ audio: true, video: false })
+      .then((stream) =&gt; {
+        mediaStack = stream;
+        source = audioCtx.createMediaStreamSource(stream);
+
+        source.connect(scriptNode);
+        scriptNode.connect(audioCtx.destination);
+      })
+      .catch(function (err) {
+        /* 处理error */
+        isInChannel.value = false;
+        console.log("err", err);
+      });
+    // 当麦克风有声音输入时，会调用此事件
+    // 实际上麦克风始终处于打开状态时，即使不说话，此事件也在一直调用
+    scriptNode.onaudioprocess = (audioProcessingEvent) =&gt; {
+      const inputBuffer = audioProcessingEvent.inputBuffer;
+      // console.log("inputBuffer",inputBuffer);
+      // 由于只创建了一个音轨，这里只取第一个频道的数据
+      const inputData = inputBuffer.getChannelData(0);
+      // 通过socket传输数据，实际上传输的是Float32Array
+      if (audioSocket.value.readyState === 1) {
+        // console.log("发送的数据",inputData);
+        // audioSocket.value.send(inputData);
+        let jsonData = JSON.stringify(inputData);
+        audioSocket.value.send(jsonData);
+
+        // stopCall();
+      }
+    };
+}
+// 关闭麦克风
+function stopCall() {
+  isInChannel.value = false;
+  play = false;
+  mediaStack.getTracks()[0].stop();
+  scriptNode.disconnect();
+  if (audioSocket.value) {
+    audioSocket.value.close();
+    audioSocket.value = null;
+  }
+}
+&lt;/script&gt;
+</code></pre> 
+<h3><a id="ChromeEdge_307"></a>关于Chrome或Edge浏览器报错</h3> 
+<p>关于谷歌浏览器提示<code>TypeError: Cannot read property ‘getUserMedia’ of undefined</code></p> 
+<p><strong>解决方案：</strong><br> 1.网页使用https访问，服务端升级为https访问，配置ssl证书<br> 2.使用localhost或127.0.0.1 进行访问<br> 3.修改浏览器安全配置</p> 
+<p>在chrome浏览器中输入如下指令</p> 
+<pre><code>chrome://flags/#unsafely-treat-insecure-origin-as-secure 
+</code></pre> 
+<p>开启 Insecure origins treated as secure<br> 在下方输入栏内输入你访问的地址url，然后将右侧Disabled 改成 Enabled即可</p> 
+<p><img src="https://images2.imgbox.com/89/26/i3p59uuo_o.png" alt="在这里插入图片描述"></p> 
+<p>浏览器会提示重启， 点击Relaunch即可<br> <img src="https://images2.imgbox.com/53/8e/CLHOrdD7_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/196fce141dd2b312f339647af59a6578/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">JAVA中while循环的使用</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/db1bcae770ff674aaba0739062668825/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">免费分享一套微信小程序扫码点餐(订餐)系统(uni-app&#43;SpringBoot后端&#43;Vue管理端技术实现) ，帅呆了~~</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

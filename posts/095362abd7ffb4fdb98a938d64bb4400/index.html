@@ -1,0 +1,342 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>JavaScript 垃圾回收机制深度解析：内存管理的艺术 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/095362abd7ffb4fdb98a938d64bb4400/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="JavaScript 垃圾回收机制深度解析：内存管理的艺术">
+  <meta property="og:description" content="🔥 个人主页：空白诗 文章目录 🎭 引言一、JavaScript内存模型与生命周期的深度解析📌 基本数据类型与栈内存的精妙运作📌 复杂数据类型与堆内存的广袤世界📌 生命周期管理的智慧与实践策略📌 WeakMap 和 WeakSet 介绍 二、垃圾回收机制（Garbage Collection, GC）的深度探索📌 引用计数法（Reference Counting）📌 标记-清除法（Mark-and-Sweep）📌 分代收集（Generational Collection） 三、垃圾回收的智能进化：增量标记与并发/并行回收📌 增量标记（Incremental Marking）：小步快跑，减少卡顿📌 并发/并行回收：多手多脚，效率倍增📌 总结 四、内存泄漏防范手册：最佳实践指南1. 及时断开引用 —— 清理不再使用的对象2. 关注DOM引用 —— 解除事件监听与元素关联3. 定时器与回调管理 —— 控制异步资源4. 闭包中的变量 —— 精确管理作用域5. 模块与单例 —— 适度使用全局 六、面试考点1. JavaScript中垃圾回收机制的基本原理是什么？2. 什么是引用计数法？它的缺点是什么？3. 标记清除算法是如何工作的？为什么它能解决循环引用问题？4. 什么是分代收集？它如何提高垃圾回收的效率？5. 如何在JavaScript中避免内存泄漏？ 七、总结 🎭 引言 在这个信息爆炸的时代，每一行代码都可能成为数字海洋中的璀璨星光，亦或是悄然累积的暗流。JavaScript，作为互联网世界的通用语言，它的每一次呼吸——数据的创建与消亡，都离不开垃圾回收机制的精密调控。在这篇文章中，我们将携手踏上一场深入JavaScript内存管理腹地的探险之旅，揭开垃圾回收机制那既神秘又强大的面纱，让每一次内存的分配与回收，都能成为推动应用高效运转的强劲动力。
+一、JavaScript内存模型与生命周期的深度解析 📌 基本数据类型与栈内存的精妙运作 JavaScript内存管理的根基深植于栈内存与堆内存的双重架构之中。栈内存以其快速访问速度和严谨的生命周期管理著称，它主要承载着程序中的轻量级成员——基本数据类型，覆盖了数字number、字符串string、布尔值boolean、特殊标识undefined和null。栈内存的另一项重要职责是记录函数调用时的临时住客——局部变量和执行上下文，确保一旦函数执行完毕或变量走出了自己的作用范围，它们占用的内存空间就能迅速被释放，从而维护内存使用的高效率和及时周转。
+let age = 25; // 为age在栈内存中分配空间，并储存数字25 function greet() { let message = &#34;Hello!&#34;; // greet执行期间，在栈内存为message分配临时住所 } greet(); // 函数演出结束，message占用的栈内存空间随即被回收 📌 复杂数据类型与堆内存的广袤世界 相较于栈内存的瞬时特性，堆内存如同一片广阔无垠的天地，为复杂数据类型如对象object、数组array以及函数（本质上作为对象存在）提供了一片生存的沃土。在这里，数据的家需要通过构造函数或字面量的方式显式建立。由于这些复杂结构可能被多个变量共享引用，甚至自身内部也包含引用关系，它们的生命周期管理就变得错综复杂，这也正是垃圾回收机制大展身手的舞台，负责甄别并清理那些已经孤立无援、不再被任何变量引用的内存区域。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-09T07:58:57+08:00">
+    <meta property="article:modified_time" content="2024-05-09T07:58:57+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">JavaScript 垃圾回收机制深度解析：内存管理的艺术</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/0a/de/HyKfnn6Z_o.png" alt="在这里插入图片描述"></p> 
+<center> 
+ <strong><font color="red">🔥 个人主页：<a href="https://blog.csdn.net/m0_52827996?spm=1010.2135.3001.5343">空白诗</a></font></strong> 
+</center> 
+<p><img src="https://images2.imgbox.com/6d/40/6PoUxBds_o.gif" alt="在这里插入图片描述"></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#__8" rel="nofollow">🎭 引言</a></li><li><a href="#JavaScript_17" rel="nofollow">一、JavaScript内存模型与生命周期的深度解析</a></li><li><ul><li><a href="#__19" rel="nofollow">📌 基本数据类型与栈内存的精妙运作</a></li><li><a href="#__31" rel="nofollow">📌 复杂数据类型与堆内存的广袤世界</a></li><li><a href="#__39" rel="nofollow">📌 生命周期管理的智慧与实践策略</a></li><li><a href="#_WeakMap__WeakSet__54" rel="nofollow">📌 WeakMap 和 WeakSet 介绍</a></li></ul> 
+   </li><li><a href="#Garbage_Collection_GC_111" rel="nofollow">二、垃圾回收机制（Garbage Collection, GC）的深度探索</a></li><li><ul><li><a href="#_Reference_Counting_113" rel="nofollow">📌 引用计数法（Reference Counting）</a></li><li><a href="#_MarkandSweep_129" rel="nofollow">📌 标记-清除法（Mark-and-Sweep）</a></li><li><a href="#_Generational_Collection_148" rel="nofollow">📌 分代收集（Generational Collection）</a></li></ul> 
+   </li><li><a href="#_159" rel="nofollow">三、垃圾回收的智能进化：增量标记与并发/并行回收</a></li><li><ul><li><a href="#_Incremental_Marking_161" rel="nofollow">📌 增量标记（Incremental Marking）：小步快跑，减少卡顿</a></li><li><a href="#__184" rel="nofollow">📌 并发/并行回收：多手多脚，效率倍增</a></li><li><a href="#__203" rel="nofollow">📌 总结</a></li></ul> 
+   </li><li><a href="#_210" rel="nofollow">四、内存泄漏防范手册：最佳实践指南</a></li><li><ul><li><a href="#1____212" rel="nofollow">1. 及时断开引用 —— 清理不再使用的对象</a></li><li><a href="#2_DOM___224" rel="nofollow">2. 关注DOM引用 —— 解除事件监听与元素关联</a></li><li><a href="#3____240" rel="nofollow">3. 定时器与回调管理 —— 控制异步资源</a></li><li><a href="#4____253" rel="nofollow">4. 闭包中的变量 —— 精确管理作用域</a></li><li><a href="#5____267" rel="nofollow">5. 模块与单例 —— 适度使用全局</a></li></ul> 
+   </li><li><a href="#_294" rel="nofollow">六、面试考点</a></li><li><ul><li><a href="#1_JavaScript_298" rel="nofollow">1. JavaScript中垃圾回收机制的基本原理是什么？</a></li><li><a href="#2__302" rel="nofollow">2. 什么是引用计数法？它的缺点是什么？</a></li><li><a href="#3__306" rel="nofollow">3. 标记清除算法是如何工作的？为什么它能解决循环引用问题？</a></li><li><a href="#4__310" rel="nofollow">4. 什么是分代收集？它如何提高垃圾回收的效率？</a></li><li><a href="#5_JavaScript_314" rel="nofollow">5. 如何在JavaScript中避免内存泄漏？</a></li></ul> 
+   </li><li><a href="#_327" rel="nofollow">七、总结</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="__8"></a>🎭 引言</h3> 
+<blockquote> 
+ <p>在这个信息爆炸的时代，每一行代码都可能成为数字海洋中的璀璨星光，亦或是悄然累积的暗流。JavaScript，作为互联网世界的通用语言，它的每一次呼吸——数据的创建与消亡，都离不开垃圾回收机制的精密调控。在这篇文章中，我们将携手踏上一场深入JavaScript内存管理腹地的探险之旅，揭开垃圾回收机制那既神秘又强大的面纱，让每一次内存的分配与回收，都能成为推动应用高效运转的强劲动力。</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/c5/97/PUrJWNU3_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="JavaScript_17"></a>一、JavaScript内存模型与生命周期的深度解析</h3> 
+<h4><a id="__19"></a>📌 基本数据类型与栈内存的精妙运作</h4> 
+<p><code>JavaScript</code>内存管理的根基深植于<strong>栈内存</strong>与<strong>堆内存</strong>的双重架构之中。<strong>栈内存</strong>以其快速访问速度和严谨的生命周期管理著称，它主要承载着程序中的轻量级成员——基本数据类型，覆盖了数字<code>number</code>、字符串<code>string</code>、布尔值<code>boolean</code>、特殊标识<code>undefined</code>和<code>null</code>。栈内存的另一项重要职责是记录函数调用时的临时住客——局部变量和执行上下文，确保一旦函数执行完毕或变量走出了自己的作用范围，它们占用的内存空间就能迅速被释放，从而维护内存使用的高效率和及时周转。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">let</span> age <span class="token operator">=</span> <span class="token number">25</span><span class="token punctuation">;</span> <span class="token comment">// 为age在栈内存中分配空间，并储存数字25</span>
+<span class="token keyword">function</span> <span class="token function">greet</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">let</span> message <span class="token operator">=</span> <span class="token string">"Hello!"</span><span class="token punctuation">;</span> <span class="token comment">// greet执行期间，在栈内存为message分配临时住所</span>
+<span class="token punctuation">}</span>
+<span class="token function">greet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 函数演出结束，message占用的栈内存空间随即被回收</span>
+</code></pre> 
+<h4><a id="__31"></a>📌 复杂数据类型与堆内存的广袤世界</h4> 
+<p>相较于<strong>栈内存</strong>的瞬时特性，<strong>堆内存</strong>如同一片广阔无垠的天地，为复杂数据类型如对象<code>object</code>、数组<code>array</code>以及函数（本质上作为对象存在）提供了一片生存的沃土。在这里，数据的家需要通过构造函数或字面量的方式显式建立。由于这些复杂结构可能被多个变量共享引用，甚至自身内部也包含引用关系，它们的生命周期管理就变得错综复杂，这也正是垃圾回收机制大展身手的舞台，负责甄别并清理那些已经孤立无援、不再被任何变量引用的内存区域。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">let</span> person <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">"Alice"</span> <span class="token punctuation">}</span><span class="token punctuation">;</span> <span class="token comment">// 在堆内存中为person建造一座房子，并在栈内存保留一张前往该住址的地图</span>
+</code></pre> 
+<h4><a id="__39"></a>📌 生命周期管理的智慧与实践策略</h4> 
+<p>深入理解栈内存与堆内存各自的生命周期管理机制，对于编写高效、无内存泄漏的<code>JavaScript</code>代码来说至关重要。</p> 
+<ul><li><strong>栈内存</strong>的自动清理机制确保了瞬时数据的迅速释放，展现了自动化的高效；</li><li><strong>堆内存</strong>的动态性则要求开发者必须具备良好的内存管理意识，通过合理设计和适时解除对象引用，与垃圾回收机制相辅相成，共同抵御内存泄漏的威胁。</li></ul> 
+<p>在实际编程实践中，以下几点是每位开发者应铭记于心的原则：</p> 
+<ul><li><strong>及时释放不再使用的对象引用</strong>，避免无谓的内存占用；</li><li><strong>利用工具辅助</strong>，如浏览器的开发者工具进行内存分析，定期检查和定位内存泄漏；</li><li><strong>谨慎处理事件监听器和定时器</strong>，确保在不再需要时及时清理；</li><li><strong>了解并运用WeakMap和WeakSet</strong>，它们持有的弱引用可以减少内存泄漏的风险。</li></ul> 
+<p>通过这些策略的实施，开发者不仅能提升应用的性能表现，还能确保资源的高效利用，让程序在内存的舞台上轻盈起舞，演绎出流畅无阻的用户体验。</p> 
+<h4><a id="_WeakMap__WeakSet__54"></a>📌 WeakMap 和 WeakSet 介绍</h4> 
+<p><code>WeakMap</code> 和 <code>WeakSet</code> 是 ES6 中引入的两种特殊集合类型，它们与 <code>Map</code> 和 <code>Set</code> 类似，但在内存管理上有所不同，主要体现在它们对所存储对象的引用是弱引用（weak reference）。这意味着，如果一个对象仅通过 <code>WeakMap</code> 或 <code>WeakSet</code> 引用，当这个对象不再被其他地方使用时，垃圾回收机制可以回收该对象，即使它还存在于 <code>WeakMap</code> 或 <code>WeakSet</code> 中。</p> 
+<p><strong>WeakMap</strong></p> 
+<p><code>WeakMap</code> 是一个键值对集合，其键必须是对象类型，而值可以是任意类型。适合用于存储对象的私有数据或元数据，不会阻止垃圾回收机制回收对象。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">let</span> user <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token literal-property property">name</span><span class="token operator">:</span> <span class="token string">"Alice"</span> <span class="token punctuation">}</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 创建一个 WeakMap</span>
+<span class="token keyword">let</span> userMetadata <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">WeakMap</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 向 WeakMap 添加数据</span>
+userMetadata<span class="token punctuation">.</span><span class="token function">set</span><span class="token punctuation">(</span>user<span class="token punctuation">,</span> <span class="token punctuation">{<!-- --></span> <span class="token literal-property property">role</span><span class="token operator">:</span> <span class="token string">"Admin"</span><span class="token punctuation">,</span> <span class="token literal-property property">joined</span><span class="token operator">:</span> <span class="token keyword">new</span> <span class="token class-name">Date</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>userMetadata<span class="token punctuation">.</span><span class="token function">get</span><span class="token punctuation">(</span>user<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 输出: { role: "Admin", joined: Thu May 08 2024 11:55:35 GMT+0800 (China Standard Time) }</span>
+
+<span class="token comment">// 假设 user 对象不再被其他地方引用，垃圾回收机制可以回收 user 对象及其在 WeakMap 中的元数据</span>
+user <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+</code></pre> 
+<p><strong>WeakSet</strong></p> 
+<p><code>WeakSet</code> 是一个集合类型，只接受对象作为成员，并且对这些成员的引用是弱引用。当对象不在其他地方被引用时，即便它还在 <code>WeakSet</code> 中，也会被垃圾回收。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">class</span> <span class="token class-name">Node</span> <span class="token punctuation">{<!-- --></span>
+  <span class="token function">constructor</span><span class="token punctuation">(</span><span class="token parameter">id</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">this</span><span class="token punctuation">.</span>id <span class="token operator">=</span> id<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token keyword">let</span> nodeA <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Node</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token keyword">let</span> nodeB <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Node</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 创建一个 WeakSet</span>
+<span class="token keyword">let</span> processedNodes <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">WeakSet</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 向 WeakSet 添加对象</span>
+processedNodes<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>nodeA<span class="token punctuation">)</span><span class="token punctuation">;</span>
+processedNodes<span class="token punctuation">.</span><span class="token function">add</span><span class="token punctuation">(</span>nodeB<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>processedNodes<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">(</span>nodeA<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 输出: true</span>
+
+<span class="token comment">// 假设 nodeA 不再被其他地方引用</span>
+nodeA <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 垃圾回收机制可以回收 nodeA，同时它在 WeakSet 中的表示也会被移除</span>
+console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span>processedNodes<span class="token punctuation">.</span><span class="token function">has</span><span class="token punctuation">(</span>nodeA<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 在垃圾回收之后，输出: false</span>
+</code></pre> 
+<p>这些示例展示了 <code>WeakMap</code> 和 <code>WeakSet</code> 如何在不阻止垃圾回收的情况下存储对象的关联数据或跟踪对象集合。在需要管理对象生命周期和避免内存泄漏的场景中，它们是非常有用的工具。</p> 
+<hr> 
+<h3><a id="Garbage_Collection_GC_111"></a>二、垃圾回收机制（Garbage Collection, GC）的深度探索</h3> 
+<h4><a id="_Reference_Counting_113"></a>📌 引用计数法（Reference Counting）</h4> 
+<p>作为最直观的垃圾回收策略，引用计数机制赋予每个对象一个<em><strong>引用计数器</strong></em>，用来追踪该对象被引用的次数。每当创建新的引用时，计数器加1；当引用被释放（如变量被重新赋值或作用域结束）时，计数器减1。一旦对象的引用计数降至0，表明它不再被任何变量引用，随即被标记为可回收资源。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">function</span> <span class="token function">referenceCountingExample</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">let</span> obj1 <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Object</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// obj1的引用计数初始化为1</span>
+    <span class="token keyword">let</span> obj2 <span class="token operator">=</span> obj1<span class="token punctuation">;</span>       <span class="token comment">// obj1的引用计数因被obj2引用而增加至2</span>
+    obj1 <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>          <span class="token comment">// obj1的引用被解除，但因obj2的引用，计数仍为1</span>
+    obj2 <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>          <span class="token comment">// 最后一个引用被解除，对象的引用计数为0，准备回收</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>注意事项</strong>⚠️<br> 尽管简单直接，引用计数机制在处理<strong>循环引用</strong>场景时显得无能为力，容易导致内存泄漏问题，即两个或多个对象相互引用，即使它们已不再被外部使用，计数也不会降为0。</p> 
+<h4><a id="_MarkandSweep_129"></a>📌 标记-清除法（Mark-and-Sweep）</h4> 
+<p>为克服引用计数的局限性，标记-清除算法应运而生。此算法通过两阶段实现内存的回收：</p> 
+<ol><li><strong>标记阶段</strong>：从根对象（如全局对象）出发，遍历所有可达的对象，将其标记为“活着”或“可达”状态。</li><li><strong>清除阶段</strong>：遍历堆内存，未被标记的所有对象被视为垃圾，回收它们占用的内存空间。</li></ol> 
+<pre><code class="prism language-javascript"><span class="token keyword">function</span> <span class="token function">markAndSweepExample</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">let</span> objA <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span><span class="token punctuation">;</span> 
+    <span class="token keyword">let</span> objB <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span><span class="token punctuation">;</span> 
+    objA<span class="token punctuation">.</span>ref <span class="token operator">=</span> objB<span class="token punctuation">;</span> <span class="token comment">// 形成循环引用</span>
+    objB<span class="token punctuation">.</span>ref <span class="token operator">=</span> objA<span class="token punctuation">;</span>
+    objA <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span> 
+    objB <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span>
+    <span class="token comment">// 标记-清除机制能够识别并处理此类循环引用，确保无用对象被回收</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="_Generational_Collection_148"></a>📌 分代收集（Generational Collection）</h4> 
+<p>鉴于大多数对象具有短暂生命周期的特性，现代<code>JavaScript</code>引擎采用了<mark>分代收集策略</mark>，将堆内存划分为<strong>年轻代</strong> 和 <strong>老年代</strong>。新创建的对象首先进入年轻代，经历一轮或几轮垃圾回收后仍存活的对象会被晋升到老年代。这一策略的优势在于，针对年轻代频繁执行低成本的回收，而老年代则执行较不频繁但成本较高的回收，从而显著提升了GC的整体效率。</p> 
+<ul><li><strong>年轻代</strong>：频繁进行快速回收，适用于短期生存的对象。</li><li><strong>老年代</strong>：较少执行回收，但每次回收更彻底，适合长期存活的对象。</li></ul> 
+<p>通过以上机制的综合运用，<code>JavaScript</code>的垃圾回收系统能够在保持内存使用效率的同时，最小化因垃圾回收引起的程序暂停，确保应用运行的流畅与高效。</p> 
+<hr> 
+<h3><a id="_159"></a>三、垃圾回收的智能进化：增量标记与并发/并行回收</h3> 
+<h4><a id="_Incremental_Marking_161"></a>📌 增量标记（Incremental Marking）：小步快跑，减少卡顿</h4> 
+<blockquote> 
+ <p>想象一下，垃圾回收就像家里大扫除，如果一次性打扫所有房间，可能会占用很长时间，期间家人就无法正常使用客厅了。增量标记就是把大扫除分成很多小任务，比如每次只打扫一个角落，打扫完快速休息一下，让家人可以继续在其他地方活动，然后再打扫下一个角落。这样，虽然打扫时间可能总长一些，但家里人几乎感觉不到被打扰。</p> 
+</blockquote> 
+<p>在<code>JavaScript</code>的世界里，增量标记就是将原本可能引起长时间卡顿的垃圾回收过程，拆解成一系列小步骤，在代码执行的间隙逐一执行。这样，即便在执行垃圾回收，应用也不会突然“冻结”，用户体验更加流畅。</p> 
+<p><strong>示例代码（概念展示）</strong><br> 虽然我们不能直接控制垃圾回收的具体执行，但可以通过模拟理解其背后的逻辑：</p> 
+<pre><code class="prism language-javascript"><span class="token comment">// 模拟应用逻辑：执行一些操作，期间垃圾回收可能在后台进行增量标记</span>
+<span class="token keyword">function</span> <span class="token function">simulateAppLogic</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">for</span><span class="token punctuation">(</span><span class="token keyword">let</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> <span class="token number">10</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 模拟执行一些操作，如处理数据、渲染页面等</span>
+        console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token template-string"><span class="token template-punctuation string">`</span><span class="token string">处理第 </span><span class="token interpolation"><span class="token interpolation-punctuation punctuation">${<!-- --></span>i<span class="token interpolation-punctuation punctuation">}</span></span><span class="token string"> 步数据...</span><span class="token template-punctuation string">`</span></span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        
+        <span class="token comment">// 模拟增量标记的“间隙”，这里实际上由引擎自动管理</span>
+        <span class="token comment">// 但我们可以想象在此期间，GC可能在悄悄工作</span>
+    <span class="token punctuation">}</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"所有操作完成！"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="__184"></a>📌 并发/并行回收：多手多脚，效率倍增</h4> 
+<blockquote> 
+ <p>并发回收就像是家里有两个人同时打扫，一个人负责扫地，另一个人负责擦桌子，两人同时工作，家务完成得更快。而并行回收则是家里有多个房间，每个房间都有人在打扫，大家同时动手，整个房子的清洁工作迅速完成。</p> 
+</blockquote> 
+<p>在<code>JavaScript</code>引擎中，<strong>并发回收</strong>意味着垃圾回收可以在与主线程不同的另一个线程中同时进行，两者互不干扰。<strong>并行回收</strong>则是在有多核CPU的情况下，垃圾回收的不同部分可以同时在不同的CPU核心上执行，实现真正的并行处理，极大提升了回收速度。</p> 
+<p><strong>示例代码（概念展示）</strong><br> 继续使用之前的模拟，理解并发或并行的思想：</p> 
+<pre><code class="prism language-javascript"><span class="token comment">// 假想的并发/并行回收概念展示</span>
+<span class="token keyword">function</span> <span class="token function">imagineConcurrentParallelGC</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"开始并发/并行GC..."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token comment">// 这里实际由引擎控制，模拟时无法直接实现，但理解为GC在后台高效进行</span>
+    <span class="token comment">// 并发情况下，GC与应用代码交替进行；并行情况下，多核CPU上同时工作</span>
+    console<span class="token punctuation">.</span><span class="token function">log</span><span class="token punctuation">(</span><span class="token string">"GC任务在后台悄悄进行，不影响应用逻辑..."</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="__203"></a>📌 总结</h4> 
+<p>通过增量标记与并发/并行回收技术，现代<code>JavaScript</code>引擎能在保持应用运行流畅的同时，高效管理内存。开发者虽不能直接控制这些机制，但理解其原理对于写出更高效、响应更快的代码至关重要。就如同生活中合理的安排家务，让家里始终保持整洁，而家人几乎感受不到打扫的存在，<code>JavaScript</code>的垃圾回收机制也在幕后默默地为我们创造了一个流畅的数字家园。</p> 
+<hr> 
+<h3><a id="_210"></a>四、内存泄漏防范手册：最佳实践指南</h3> 
+<h4><a id="1____212"></a>1. 及时断开引用 —— 清理不再使用的对象</h4> 
+<p>当对象不再服务于任何用途时，主动将其引用设为<code>null</code>，可以帮助垃圾回收机制更快识别并释放该对象占用的内存。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">function</span> <span class="token function">processData</span><span class="token punctuation">(</span><span class="token parameter">data</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">let</span> heavyObject <span class="token operator">=</span> <span class="token function">createHeavyObject</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 创建一个大对象</span>
+    <span class="token comment">// ...使用heavyObject...</span>
+    heavyObject <span class="token operator">=</span> <span class="token keyword">null</span><span class="token punctuation">;</span> <span class="token comment">// 不再使用时，断开引用</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="2_DOM___224"></a>2. 关注DOM引用 —— 解除事件监听与元素关联</h4> 
+<p>动态添加到DOM上的元素及其事件监听器，如果不恰当处理，可能形成内存泄漏。移除元素时，务必解除相关的事件监听。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">let</span> button <span class="token operator">=</span> document<span class="token punctuation">.</span><span class="token function">createElement</span><span class="token punctuation">(</span><span class="token string">'button'</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+button<span class="token punctuation">.</span>textContent <span class="token operator">=</span> <span class="token string">'Click me'</span><span class="token punctuation">;</span>
+document<span class="token punctuation">.</span>body<span class="token punctuation">.</span><span class="token function">appendChild</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+button<span class="token punctuation">.</span><span class="token function">addEventListener</span><span class="token punctuation">(</span><span class="token string">'click'</span><span class="token punctuation">,</span> handleClick<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">// 当不再需要时，正确移除元素和监听器</span>
+button<span class="token punctuation">.</span><span class="token function">removeEventListener</span><span class="token punctuation">(</span><span class="token string">'click'</span><span class="token punctuation">,</span> handleClick<span class="token punctuation">)</span><span class="token punctuation">;</span>
+document<span class="token punctuation">.</span>body<span class="token punctuation">.</span><span class="token function">removeChild</span><span class="token punctuation">(</span>button<span class="token punctuation">)</span><span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="3____240"></a>3. 定时器与回调管理 —— 控制异步资源</h4> 
+<p>使用<code>setTimeout</code>或<code>setInterval</code>时，确保在不再需要时清除定时器，避免无尽的等待和内存占用。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">let</span> intervalId <span class="token operator">=</span> <span class="token function">setInterval</span><span class="token punctuation">(</span>updateUI<span class="token punctuation">,</span> <span class="token number">1000</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token keyword">function</span> <span class="token function">cleanup</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token function">clearInterval</span><span class="token punctuation">(</span>intervalId<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 清除不再需要的定时器</span>
+<span class="token punctuation">}</span>
+<span class="token comment">// 适时调用cleanup函数，比如在组件卸载时</span>
+</code></pre> 
+<h4><a id="4____253"></a>4. 闭包中的变量 —— 精确管理作用域</h4> 
+<p>闭包能维持变量的生命期，但也可能导致意外的内存泄漏。确保闭包内只保留必要变量，并在可能时释放不再需要的变量。</p> 
+<pre><code class="prism language-javascript"><span class="token keyword">function</span> <span class="token function">createClosure</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">let</span> tempArr <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span><span class="token punctuation">;</span> <span class="token comment">// 可能的内存泄漏源</span>
+    <span class="token keyword">return</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 如果可以，清理泄露变量</span>
+        <span class="token comment">// ...</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="5____267"></a>5. 模块与单例 —— 适度使用全局</h4> 
+<p>滥用全局变量会增加内存泄漏的风险，特别是在大型应用中。采用模块模式或ES6模块，限制作用域，减少全局污染。</p> 
+<pre><code class="prism language-javascript"><span class="token comment">// 使用ES6模块避免全局变量</span>
+<span class="token keyword">export</span> <span class="token keyword">function</span> <span class="token function">someFunction</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token comment">// ...</span>
+<span class="token punctuation">}</span>
+<span class="token comment">// 或者使用立即执行函数表达式包裹模块</span>
+<span class="token punctuation">(</span><span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">var</span> privateVar<span class="token punctuation">;</span> <span class="token comment">// 私有变量</span>
+    window<span class="token punctuation">.</span>myLibrary <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">// 公开接口</span>
+        <span class="token function-variable function">publicMethod</span><span class="token operator">:</span> <span class="token keyword">function</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token comment">// 使用privateVar...</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+</code></pre> 
+<p>遵循这些最佳实践，能显著降低内存泄漏的风险，使你的<code>JavaScript</code>应用更加健壮、响应迅速。内存管理是每个开发者都应持续关注并优化的领域，它直接影响到应用的性能和用户体验。</p> 
+<hr> 
+<h3><a id="_294"></a>六、面试考点</h3> 
+<p>在面试中，有关<code>JavaScript</code>垃圾回收机制的问题经常围绕以下几个核心概念和实践展开，以下是一些常考问题及其简要回答示例：</p> 
+<h4><a id="1_JavaScript_298"></a>1. JavaScript中垃圾回收机制的基本原理是什么？</h4> 
+<p><strong>回答</strong>：<code>JavaScript</code>的垃圾回收机制主要是为了<mark>自动管理内存，防止内存泄漏</mark>。它基于两种主要算法：<strong>引用计数</strong>和<strong>标记-清除</strong>。引用计数通过跟踪对象的引用数量来决定是否回收，而标记-清除则通过遍历所有可达对象并标记，未被标记的对象视为垃圾进行回收。现代JavaScript引擎还采用了分代收集和增量标记、并发回收等策略以提高效率。</p> 
+<h4><a id="2__302"></a>2. 什么是引用计数法？它的缺点是什么？</h4> 
+<p><strong>回答</strong>：<strong>引用计数法</strong>是通过跟踪对象被引用的次数来决定是否回收。当一个对象的引用计数变为0时，该对象被视为垃圾并回收。它的缺点在于无法处理循环引用问题，即两个或多个对象相互引用，即使不再被使用，引用计数也不降为0，导致内存泄漏。</p> 
+<h4><a id="3__306"></a>3. 标记清除算法是如何工作的？为什么它能解决循环引用问题？</h4> 
+<p><strong>回答</strong>：<strong>标记清除算法</strong>分为两步：首先从根对象开始，遍历所有可达对象并标记为活动对象，然后遍历堆内存，未被标记的对象即为垃圾并回收。它解决了循环引用问题，因为循环引用的对象虽然互相引用，但如果它们不再可从根对象到达，依然会被标记为不可达并回收。</p> 
+<h4><a id="4__310"></a>4. 什么是分代收集？它如何提高垃圾回收的效率？</h4> 
+<p><strong>回答</strong>：分代收集将堆内存分为年轻代和老年代。新创建的对象通常分配在年轻代，经历一次GC后仍然存活的对象会晋升到老年代。年轻代的垃圾回收频繁且速度快，因为它假设多数对象寿命短；老年代回收少但更彻底，针对长寿对象。这种方式通过减少对老对象的频繁扫描，显著提高了回收效率。</p> 
+<h4><a id="5_JavaScript_314"></a>5. 如何在JavaScript中避免内存泄漏？</h4> 
+<p><strong>回答</strong>：</p> 
+<ul><li><strong>及时解除不再使用的对象引用</strong>：例如，设置为<code>null</code>。</li><li><strong>管理DOM引用</strong>：移除DOM节点时，记得移除事件监听器。</li><li><strong>定时器和回调清理</strong>：确保取消不需要的<code>setTimeout</code>和<code>setInterval</code>。</li><li><strong>闭包谨慎使用</strong>：避免不必要的变量长期驻留在闭包中。</li><li><strong>避免全局变量滥用</strong>：减少全局变量，使用模块或局部变量。</li></ul> 
+<p>这些问题涵盖了垃圾回收机制的基本概念、优缺点、具体算法的运作方式以及开发者如何在实践中避免内存泄漏的关键点，是面试中考察JavaScript内存管理理解的常见维度。</p> 
+<hr> 
+<h3><a id="_327"></a>七、总结</h3> 
+<p>本文深度剖析了<mark>JavaScript垃圾回收机制</mark>的核心原理与实战策略，为开发者铺就了一条通向高效内存管理的道路。要点概括如下：</p> 
+<ol><li> <p><strong>内存的双域世界</strong>：阐明了JavaScript中的内存分为栈内存和堆内存，前者存储基本类型变量，后者负责复杂数据结构，奠定了理解垃圾回收的基础框架。</p> </li><li> <p><strong>回收机制的哲学</strong>：介绍了两种主要的垃圾回收策略——引用计数与标记-清除。引用计数直接追踪对象的引用次数，简单直观；而标记-清除则通过根对象出发遍历，区分可达与不可达对象，实现内存的回收，解决了循环引用的问题。</p> </li><li> <p><strong>分代收集的智慧</strong>：阐述了现代JavaScript引擎采用的分代收集策略，将堆内存划分为新生代和老生代，针对不同对象的生命周期采取不同的回收策略，提升了回收效率。</p> </li><li> <p><strong>优化与挑战</strong>：探讨了增量标记、并发回收等高级技术，这些机制进一步优化了垃圾回收过程，减少了内存管理对应用性能的影响，确保了应用的流畅运行。</p> </li><li> <p><strong>开发者实践</strong>：强调了实践中避免内存泄漏的重要性，提供了识别与解决内存管理问题的方法，鼓励开发者采用工具辅助检测，编写更加健壮的代码。</p> </li><li> <p><strong>结语展望</strong>：以鼓舞人心的话语作结，激励开发者持续探索JavaScript的深度与广度，成为精通内存管理的大师，不断追求代码的卓越与应用的极致性能。</p> </li></ol> 
+<p>总之，掌握JavaScript垃圾回收机制不仅是技术的提升，更是对应用品质的承诺。在编程的无尽探索中，愿你凭借这份知识，开辟出更高效、更稳定的技术天地。</p> 
+<hr> 
+<p><img src="https://images2.imgbox.com/ca/87/o2asWgwE_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/703235e48311621e9dfa12239c147b39/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">本地搭建AI环境</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7cc35c35d5d43323459eee592a25ed42/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">大数据Hadoop之——部署hadoop&#43;hive&#43;Mysql环境（Linux）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

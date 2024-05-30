@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Stable-diffusion-WebUI 的API调用(内含文生图和图生图实例) - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/595d20356a327db8e5ad26f2b33ad4d7/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Stable-diffusion-WebUI 的API调用(内含文生图和图生图实例)">
+  <meta property="og:description" content="前情提要 在之前尝试使用Diffusers库来进行stable-diffusion的接口调用以及各种插件功能实现，但发现diffusers库中各复杂功能的添加较为麻烦，而且难以实现对采样器的添加，safetensors格式模型的读取。在官网上找到了webui有专门的api接口，能够极大方便我们进行类似webui界面的api调用。
+diffusers文档
+webui项目官网
+webui API说明
+webui项目部署 这种调用webui自带的api的方法需要先将webui运行起来，无论是自己从官网配置的webui，还是各类启动器一键启动的都是可以的。（我使用的为一键启动包，较为简单）
+一键启动包教程
+如果是自己配置的
+使用
+bash webui.sh --nowebui 或者
+python launch.py --xformers --api API接口调用 当我们把webui项目启动之后，我们可以看到运行的端口（默认为7860）
+可以进行调用
+1. 文生图（python示例）：
+import json import requests import io import base64 from PIL import Image url = &#34;http://127.0.0.1:7860&#34; prompt = &#34;dog&#34; negative_prompt = &#34;&#34; payload = { # 模型设置 &#34;override_settings&#34;:{ &#34;sd_model_checkpoint&#34;: &#34;v1-5-pruned.ckpt&#34;, &#34;sd_vae&#34;: &#34;animevae.pt&#34;, &#34;CLIP_stop_at_last_layers&#34;: 2, }, # 基本参数 &#34;prompt&#34;: prompt, &#34;negative_prompt&#34;: negative_prompt, &#34;steps&#34;: 30, &#34;sampler_name&#34;: &#34;Euler a&#34;, &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-15T14:56:36+08:00">
+    <meta property="article:modified_time" content="2024-01-15T14:56:36+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Stable-diffusion-WebUI 的API调用(内含文生图和图生图实例)</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>前情提要</h2> 
+<p>在之前尝试使用Diffusers库来进行stable-diffusion的接口调用以及各种插件功能实现，但发现diffusers库中各复杂功能的添加较为麻烦，而且难以实现对采样器的添加，safetensors格式模型的读取。在官网上找到了webui有专门的api接口，能够极大方便我们进行类似webui界面的api调用。</p> 
+<p><img alt="webui实例图" height="1200" src="https://images2.imgbox.com/5b/f6/zadA1ugp_o.png" width="1200"></p> 
+<p><img alt="" height="902" src="https://images2.imgbox.com/76/2b/bU508w07_o.png" width="1200"></p> 
+<p><a class="link-info" href="https://huggingface.co/docs/diffusers/v0.22.2/en/index" rel="nofollow" title="diffusers文档">diffusers文档</a></p> 
+<p><a class="link-info" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui" title="webui项目官网">webui项目官网</a></p> 
+<p><a class="link-info" href="https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/API" title="webui API说明">webui API说明</a></p> 
+<h2>webui项目部署</h2> 
+<p>这种调用webui自带的api的方法需要先将webui运行起来，无论是自己从官网配置的webui，还是各类启动器一键启动的都是可以的。（我使用的为一键启动包，较为简单）</p> 
+<p><a href="https://www.bilibili.com/video/BV1iM4y1y7oA/?spm_id_from=333.337.search-card.all.click" rel="nofollow" title="一键启动包教程">一键启动包教程</a></p> 
+<p>如果是自己配置的</p> 
+<p>使用</p> 
+<pre><code class="language-bash">bash webui.sh --nowebui</code></pre> 
+<p>或者</p> 
+<pre><code class="language-bash">python launch.py --xformers --api</code></pre> 
+<h2>API接口调用</h2> 
+<p>当我们把webui项目启动之后，我们可以看到运行的端口（默认为7860）</p> 
+<p>可以进行调用</p> 
+<p>1. 文生图（python示例）：</p> 
+<pre><code class="language-python">import json
+import requests
+import io
+import base64
+from PIL import Image
+
+url = "http://127.0.0.1:7860"
+
+prompt = "dog"
+negative_prompt = ""
+
+payload = {
+
+    # 模型设置
+    "override_settings":{
+          "sd_model_checkpoint": "v1-5-pruned.ckpt",
+          "sd_vae": "animevae.pt",
+          "CLIP_stop_at_last_layers": 2,
+    },
+
+    # 基本参数
+    "prompt": prompt,
+    "negative_prompt": negative_prompt,
+    "steps": 30,
+    "sampler_name": "Euler a",
+    "width": 512,
+    "height": 512,
+    "batch_size": 1,
+    "n_iter": 1,
+    "seed": 1,
+    "CLIP_stop_at_last_layers": 2,
+
+    # 面部修复 face fix
+    "restore_faces": False,
+
+    #高清修复 highres fix
+    # "enable_hr": True,
+    # "denoising_strength": 0.4,
+    # "hr_scale": 2,
+    # "hr_upscaler": "Latent",
+
+}
+
+response = requests.post(url=f'{url}/sdapi/v1/txt2img', json=payload)
+r = response.json()
+image = Image.open(io.BytesIO(base64.b64decode(r['images'][0])))
+
+image.show()
+image.save('output.png')</code></pre> 
+<p>2. 图生图（python 示例）</p> 
+<pre><code class="language-python">import json
+import requests
+import io
+import base64
+from PIL import Image
+import cv2
+
+url = "http://127.0.0.1:7860"
+
+prompt = "cat"
+negative_prompt = ""
+
+# 此处为读取一张图片作为输入图像
+img = cv2.imread('image.jpg')
+
+# 编码图像
+retval, bytes = cv2.imencode('.png', img)
+encoded_image = base64.b64encode(bytes).decode('utf-8')
+
+payload = {
+
+#     # 模型设置
+#     "override_settings":{
+#           "sd_model_checkpoint": "v1-5-pruned.ckpt",
+#           "sd_vae": "animevae.pt",
+#           "CLIP_stop_at_last_layers": 2,
+#     },
+
+    # 基本参数
+    "prompt": prompt,
+    "negative_prompt": negative_prompt,
+    "steps": 30,
+    "sampler_name": "Euler a",
+    "width": 512,
+    "height": 512,
+    "batch_size": 1,
+    "n_iter": 1,
+    "seed": 1,
+    "cfg_scale": 7,
+    "CLIP_stop_at_last_layers": 2,
+    
+    "init_images": [encoded_image],
+
+    # 面部修复 face fix
+    "restore_faces": False,
+
+    #高清修复 highres fix
+    # "enable_hr": True,
+    # "denoising_strength": 0.4,
+    # "hr_scale": 2,
+    # "hr_upscaler": "Latent",
+
+}
+
+
+
+response = requests.post(url=f'{url}/sdapi/v1/img2img', json=payload)
+r = response.json()
+image = Image.open(io.BytesIO(base64.b64decode(r['images'][0])))
+
+image.show()
+image.save('output.png')</code></pre> 
+<p>如要修改其他参数可参照官网文档进行修改。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/2c659316861843105ad600c829352318/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">大数据与AI人工智能：AI的影响与应对措施</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/4a61562dc651102bc5611e165b571811/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">mysql-实战案例 （超详细版）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

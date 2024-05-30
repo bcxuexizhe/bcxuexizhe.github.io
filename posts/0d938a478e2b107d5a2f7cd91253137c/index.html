@@ -1,0 +1,418 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>python 爬虫 m3u8 视频文件 加密解密 整合mp4 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0d938a478e2b107d5a2f7cd91253137c/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="python 爬虫 m3u8 视频文件 加密解密 整合mp4">
+  <meta property="og:description" content="文章目录 一、完整代码二、视频分析1. 认识m3u8文件2. 获取密钥，构建解密器3. 下载ts文件4. 合并ts文件为mp4 三、总结 一、完整代码 完整代码如下：
+import requests from multiprocessing import Pool import re import os from tqdm import tqdm from Crypto.Cipher import AES # 创建临时文件夹 dirs = &#39;ts_list_need_to_merge/&#39; os.makedirs(dirs, exist_ok=True) headers = { &#39;Accept&#39;: &#39;*/*&#39;, &#39;Accept-Language&#39;: &#39;zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6&#39;, &#39;Connection&#39;: &#39;keep-alive&#39;, &#39;Origin&#39;: &#39;http://www.kpd510.me&#39;, &#39;Referer&#39;: &#39;http://www.kpd510.me/&#39;, &#39;Sec-Fetch-Dest&#39;: &#39;empty&#39;, &#39;Sec-Fetch-Mode&#39;: &#39;cors&#39;, &#39;Sec-Fetch-Site&#39;: &#39;cross-site&#39;, &#39;User-Agent&#39;: &#39;Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.69&#39;, &#39;sec-ch-ua&#39;: &#39;&#34;Chromium&#34;;v=&#34;116&#34;, &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-17T14:59:34+08:00">
+    <meta property="article:modified_time" content="2024-01-17T14:59:34+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">python 爬虫 m3u8 视频文件 加密解密 整合mp4</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-github-gist">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#_3" rel="nofollow">一、完整代码</a></li><li><a href="#_119" rel="nofollow">二、视频分析</a></li><li><ul><li><a href="#1_m3u8_121" rel="nofollow">1. 认识m3u8文件</a></li><li><a href="#2___195" rel="nofollow">2. 获取密钥，构建解密器</a></li><li><a href="#3__ts_234" rel="nofollow">3. 下载ts文件</a></li><li><a href="#4__tsmp4_328" rel="nofollow">4. 合并ts文件为mp4</a></li></ul> 
+   </li><li><a href="#_350" rel="nofollow">三、总结</a></li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="_3"></a>一、完整代码</h3> 
+<p>完整代码如下：</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> requests
+<span class="token keyword">from</span> multiprocessing <span class="token keyword">import</span> Pool
+<span class="token keyword">import</span> re
+<span class="token keyword">import</span> os
+<span class="token keyword">from</span> tqdm <span class="token keyword">import</span> tqdm
+<span class="token keyword">from</span> Crypto<span class="token punctuation">.</span>Cipher <span class="token keyword">import</span> AES
+
+
+<span class="token comment"># 创建临时文件夹</span>
+dirs <span class="token operator">=</span> <span class="token string">'ts_list_need_to_merge/'</span>
+os<span class="token punctuation">.</span>makedirs<span class="token punctuation">(</span>dirs<span class="token punctuation">,</span> exist_ok<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+headers <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">'Accept'</span><span class="token punctuation">:</span> <span class="token string">'*/*'</span><span class="token punctuation">,</span>
+        <span class="token string">'Accept-Language'</span><span class="token punctuation">:</span> <span class="token string">'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'</span><span class="token punctuation">,</span>
+        <span class="token string">'Connection'</span><span class="token punctuation">:</span> <span class="token string">'keep-alive'</span><span class="token punctuation">,</span>
+        <span class="token string">'Origin'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me'</span><span class="token punctuation">,</span>
+        <span class="token string">'Referer'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me/'</span><span class="token punctuation">,</span>
+        <span class="token string">'Sec-Fetch-Dest'</span><span class="token punctuation">:</span> <span class="token string">'empty'</span><span class="token punctuation">,</span>
+        <span class="token string">'Sec-Fetch-Mode'</span><span class="token punctuation">:</span> <span class="token string">'cors'</span><span class="token punctuation">,</span>
+        <span class="token string">'Sec-Fetch-Site'</span><span class="token punctuation">:</span> <span class="token string">'cross-site'</span><span class="token punctuation">,</span>
+        <span class="token string">'User-Agent'</span><span class="token punctuation">:</span> <span class="token string">'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.69'</span><span class="token punctuation">,</span>
+        <span class="token string">'sec-ch-ua'</span><span class="token punctuation">:</span> <span class="token string">'"Chromium";v="116", "Not)A;Brand";v="24", "Microsoft Edge";v="116"'</span><span class="token punctuation">,</span>
+        <span class="token string">'sec-ch-ua-mobile'</span><span class="token punctuation">:</span> <span class="token string">'?0'</span><span class="token punctuation">,</span>
+        <span class="token string">'sec-ch-ua-platform'</span><span class="token punctuation">:</span> <span class="token string">'"Windows"'</span><span class="token punctuation">,</span>
+    <span class="token punctuation">}</span>
+
+
+
+<span class="token keyword">def</span> <span class="token function">parse_m3u8_text</span><span class="token punctuation">(</span>m3u8_text<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    m3u8_text <span class="token operator">=</span> m3u8_text<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    encode_info <span class="token operator">=</span> <span class="token punctuation">[</span>line <span class="token keyword">for</span> line <span class="token keyword">in</span> m3u8_text <span class="token keyword">if</span> line<span class="token punctuation">.</span>startswith<span class="token punctuation">(</span><span class="token string">'#EXT-X-KEY:'</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+    pattern <span class="token operator">=</span> <span class="token string">r"#EXT-X-KEY:METHOD=(.*),URI=\"(.*)\""</span>  
+    
+    <span class="token comment">## 获得加密method 和 key.key的url</span>
+    <span class="token keyword">match</span> <span class="token operator">=</span> re<span class="token punctuation">.</span>search<span class="token punctuation">(</span>pattern<span class="token punctuation">,</span> encode_info<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token keyword">match</span><span class="token punctuation">:</span>
+        method <span class="token operator">=</span> <span class="token keyword">match</span><span class="token punctuation">.</span>group<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+        key_url <span class="token operator">=</span> <span class="token keyword">match</span><span class="token punctuation">.</span>group<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> <span class="token string">'解析失败'</span>
+    
+    <span class="token comment">## 获得ts文件url</span>
+    ts_list <span class="token operator">=</span> <span class="token punctuation">[</span>line <span class="token keyword">for</span> line <span class="token keyword">in</span> m3u8_text <span class="token keyword">if</span> line<span class="token punctuation">.</span>endswith<span class="token punctuation">(</span><span class="token string">'ts'</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+    <span class="token keyword">return</span> method<span class="token punctuation">,</span> key_url<span class="token punctuation">,</span> ts_list
+
+<span class="token keyword">def</span> <span class="token function">decrypt_content_and_save_file</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> content<span class="token punctuation">,</span> decrypter<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'wb'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f<span class="token punctuation">:</span>
+        f<span class="token punctuation">.</span>write<span class="token punctuation">(</span>decrypter<span class="token punctuation">.</span>decrypt<span class="token punctuation">(</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">merge_ts_to_mp4</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> ts_file_list<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'ab'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f1<span class="token punctuation">:</span>
+        <span class="token keyword">for</span> ts_file <span class="token keyword">in</span> ts_file_list<span class="token punctuation">:</span>
+            <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>ts_file<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'rb'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f2<span class="token punctuation">:</span>
+                f1<span class="token punctuation">.</span>write<span class="token punctuation">(</span>f2<span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+    <span class="token keyword">print</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> <span class="token string">'完成！'</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">process_one_url</span><span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    decrypter <span class="token operator">=</span> AES<span class="token punctuation">.</span>new<span class="token punctuation">(</span>key<span class="token punctuation">,</span> AES<span class="token punctuation">.</span>MODE_CBC<span class="token punctuation">)</span>
+    filename <span class="token operator">=</span> dirs <span class="token operator">+</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>split<span class="token punctuation">(</span>ts_url<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span>
+    content <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span><span class="token punctuation">.</span>content
+    decrypt_content_and_save_file<span class="token punctuation">(</span>filename<span class="token punctuation">,</span> content<span class="token punctuation">,</span> decrypter<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> filename
+
+
+<span class="token keyword">def</span> <span class="token function">download_method_1</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 普通次序一个一个下载，耗时11分钟</span>
+    ts_file_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> tqdm<span class="token punctuation">(</span>ts_list<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        filename <span class="token operator">=</span> process_one_url<span class="token punctuation">(</span>ts_url<span class="token operator">=</span>ts_url<span class="token punctuation">,</span> key<span class="token operator">=</span>key<span class="token punctuation">)</span>
+        ts_file_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span>filename<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> ts_file_list
+
+
+<span class="token keyword">def</span> <span class="token function">download_method_2</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token punctuation">,</span> processes_nums<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+	<span class="token comment"># 多进程下载， 耗时1分钟</span>
+    <span class="token keyword">class</span> <span class="token class-name">CallBack</span><span class="token punctuation">:</span>
+        <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> nums<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+            self<span class="token punctuation">.</span>pbar <span class="token operator">=</span> tqdm<span class="token punctuation">(</span>total<span class="token operator">=</span>nums<span class="token punctuation">)</span>
+            self<span class="token punctuation">.</span>filenames <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+        
+        <span class="token keyword">def</span> <span class="token function">callback</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> filename<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            self<span class="token punctuation">.</span>pbar<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+            self<span class="token punctuation">.</span>filenames<span class="token punctuation">.</span>append<span class="token punctuation">(</span>filename<span class="token punctuation">)</span>
+    
+    callback <span class="token operator">=</span> CallBack<span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    pool <span class="token operator">=</span> Pool<span class="token punctuation">(</span>processes<span class="token operator">=</span>processes_nums<span class="token punctuation">)</span>
+    <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> ts_list<span class="token punctuation">:</span>
+        pool<span class="token punctuation">.</span>apply_async<span class="token punctuation">(</span>process_one_url<span class="token punctuation">,</span> <span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">,</span> error_callback<span class="token operator">=</span><span class="token keyword">print</span><span class="token punctuation">,</span> callback<span class="token operator">=</span>callback<span class="token punctuation">.</span>callback<span class="token punctuation">)</span>
+    pool<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    pool<span class="token punctuation">.</span>join<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    callback<span class="token punctuation">.</span>pbar<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>dirs <span class="token operator">+</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>split<span class="token punctuation">(</span>ts_url<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> ts_list<span class="token punctuation">]</span>
+
+
+<span class="token keyword">if</span> __name__ <span class="token operator">==</span> <span class="token string">"__main__"</span><span class="token punctuation">:</span>
+    m3u8_url <span class="token operator">=</span> <span class="token string">'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/index.m3u8'</span>
+    response <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span>m3u8_url<span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span>
+    m3u8 <span class="token operator">=</span> response<span class="token punctuation">.</span>text
+    method<span class="token punctuation">,</span> key_url<span class="token punctuation">,</span> ts_list <span class="token operator">=</span> parse_m3u8_text<span class="token punctuation">(</span>m3u8<span class="token punctuation">)</span>
+    
+    key_url <span class="token operator">=</span> <span class="token string">'https://play.bo262626.com'</span> <span class="token operator">+</span> key_url
+    ts_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'https://play.bo262626.com'</span> <span class="token operator">+</span> item <span class="token keyword">for</span> item <span class="token keyword">in</span> ts_list<span class="token punctuation">]</span>
+    
+    key <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span>key_url<span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span><span class="token punctuation">.</span>content
+    ts_file_list <span class="token operator">=</span> download_method_2<span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token operator">=</span>key<span class="token punctuation">,</span> processes_nums<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span>
+    
+    merge_ts_to_mp4<span class="token punctuation">(</span><span class="token string">'test.mp4'</span><span class="token punctuation">,</span> ts_file_list<span class="token punctuation">)</span>
+</code></pre> 
+<h3><a id="_119"></a>二、视频分析</h3> 
+<h4><a id="1_m3u8_121"></a>1. 认识m3u8文件</h4> 
+<p><code>m3u8</code>的结构详细分析可以看这个链接<a href="https://www.jianshu.com/p/e97f6555a070" rel="nofollow">m3u8 文件格式详解 - 简书 (jianshu.com)</a>，这里我们只简要介绍一下；</p> 
+<p>相信无论多小白都应该知道如何打开开发者模型解析得到下面的结果；</p> 
+<div align="center"> 
+ <img src="https://images2.imgbox.com/c2/8c/MDNPKPvF_o.png"> 
+</div> 
+<p>要注意的是，只有预览里面包含了<code>ts</code>信息的才算是我们需要的<code>m3u8</code>文件；大家可以看到左侧有两个<strong>index.m3u8</strong>，其中一个是没有<code>ts</code>信息的，所以我们直接忽略掉；现在我们先下载来，再来具体分析一下m3u8文件以及里面的内容分别表达什么意思；</p> 
+<p>下载代码如下：</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> requests
+<span class="token keyword">import</span> re
+
+headers <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">'Accept'</span><span class="token punctuation">:</span> <span class="token string">'*/*'</span><span class="token punctuation">,</span>
+    <span class="token string">'Accept-Language'</span><span class="token punctuation">:</span> <span class="token string">'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'</span><span class="token punctuation">,</span>
+    <span class="token string">'Connection'</span><span class="token punctuation">:</span> <span class="token string">'keep-alive'</span><span class="token punctuation">,</span>
+    <span class="token string">'Origin'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me'</span><span class="token punctuation">,</span>
+    <span class="token string">'Referer'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me/'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Dest'</span><span class="token punctuation">:</span> <span class="token string">'empty'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Mode'</span><span class="token punctuation">:</span> <span class="token string">'cors'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Site'</span><span class="token punctuation">:</span> <span class="token string">'cross-site'</span><span class="token punctuation">,</span>
+    <span class="token string">'User-Agent'</span><span class="token punctuation">:</span> <span class="token string">'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.69'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua'</span><span class="token punctuation">:</span> <span class="token string">'"Chromium";v="116", "Not)A;Brand";v="24", "Microsoft Edge";v="116"'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua-mobile'</span><span class="token punctuation">:</span> <span class="token string">'?0'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua-platform'</span><span class="token punctuation">:</span> <span class="token string">'"Windows"'</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+
+response <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span><span class="token string">'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/index.m3u8'</span><span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span>
+
+m3u8 <span class="token operator">=</span> response<span class="token punctuation">.</span>text
+</code></pre> 
+<p><code>m3u8</code>文件的实质是一个视频的url列表，其中<code>ts</code>是计算器可以直接播放的视频格式文件，但是直接下载是可能被加了密的文件，我们需要<code>m3u8</code>文件内容信息进行解密；</p> 
+<p>我们可以这样理解，<code>m3u8</code>把一个完整的<code>mp4</code>视频切割成了很多的小块，每一个小块在<code>m3u8</code>都是<code>ts</code>文件格式，并在<code>m3u8</code>中采取了加密的措施，至于为什么要加密，这里就不多介绍；</p> 
+<p>在一般的视频爬取中，我们只需要考虑两个部分，一个是<code>EXT-X-KEY</code>，一个是<code>ts</code>；</p> 
+<div align="center"> 
+ <img src="https://images2.imgbox.com/fd/f1/61eqVoBh_o.png"> 
+</div> 
+<p>其中<code>EXT-X-KEY</code>包含了<code>ts</code>的加密方式，<code>ts</code>包含了<code>ts</code>文件的下载地址；</p> 
+<p>在红色部分也就是<code>EXT-X-KEY</code>部分，我们可以从<strong>METHOD</strong>中获取到采取的加密方式是<code>AES-128</code>，同时看到<code>URI</code>的地址<code>/20231126/10VkaJks/700kb/hls/key.key</code>，这也就是AES加密密匙的地址：<code>key.key</code>，接下来我们写一个文件来对m3u8文件解析，目的是提取出红色部分和蓝色部分；</p> 
+<p>代码如下：</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">parse_m3u8_text</span><span class="token punctuation">(</span>m3u8_text<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    m3u8_text <span class="token operator">=</span> m3u8_text<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    encode_info <span class="token operator">=</span> <span class="token punctuation">[</span>line <span class="token keyword">for</span> line <span class="token keyword">in</span> m3u8_text <span class="token keyword">if</span> line<span class="token punctuation">.</span>startswith<span class="token punctuation">(</span><span class="token string">'#EXT-X-KEY:'</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span>
+    pattern <span class="token operator">=</span> <span class="token string">r"#EXT-X-KEY:METHOD=(.*),URI=\"(.*)\""</span>  
+    
+    <span class="token comment">## 获得加密method 和 key.key的url</span>
+    <span class="token keyword">match</span> <span class="token operator">=</span> re<span class="token punctuation">.</span>search<span class="token punctuation">(</span>pattern<span class="token punctuation">,</span> encode_info<span class="token punctuation">)</span>
+    <span class="token keyword">if</span> <span class="token keyword">match</span><span class="token punctuation">:</span>
+        method <span class="token operator">=</span> <span class="token keyword">match</span><span class="token punctuation">.</span>group<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+        key_url <span class="token operator">=</span> <span class="token keyword">match</span><span class="token punctuation">.</span>group<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span>
+    <span class="token keyword">else</span><span class="token punctuation">:</span>
+        <span class="token keyword">raise</span> <span class="token string">'解析失败'</span>
+    
+    <span class="token comment">## 获得ts文件url</span>
+    ts_list <span class="token operator">=</span> <span class="token punctuation">[</span>line <span class="token keyword">for</span> line <span class="token keyword">in</span> m3u8_text <span class="token keyword">if</span> line<span class="token punctuation">.</span>endswith<span class="token punctuation">(</span><span class="token string">'ts'</span><span class="token punctuation">)</span><span class="token punctuation">]</span>
+    <span class="token keyword">return</span> method<span class="token punctuation">,</span> key_url<span class="token punctuation">,</span> ts_list
+
+<span class="token comment">## 在这里我们直接把m3u8文本丢进去就可以获得</span>
+<span class="token comment">## method, key_url, ts_list</span>
+method<span class="token punctuation">,</span> key_url<span class="token punctuation">,</span> ts_list <span class="token operator">=</span> parse_m3u8_text<span class="token punctuation">(</span>m3u8<span class="token punctuation">)</span>
+<span class="token comment">## method = 'AES-128'</span>
+<span class="token comment">## key_url = '/20231108/xV1bY9Cn/700kb/hls/key.key'</span>
+<span class="token comment">## ts_list = ['...ts', '...ts', ...]</span>
+</code></pre> 
+<h4><a id="2___195"></a>2. 获取密钥，构建解密器</h4> 
+<p>因为构建解密器我们需要密钥，而密钥存储在<code>key.key</code>中，首先我们需要解析<code>key_url</code>获取密钥；</p> 
+<p>在这里可以明显的看到<code>key_url = '/20231108/xV1bY9Cn/700kb/hls/key.key'</code>这不是一个完整的<code>url</code>，我们在这里加上获取<code>m3u8</code>请求的主域名便好；</p> 
+<p>代码如下：</p> 
+<pre><code class="prism language-python">headers <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">'Accept'</span><span class="token punctuation">:</span> <span class="token string">'*/*'</span><span class="token punctuation">,</span>
+    <span class="token string">'Accept-Language'</span><span class="token punctuation">:</span> <span class="token string">'zh-CN,zh;q=0.9,en;q=0.8,en-GB;q=0.7,en-US;q=0.6'</span><span class="token punctuation">,</span>
+    <span class="token string">'Connection'</span><span class="token punctuation">:</span> <span class="token string">'keep-alive'</span><span class="token punctuation">,</span>
+    <span class="token string">'Origin'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me'</span><span class="token punctuation">,</span>
+    <span class="token string">'Referer'</span><span class="token punctuation">:</span> <span class="token string">'http://www.kpd510.me/'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Dest'</span><span class="token punctuation">:</span> <span class="token string">'empty'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Mode'</span><span class="token punctuation">:</span> <span class="token string">'cors'</span><span class="token punctuation">,</span>
+    <span class="token string">'Sec-Fetch-Site'</span><span class="token punctuation">:</span> <span class="token string">'cross-site'</span><span class="token punctuation">,</span>
+    <span class="token string">'User-Agent'</span><span class="token punctuation">:</span> <span class="token string">'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36 Edg/116.0.1938.69'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua'</span><span class="token punctuation">:</span> <span class="token string">'"Chromium";v="116", "Not)A;Brand";v="24", "Microsoft Edge";v="116"'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua-mobile'</span><span class="token punctuation">:</span> <span class="token string">'?0'</span><span class="token punctuation">,</span>
+    <span class="token string">'sec-ch-ua-platform'</span><span class="token punctuation">:</span> <span class="token string">'"Windows"'</span><span class="token punctuation">,</span>
+<span class="token punctuation">}</span>
+
+key_url <span class="token operator">=</span> <span class="token string">'https://play.bo262626.com'</span> <span class="token operator">+</span> key_url
+key <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span>key_url<span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span><span class="token punctuation">.</span>content
+<span class="token comment"># 这里我们得到key = b'388d590fabfeabcf' 是一个二进制结果</span>
+</code></pre> 
+<p>得到了密钥，再结合加密方式<code>AES-128</code>，我们就可以构建一个解密器，构建解密器代码如下：</p> 
+<pre><code class="prism language-python"><span class="token keyword">from</span> Crypto<span class="token punctuation">.</span>Cipher <span class="token keyword">import</span> AES
+<span class="token comment">## 这里网络爬取视频一般是MODE_CBC模式</span>
+decrypter <span class="token operator">=</span> AES<span class="token punctuation">.</span>new<span class="token punctuation">(</span>key<span class="token punctuation">,</span> AES<span class="token punctuation">.</span>MODE_CBC<span class="token punctuation">)</span>
+</code></pre> 
+<p>这里要提起的是网络上的<code>m3u8</code>文件采取的加密一般是<code>AES.MODE_CBC</code>模式，在后续操作中如果这里出问题就换<code>MODE</code>一个一个试就好；</p> 
+<h4><a id="3__ts_234"></a>3. 下载ts文件</h4> 
+<p>由于有许多的<code>ts</code>文件，我们有三种方法，第一是简单的requests请求一个一个下，这也是最费时的一种；第二个是多进程或者多线程的方式下载；第三个是采用协程的方式；接下来我们一个个实现；</p> 
+<p>在开始之间，<code>ts_list</code>存在同样的问题，就是需要重构<code>url</code>，这里代码如下：</p> 
+<pre><code class="prism language-python">ts_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token string">'https://play.bo262626.com'</span> <span class="token operator">+</span> item <span class="token keyword">for</span> item <span class="token keyword">in</span> ts_list<span class="token punctuation">]</span>
+
+<span class="token comment"># 这里得到：</span>
+<span class="token comment"># ['https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/o3jSJ9mc.ts',</span>
+<span class="token comment">#  'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/GNHDlClJ.ts',</span>
+<span class="token comment">#  'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/zKym5c6V.ts',</span>
+<span class="token comment">#  'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/4ll4NQH3.ts',</span>
+<span class="token comment">#  'https://play.bo262626.com/20231108/xV1bY9Cn/700kb/hls/RwUOniSQ.ts' ...]</span>
+</code></pre> 
+<p>再测试一下解密器是否可以：</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> os
+<span class="token keyword">from</span> tqdm <span class="token keyword">import</span> tqdm
+
+dirs <span class="token operator">=</span> <span class="token string">'ts_list_need_to_merge/'</span>
+os<span class="token punctuation">.</span>makedirs<span class="token punctuation">(</span>dirs<span class="token punctuation">,</span> exist_ok<span class="token operator">=</span><span class="token boolean">True</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">decrypt_content_and_save_file</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> content<span class="token punctuation">,</span> decrypter<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'wb'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f<span class="token punctuation">:</span>
+        f<span class="token punctuation">.</span>write<span class="token punctuation">(</span>decrypter<span class="token punctuation">.</span>decrypt<span class="token punctuation">(</span>content<span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+
+<span class="token keyword">def</span> <span class="token function">process_one_url</span><span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    decrypter <span class="token operator">=</span> AES<span class="token punctuation">.</span>new<span class="token punctuation">(</span>key<span class="token punctuation">,</span> AES<span class="token punctuation">.</span>MODE_CBC<span class="token punctuation">)</span>
+    filename <span class="token operator">=</span> dirs <span class="token operator">+</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>split<span class="token punctuation">(</span>ts_url<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span>
+    content <span class="token operator">=</span> requests<span class="token punctuation">.</span>get<span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> headers<span class="token operator">=</span>headers<span class="token punctuation">)</span><span class="token punctuation">.</span>content
+    decrypt_content_and_save_file<span class="token punctuation">(</span>filename<span class="token punctuation">,</span> content<span class="token punctuation">,</span> decrypter<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> filename
+
+process_one_url<span class="token punctuation">(</span>ts_list<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+
+<span class="token comment">## 打开视频看是否能打开</span>
+<span class="token comment">## 如果能打开说明解密没问题</span>
+</code></pre> 
+<p><strong>直接requests: 代码如下</strong></p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">download_method_1</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token comment"># 这里弄一个filename_list 方便后续合并ts到mp4</span>
+    ts_file_list <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+    <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> tqdm<span class="token punctuation">(</span>ts_list<span class="token punctuation">)</span><span class="token punctuation">:</span>
+        filename <span class="token operator">=</span> process_one_url<span class="token punctuation">(</span>ts_url<span class="token operator">=</span>ts_url<span class="token punctuation">,</span> key<span class="token operator">=</span>key<span class="token punctuation">)</span>
+        ts_file_list<span class="token punctuation">.</span>append<span class="token punctuation">(</span>filename<span class="token punctuation">)</span>
+    <span class="token keyword">return</span> ts_file_list
+
+<span class="token comment"># 下载测试</span>
+ts_file_list <span class="token operator">=</span> download_method_1<span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token punctuation">)</span>
+</code></pre> 
+<p>实现挺慢的，不合理；</p> 
+<div align="center"> 
+ <img src="https://images2.imgbox.com/8c/25/cpfvJLxC_o.png"> 
+</div> 
+<p><strong>多进程: 代码如下</strong></p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">download_method_2</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token punctuation">,</span> processes_nums<span class="token operator">=</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">class</span> <span class="token class-name">CallBack</span><span class="token punctuation">:</span>
+        <span class="token keyword">def</span> <span class="token function">__init__</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> nums<span class="token punctuation">)</span> <span class="token operator">-</span><span class="token operator">&gt;</span> <span class="token boolean">None</span><span class="token punctuation">:</span>
+            self<span class="token punctuation">.</span>pbar <span class="token operator">=</span> tqdm<span class="token punctuation">(</span>total<span class="token operator">=</span>nums<span class="token punctuation">)</span>
+            self<span class="token punctuation">.</span>filenames <span class="token operator">=</span> <span class="token punctuation">[</span><span class="token punctuation">]</span>
+        <span class="token keyword">def</span> <span class="token function">callback</span><span class="token punctuation">(</span>self<span class="token punctuation">,</span> filename<span class="token punctuation">)</span><span class="token punctuation">:</span>
+            self<span class="token punctuation">.</span>pbar<span class="token punctuation">.</span>update<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+            self<span class="token punctuation">.</span>filenames<span class="token punctuation">.</span>append<span class="token punctuation">(</span>filename<span class="token punctuation">)</span>
+
+    callback <span class="token operator">=</span> CallBack<span class="token punctuation">(</span><span class="token builtin">len</span><span class="token punctuation">(</span>ts_list<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    pool <span class="token operator">=</span> Pool<span class="token punctuation">(</span>processes<span class="token operator">=</span>processes_nums<span class="token punctuation">)</span>
+    <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> ts_list<span class="token punctuation">:</span>
+        pool<span class="token punctuation">.</span>apply_async<span class="token punctuation">(</span>process_one_url<span class="token punctuation">,</span> <span class="token punctuation">(</span>ts_url<span class="token punctuation">,</span> key<span class="token punctuation">)</span><span class="token punctuation">,</span> error_callback<span class="token operator">=</span><span class="token keyword">print</span><span class="token punctuation">,</span> callback<span class="token operator">=</span>callback<span class="token punctuation">.</span>callback<span class="token punctuation">)</span>
+    pool<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    pool<span class="token punctuation">.</span>join<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    callback<span class="token punctuation">.</span>pbar<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    <span class="token keyword">return</span> <span class="token punctuation">[</span>dirs <span class="token operator">+</span> os<span class="token punctuation">.</span>path<span class="token punctuation">.</span>split<span class="token punctuation">(</span>ts_url<span class="token punctuation">)</span><span class="token punctuation">[</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token keyword">for</span> ts_url <span class="token keyword">in</span> ts_list<span class="token punctuation">]</span>
+
+ts_file_list <span class="token operator">=</span> download_method_2<span class="token punctuation">(</span>ts_list<span class="token punctuation">,</span> key<span class="token operator">=</span>key<span class="token punctuation">,</span> processes_nums<span class="token operator">=</span><span class="token number">10</span><span class="token punctuation">)</span>
+</code></pre> 
+<p>爬取巨快，1分钟下载20多分钟的视频；</p> 
+<div align="center"> 
+ <img src="https://images2.imgbox.com/cd/fb/27XoZFul_o.png"> 
+</div> 
+<h4><a id="4__tsmp4_328"></a>4. 合并ts文件为mp4</h4> 
+<p>在完成前面的步骤后，直接<code>ab</code>的方式把所有的文件按顺序加入就好；</p> 
+<pre><code class="prism language-python"><span class="token keyword">def</span> <span class="token function">merge_ts_to_mp4</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> ts_file_list<span class="token punctuation">)</span><span class="token punctuation">:</span>
+    <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>filename<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'ab'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f1<span class="token punctuation">:</span>
+        <span class="token keyword">for</span> ts_file <span class="token keyword">in</span> ts_file_list<span class="token punctuation">:</span>
+            <span class="token keyword">with</span> <span class="token builtin">open</span><span class="token punctuation">(</span>ts_file<span class="token punctuation">,</span> mode<span class="token operator">=</span><span class="token string">'rb'</span><span class="token punctuation">)</span> <span class="token keyword">as</span> f2<span class="token punctuation">:</span>
+                f1<span class="token punctuation">.</span>write<span class="token punctuation">(</span>f2<span class="token punctuation">.</span>read<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+
+merge_ts_to_mp4<span class="token punctuation">(</span><span class="token string">'test.mp4'</span><span class="token punctuation">,</span> ts_file_list<span class="token punctuation">)</span>
+</code></pre> 
+<p>后续如果需要删除<code>'ts_list_need_to_merge/'</code>这个临时文件夹里面的所有内容，直接运行下面代码</p> 
+<pre><code class="prism language-python"><span class="token keyword">import</span> send2trash
+
+send2trash<span class="token punctuation">.</span>send2trash<span class="token punctuation">(</span><span class="token string">'ts_list_need_to_merge/'</span><span class="token punctuation">)</span> <span class="token comment"># send2trash.send2trash(dirs)</span>
+</code></pre> 
+<h3><a id="_350"></a>三、总结</h3> 
+<p>别在图书馆测试这段代码！</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fb03b8e3a5da959f217bcf5704d52d47/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Python 发微信：实现自动化沟通的利器</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/7d500dd2cc898a1923f2256cd31e40f3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">c&#43;&#43; 字符串去除指定的字符</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

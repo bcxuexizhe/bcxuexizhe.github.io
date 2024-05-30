@@ -1,0 +1,325 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Redis（主从复制搭建） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/cc7c37202ab7542f165f41c165bbefac/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Redis（主从复制搭建）">
+  <meta property="og:description" content="文章目录 1.主从复制示意图2.搭建一主多从1.搭建规划三台机器（一主二从）2.将两台从Redis服务都按照同样的方式配置（可以理解为Redis初始化）1.安装Redis1.yum安装gcc2.查看gcc版本3.将redis6.2.6上传到/opt目录下4.进入/opt目录下然后解压5.进入 redis-6.2.6目录6.编译并安装7.进入 /usr/local/bin 查看是否有redis的命令 2.启动并使用Redis1.进入 /opt/redis-6.2.6/2.将里面的redis.conf复制一份到/etc下3.编辑 /etc/redis.conf，将daemonize no修改成daemonize yes即以守护进程的方式启动（后台启动）4.启动redis，指定刚才的配置文件5.查看redis进程 3.Redis基本配置1.修改端口为7489 port2.设置redis密码 requirepass3.使redis支持远程访问 bind4.登录redis的命令行，关闭redis5.重新启动redis，使配置生效 4.开启7489端口1.宝塔开启端口2.腾讯云开启端口（只允许本机ip访问） 5.Redis持久化配置1.进入redis配置文件2.dbfilename为redis持久化的文件名（一般不用改）3.dir修改为/root/则每次持久化的dump.rdb都会在/root/下，恢复时无论在哪里启动，都会读取这个文件进行恢复4.开启AOF持久化配置，编辑配置文件找到appendonly，设置成yes5.进入命令行关闭redis，需要指定端口登录6.重新启动redis，使配置生效7.发现/root/下面有两个配置文件，如果没有dump.rdb是因为没有对redis进行操作 6.测试Java连接redis1.引入jedis的jar包2.编写测试程序 3.配置Redis的一主二仆1.在配置之前，将三台的Redis的7489端口完全放开2.三台机器都进入redis的客户端，将数据全部清除3.输入 info replication 可以看到目前三台机器都为master4.在两台从服务上输入 slaveof 主服务ip 主服务端口 来设置主服务5.输入 info replication 来查看角色1.从服务2.主服务3.没连接成功，后来询问GPT4发现如果主服务器配置了密码，则需要在从服务器的masterauth 中设置一下密码 6.为两台从服务器的 masterauth 配置主服务器的密码，然后测试连接1.分别设置密码2.分别重启3.从服务器重新配置4.再查看一下主服务器的状态，也是成功连接两台从服务器 7.注意事项和细节1.如果想要持久化，需要在从服务的配置文件中配置 slaveof ...... 否则重启主从关系就会消失2.主服务器可读可写，从服务器只可读 3.主从复制原理分析1.原理示意图2.解读3.细节1.主服务down掉了的情况2.当从服务down掉了的情况 4.薪火相传5.反客为主（是在薪火相传的基础上的） 4.哨兵模式（sentinel）1.配置哨兵1.**保持一主二仆的环境即可**2.随便找一台服务器启动哨兵，这里选择在master服务器启动1.在/etc下面创建一个sentinel.conf的配置文件2.编辑文件，设置master的名字，ip&#43;端口以及哨兵的个数，这里是1，还有master的密码3.再开启一个连接，启动哨兵，指定配置文件 2.测试1.关闭master2.等待一会，查看哨兵，可以看到切换了master3.查看子节点的情况，注意：此时需要重新进行密码验证4.重启原来的master，会自动降级为子节点 3.注意事项和细节1.主机down后的执行流程2.哨兵挑选新master的依据3.重启原来的master，会自动降级为子节点4.如果原来的主节点有密码，则需要在sentinel.conf 配置auth-pass参数设置密码5.关于密码配置方案 1.主从复制示意图 2.搭建一主多从 1.搭建规划三台机器（一主二从） 2.将两台从Redis服务都按照同样的方式配置（可以理解为Redis初始化） 1.安装Redis 1.yum安装gcc yum install gcc 2.查看gcc版本 gcc --version 3.将redis6.2.6上传到/opt目录下 4.进入/opt目录下然后解压 cd /opt &amp;&amp; tar -zxvf redis-6.2.6.tar.gz 5.进入 redis-6.2.6目录 cd redis-6.2.6 6.编译并安装 make &amp;&amp; make install 7.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-08T22:49:59+08:00">
+    <meta property="article:modified_time" content="2024-05-08T22:49:59+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Redis（主从复制搭建）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><ul><li><a href="#1_2" rel="nofollow">1.主从复制示意图</a></li><li><a href="#2_6" rel="nofollow">2.搭建一主多从</a></li><li><ul><li><ul><li><a href="#1_8" rel="nofollow">1.搭建规划三台机器（一主二从）</a></li><li><a href="#2RedisRedis_10" rel="nofollow">2.将两台从Redis服务都按照同样的方式配置（可以理解为Redis初始化）</a></li><li><ul><li><a href="#1Redis_12" rel="nofollow">1.安装Redis</a></li><li><ul><li><a href="#1yumgcc_14" rel="nofollow">1.yum安装gcc</a></li><li><a href="#2gcc_20" rel="nofollow">2.查看gcc版本</a></li><li><a href="#3redis626opt_28" rel="nofollow">3.将redis6.2.6上传到/opt目录下</a></li><li><a href="#4opt_32" rel="nofollow">4.进入/opt目录下然后解压</a></li><li><a href="#5_redis626_40" rel="nofollow">5.进入 redis-6.2.6目录</a></li><li><a href="#6_48" rel="nofollow">6.编译并安装</a></li><li><a href="#7_usrlocalbin_redis_56" rel="nofollow">7.进入 /usr/local/bin 查看是否有redis的命令</a></li></ul> 
+      </li><li><a href="#2Redis_64" rel="nofollow">2.启动并使用Redis</a></li><li><ul><li><a href="#1_optredis626_66" rel="nofollow">1.进入 /opt/redis-6.2.6/</a></li><li><a href="#2redisconfetc_74" rel="nofollow">2.将里面的redis.conf复制一份到/etc下</a></li><li><a href="#3_etcredisconfdaemonize_nodaemonize_yes_82" rel="nofollow">3.编辑 /etc/redis.conf，将daemonize no修改成daemonize yes即以守护进程的方式启动（后台启动）</a></li><li><a href="#4redis_90" rel="nofollow">4.启动redis，指定刚才的配置文件</a></li><li><a href="#5redis_96" rel="nofollow">5.查看redis进程</a></li></ul> 
+      </li><li><a href="#3Redis_104" rel="nofollow">3.Redis基本配置</a></li><li><ul><li><a href="#17489_port_106" rel="nofollow">1.修改端口为7489 port</a></li><li><a href="#2redis__requirepass_110" rel="nofollow">2.设置redis密码 requirepass</a></li><li><a href="#3redis_bind_114" rel="nofollow">3.使redis支持远程访问 bind</a></li><li><a href="#4redisredis_120" rel="nofollow">4.登录redis的命令行，关闭redis</a></li><li><a href="#5redis_128" rel="nofollow">5.重新启动redis，使配置生效</a></li></ul> 
+      </li><li><a href="#47489_136" rel="nofollow">4.开启7489端口</a></li><li><ul><li><a href="#1_138" rel="nofollow">1.宝塔开启端口</a></li><li><a href="#2ip_146" rel="nofollow">2.腾讯云开启端口（只允许本机ip访问）</a></li></ul> 
+      </li><li><a href="#5Redis_150" rel="nofollow">5.Redis持久化配置</a></li><li><ul><li><a href="#1redis_152" rel="nofollow">1.进入redis配置文件</a></li><li><a href="#2dbfilenameredis_158" rel="nofollow">2.dbfilename为redis持久化的文件名（一般不用改）</a></li><li><a href="#3dirrootdumprdbroot_162" rel="nofollow">3.dir修改为/root/则每次持久化的dump.rdb都会在/root/下，恢复时无论在哪里启动，都会读取这个文件进行恢复</a></li><li><a href="#4AOFappendonlyyes_166" rel="nofollow">4.开启AOF持久化配置，编辑配置文件找到appendonly，设置成yes</a></li><li><a href="#5redis_170" rel="nofollow">5.进入命令行关闭redis，需要指定端口登录</a></li><li><a href="#6redis_178" rel="nofollow">6.重新启动redis，使配置生效</a></li><li><a href="#7rootdumprdbredis_186" rel="nofollow">7.发现/root/下面有两个配置文件，如果没有dump.rdb是因为没有对redis进行操作</a></li></ul> 
+      </li><li><a href="#6Javaredis_190" rel="nofollow">6.测试Java连接redis</a></li><li><ul><li><a href="#1jedisjar_192" rel="nofollow">1.引入jedis的jar包</a></li><li><a href="#2_196" rel="nofollow">2.编写测试程序</a></li></ul> 
+     </li></ul> 
+     </li><li><a href="#3Redis_209" rel="nofollow">3.配置Redis的一主二仆</a></li><li><ul><li><a href="#1Redis7489_211" rel="nofollow">1.在配置之前，将三台的Redis的7489端口完全放开</a></li><li><a href="#2redis_215" rel="nofollow">2.三台机器都进入redis的客户端，将数据全部清除</a></li><li><a href="#3_info_replication_master_219" rel="nofollow">3.输入 info replication 可以看到目前三台机器都为master</a></li><li><a href="#4_slaveof_ip___223" rel="nofollow">4.在两台从服务上输入 slaveof 主服务ip 主服务端口 来设置主服务</a></li><li><a href="#5_info_replication__230" rel="nofollow">5.输入 info replication 来查看角色</a></li><li><ul><li><a href="#1_232" rel="nofollow">1.从服务</a></li><li><a href="#2_237" rel="nofollow">2.主服务</a></li><li><a href="#3GPT4masterauth__240" rel="nofollow">3.没连接成功，后来询问GPT4发现如果主服务器配置了密码，则需要在从服务器的masterauth 中设置一下密码</a></li></ul> 
+      </li><li><a href="#6_masterauth__244" rel="nofollow">6.为两台从服务器的 masterauth 配置主服务器的密码，然后测试连接</a></li><li><ul><li><a href="#1_246" rel="nofollow">1.分别设置密码</a></li><li><a href="#2_250" rel="nofollow">2.分别重启</a></li><li><a href="#3_254" rel="nofollow">3.从服务器重新配置</a></li><li><a href="#4_263" rel="nofollow">4.再查看一下主服务器的状态，也是成功连接两台从服务器</a></li></ul> 
+      </li><li><a href="#7_272" rel="nofollow">7.注意事项和细节</a></li><li><ul><li><a href="#1_slaveof___274" rel="nofollow">1.如果想要持久化，需要在从服务的配置文件中配置 slaveof ...... 否则重启主从关系就会消失</a></li><li><a href="#2_276" rel="nofollow">2.主服务器可读可写，从服务器只可读</a></li></ul> 
+     </li></ul> 
+    </li></ul> 
+   </li></ul> 
+   </li><li><a href="#3_278" rel="nofollow">3.主从复制原理分析</a></li><li><ul><li><ul><li><a href="#1_280" rel="nofollow">1.原理示意图</a></li><li><a href="#2_284" rel="nofollow">2.解读</a></li><li><a href="#3_288" rel="nofollow">3.细节</a></li><li><ul><li><a href="#1down_290" rel="nofollow">1.主服务down掉了的情况</a></li><li><a href="#2down_295" rel="nofollow">2.当从服务down掉了的情况</a></li></ul> 
+     </li><li><a href="#4_299" rel="nofollow">4.薪火相传</a></li><li><a href="#5_306" rel="nofollow">5.反客为主（是在薪火相传的基础上的）</a></li></ul> 
+   </li></ul> 
+   </li><li><a href="#4sentinel_310" rel="nofollow">4.哨兵模式（sentinel）</a></li><li><ul><li><ul><li><a href="#1_312" rel="nofollow">1.配置哨兵</a></li><li><ul><li><a href="#1_314" rel="nofollow">1.**保持一主二仆的环境即可**</a></li><li><a href="#2master_316" rel="nofollow">2.随便找一台服务器启动哨兵，这里选择在master服务器启动</a></li><li><ul><li><a href="#1etcsentinelconf_318" rel="nofollow">1.在/etc下面创建一个sentinel.conf的配置文件</a></li><li><a href="#2masterip1master_324" rel="nofollow">2.编辑文件，设置master的名字，ip+端口以及哨兵的个数，这里是1，还有master的密码</a></li><li><a href="#3_334" rel="nofollow">3.再开启一个连接，启动哨兵，指定配置文件</a></li></ul> 
+     </li></ul> 
+     </li><li><a href="#2_342" rel="nofollow">2.测试</a></li><li><ul><li><a href="#1master_344" rel="nofollow">1.关闭master</a></li><li><a href="#2master_348" rel="nofollow">2.等待一会，查看哨兵，可以看到切换了master</a></li><li><a href="#3_350" rel="nofollow">3.查看子节点的情况，注意：此时需要重新进行密码验证</a></li><li><a href="#4master_355" rel="nofollow">4.重启原来的master，会自动降级为子节点</a></li></ul> 
+     </li><li><a href="#3_360" rel="nofollow">3.注意事项和细节</a></li><li><ul><li><a href="#1down_362" rel="nofollow">1.主机down后的执行流程</a></li><li><a href="#2master_366" rel="nofollow">2.哨兵挑选新master的依据</a></li><li><a href="#3master_370" rel="nofollow">3.重启原来的master，会自动降级为子节点</a></li><li><a href="#4sentinelconf_authpass_372" rel="nofollow">4.如果原来的主节点有密码，则需要在sentinel.conf 配置auth-pass参数设置密码</a></li><li><a href="#5_374" rel="nofollow">5.关于密码配置方案</a></li></ul> 
+    </li></ul> 
+   </li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h3><a id="1_2"></a>1.主从复制示意图</h3> 
+<p><img src="https://images2.imgbox.com/36/ea/KP2o36kj_o.png" alt="image-20240502113422879"></p> 
+<h3><a id="2_6"></a>2.搭建一主多从</h3> 
+<h5><a id="1_8"></a>1.搭建规划三台机器（一主二从）</h5> 
+<h5><a id="2RedisRedis_10"></a>2.将两台从Redis服务都按照同样的方式配置（可以理解为Redis初始化）</h5> 
+<h6><a id="1Redis_12"></a>1.安装Redis</h6> 
+<h6><a id="1yumgcc_14"></a>1.yum安装gcc</h6> 
+<pre><code class="prism language-sh">yum <span class="token function">install</span> gcc
+</code></pre> 
+<h6><a id="2gcc_20"></a>2.查看gcc版本</h6> 
+<pre><code class="prism language-sh">gcc <span class="token parameter variable">--version</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/8d/dd/6XFW7eIc_o.png" alt="image-20240502134411561"></p> 
+<h6><a id="3redis626opt_28"></a>3.将redis6.2.6上传到/opt目录下</h6> 
+<p><img src="https://images2.imgbox.com/27/31/KBjg8iil_o.png" alt="image-20240502134559769"></p> 
+<h6><a id="4opt_32"></a>4.进入/opt目录下然后解压</h6> 
+<pre><code class="prism language-sh"><span class="token builtin class-name">cd</span> /opt <span class="token operator">&amp;&amp;</span> <span class="token function">tar</span> <span class="token parameter variable">-zxvf</span> redis-6.2.6.tar.gz
+</code></pre> 
+<p><img src="https://images2.imgbox.com/94/3e/IHbTepQ6_o.png" alt="image-20240502134704827"></p> 
+<h6><a id="5_redis626_40"></a>5.进入 redis-6.2.6目录</h6> 
+<pre><code class="prism language-sh"><span class="token builtin class-name">cd</span> redis-6.2.6
+</code></pre> 
+<p><img src="https://images2.imgbox.com/45/0f/EdO7mJE0_o.png" alt="image-20240502134745310"></p> 
+<h6><a id="6_48"></a>6.编译并安装</h6> 
+<pre><code class="prism language-sh"><span class="token function">make</span> <span class="token operator">&amp;&amp;</span> <span class="token function">make</span> <span class="token function">install</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/04/73/0xdpA6db_o.png" alt="image-20240502134932117"></p> 
+<h6><a id="7_usrlocalbin_redis_56"></a>7.进入 /usr/local/bin 查看是否有redis的命令</h6> 
+<pre><code class="prism language-sh"><span class="token builtin class-name">cd</span> /usr/local/bin <span class="token operator">&amp;&amp;</span> ll
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ad/86/GcU9J3rR_o.png" alt="image-20240502135006749"></p> 
+<h6><a id="2Redis_64"></a>2.启动并使用Redis</h6> 
+<h6><a id="1_optredis626_66"></a>1.进入 /opt/redis-6.2.6/</h6> 
+<pre><code class="prism language-sh"><span class="token builtin class-name">cd</span> /opt/redis-6.2.6/
+</code></pre> 
+<p><img src="https://images2.imgbox.com/17/f3/LhUCOBJP_o.png" alt="image-20240502135103511"></p> 
+<h6><a id="2redisconfetc_74"></a>2.将里面的redis.conf复制一份到/etc下</h6> 
+<pre><code class="prism language-sh"><span class="token function">cp</span> redis.conf /etc/redis.conf
+</code></pre> 
+<p><img src="https://images2.imgbox.com/92/b3/6MRvIGm8_o.png" alt="image-20240502135237138"></p> 
+<h6><a id="3_etcredisconfdaemonize_nodaemonize_yes_82"></a>3.编辑 /etc/redis.conf，将daemonize no修改成daemonize yes即以守护进程的方式启动（后台启动）</h6> 
+<pre><code class="prism language-sh"><span class="token function">vim</span> /etc/redis.conf
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c8/33/BzvzW7bp_o.png" alt="image-20240502135330240"></p> 
+<h6><a id="4redis_90"></a>4.启动redis，指定刚才的配置文件</h6> 
+<pre><code class="prism language-sh">/usr/local/bin/redis-server /etc/redis.conf
+</code></pre> 
+<h6><a id="5redis_96"></a>5.查看redis进程</h6> 
+<pre><code class="prism language-sh"><span class="token function">ps</span> <span class="token parameter variable">-aux</span> <span class="token operator">|</span> <span class="token function">grep</span> redis
+</code></pre> 
+<p><img src="https://images2.imgbox.com/9c/76/fLZFVzmC_o.png" alt="image-20240502135537103"></p> 
+<h6><a id="3Redis_104"></a>3.Redis基本配置</h6> 
+<h6><a id="17489_port_106"></a>1.修改端口为7489 port</h6> 
+<p><img src="https://images2.imgbox.com/73/c9/q1xAhRNV_o.png" alt="image-20240502135741587"></p> 
+<h6><a id="2redis__requirepass_110"></a>2.设置redis密码 requirepass</h6> 
+<p><img src="https://images2.imgbox.com/f2/02/d98kphYR_o.png" alt="image-20240502135842050"></p> 
+<h6><a id="3redis_bind_114"></a>3.使redis支持远程访问 bind</h6> 
+<p><img src="https://images2.imgbox.com/66/da/V0h9nFgs_o.png" alt="image-20240502140044483"></p> 
+<p><img src="https://images2.imgbox.com/be/af/c4SJfiXG_o.png" alt="image-20240502140108290"></p> 
+<h6><a id="4redisredis_120"></a>4.登录redis的命令行，关闭redis</h6> 
+<pre><code class="prism language-sh">/usr/local/bin/redis-cli
+</code></pre> 
+<p><img src="https://images2.imgbox.com/a4/3c/23Hv7iMP_o.png" alt="image-20240502140407662"></p> 
+<h6><a id="5redis_128"></a>5.重新启动redis，使配置生效</h6> 
+<pre><code class="prism language-sh">/usr/local/bin/redis-server /etc/redis.conf <span class="token operator">&amp;&amp;</span> <span class="token function">ps</span> <span class="token parameter variable">-aux</span> <span class="token operator">|</span> <span class="token function">grep</span> redis
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c7/74/bBQyPHJS_o.png" alt="image-20240502140612286"></p> 
+<h6><a id="47489_136"></a>4.开启7489端口</h6> 
+<h6><a id="1_138"></a>1.宝塔开启端口</h6> 
+<pre><code class="prism language-sh">systemctl start firewalld <span class="token operator">&amp;&amp;</span> firewall-cmd <span class="token parameter variable">--permanent</span> --add-port<span class="token operator">=</span><span class="token number">7489</span>/tcp <span class="token operator">&amp;&amp;</span> firewall-cmd <span class="token parameter variable">--reload</span> <span class="token operator">&amp;&amp;</span> firewall-cmd --query-port<span class="token operator">=</span><span class="token number">7489</span>/tcp
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c8/f7/D7EnSAGO_o.png" alt="image-20240502140719020"></p> 
+<h6><a id="2ip_146"></a>2.腾讯云开启端口（只允许本机ip访问）</h6> 
+<p><img src="https://images2.imgbox.com/8c/a9/dw7xUkgv_o.png" alt="image-20240502143052618"></p> 
+<h6><a id="5Redis_150"></a>5.Redis持久化配置</h6> 
+<h6><a id="1redis_152"></a>1.进入redis配置文件</h6> 
+<pre><code class="prism language-sh"><span class="token function">vim</span> /etc/redis.conf
+</code></pre> 
+<h6><a id="2dbfilenameredis_158"></a>2.dbfilename为redis持久化的文件名（一般不用改）</h6> 
+<p><img src="https://images2.imgbox.com/e1/84/uJKfe5j2_o.png" alt="image-20240502141741998"></p> 
+<h6><a id="3dirrootdumprdbroot_162"></a>3.dir修改为/root/则每次持久化的dump.rdb都会在/root/下，恢复时无论在哪里启动，都会读取这个文件进行恢复</h6> 
+<p><img src="https://images2.imgbox.com/e8/fe/hJ8BQnoP_o.png" alt="image-20240502141833925"></p> 
+<h6><a id="4AOFappendonlyyes_166"></a>4.开启AOF持久化配置，编辑配置文件找到appendonly，设置成yes</h6> 
+<p><img src="https://images2.imgbox.com/d5/08/h3qPmMbC_o.png" alt="image-20240502142032064"></p> 
+<h6><a id="5redis_170"></a>5.进入命令行关闭redis，需要指定端口登录</h6> 
+<pre><code>/usr/local/bin/redis-cli -p 7489
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ca/bc/lhHhNpZn_o.png" alt="image-20240502142252827"></p> 
+<h6><a id="6redis_178"></a>6.重新启动redis，使配置生效</h6> 
+<pre><code class="prism language-sh">/usr/local/bin/redis-server /etc/redis.conf <span class="token operator">&amp;&amp;</span> <span class="token function">ps</span> <span class="token parameter variable">-aux</span> <span class="token operator">|</span> <span class="token function">grep</span> redis
+</code></pre> 
+<p><img src="https://images2.imgbox.com/46/ce/DeBTwbCB_o.png" alt="image-20240502142304676"></p> 
+<h6><a id="7rootdumprdbredis_186"></a>7.发现/root/下面有两个配置文件，如果没有dump.rdb是因为没有对redis进行操作</h6> 
+<p><img src="https://images2.imgbox.com/7b/01/KNajDEEZ_o.png" alt="image-20240502142608205"></p> 
+<h6><a id="6Javaredis_190"></a>6.测试Java连接redis</h6> 
+<h6><a id="1jedisjar_192"></a>1.引入jedis的jar包</h6> 
+<p><img src="https://images2.imgbox.com/1f/1c/QuQzknyt_o.png" alt="image-20240502143134966"></p> 
+<h6><a id="2_196"></a>2.编写测试程序</h6> 
+<pre><code class="prism language-java">    <span class="token keyword">public</span> <span class="token keyword">static</span> <span class="token keyword">void</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token class-name">String</span><span class="token punctuation">[</span><span class="token punctuation">]</span> args<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// 连接服务器的redis命令行</span>
+        <span class="token class-name">Jedis</span> jedis <span class="token operator">=</span> <span class="token keyword">new</span> <span class="token class-name">Jedis</span><span class="token punctuation">(</span><span class="token string">"xxx"</span><span class="token punctuation">,</span> xx<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token comment">// 如果redis设置了密码要先进行验证</span>
+        jedis<span class="token punctuation">.</span><span class="token function">auth</span><span class="token punctuation">(</span><span class="token string">"******"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">String</span> ping <span class="token operator">=</span> jedis<span class="token punctuation">.</span><span class="token function">ping</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token class-name">System</span><span class="token punctuation">.</span>out<span class="token punctuation">.</span><span class="token function">println</span><span class="token punctuation">(</span>ping<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+</code></pre> 
+<h5><a id="3Redis_209"></a>3.配置Redis的一主二仆</h5> 
+<h6><a id="1Redis7489_211"></a>1.在配置之前，将三台的Redis的7489端口完全放开</h6> 
+<p><img src="https://images2.imgbox.com/f8/19/jU7ra1PX_o.png" alt="image-20240502151305582"></p> 
+<h6><a id="2redis_215"></a>2.三台机器都进入redis的客户端，将数据全部清除</h6> 
+<p><img src="https://images2.imgbox.com/17/5f/qGkXjZUv_o.png" alt="image-20240502152257185"></p> 
+<h6><a id="3_info_replication_master_219"></a>3.输入 info replication 可以看到目前三台机器都为master</h6> 
+<p><img src="https://images2.imgbox.com/42/51/Db9RTWvN_o.png" alt="image-20240502152339936"></p> 
+<h6><a id="4_slaveof_ip___223"></a>4.在两台从服务上输入 slaveof 主服务ip 主服务端口 来设置主服务</h6> 
+<pre><code>slaveof xxxx  xxx
+</code></pre> 
+<h6><a id="5_info_replication__230"></a>5.输入 info replication 来查看角色</h6> 
+<h6><a id="1_232"></a>1.从服务</h6> 
+<p><img src="https://images2.imgbox.com/a8/dd/sFLBEhJN_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="2_237"></a>2.主服务</h6> 
+<p><img src="https://images2.imgbox.com/7b/b2/xqhk7dS1_o.png" alt="image-20240502160014051"></p> 
+<h6><a id="3GPT4masterauth__240"></a>3.没连接成功，后来询问GPT4发现如果主服务器配置了密码，则需要在从服务器的masterauth 中设置一下密码</h6> 
+<p><img src="https://images2.imgbox.com/2c/4c/9AT3DLUZ_o.png" alt="image-20240502160216284"></p> 
+<h6><a id="6_masterauth__244"></a>6.为两台从服务器的 masterauth 配置主服务器的密码，然后测试连接</h6> 
+<h6><a id="1_246"></a>1.分别设置密码</h6> 
+<p><img src="https://images2.imgbox.com/ce/e2/93O01Ksx_o.png" alt="image-20240502160347989"></p> 
+<h6><a id="2_250"></a>2.分别重启</h6> 
+<p><img src="https://images2.imgbox.com/2f/60/Ro5yaYZo_o.png" alt="image-20240502160945545"></p> 
+<h6><a id="3_254"></a>3.从服务器重新配置</h6> 
+<pre><code class="prism language-sh">slaveof 。。。。。。
+</code></pre> 
+<p><img src="https://images2.imgbox.com/37/ab/BOOCeJ0P_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="4_263"></a>4.再查看一下主服务器的状态，也是成功连接两台从服务器</h6> 
+<pre><code class="prism language-sh">info replication
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ab/6a/fMgcgLPF_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="7_272"></a>7.注意事项和细节</h6> 
+<h6><a id="1_slaveof___274"></a>1.如果想要持久化，需要在从服务的配置文件中配置 slaveof … 否则重启主从关系就会消失</h6> 
+<h6><a id="2_276"></a>2.主服务器可读可写，从服务器只可读</h6> 
+<h3><a id="3_278"></a>3.主从复制原理分析</h3> 
+<h5><a id="1_280"></a>1.原理示意图</h5> 
+<p><img src="https://images2.imgbox.com/ad/e6/AB4SY7PL_o.png" alt="image-20240502162041121"></p> 
+<h5><a id="2_284"></a>2.解读</h5> 
+<p><img src="https://images2.imgbox.com/56/c0/L65otwro_o.png" alt="image-20240502162022135"></p> 
+<h5><a id="3_288"></a>3.细节</h5> 
+<h6><a id="1down_290"></a>1.主服务down掉了的情况</h6> 
+<ul><li>从服务并不会抢占主服务的位置</li><li>当主服务重新启动之后，从服务又会指向主服务</li></ul> 
+<h6><a id="2down_295"></a>2.当从服务down掉了的情况</h6> 
+<ul><li>当再次连接主服务时还是会进行一次全量备份</li></ul> 
+<h5><a id="4_299"></a>4.薪火相传</h5> 
+<ul><li>简单来说就是让b是a的slave，c是b的slave</li><li>这样c的数据就从b来获取，而写入操作还是从a进行</li></ul> 
+<p><img src="https://images2.imgbox.com/09/76/imvxIpIh_o.png" alt="image-20240502163548532"></p> 
+<h5><a id="5_306"></a>5.反客为主（是在薪火相传的基础上的）</h5> 
+<p><img src="https://images2.imgbox.com/69/a8/U9FUJog8_o.png" alt="image-20240502164007948"></p> 
+<h3><a id="4sentinel_310"></a>4.哨兵模式（sentinel）</h3> 
+<h5><a id="1_312"></a>1.配置哨兵</h5> 
+<h6><a id="1_314"></a>1.<strong>保持一主二仆的环境即可</strong></h6> 
+<h6><a id="2master_316"></a>2.随便找一台服务器启动哨兵，这里选择在master服务器启动</h6> 
+<h6><a id="1etcsentinelconf_318"></a>1.在/etc下面创建一个sentinel.conf的配置文件</h6> 
+<pre><code class="prism language-sh"><span class="token function">touch</span> /etc/sentinel.conf
+</code></pre> 
+<h6><a id="2masterip1master_324"></a>2.编辑文件，设置master的名字，ip+端口以及哨兵的个数，这里是1，还有master的密码</h6> 
+<pre><code class="prism language-sh"><span class="token function">vim</span> /etc/sentinel.conf
+</code></pre> 
+<pre><code class="prism language-sh">sentinel monitor redis_master <span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span><span class="token punctuation">..</span>
+</code></pre> 
+<h6><a id="3_334"></a>3.再开启一个连接，启动哨兵，指定配置文件</h6> 
+<pre><code class="prism language-sh">/usr/local/bin/redis-sentinel /etc/sentinel.conf 
+</code></pre> 
+<p><img src="https://images2.imgbox.com/3a/2e/x37sG6eL_o.png" alt="image-20240502165851224"></p> 
+<h5><a id="2_342"></a>2.测试</h5> 
+<h6><a id="1master_344"></a>1.关闭master</h6> 
+<p><img src="https://images2.imgbox.com/b7/f5/2WsFe5iL_o.png" alt="image-20240502183659278"></p> 
+<h6><a id="2master_348"></a>2.等待一会，查看哨兵，可以看到切换了master</h6> 
+<h6><a id="3_350"></a>3.查看子节点的情况，注意：此时需要重新进行密码验证</h6> 
+<p><img src="https://images2.imgbox.com/17/e1/jrfHcEgu_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/d9/64/XsyMglfa_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="4master_355"></a>4.重启原来的master，会自动降级为子节点</h6> 
+<p><img src="https://images2.imgbox.com/58/e6/SNOi8R72_o.png" alt="在这里插入图片描述"></p> 
+<h5><a id="3_360"></a>3.注意事项和细节</h5> 
+<h6><a id="1down_362"></a>1.主机down后的执行流程</h6> 
+<p><img src="https://images2.imgbox.com/68/57/1DWqBFi0_o.png" alt="image-20240502184700413"></p> 
+<h6><a id="2master_366"></a>2.哨兵挑选新master的依据</h6> 
+<p><img src="https://images2.imgbox.com/7c/92/EdYqeq2Q_o.png" alt="image-20240502184725028"></p> 
+<h6><a id="3master_370"></a>3.重启原来的master，会自动降级为子节点</h6> 
+<h6><a id="4sentinelconf_authpass_372"></a>4.如果原来的主节点有密码，则需要在sentinel.conf 配置auth-pass参数设置密码</h6> 
+<h6><a id="5_374"></a>5.关于密码配置方案</h6> 
+<ul><li>在redis.conf中配置requirepass 以及masterauth 都为相同的密码，这样各个节点就可以正常连接了</li><li>如果是哨兵模式还要在sentinel.conf 配置master的密码，格式为 sentinel auth-pass master名字yourStrongPassword</li></ul>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/6e7e7f7a7d483d42a4e9792c93c760d4/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【Linux】线程的内核级理解&amp;&amp;详谈页表以及虚拟地址到物理地址之间的转化</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9b62ded5ae193ea8ebb0d61a394adb83/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Python版【植物大战僵尸 &#43;源码】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

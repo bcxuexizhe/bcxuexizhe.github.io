@@ -1,0 +1,165 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>JVM-调优之-高内存占用问题排查 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/afb06539bdc429a539bf395636a7b415/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="JVM-调优之-高内存占用问题排查">
+  <meta property="og:description" content="排查思路 1）检查jvm内存的分配情况
+2）检查jvm的gc情况
+3） 找出占用量比较大的对象
+第一步：jmap -heap PID 查看jvm内存使用情况
+jmap -heap 2525
+可以看到老年代年轻代等其他内存区域内存使用率百分比
+第二步：jstat -gc PID 查看GC的情况
+jstat -gc 2525
+jstat -gcutil 2525 1000 1000m打印一次gc情况
+YGC : YG GC的次数
+YGCT：YG GC的平均时间
+FGC： FULL GC的次数
+FGCT：FULL GC的平均时间
+发现FULL GC的次数在疯狂增长，而且FULL GC的平均时间也会增长，这就是CPU100%的原因，因为CPU一直在尝试垃圾回收
+第三步： jmap -histo:live &#43;进程id|more 命令，找出堆中占用量比较大的存活的对象
+注意：一般不通过直接采用jmap dump 命令导出系统日志，因为dump操作长时间，很耗cpu资源，一般建议通过 jvm参数配置，在发生oom时，自动dump生成系统jvm快照文件，然后结合mat工具进行分析。
+-XX:&#43;HeapDumpOnOutOfMemoryError
+#生成堆文件地址： -XX:HeapDumpPath=/home/liuke/jvmlogs/ 其实可以直接生成dump文件，下载下来，到idea中分析：
+一般第三步不建议用，直接用第四步
+第四步：下载dump文件，分析内存告警
+1：找到Java服务： jps 或者 ps -ef | grep java
+2：生成dump 文件：jmap -dump:file=/tmp/dump.bin 1
+3：压缩dump文件 tar -zcvf dump.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-21T17:27:34+08:00">
+    <meta property="article:modified_time" content="2024-05-21T17:27:34+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">JVM-调优之-高内存占用问题排查</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p></p> 
+<h6>排查思路</h6> 
+<p>1）检查<a href="https://so.csdn.net/so/search?q=jvm&amp;spm=1001.2101.3001.7020" title="jvm">jvm</a>内存的分配情况</p> 
+<p>2）检查jvm的gc情况</p> 
+<p>3） 找出占用量比较大的对象</p> 
+<p></p> 
+<p>第一步：jmap -heap PID 查看jvm内存使用情况</p> 
+<p>        jmap -heap 2525</p> 
+<p>        可以看到老年代年轻代等其他内存区域内存使用率百分比</p> 
+<p>第二步：jstat -gc PID 查看GC的情况</p> 
+<p>        jstat -gc 2525<br>         jstat -gcutil 2525 1000      1000m打印一次gc情况</p> 
+<p>        YGC : YG GC的次数<br>         YGCT：YG GC的平均时间<br>         FGC： FULL GC的次数<br>         FGCT：FULL GC的平均时间</p> 
+<p>        发现FULL GC的次数在疯狂增长，而且FULL GC的平均时间也会增长，这就是CPU100%的原因，因为CPU一直在尝试垃圾回收</p> 
+<p>第三步： jmap -histo:live +进程id|more 命令，找出堆中占用量比较大的存活的对象</p> 
+<p>        注意：一般不通过直接采用jmap dump 命令导出系统日志，因为dump操作长时间，很耗cpu资源，一般建议通过 jvm参数配置，在发生oom时，自动dump生成系统jvm快照文件，然后结合mat工具进行分析。</p> 
+<p>        -XX:+HeapDumpOnOutOfMemoryError</p> 
+<p>        #生成堆文件地址： -XX:HeapDumpPath=/home/liuke/jvmlogs/  </p> 
+<p></p> 
+<p>        其实可以直接生成dump文件，下载下来，到idea中分析：</p> 
+<p>        一般第三步不建议用，直接用第四步</p> 
+<p>第四步：下载dump文件，分析内存告警</p> 
+<p>        1：找到Java服务： jps 或者 ps -ef | grep java</p> 
+<p>        2：生成dump 文件：jmap -dump:file=/tmp/dump.bin 1</p> 
+<p>        3：压缩dump文件 tar -zcvf dump.tar.gz dump.bin</p> 
+<p>        在真实线上生成的 dump 文件都很大，所以我们需要把它压缩成 tar.gz 文件，可以减少6倍以上的大小。</p> 
+<p>第五步：查看dump文件</p> 
+<p>        可以用jdk的visualvm，把dump文件拖进去就可以，还可以直接把dump导入到idea中，也能看。</p> 
+<p>        毫无疑问，内存飙升，我们只需要看看当前系统中内存占比最大的是个什么东西，然后想办法干掉它</p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<p>参考文章：</p> 
+<p><a href="https://blog.csdn.net/Daybreak1209/article/details/80538594" title="JVM线程、内存问题排查_jvm 线程8000多-CSDN博客">JVM线程、内存问题排查_jvm 线程8000多-CSDN博客</a></p> 
+<p><a href="https://cloud.tencent.com/developer/article/1846028" rel="nofollow" title="线上java JVM问题排查-腾讯云开发者社区-腾讯云">线上java JVM问题排查-腾讯云开发者社区-腾讯云</a></p> 
+<p><a href="https://www.jb51.net/program/287389gy2.htm#_label1" rel="nofollow" title="JVM实战系列之CPU100%和内存100%排查_java_脚本之家">JVM实战系列之CPU100%和内存100%排查_java_脚本之家</a></p> 
+<p><a href="https://blog.51cto.com/u_5650011/5478722" rel="nofollow" title="https://blog.51cto.com/u_5650011/5478722">https://blog.51cto.com/u_5650011/5478722</a></p> 
+<p><a href="https://blog.csdn.net/kelenwait/article/details/125706880" title="JVM查看内存信息及“调优”方式_jvm查看某个进程占用内存-CSDN博客">JVM查看内存信息及“调优”方式_jvm查看某个进程占用内存-CSDN博客</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/6811f5581a230b5327042f25f9125976/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">视频标注已上线，支持视频分类、多目标检测｜ModelWhale 版本更新</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/9e028063732aac5b3167c664fba5d2f3/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">3D透视图模型转模型变形？---模大狮模型网</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,317 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>(14)Hive调优——合并小文件 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/34ec0299f66d4d70265ece423cf3c3f6/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="(14)Hive调优——合并小文件">
+  <meta property="og:description" content="目录
+一、小文件产生的原因
+二、小文件的危害
+三、小文件的解决方案
+3.1 小文件的预防
+3.1.1 减少Map数量
+3.1.2 减少Reduce的数量
+3.2 已存在的小文件合并
+3.2.1 方式一：insert overwrite (推荐)
+3.2.2 方式二：concatenate
+3.2.3 方式三：使用hive的archive归档
+3.2.4 方式四：hadoop getmerge
+一、小文件产生的原因 数据源本身就包含大量的小文件，例如api,kafka消息管道等。动态分区插入数据的时候，会产生大量的小文件，从而导致map数量剧增；；reduce 数量越多，小文件也越多，小文件数量=ReduceTask数量*分区数；hive中的小文件是向 hive 表中导入数据时产生； 向 hive 中导入数据的几种方式:
+（1）直接向表中插入数据
+insert into table t_order2 values (1,&#39;zhangsan&#39;,88),(2,&#39;lisi&#39;,61); 这种方式每次插入时都会产生一个小文件，多次插入少量数据就会出现多个小文件，故这种方式生产环境基本不使用；
+（2）通过load方式加载数据
+-- 导入文件 load data local inpath &#34;/opt/module/hive_data/t_order.txt&#34; overwrite into table t_order; -- 导入文件夹 load data local inpath &#34;/opt/module/hive_data/t_order&#34; overwrite into table t_order; 使用 load方式可以导入文件或文件夹，当导入一个文件时，hive表就有一个文件，当导入文件夹时，hive表的文件数量为文件夹下所有文件的数量；
+（3）通过查询方式加载数据
+insert overwrite t_order select oid,uid from t_order2 这种方式是生产环境中经常用的，也是最容易产生小文件的方式。insert 导入数据时会启动MR任务，MR-reduce的个数与输出文件个数一致。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-15T20:29:25+08:00">
+    <meta property="article:modified_time" content="2024-02-15T20:29:25+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">(14)Hive调优——合并小文件</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="-toc" style="margin-left:0px;"></p> 
+<p id="%E4%B8%80%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E4%BA%A7%E7%94%9F%E7%9A%84%E5%8E%9F%E5%9B%A0-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E4%BA%A7%E7%94%9F%E7%9A%84%E5%8E%9F%E5%9B%A0" rel="nofollow">一、小文件产生的原因</a></p> 
+<p id="%E4%BA%8C%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E5%8D%B1%E5%AE%B3-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E5%8D%B1%E5%AE%B3" rel="nofollow">二、小文件的危害</a></p> 
+<p id="%E4%B8%89%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88" rel="nofollow">三、小文件的解决方案</a></p> 
+<p id="3.1%20%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E9%A2%84%E9%98%B2-toc" style="margin-left:40px;"><a href="#3.1%20%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E9%A2%84%E9%98%B2" rel="nofollow">3.1 小文件的预防</a></p> 
+<p id="3.1.1%20%E5%87%8F%E5%B0%91Map%E6%95%B0%E9%87%8F-toc" style="margin-left:80px;"><a href="#3.1.1%20%E5%87%8F%E5%B0%91Map%E6%95%B0%E9%87%8F" rel="nofollow">3.1.1 减少Map数量</a></p> 
+<p id="%C2%A03.1.2%20%E5%87%8F%E5%B0%91Reduce%E7%9A%84%E6%95%B0%E9%87%8F-toc" style="margin-left:80px;"><a href="#%C2%A03.1.2%20%E5%87%8F%E5%B0%91Reduce%E7%9A%84%E6%95%B0%E9%87%8F" rel="nofollow"> 3.1.2 减少Reduce的数量</a></p> 
+<p id="3.2%20%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E5%B0%8F%E6%96%87%E4%BB%B6%E5%90%88%E5%B9%B6-toc" style="margin-left:40px;"><a href="#3.2%20%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E5%B0%8F%E6%96%87%E4%BB%B6%E5%90%88%E5%B9%B6" rel="nofollow">3.2 已存在的小文件合并</a></p> 
+<p id="3.2.1%20%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9Ainsert%20overwrite%20(%E6%8E%A8%E8%8D%90)-toc" style="margin-left:80px;"><a href="#3.2.1%20%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9Ainsert%20overwrite%20%28%E6%8E%A8%E8%8D%90%29" rel="nofollow">3.2.1 方式一：insert overwrite (推荐)</a></p> 
+<p id="%C2%A03.2.2%20%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9Aconcatenate-toc" style="margin-left:80px;"><a href="#%C2%A03.2.2%20%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9Aconcatenate" rel="nofollow"> 3.2.2 方式二：concatenate</a></p> 
+<p id="%C2%A03.2.3%20%E6%96%B9%E5%BC%8F%E4%B8%89%EF%BC%9A%E4%BD%BF%E7%94%A8hive%E7%9A%84archive%E5%BD%92%E6%A1%A3-toc" style="margin-left:80px;"><a href="#%C2%A03.2.3%20%E6%96%B9%E5%BC%8F%E4%B8%89%EF%BC%9A%E4%BD%BF%E7%94%A8hive%E7%9A%84archive%E5%BD%92%E6%A1%A3" rel="nofollow"> 3.2.3 方式三：使用hive的archive归档</a></p> 
+<p id="3.2.4%20%E6%96%B9%E5%BC%8F%E5%9B%9B%EF%BC%9Ahadoop%C2%A0getmerge-toc" style="margin-left:80px;"><a href="#3.2.4%20%E6%96%B9%E5%BC%8F%E5%9B%9B%EF%BC%9Ahadoop%C2%A0getmerge" rel="nofollow">3.2.4 方式四：hadoop getmerge</a></p> 
+<p></p> 
+<h2 id="%E4%B8%80%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E4%BA%A7%E7%94%9F%E7%9A%84%E5%8E%9F%E5%9B%A0">一、小文件产生的原因</h2> 
+<ul><li>数据源本身就包含大量的小文件，例如api,kafka消息管道等。</li><li>动态分区插入数据的时候，会产生大量的小文件，从而导致map数量剧增；；</li><li>reduce 数量越多，小文件也越多，小文件数量=ReduceTask数量*分区数；</li><li><strong>hive中的小文件是向 hive 表中导入数据时产生；</strong></li></ul> 
+<p><strong>向 hive 中导入数据的几种方式:</strong></p> 
+<p><strong>（1）直接向表中插入数据</strong></p> 
+<pre><code class="language-sql">insert into table t_order2 values (1,'zhangsan',88),(2,'lisi',61);</code></pre> 
+<p>     这种方式每次插入时都会产生一个小文件，多次插入少量数据就会出现多个小文件，故这种方式生产环境基本不使用；</p> 
+<p><img alt="" height="339" src="https://images2.imgbox.com/91/8e/HMIDKhD0_o.png" width="500"></p> 
+<p><strong>（2）通过load方式加载数据</strong></p> 
+<pre><code class="language-sql">-- 导入文件
+load data local inpath "/opt/module/hive_data/t_order.txt" overwrite into table t_order;
+-- 导入文件夹
+load data local inpath "/opt/module/hive_data/t_order" overwrite into table t_order;
+
+</code></pre> 
+<p>     使用 load方式可以导入文件或文件夹，当导入一个文件时，hive表就有一个文件，当导入文件夹时，hive表的文件数量为文件夹下所有文件的数量；</p> 
+<p><span style="color:#fe2c24;"><strong>（3）通过查询方式加载数据</strong></span></p> 
+<pre><code class="language-sql">insert overwrite t_order  select oid,uid from t_order2</code></pre> 
+<p>   这种方式是<strong>生产环境</strong>中经常用的，也是最容易产生小文件的方式。insert 导入数据时会启动MR任务，MR-reduce的个数与输出文件个数一致。</p> 
+<p>    因此，hdfs的<strong>文件数量=  reduceTask数量* 分区数</strong>，有些fetch本地抓取任务（例如：简单的 select * from tableA）仅有map阶段，那此时文件个数 = mapTask数量*分区数</p> 
+<h2 id="%E4%BA%8C%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E5%8D%B1%E5%AE%B3">二、小文件的危害</h2> 
+<p>        小文件通常是指文件大小要比HDFS块大小（一般是128M）还要小很多的文件。</p> 
+<ul><li> <p>NameNode在内存中维护整个文件系统的元数据镜像、其中每个HDFS文件元数据信息（位置、大小、分块等）对象约占150字节，如果小文件过多会占用大量内存，会直接影响NameNode性能。相对的，HDFS读写小文件也会更加耗时，因为每次都需要从NameNode获取元信息，并与对应的DataNode建立pipeline连接。</p> </li><li>从 Hive 角度看，<strong>一个小文件会开启一个 MapTask，</strong>一个 <strong>MapTask</strong>开一个 JVM 去执行，这些任务的启动及初始化，会浪费大量的资源，严重影响性能。</li></ul> 
+<h2 id="%E4%B8%89%E3%80%81%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E8%A7%A3%E5%86%B3%E6%96%B9%E6%A1%88">三、小文件的解决方案</h2> 
+<p>   小文件的解决思路主要有两个方向：<strong>1.小文件的预防；2.已存在的小文件合并</strong></p> 
+<h3 id="3.1%20%E5%B0%8F%E6%96%87%E4%BB%B6%E7%9A%84%E9%A2%84%E9%98%B2">3.1 小文件的预防</h3> 
+<p>     通过调整参数进行合并，在 hive 中执行 insert overwrite  tableA select xx  from tableB 之前设置如下合并参数，即可自动合并小文件。</p> 
+<h4 id="3.1.1%20%E5%87%8F%E5%B0%91Map%E6%95%B0%E9%87%8F">3.1.1 减少Map数量</h4> 
+<p>         在Map前进行输入合并，从而减少mapper任务的数量。</p> 
+<ul><li>设置map输入时的合并参数：</li></ul> 
+<pre><code class="language-sql">#Map前进行小文件合并
+#CombineHiveInputFormat底层是 Hadoop的CombineFileInputFormat方法，该方法是在mapper中将多个文件合成一个split切片作为输入
+set hive.input.format=org.apache.hadoop.hive.ql.io.CombineHiveInputFormat; -- 默认开启
+
+#每个Map最大的输入数据量(这个值决定了合并后文件的数量，会影响mapper数量)
+set mapred.max.split.size=256*1000*100;   -- 默认是256M
+
+#一个节点上split的至少的大小(这个值决定了多个DataNode上的文件是否需要合并)
+set mapred.min.split.size.per.node=100*100*100;  -- 100M
+#一个交换机下split的至少的大小(这个值决定了多个交换机上的文件是否需要合并)
+set mapred.min.split.size.per.rack=100*100*100; -- 100M</code></pre> 
+<ul><li>设置map端输出时和reduce端输出时的合并参数：</li></ul> 
+<pre><code class="language-sql">#设置map端输出进行合并，默认为true
+set hive.merge.mapfiles = true;
+#设置reduce端输出进行合并，默认为false
+set hive.merge.mapredfiles = true;
+#设置合并文件的大小
+set hive.merge.size.per.task = 256*1000*1000;   -- 256M
+#当输出文件的平均大小小于该值时，启动一个独立的MapReduce任务进行文件merge
+set hive.merge.smallfiles.avgsize=16000000;   -- 16M</code></pre> 
+<ul><li>启用压缩（小文件合并后，也可以选择启用压缩）</li></ul> 
+<pre><code class="language-sql"># hive的查询结果输出是否进行压缩
+set hive.exec.compress.output=true;
+# MapReduce Job的结果输出是否使用压缩
+set mapreduce.output.fileoutputformat.compress=true;
+#设置压缩方式是snappy
+set parquet.compression = snappy;
+</code></pre> 
+<h4 id="%C2%A03.1.2%20%E5%87%8F%E5%B0%91Reduce%E7%9A%84%E6%95%B0%E9%87%8F"> 3.1.2 减少Reduce的数量</h4> 
+<pre><code class="language-sql">#reduce的个数决定了输出的文件的个数，所以可以调整reduce的个数控制hive表的文件数量，
+#通过设置reduce的数量，利用distribute by使得数据均衡的进入每个reduce。
+#设置reduce的数量有两种方式，第一种是直接设置reduce个数
+set mapreduce.job.reduces=10;
+
+#第二种是设置每个reduceTask的大小，Hive会根据数据总大小猜测确定一个reduce个数
+set hive.exec.reducers.bytes.per.reducer=512*1000*1000; -- 默认是1G，这里为设置为5G
+
+#执行以下语句，将数据均衡的分配到reduce中
+set mapreduce.job.reduces=10;
+
+insert overwrite table A partition(dt)
+select * from B
+distribute by  cast(rand()*10 as int);
+
+解释：如设置reduce数量为10，则使用cast(rand()*10 as int)，生成0-10之间的随机整数，根据【随机整数 % 10】计算分区编号，这样数据就会均衡的分发到各reduce中，防止出现有的文件过大或过小
+
+</code></pre> 
+<h3 id="3.2%20%E5%B7%B2%E5%AD%98%E5%9C%A8%E7%9A%84%E5%B0%8F%E6%96%87%E4%BB%B6%E5%90%88%E5%B9%B6"><strong>3.2 已存在的小文件合并</strong></h3> 
+<p>      对<u>集群上</u>已存在的小文件进行定时或实时的合并操作，定时操作可在访问低峰期操作，如凌晨2点，合并操作主要有以下几种方式：</p> 
+<h4 id="3.2.1%20%E6%96%B9%E5%BC%8F%E4%B8%80%EF%BC%9Ainsert%20overwrite%20(%E6%8E%A8%E8%8D%90)"><strong>3.2.1 方式一：<span style="color:#fe2c24;">insert overwrite (推荐)</span></strong></h4> 
+<p><strong>执行流程总体如下：</strong></p> 
+<p><strong>（1）创建备份表（创建备份表时需和原表的表结构一致）</strong></p> 
+<pre><code class="language-sql">create table test.table_hive_back like test.table_hive ;</code></pre> 
+<p><strong>（2）设置合并文件相关参数，并使用insert overwrite 语句读取原表，再插入备份表</strong></p> 
+<ul><li>设置合并文件相关参数</li></ul> 
+<p>       使用 hive的merger合并参数，在正式 insert overwrite 之前做一个合并，合并的时候注意设置好压缩，不然文件会比较大。</p> 
+<ul><li><span style="color:#fe2c24;"><strong>合并文件至备份表中，</strong></span>执行前保证没有数据写入原表</li></ul> 
+<pre><code class="language-sql">#如果有多级分区，将分区名放到partition中
+insert overwrite table test.table_hive_back partition(batch_date) 
+select * from test.table_hive;
+</code></pre> 
+<p><span style="color:#fe2c24;"><strong> ps</strong></span><span style="color:#494949;"><strong>：</strong>insert overwrite table test.table_hive_back 备份表的时候，可以使用</span><span style="color:#fe2c24;"><strong>distribute by 命令</strong></span>设置<span style="color:#494949;">合并后的batch_date分区下的文件数据量</span></p> 
+<pre><code class="language-sql">insert overwrite table 目标表 [partition(hour=...)] select * from 目标表 
+distribute by cast( rand() * 具体最后落地生成多少个文件数 as int);</code></pre> 
+<blockquote> 
+ <ul><li> <p><strong><code>insert overwrite</code>：</strong>会重写数据，先进行删除后插入（不用担心如果<code>overwrite</code>失败，数据没了，这里面是有事务保障的）;</p> </li><li> <p><strong><code>distribute by分区</code>：<code>能</code></strong>控制数据从map端发往到哪个reduceTask中，<strong><code>distribute by的分区规则：</code></strong><strong>分区字段的</strong><strong>hashcode值对reduce </strong><strong>个数取模后</strong>， 余数相同的数据会分发到同一个reduceTask中。</p> </li><li> <p><strong><code>rand()</code>函数</strong>：生成0-1的随机小数，控制最终输出多少个文件。</p> </li></ul> 
+</blockquote> 
+<p></p> 
+<pre><code class="language-sql"># 使用distribute by rand()将数据随机分配给reduce,这样可以使得每个reduce处理的数据大体一致。 避免出现有的文件特别大, 有的文件特别小，例如：控制dt分区目录下生成100个文件，那么hsql如下：
+insert overwrite table A partition(dt)
+ select * from B
+distribute by cast(rand()*100 as int);
+
+#cast(rand()*100 as int) 可以生成0-100的随机整数</code></pre> 
+<p>     如果合并之后的文件竟然还变大了，可能是 select from的原数据是被压缩的，但是insert overwrite目标表的时候，没有<strong><span style="color:#fe2c24;">设置输出文件压缩功能</span></strong>，解决方案：</p> 
+<pre><code class="language-sql"># hive的查询结果输出是否进行压缩
+set hive.exec.compress.output=true;
+# MapReduce Job的结果输出是否使用压缩
+set mapreduce.output.fileoutputformat.compress=true;
+#设置压缩方式是snappy
+set parquet.compression = snappy;
+</code></pre> 
+<p><strong>（3）确认表数据一致后，将原表修改名称为临时表tmp，将备份表修改名称为原表</strong></p> 
+<ul><li>先查看原表和备份表数据量，确保表数据一致</li></ul> 
+<pre><code class="language-sql">#查看原表和备份表数据量
+set hive.compute.query.using.stats=false ;
+set hive.fetch.task.conversion=none;
+SELECT count(*) FROM test.table_hive;
+SELECT count(*) FROM test.table_hive_back ;</code></pre> 
+<ul><li>将原表修改名称为临时表tmp，将备份表修改名称为原表</li></ul> 
+<pre><code class="language-sql">alter table test.table_hive rename to test.table_hive_tmp;
+alter table test.table_hive_back rename to test.table_hive ;</code></pre> 
+<p><strong>（4）查看合并后的分区数和小文件数量</strong></p> 
+<p></p> 
+<p>    正常情况下：hdfs文件系统上的table_hive表的分区数量没有改变，但是每个分区的几个小文件已经合并为一个文件。</p> 
+<pre><code class="language-sql">#统计合并后的分区数
+[atguigu@bigdata102 ~]$ hdfs dfs -ls /user/hive/warehouse/test/table_hive
+#统计合并后的分区数下的文件数
+[atguigu@bigdata102 ~]$ hdfs dfs -ls /user/hive/warehouse/test/table_hive/batch_date=20210608</code></pre> 
+<p>  例如：</p> 
+<p><img alt="" height="333" src="https://images2.imgbox.com/b6/27/8XC3lYZ6_o.png" width="1200"></p> 
+<p><strong>（5）观察一段时间后再删除临时表</strong></p> 
+<pre><code class="language-sql">drop  table test.table_hive_tmp ;
+</code></pre> 
+<p><strong>     ps：注意修改hive表名的时候，对应表的存储路径会发生变化</strong>，如果有新的任务上传数据到具体路径，需要注意可能需要修改。</p> 
+<h4 id="%C2%A03.2.2%20%E6%96%B9%E5%BC%8F%E4%BA%8C%EF%BC%9Aconcatenate"><strong> 3.2.2 方式二：</strong>concatenate</h4> 
+<p>      对于orc文件，可以使用hive自带的 concatenate 命令，自动合并小文件</p> 
+<pre><code class="language-sql">#对于非分区表
+alter table test concatenate;
+
+#对于分区表
+alter table test [partition(...)] concatenate
+#例如：alter table test partition(dt='2021-05-07',hr='12') concatenate;</code></pre> 
+<blockquote> 
+ <p><strong>注意：</strong> </p> 
+ <ul><li>concatenate 命令只支持 rcfile和 orc文件类型。 </li><li>concatenate命令合并小文件时不<strong>能指定合并后的文件数量</strong>，但可以多次执行该命令。 </li><li>当多次使用concatenate后文件数量不变化，这个跟参数 mapreduce.input.fileinputformat.split.minsize=256mb 的设置有关，可设定每个文件的最小size。</li></ul> 
+</blockquote> 
+<h4 id="%C2%A03.2.3%20%E6%96%B9%E5%BC%8F%E4%B8%89%EF%BC%9A%E4%BD%BF%E7%94%A8hive%E7%9A%84archive%E5%BD%92%E6%A1%A3"><strong> 3.2.3 方式三：</strong>使用hive的archive归档</h4> 
+<p>    每日定时脚本，对于已经产生小文件的<code>hive</code>表使用<code>har</code>归档，然后已归档的分区不能insert overwrite ，必须先unarchive</p> 
+<pre><code class="language-sql">#用来控制归档是否可用
+set hive.archive.enabled=true;
+
+#通知Hive在创建归档时是否可以设置父目录
+set hive.archive.har.parentdir.settable=true;
+
+#控制需要归档文件的大小
+set har.partfile.size=256000000;
+
+#对表的某个分区进行归档
+alter table test_rownumber2 archive partition(dt='20230324');
+
+#对已归档的分区恢复为原文件
+alter table test_rownumber2 unarchive partition(dt='20230324');
+</code></pre> 
+<h4 id="3.2.4%20%E6%96%B9%E5%BC%8F%E5%9B%9B%EF%BC%9Ahadoop%C2%A0getmerge">3.2.4 方式四：hadoop getmerge</h4> 
+<p>  对于txt格式的文件可以使用hadoop getmerge命令来合并小文件。使用 getmerge 命令先合并数据到本地，再通过put命令回传数据到hdfs。</p> 
+<blockquote> 
+ <ul><li>将hdfs上分区为pdate=20220815，文件路径为  /user/hive/warehouse/xxxx.db/xxxx/pdate=20220815/* 下<strong>载到linux 本地进行合并文件，</strong>本地路径为：/home/hadoop/pdate/20220815</li></ul> 
+ <p><strong>         hadoop fs -getmerge</strong>  /user/hive/warehouse/xxxx.db/xxxx/pdate=20220815/*  /home/hadoop/pdate/20220815;</p> 
+ <ul><li> 将hdfs源分区数据删除</li></ul> 
+ <p>        <strong>hadoop fs -rm</strong>  /user/hive/warehouse/xxxx.db/xxxx/pdate=20220815/*</p> 
+ <ul><li>在hdfs上新建分区</li></ul> 
+ <p>      hadoop fs -mkdir -p /user/hive/warehouse/xxxx.db/xxxx/pdate=20220815</p> 
+ <ul><li>将本地合并后的文件回传到hdfs上</li></ul> 
+ <p>         <strong>hadoop fs -put </strong> /home/hadoop/pdate/20220815  /user/hive/warehouse/xxxx.db/xxxx/pdate=20220815/*</p> 
+</blockquote> 
+<p>参考文章：</p> 
+<p><a href="https://blog.csdn.net/zhaomengszu/article/details/124520732" title="HIVE中小文件问题_hive小文件产生的原因-CSDN博客">HIVE中小文件问题_hive小文件产生的原因-CSDN博客</a></p> 
+<p><a href="https://developer.aliyun.com/article/1379267?spm=a2c6h.14164896.0.0.55f947c5fVnWVa&amp;scm=20140722.S_community@@%E6%96%87%E7%AB%A0@@1379267._.ID_1379267-RL_hive%20%E5%B0%8F%E6%96%87%E4%BB%B6-LOC_search~UND~community~UND~item-OR_ser-V_3-P0_1" rel="nofollow" title="Hive教程（09）- 彻底解决小文件的问题-阿里云开发者社区">Hive教程（09）- 彻底解决小文件的问题-阿里云开发者社区</a></p> 
+<p><a href="https://cloud.tencent.com/developer/article/1514064" rel="nofollow" title="0704-5.16.2-如何使用Hive合并小文件-腾讯云开发者社区-腾讯云">0704-5.16.2-如何使用Hive合并小文件-腾讯云开发者社区-腾讯云</a></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b4d4cae971fd20ad79431959c2a96144/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">(12)Hive调优——count distinct去重优化</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/4a9392638b396e65aa32be803747aa85/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">社区养老|社区养老服务系统|基于springboot社区养老服务系统设计与实现(源码&#43;数据库&#43;文档)</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

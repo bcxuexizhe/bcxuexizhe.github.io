@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>MacOS使用ollama部署codellama&#43;openui以及llama.cpp部署 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/490592b5c913a9ec80262a7cb6f357ce/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="MacOS使用ollama部署codellama&#43;openui以及llama.cpp部署">
+  <meta property="og:description" content="现在AI这么火，你是不是也渴望能够在本地部署并运行属于自己的大模型，然而，高昂的硬件成本又往往成了一大障碍，限制了你继续在AI领域去探索和创新。如果告诉你，无需换电脑，无需额外花钱买GPU或换显卡，你现在的电脑就可以本地跑一些大模型，那将是多么酷的一件事！！！ 先来强调下对于硬件的要求：基本的配置只需是Intel i5处理器 &#43; 16G内存（内存8G也ok，但是能慢一些，但你CPU起码de得是i5的，相信这个配置对于大多数人来说还是可以满足的），你就能够顺利运行多种开源的大模型，例如33亿参数、7亿参数的模型，但是70b那种跑不起来。需要注意的是，这里讨论的是利用大型模型进行推理，而非训练或微调模型。如果你的显卡性能更强，那么在大模型训练和微调方面的能力也会对应增强。不过，今天我们主要关注如何在现有硬件条件下运行大模型，所以重点不在此，就不详细介绍显卡相关部分了。
+重点来了，这里介绍两个可以运行在本地的大模型工具：ollama和llama.cpp，尤其是ollama，本地跑一个大模型特别简单，后面将会重点介绍。这里还有一个小知识补充一下，无论是Ollama还是llama.cpp都是运行的量化后的模型（GGUF格式的），所以对电脑配置的要求大幅降低。
+Ollama运行开源LLM
+Ollama是一个轻量级且可扩展的框架，通过提供命令行界面，可以帮助用户在本地电脑上运行、创建和管理大语言模型（LLMs），整体感觉和Docker很像。
+官网：https://ollama.com/
+如何使用呢？很简单，下载安装后，只需在CMD命令行窗口，执行下面的命令（比如我这里启动Google刚开源的codegemma模型），就可以启动快速下载和直接运行一个大模型。
+ollama run codegemma
+运行后，就可以在命令行窗口进行交互了，但是整体还是不太方便，我们期待的是有个web页面可以进行交互，方便使用。
+到了这里，配套的再推荐另一个开源项目：Open-webui。它可以快速基于Ollama构筑本地UI。具体使用方法可以参照官网：https://github.com/open-webui/open-webui
+我们用docker命令（docker的安装和基本使用这里就不详细说明了），快速启动Open-webui，自动关联本地的ollama。
+docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main
+启动成功之后，访问：http://localhost:3000 我们就可以使用了。
+上面简单给大家演示了，如何只用两行命令（一行是用ollama去运行一个大模型，一行是用docker启动web页面，自动关联本地ollama），基于Ollama &#43; Open-webui去构筑本地大模型，并且可以通过web操作页面进行访问，是不是特别方便和简单。到这里，大家可能还会有下面的疑问：
+问题1、ollama可以下载和运行哪些开源大模型？
+可以参照网站：https://ollama.com/library 这里列出了ollama支持的开源大模型。
+模型更新得很快，比如刚开源的llama3立刻就支持。并且Ollama它还允许用户通过编写Modelfile来导入更多的自定义模型，具有灵活的扩展性，并能与许多工具集成。它还支持GPU/CPU混合模式，可以根据用户的硬件配置进行优化。
+问题2、ollama还有哪些常用的命令？
+可以执行 ollama -h 去获取ollama支持的命令，真的很少，很简单。
+问题3、ollama可以支持本地跑多个大模型吗？
+必须可以，只要你电脑配置足够，同样的方法，使用ollama run 去运行你想运行的大模型。具体使用的时候，可以在open-webui提供的页面进行切换大模型即可：
+问题4、为什么下载的模型要比原始模型小？
+之前上面也提过，Ollma运行的是量化后的模型，将权重参数的精度压缩为4位整数精度，大幅减小了显存需求。此外，Ollama提供了对模型的量化和推理优化能力，这使得模型能够在有限计算资源下进行高效推理。
+相信介绍到这里，大家都清楚了如何用ollama本地电脑玩转大模型，是不是看起来很简单，很酷。。。赶紧回去试一试吧。
+-----------------
+llama.cpp运行开源LLM
+这个就比ollama复杂一些了，下面也简单介绍下，具体详细使用可以参照我的知识星球，里面写得很详细。
+llama.cpp 是一个C&#43;&#43;库，用于简化LLM推理的设置，它使得在本地机器上运行大模型（GGUF格式）成为可能。
+官网：https://github.com/ggerganov/llama.cpp
+具体如何使用呢？主要分下面这三步：
+1、将项目clone到本地，然后使用make命令进行安装。
+2、自行去huggingface上去找gguf格式的大模型（注意，一定是gguf格式，否则跑不起来），然后将大模型下载到本地。这里下载的过程，我推荐使用从hf-mirror镜像站中下载，速度会提升很多。大家可以参照网站：https://hf-mirror.com/
+3、使用llama.cpp去运行大模型，常用的命令有./main、./server等。比如下面我用server指令去运行刚出的llama3大模型，并在web页面上进行操作。
+./server -m /Users/chiliangxu/Documents/03_src/clx/ai/models/Llama-3-8B/Meta-Llama-3-8B-Instruct.Q2_K.gguf -c 2048
+llama.cpp的使用比ollama复杂一些，技术门槛稍微高一些，所以对于初学者的话，我还是推荐使用ollama。但是llama.cpp方式要比ollama&#43;open-webui方式要占用硬件资源小，自带图形页面。两者各种利弊，大家选择最合适的就好。
+----------------
+具体使用的过程中，如果有不明白的地方，可以参照星球或留言，也可以私信我，看到我都会第一时间答复。
+相信通过上面介绍的内容，为广大开发者和研究者在硬件资源有限的情况下，降低了AI使用的门槛，可以使更多人接触到大模型，而不只是单纯使用一些别人的AI产品。如果你感兴趣，那现在是时候行动起来了。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-24T20:33:24+08:00">
+    <meta property="article:modified_time" content="2024-04-24T20:33:24+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">MacOS使用ollama部署codellama&#43;openui以及llama.cpp部署</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <div> 
+ <span style="background-color:#ffffff;"><span style="color:#333333;">现在AI这么火，你是不是也渴望能够在本地部署并运行属于自己的大模型，然而，高昂的硬件成本又往往成了一大障碍，限制了你继续在AI领域去探索和创新。如果告诉你，无需换电脑，无需额外花钱买GPU或换显卡，你现在的电脑就可以本地跑一些大模型，那将是多么酷的一件事！！！</span></span> 
+</div> 
+<div> 
+ <div> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">先来强调下对于硬件的要求：基本的配置只需是Intel i5处理器 + 16G内存（内存8G也ok，但是能慢一些，但你CPU起码de得是i5的，相信这个配置对于大多数人来说还是可以满足的），你就能够顺利运行多种开源的大模型，例如33亿参数、7亿参数的模型，但是70b那种跑不起来。需要注意的是，</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">这里讨论的是利用大型模型进行推理</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">，而非训练或微调模型。如果你的显卡性能更强，那么在大模型训练和微调方面的能力也会对应增强。不过，今天我们主要关注如何在现有硬件条件下运行大模型，所以重点不在此，就不详细介绍显卡相关部分了。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">重点来了，这里介绍两个可以运行在本地的大模型工具：</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">ollama和llama.cpp，</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">尤其是ollama，本地跑一个大模型特别简单，后面将会重点介绍。这里还有一个小知识补充一下，</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">无论是Ollama还是llama.cpp都是运行的量化后的模型（GGUF格式的），所以对电脑配置的要求大幅降低</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">Ollama运行开源LLM</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">Ollama是一个轻量级且可扩展的框架，通过提供命令行界面，可以帮助用户在本地电脑上运行、创建和管理大语言模型（LLMs），整体感觉和Docker很像。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">官网：https://ollama.com/</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">如何使用呢？很简单，下载安装后，只需在CMD命令行窗口，执行下面的命令（比如我这里启动Google刚开源的codegemma模型），就可以启动快速下载和直接运行一个大模型。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="color:#333333;">ollama run codegemma</span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">运行后，就可以在命令行窗口进行交互了，但是整体还是不太方便，我们期待的是有个web页面可以进行交互，方便使用。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">到了这里，配套的再推荐另一个开源项目：</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">Open-webui</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">。它可以快速基于Ollama构筑本地UI。具体使用方法可以参照官网：https://github.com/open-webui/open-webui</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">我们用docker命令（docker的安装和基本使用这里就不详细说明了），快速启动Open-webui，自动关联本地的ollama。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="color:#333333;">docker run -d -p 3000:8080 --add-host=host.docker.internal:host-gateway -v open-webui:/app/backend/data --name open-webui --restart always ghcr.io/open-webui/open-webui:main</span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">启动成功之后，访问：http://localhost:3000  我们就可以使用了。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><img alt="" height="601" src="https://images2.imgbox.com/c1/9b/vhUufbBg_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">上面简单给大家演示了，如何只用两行命令（</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">一行是用ollama去运行一个大模型，一行是用docker启动web页面，自动关联本地ollama</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">），基于Ollama + Open-webui去构筑本地大模型，并且可以通过web操作页面进行访问，是不是特别方便和简单。到这里，大家可能还会有下面的疑问：</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#ff0000;">问题1、ollama可以下载和运行哪些开源大模型？</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">可以参照网站：</span></span><span style="background-color:#ffffff;"><span style="color:#2f3034;">https://ollama.com/library  这里列出了ollama支持的开源大模型。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:center;"><img alt="" height="1200" src="https://images2.imgbox.com/64/50/wySyf9UB_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">模型更新</span></span><span style="color:#333333;">得</span><span style="background-color:#ffffff;"><span style="color:#333333;">很快，比如刚开源的llama3立刻就支持。</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">并且Ollama它还允许用户通过编写Modelfile来导入更多的自定义模型，具有灵活的扩展性，并能与许多工具集成</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">。它还支持GPU/CPU混合模式，可以根据用户的硬件配置进行优化。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#ff0000;">问题2、ollama还有哪些常用的命令？</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">可以执行 ollama -h 去获取ollama支持的命令，真的很少，很简单。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:center;"><img alt="" height="877" src="https://images2.imgbox.com/ff/c6/NhD95ycc_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#ff0000;">问题3、ollama可以支持本地跑多个大模型吗？</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">必须可以，只要你电脑配置足够，同样的方法，使用ollama run 去运行你想运行的大模型。具体使用的时候，可以在open-webui提供的页面进行切换大模型即可：</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:center;"><img alt="" height="778" src="https://images2.imgbox.com/79/a7/yctaHbRF_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:center;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#ff0000;">问题4、为什么下载的模型要比原始模型小？</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">之前上面也提过，Ollma运行的是量化后的模型，将权重参数的精度压缩为4位整数精度，大幅减小了显存需求。此外，Ollama提供了对模型的量化和推理优化能力，这使得模型能够在有限计算资源下进行高效推理。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">相信介绍到这里，大家都清楚了如何用ollama本地电脑玩转大模型，是不是看起来很简单，很酷。。。赶紧回去试一试吧。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">-----------------</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">llama.cpp运行开源LLM</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">这个就比ollama复杂一些了，下面也简单介绍下，</span></span><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">具体详细使用可以参照我的知识星球</span></strong></span><span style="background-color:#ffffff;"><span style="color:#333333;">，里面写</span></span><span style="color:#333333;">得</span><span style="background-color:#ffffff;"><span style="color:#333333;">很详细。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">llama.cpp 是一个C++库，用于简化LLM推理的设置，它使得在本地机器上运行大模型（GGUF格式）成为可能。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">官网：https://github.com/ggerganov/llama.cpp</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">具体如何使用呢？主要分下面这三步：</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">1、将项目clone到本地，然后使用make命令进行安装。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">2、自行去huggingface上去找gguf格式的大模型（注意，一定是gguf格式，否则跑不起来），然后将大模型下载到本地。这里下载的过程，我推荐使用从hf-mirror镜像站中下载，速度会提升很多。大家可以参照网站：https://hf-mirror.com/</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">3、使用llama.cpp去运行大模型，常用的命令有./main、./server等。比如下面我用server指令去运行刚出的llama3大模型，并在web页面上进行操作。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="color:#333333;">./server -m /Users/chiliangxu/Documents/03_src/clx/ai/models/Llama-3-8B/Meta-Llama-3-8B-Instruct.Q2_K.gguf -c 2048</span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><img alt="" height="1200" src="https://images2.imgbox.com/ce/a4/nWRoSgba_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:justify;"><img alt="" height="488" src="https://images2.imgbox.com/55/bd/Os1Wqt2Y_o.png" width="1080"></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><strong><span style="color:#0052ff;">llama.cpp的使用比ollama复杂一些，技术门槛稍微高一些，所以对于初学者的话，我还是推荐使用ollama。但是llama.cpp方式要比ollama+open-webui方式要占用硬件资源小，自带图形页面。两者各种利弊，大家选择最合适的就好。</span></strong></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">----------------</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">具体使用的过程中，如果有不明白的地方，可以参照星球或留言，也可以私信我，看到我都会第一时间答复。</span></span></p> 
+  <p style="margin-left:0;text-align:justify;"></p> 
+  <p style="margin-left:0;text-align:justify;"><span style="background-color:#ffffff;"><span style="color:#333333;">相信通过上面介绍的内容，为广大开发者和研究者在硬件资源有限的情况下，降低了AI使用的门槛，可以使更多人接触到大模型，而不只是单纯使用一些别人的AI产品。如果你感兴趣，那现在是时候行动起来了。</span></span></p> 
+  <p style="margin-left:0;text-align:left;"></p> 
+ </div> 
+</div>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/12c680307d0d262b831e7f8c8269069e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">【热门话题】AI作画算法原理解析</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/72e525d1e6bb924f2b2105317156aa6b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【基于netty&#43;zookeeper的rpc远程调用框架】首篇——缘起</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

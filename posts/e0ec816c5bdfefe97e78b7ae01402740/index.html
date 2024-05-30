@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>解析MySQL生产环境CPU使用率过高的排查与解决方案 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e0ec816c5bdfefe97e78b7ae01402740/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="解析MySQL生产环境CPU使用率过高的排查与解决方案">
+  <meta property="og:description" content="引言 在生产环境中，MySQL作为一个关键的数据库组件，其性能对整个系统的稳定性至关重要。然而，有时候我们可能会遇到MySQL CPU使用率过高的问题，这可能导致系统性能下降，应用页面访问减慢，甚至影响到用户体验。本文将详细介绍如何排查和解决MySQL CPU过高的问题，帮助您迅速恢复正常的数据库性能。
+首先我们要明白什么是CPU使用率：
+CPU使用率是指在单位时间内CPU处于非空闲状态的时间比，反映了CPU的繁忙程度。某个进程的CPU使用率就是这个进程在一段时间内占用的CPU时间占总的时间的百分比。比如在双核CPU某个开启多线程的进程1s内占用了CPU0 0.6s, CPU1 0.9s, 那么它的占用率是150%。这里不深入阐述，网上文章很多。
+CPU占用过高原因分析 CPU 占用过高常见原因：
+服务器硬件问题内存溢出高并发业务中业务设计不合理导致 数据库对象设计不合理表索引设计不合理数据库锁导致，如行锁冲突、行锁等待、锁超时、死锁等系统架构没有缓存中间件读写分离配置不合理未合理升级改造为集群环境MySQL 系统参数设置不合理问题 SQL 导致 SQL 问题导致 CPU 使用率过高是最常见的现象，比如 group by、order by、join 等，这些很大程度影响 SQL 执行效率，从而占用大量的系统资源。
+说了这么多常见原因，其实总结一句话来说就是现有系统的现有配置下的现有环境提供不了所需要的数据查询、分析、执行能力，针对这个问题，首先我们要发现问题的所在，就是说我们要准确的定位问题，然后针对问题进行优化，再考虑其他升级改造的事情。
+检查MySQL运行情况
+可以看到CPU使用率非常高，内存使用较低，可以排除不是内存影响的。而且内存资源还有很大空间。
+因此要解决问题，可以从两方面入手：
+优化Mysql参数配置，发挥服务器硬件性能，通过合适的参数配置提升Mysql性能（以空间换时间，见效快，成本高）找到问题原因，优化问题sql、添加合理的索引、引入缓存等 方案一：MySQL配置参数优化 查看服务器资源 查看服务器内存：
+[java@localhost ~]$ grep MemTotal /proc/meminfo MemTotal: 266419264 kB // 约256G 查看服务器CPU个数：
+[java@localhost ~]$ lscpu 架构： aarch64 CPU 运行模式： 64-bit 字节序： Little Endian CPU: 64 在线 CPU 列表： 0-63 每个核的线程数： 1 每个座的核数： 32 座： 2 NUMA 节点： 2 厂商 ID： HiSilicon 型号： 0 型号名称： Kunpeng-920 步进： 0x1 Frequency boost: disabled CPU 最大 MHz： 2600.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-01-27T19:00:00+08:00">
+    <meta property="article:modified_time" content="2024-01-27T19:00:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">解析MySQL生产环境CPU使用率过高的排查与解决方案</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h2><a id="_0"></a>引言</h2> 
+<p>在生产环境中，MySQL作为一个关键的数据库组件，其性能对整个系统的稳定性至关重要。然而，有时候我们可能会遇到MySQL CPU使用率过高的问题，这可能导致系统性能下降，应用页面访问减慢，甚至影响到用户体验。本文将详细介绍如何排查和解决MySQL CPU过高的问题，帮助您迅速恢复正常的数据库性能。</p> 
+<p>首先我们要明白什么是CPU使用率：</p> 
+<p>CPU使用率是指在单位时间内CPU处于非空闲状态的时间比，反映了CPU的繁忙程度。某个进程的CPU使用率就是这个进程在一段时间内占用的CPU时间占总的时间的百分比。比如在双核CPU某个开启多线程的进程1s内占用了CPU0 0.6s, CPU1 0.9s, 那么它的占用率是150%。这里不深入阐述，网上文章很多。</p> 
+<h2><a id="CPU_7"></a>CPU占用过高原因分析</h2> 
+<p>CPU 占用过高常见原因：</p> 
+<ul><li>服务器硬件问题</li><li>内存溢出</li><li>高并发业务中业务设计不合理导致 
+  <ul><li>数据库对象设计不合理</li><li>表索引设计不合理</li><li>数据库锁导致，如行锁冲突、行锁等待、锁超时、死锁等</li><li>系统架构没有缓存中间件</li><li>读写分离配置不合理</li><li>未合理升级改造为集群环境</li><li>MySQL 系统参数设置不合理</li><li>问题 SQL 导致</li></ul> </li></ul> 
+<p>SQL 问题导致 CPU 使用率过高是最常见的现象，比如 group by、order by、join 等，这些很大程度影响 SQL 执行效率，从而占用大量的系统资源。</p> 
+<p>说了这么多常见原因，其实总结一句话来说就是现有系统的现有配置下的现有环境提供不了所需要的数据查询、分析、执行能力，针对这个问题，首先我们要发现问题的所在，就是说我们要准确的定位问题，然后针对问题进行优化，再考虑其他升级改造的事情。</p> 
+<p>检查MySQL运行情况<br> <img src="https://images2.imgbox.com/a9/f0/AuSeXFEM_o.png" alt="在这里插入图片描述"><br> 可以看到CPU使用率非常高，内存使用较低，可以排除不是内存影响的。而且内存资源还有很大空间。</p> 
+<p>因此要解决问题，可以从两方面入手：</p> 
+<ul><li>优化Mysql参数配置，发挥服务器硬件性能，通过合适的参数配置提升Mysql性能（以空间换时间，见效快，成本高）</li><li>找到问题原因，优化问题sql、添加合理的索引、引入缓存等</li></ul> 
+<h2><a id="MySQL_35"></a>方案一：MySQL配置参数优化</h2> 
+<h3><a id="_37"></a>查看服务器资源</h3> 
+<p>查看服务器内存：</p> 
+<pre><code>[java@localhost ~]$ grep MemTotal /proc/meminfo 
+MemTotal:       266419264 kB   	// 约256G
+</code></pre> 
+<p>查看服务器CPU个数：</p> 
+<pre><code>[java@localhost ~]$ lscpu
+架构：                           aarch64
+CPU 运行模式：                   64-bit
+字节序：                         Little Endian
+CPU:                             64
+在线 CPU 列表：                  0-63
+每个核的线程数：                 1
+每个座的核数：                   32
+座：                             2
+NUMA 节点：                      2
+厂商 ID：                        HiSilicon
+型号：                           0
+型号名称：                       Kunpeng-920
+步进：                           0x1
+Frequency boost:                 disabled
+CPU 最大 MHz：                   2600.0000
+CPU 最小 MHz：                   200.0000
+BogoMIPS：                       200.00
+L1d 缓存：                       4 MiB
+L1i 缓存：                       4 MiB
+L2 缓存：                        32 MiB
+L3 缓存：                        64 MiB
+NUMA 节点0 CPU：                 0-31
+NUMA 节点1 CPU：                 32-63
+Vulnerability Itlb multihit:     Not affected
+Vulnerability L1tf:              Not affected
+Vulnerability Mds:               Not affected
+Vulnerability Meltdown:          Not affected
+Vulnerability Spec store bypass: Mitigation; Speculative Store Bypass disabled via prctl
+Vulnerability Spectre v1:        Mitigation; __user pointer sanitization
+Vulnerability Spectre v2:        Not affected
+Vulnerability Srbds:             Not affected
+Vulnerability Tsx async abort:   Not affected
+标记：                           fp asimd evtstrm aes pmull sha1 sha2 crc32 atomics fphp asimdhp cpuid asimdrdm jscvt fcma dcpop asimddp asimdfhm ssbs
+</code></pre> 
+<p>可以看到服务器有两个物理CPU，每个物理CPU有32个内核数，即总共64个逻辑CPU数。<br> 一般情况下，逻辑cpu=物理CPU个数×每颗核数</p> 
+<h3><a id="MySQL_83"></a>观察MySQL状态</h3> 
+<p>MySQL的运行状态是我们排查性能问题的第一步。通过查看全局状态变量，我们可以获取系统的整体运行情况。以下是一些关键的状态变量和信息：</p> 
+<ol><li>Threads_running 和 Threads_connected</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Threads_running'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Threads_connected'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>Threads_running 表示当前正在执行的线程数量。<br> Threads_connected 表示当前已连接到MySQL的线程数量。<br> 如果 Threads_running 较高，而 Threads_connected 较低，可能表明存在某些长时间运行的查询，或者可能是由于连接池配置不当导致连接被频繁创建和销毁。</p> 
+<ol start="2"><li>InnoDB 相关状态</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">ENGINE</span> <span class="token keyword">INNODB</span> <span class="token keyword">STATUS</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>查看InnoDB引擎状态，关注以下信息：</p> 
+<p>Innodb_row_lock_current_waits：表示当前正在等待的行锁数量。<br> Innodb_deadlocks：显示发生的死锁次数。<br> 高的行锁等待和死锁次数可能表明业务逻辑或查询需要优化，或者存在并发访问冲突。</p> 
+<ol start="3"><li>Key_reads 和 Key_writes</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Key_reads'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Key_writes'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>Key_reads：表示从磁盘读取索引块的次数。<br> Key_writes：表示向磁盘写入索引块的次数。<br> 高的 Key_reads 可能暗示着索引未能完全放入内存中，需要调整 key_buffer_size 参数。而频繁的 Key_writes 可能表明索引的写入操作较为频繁，需要考虑索引的优化。</p> 
+<ol start="4"><li>Created_tmp_disk_tables</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">GLOBAL</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Created_tmp_disk_tables'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>表示在磁盘上创建的临时表的数量。过多的磁盘临时表可能表明某些查询需要优化，或者 tmp_table_size 参数设置过小。</p> 
+<ol start="5"><li>Uptime</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> <span class="token keyword">STATUS</span> <span class="token operator">LIKE</span> <span class="token string">'Uptime'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>表示MySQL服务的运行时间。如果CPU问题突然发生，检查这个值，看是否与问题的时间点相关。</p> 
+<ol start="6"><li>其他关键状态变量</li></ol> 
+<p>浏览MySQL官方文档以获取更多有关全局状态变量的信息，根据具体情况添加监控和分析。</p> 
+<p>通过这些状态变量，我们可以初步了解MySQL的整体运行情况，从而有针对性地继续深入排查问题。在分析状态时，可以使用各种监控工具，如pt-mysql-summary或MySQL Enterprise Monitor，以更方便地查看和理解MySQL的状态信息。</p> 
+<h3><a id="Mysql_132"></a>Mysql参数设置</h3> 
+<p>数据库属于IO密集型的应用程序，其主职责就是数据的管理及存储工作。而我们知道，从内存中读取一个数据库的时间是微秒级别，而从一块普通硬盘上读取一个 IO是在毫秒级别，二者相差3个数量级。所以，要优化数据库，首先第一步需要优化的就是IO，尽可能将磁盘IO转化为内存IO。</p> 
+<pre><code class="prism language-sql"><span class="token keyword">SELECT</span> version<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">// 版本：8.0.30</span>
+
+ <span class="token comment">// 索引块的缓冲区大小，增加它可得到更好处理的索引</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'key_buffer_size'</span><span class="token punctuation">;</span>  <span class="token comment">// 默认值：8M</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> key_buffer_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">64</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'max_allowed_packet'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：64M</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'table_open_cache'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：4000</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> table_open_cache<span class="token operator">=</span><span class="token number">16000</span>
+
+<span class="token comment">// sort_buffer_size是MySql执行排序使用的缓冲大小</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'sort_buffer_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：256KB</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> sort_buffer_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">16</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'net_buffer_length'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：16KB</span>
+
+ <span class="token comment">//read_buffer_size 是MySql读入缓冲区大小。</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'read_buffer_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：128KB</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> read_buffer_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">8</span>
+
+ <span class="token comment">// tmp_table_size是MySql的heap （堆积）表缓冲大小</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'tmp_table_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：16M</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> tmp_table_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">128</span>
+
+ <span class="token comment">// read_rnd_buffer_size 是MySql的随机读缓冲区大小</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'read_rnd_buffer_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：256KB</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> read_rnd_buffer_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">4</span>
+
+<span class="token comment">// thread_cache_size可以重新利用保存在缓存中线程的数量     </span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'thread_cache_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：8</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> thread_cache_size<span class="token operator">=</span><span class="token number">64</span>
+
+
+
+<span class="token comment">// MySql的最大连接数，如果服务器的并发连接请求量比较大，建议调高此值，以增加并行连接数量，</span>
+<span class="token comment">// 当然这建立在机器能支撑的情况下，因为如果连接数越多，介于MySql会为每个连接提供连接缓冲区，就会开销越多的内存</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'max_connections'</span><span class="token punctuation">;</span> <span class="token comment">// 最多连接数, 默认：151</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> max_connections<span class="token operator">=</span><span class="token number">5000</span><span class="token punctuation">;</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'max_connect_errors'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：100</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> max_connect_errors<span class="token operator">=</span><span class="token number">1000</span><span class="token punctuation">;</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'open_files_limit'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：1M</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'innodb_data_file_path'</span><span class="token punctuation">;</span>    
+
+<span class="token comment">// InnoDB</span>
+<span class="token comment">// 对InnoDB表性能影响最大的一个参数。InnoDB缓冲池用于缓存数据和索引，对于读取频繁的表，适当调整缓冲池大小可以显著提升性能。</span>
+将
+<span class="token comment">// innodb_buffer_pool_size设置为系统中Mysql可用内存的70%左右。这确保了大部分数据和索引都可以在内存中缓存，减少磁盘I/O操作。</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'innodb_buffer_pool_size'</span><span class="token punctuation">;</span> <span class="token comment">// 默认值：128M</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> innodb_buffer_pool_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">32</span> <span class="token comment">//32G</span>
+
+<span class="token comment">//InnoDB事务日志文件大小</span>
+ <span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'innodb_log_file_size'</span><span class="token punctuation">;</span>
+
+<span class="token comment">// InnoDB存储引擎的事务日志所使用的缓冲区</span>
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'innodb_log_buffer_size'</span><span class="token punctuation">;</span>  <span class="token comment">// 默认值：16M</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> innodb_log_buffer_size<span class="token operator">=</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">1024</span><span class="token operator">*</span><span class="token number">128</span>
+
+<span class="token keyword">show</span> <span class="token keyword">global</span> variables <span class="token operator">like</span> <span class="token string">'sync_binlog'</span><span class="token punctuation">;</span>
+
+<span class="token keyword">set</span> <span class="token keyword">global</span> sync_binlog<span class="token operator">=</span><span class="token number">1000</span>
+</code></pre> 
+<p>可根据自己服务器性能动态调整，但重启后会失效，最好同时修改my.cnf配置文件：</p> 
+<p>通过参数调优后的MySQL状态：<br> <img src="https://images2.imgbox.com/5e/38/mN0a95Mk_o.png" alt="在这里插入图片描述"></p> 
+<p>参数参考:</p> 
+<ul><li> <p><a href="https://www.cnblogs.com/angryprogrammer/p/6667741.html" rel="nofollow">MySQL性能优化之参数配置</a></p> </li><li> <p><a href="https://blog.csdn.net/LJFPHP/article/details/100751502">mysql配置参数调优</a></p> </li></ul> 
+<h2><a id="SQL_224"></a>方案二：SQL问题分析定位解决</h2> 
+<p>MySQL的查询分析是排查性能问题的关键步骤。通过检查慢查询日志和使用性能分析工具，我们可以找到潜在的性能瓶颈。</p> 
+<ol><li>启用慢查询日志<br> 首先，确保MySQL的慢查询日志功能已启用。在MySQL配置文件中添加以下配置：</li></ol> 
+<pre><code class="prism language-bash">slow_query_log <span class="token operator">=</span> <span class="token number">1</span>
+slow_query_log_file <span class="token operator">=</span> /usr/local/mysql/slowlog/slow-query.log
+long_query_time <span class="token operator">=</span> <span class="token number">1</span>
+</code></pre> 
+<p>slow_query_log 启用慢查询日志。<br> slow_query_log_file 设置慢查询日志文件路径。<br> long_query_time 定义慢查询的时间阈值（单位：秒），这里设置为1秒。</p> 
+<p>或者使用MySQL客户端：</p> 
+<pre><code class="prism language-sql"> 
+<span class="token comment">-- 启动慢查询日志</span>
+<span class="token keyword">set</span> <span class="token keyword">global</span> slow_query_log<span class="token operator">=</span><span class="token string">'ON'</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 设置慢查询存储文件地址</span>
+<span class="token keyword">set</span> <span class="token keyword">global</span> slow_query_log_file<span class="token operator">=</span><span class="token string">'/usr/local/mysql/slowlog/slow-query.log'</span><span class="token punctuation">;</span>
+ 
+<span class="token comment">-- 设置储存sql条件，sql 执行时间高于0.001秒存入日志文件</span>
+<span class="token keyword">set</span> <span class="token keyword">global</span> long_query_time<span class="token operator">=</span><span class="token number">0.001</span><span class="token punctuation">;</span>
+
+<span class="token comment">-- 开启 记录没有使用索引查询语句</span>
+<span class="token keyword">set</span> <span class="token keyword">global</span> log<span class="token operator">-</span>queries<span class="token operator">-</span><span class="token operator">not</span><span class="token operator">-</span><span class="token keyword">using</span><span class="token operator">-</span>indexes <span class="token operator">=</span> <span class="token keyword">on</span>
+</code></pre> 
+<ol start="2"><li>分析慢查询日志<br> 使用以下命令查看慢查询日志中的内容：</li></ol> 
+<pre><code class="prism language-bash"><span class="token function">tail</span> -f /usr/local/mysql/slowlog/slow-query.log
+</code></pre> 
+<p>或者使用MySQL客户端：</p> 
+<pre><code class="prism language-sql"><span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'slow_query_log'</span><span class="token punctuation">;</span>
+<span class="token keyword">SHOW</span> VARIABLES <span class="token operator">LIKE</span> <span class="token string">'slow_query_log_file'</span><span class="token punctuation">;</span>
+</code></pre> 
+<p>通过检查慢查询日志，识别执行时间长的查询。注意关注查询的执行计划，以便理解MySQL是如何处理这些查询的。</p> 
+<ol start="3"><li>使用慢查询分析工具<br> 使用工具如pt-query-digest来分析慢查询日志：</li></ol> 
+<pre><code class="prism language-bash">pt-query-digest /path/to/slow-query.log
+</code></pre> 
+<p>该工具能够生成详细的报告，包括执行时间最长的查询、查询频率、索引使用情况等信息。通过这些信息，您可以确定哪些查询需要优化，以提高其性能。</p> 
+<ol start="4"><li>Explain命令<br> 对于特定的查询，使用EXPLAIN命令来查看其执行计划：</li></ol> 
+<pre><code class="prism language-sql"><span class="token keyword">EXPLAIN</span> <span class="token keyword">SELECT</span> <span class="token operator">*</span> <span class="token keyword">FROM</span> your_table <span class="token keyword">WHERE</span> your_condition<span class="token punctuation">;</span>
+</code></pre> 
+<p>EXPLAIN命令将显示MySQL执行查询时的执行计划，包括使用的索引、访问表的方式等。通过分析执行计划，您可以了解查询的性能瓶颈，并进行相应的优化。</p> 
+<ol start="5"><li>优化查询<br> 根据慢查询日志和执行计划的分析结果，对性能较差的查询进行优化。可能的优化方式包括：</li></ol> 
+<ul><li>优化查询语句，避免全表扫描。</li><li>优化 SQL，降低 SQL 复杂度，降低 MySQL 执行成本。</li><li>确保查询涉及的列都有合适的索引。</li><li>考虑分表、分区表等策略，以减少单表的数据量。</li></ul> 
+<p>通过以上步骤，您将能够更好地理解哪些查询对系统性能有负面影响，并有针对性地进行优化，提高整体性能。</p> 
+<h2><a id="_297"></a>结论</h2> 
+<p>通过以上步骤，您应该能够定位和解决MySQL CPU使用率过高的问题。请注意，每个生产环境都是独特的，可能需要根据实际情况进行适当调整。保持监控和定期优化是确保MySQL性能稳定的关键。希望这篇文章对您解决MySQL性能问题提供了帮助。如果有任何问题或建议，请随时留言。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b9290098c111dd4d8e8383fe87643843/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">android APK安装提示“解析错误，解析软件包时出现问题” 解析</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b424ddeafcfd8796f024a24187df2e1a/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Qt WebEngine模块使用（开发环境安装和程序开发）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

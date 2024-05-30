@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>FPN和PAN的内容及区别（修改版1.2） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/9c0e078edc4f45acfb75ad8ec2eb5915/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="FPN和PAN的内容及区别（修改版1.2）">
+  <meta property="og:description" content="FPN和PAN都是用于解决在目标检测中特征金字塔网络(FPN)在多尺度检测任务上的不足的方法。下面分别详细介绍一下它们的原理和区别。 FPN FPN全称Feature Pyramid Network，是由FAIR在2017年提出的一种处理多尺度问题的方法。FPN的主要思路是通过构建金字塔式的特征图来提取不同尺度下的目标特征，进而提高检测精度。
+FPN的构建方式是从高分辨率的特征图开始向下采样，同时从低分辨率的特征图开始向上采样，将它们连接起来形成金字塔。在这个过程中，每一层特征图的信息都会与上下相邻层的特征图融合，这样可以使得高层特征图中的目标信息得以保留，同时低层特征图中的背景信息也可以被高层特征图所补充。经过这样的处理，FPN可以提高模型在多尺度检测任务上的精度，同时还可以在不影响检测速度的情况下提高检测 速度 精度。（原版有错误，此处进行修改）
+FPN的主要思想是在图像的不同层次上构建特征金字塔，以便能够捕获不同尺度的物体。
+FPN的核心是特征融合，其基本步骤如下：
+输入图像经过卷积神经网络，得到一系列特征图，每个特征图对应网络的一层。对于 较浅 较深 的特征图，进行上采样操作，使其尺寸与 较深 较浅 的特征图相同。这里的上采样可以使用插值等方法进行。（原版有错误，此处进行修改）将上采样后的 较浅 较深 特征图与 较深 较浅 特征图进行融合，这里采用的是加法操作。（原版有错误，此处进行修改）对融合后的特征图进行卷积，进一步融合信息。重复步骤2~4，直到所有特征图都进行了融合操作。最终得到的特征金字塔包含多个尺度的特征图，可用于物体检测和分割等任务。
+如上图中的d所示。 FPN的融合过程 在FPN中，浅层特征图和深层特征图的融合是通过上采样（up-sampling）和下采样（down-sampling）完成的。具体来说，FPN将深层特征图分解为一系列分辨率更低但语义更高的特征图，并将这些特征图与对应的上采样浅层特征图进行加和融合，最终得到多尺度的特征图。融合的具体过程如下：
+自下而上生成金字塔：FPN首先采用ResNet等网络作为骨干网络，自下而上生成一系列特征图，每个特征图的分辨率比上一层低，但语义更高。
+自上而下进行特征融合：FPN然后从自下而上生成的特征图序列的顶部（即 最高 最低 分辨率的特征图）开始，通过上采样将其分辨率加倍，然后将结果与该特征图序列中分辨率较低但语义更高的下一层特征图进行加和，从而获得一组新的特征图。FPN将该过程称为“特征上采样（feature up-sampling）”。（原版有错误，此处进行修改）
+横向连接进行特征融合：接下来，FPN将新生成的高分辨率特征图（上采样后的图）与 与之相对应的浅层特征图进行加和，从而生成新的特征图。这一过程称为“特征横向连接（feature lateral connection）”，可以有效地将低分辨率特征图中的语义信息传递到高分辨率特征图中。
+重复步骤2和3：FPN在步骤2和3中重复使用相同的操作，从而生成多尺度特征图金字塔。在该金字塔中，每个特征图都与不同分辨率的输入图像区域相对应，这使得FPN可以同时对不同尺度的目标进行检测。
+总体来说，FPN通过上下采样和横向连接操作实现了浅层和深层特征图的融合，从而提高了检测器对不同尺度目标的检测能力。与PAN不同，FPN使用了上采样操作，这使得FPN生成的特征图具有更高的分辨率，从而能够更好地保留目标的细节信息。
+FPN的优点在于能够自然地融合不同尺度的特征图，提高目标检测和分割的准确性。FPN的缺点在于计算量较大，需要耗费较长时间进行训练和推断。
+PAN PAN全称Path Aggregation Network，是由Megvii在2018年提出的一种处理多尺度问题的方法。
+PAN（Path Aggregation Network）是一个用于图像语义分割的深度神经网络架构。PAN的主要思路是通过聚合来自不同层级的特征图，使得每个特征图中的信息都可以被充分利用，从而提高检测精度。与FPN类似，PAN也是一种金字塔式的特征提取网络，但是它采用的是自下而上的特征传播方式。
+PAN的构建方式是从低分辨率的特征图开始向上采样，同时从高分辨率的特征图开始向下采样，将它们连接起来形成一条路径。在这个过程中，每一层特征图的信息都会与上下相邻层的特征图融合，但与FPN不同的是，PAN会将不同层级的特征图融合后的结果进行 加和 级联 ，而不是 级联 加和。这样可以避免在 级联 加和 过程中信息的损失，同时还可以保留更多的细节信息，从而提高检测精度。（原版有错误，此处进行修改）
+在PAN中，网络的主干部分通常采用ResNet等常用的卷积神经网络结构。在主干网络的后半部分，PAN引入了一个自下而上的侧边分支，用于将低分辨率的特征图传递到高分辨率的层中。这个侧边分支与主干网络是平行的，由一系列卷积和上采样（即反卷积）操作组成，从而将低分辨率的特征图上采样到与高分辨率的特征图相同的分辨率。
+在将不同分辨率的特征图进行融合时，PAN采用了一种类似于FPN的方法，但稍有不同。具体而言，PAN中首先将低分辨率的特征图进行上采样，然后将其与高分辨率的特征图进行拼接，得到一个更加丰富的特征图。接着，对这个特征图进行卷积操作，以得到最终的特征表示。
+与FPN相比，PAN中自下而上的特征传播方式更为高效，可以在更少的计算资源下实现更好的语义分割效果。同时，PAN中的特征融合方式也具有一定的优势，能够更好地保留低分辨率特征图中的细节信息，从而提高分割的准确性。
+如图所示，b区域是PAN多出的一条自底向上的路径。
+区别 FPN和PAN的主要区别在于特征融合方式不同，而且PAN比FPN多了一条自底向上的路径。FPN采用 级联 加和 的方式进行特征融合，会在融合过程中丢失一部分细节信息，因此对于需要高精度检测的场景，可能表现不如PAN。而PAN采用 加和 级联 的方式进行特征融合，可以保留更多的细节信息，但同时也会增加计算量。
+参考及图片来自 版权声明：本文为博主原创文章，遵循 CC 4.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-07T15:50:33+08:00">
+    <meta property="article:modified_time" content="2024-03-07T15:50:33+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">FPN和PAN的内容及区别（修改版1.2）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <br>   FPN和PAN都是用于解决在目标检测中特征金字塔网络(FPN)在多尺度检测任务上的不足的方法。下面分别详细介绍一下它们的原理和区别。 
+<h3><a id="FPN_3"></a>FPN</h3> 
+<p>  FPN全称Feature Pyramid Network，是由FAIR在2017年提出的一种处理多尺度问题的方法。FPN的主要思路是通过构建金字塔式的特征图来提取不同尺度下的目标特征，进而提高检测精度。<br>   FPN的构建方式是从高分辨率的特征图开始向下采样，同时从低分辨率的特征图开始向上采样，将它们连接起来形成金字塔。在这个过程中，每一层特征图的信息都会与上下相邻层的特征图融合，这样可以使得高层特征图中的目标信息得以保留，同时低层特征图中的背景信息也可以被高层特征图所补充。经过这样的处理，FPN可以提高模型在多尺度检测任务上的精度，同时还可以在不影响检测速度的情况下提高检测 <s>速度</s> <strong>精度</strong>。（原版有错误，此处进行修改）</p> 
+<p>  FPN的主要思想是在图像的不同层次上构建特征金字塔，以便能够捕获不同尺度的物体。</p> 
+<p>  FPN的核心是特征融合，其基本步骤如下：</p> 
+<ol><li>输入图像经过卷积神经网络，得到一系列特征图，每个特征图对应网络的一层。</li><li>对于 <s>较浅</s> <strong>较深</strong> 的特征图，进行上采样操作，使其尺寸与 <s>较深</s> <strong>较浅</strong> 的特征图相同。这里的上采样可以使用插值等方法进行。（原版有错误，此处进行修改）</li><li>将上采样后的 <s>较浅</s> <strong>较深</strong> 特征图与 <s>较深</s> <strong>较浅</strong> 特征图进行融合，这里采用的是加法操作。（原版有错误，此处进行修改）</li><li>对融合后的特征图进行卷积，进一步融合信息。</li><li>重复步骤2~4，直到所有特征图都进行了融合操作。最终得到的特征金字塔包含多个尺度的特征图，可用于物体检测和分割等任务。<br> <img src="https://images2.imgbox.com/9e/c3/v0nBOq3z_o.png" alt="在这里插入图片描述"><br> 如上图中的d所示。</li></ol> 
+<h4><a id="FPN_18"></a>FPN的融合过程</h4> 
+<p>  在FPN中，浅层特征图和深层特征图的融合是通过上采样（up-sampling）和下采样（down-sampling）完成的。具体来说，FPN将深层特征图分解为一系列分辨率更低但语义更高的特征图，并将这些特征图与对应的上采样浅层特征图进行加和融合，最终得到多尺度的特征图。融合的具体过程如下：</p> 
+<ol><li> <p>自下而上生成金字塔：FPN首先采用ResNet等网络作为骨干网络，自下而上生成一系列特征图，每个特征图的分辨率比上一层低，但语义更高。</p> </li><li> <p>自上而下进行特征融合：FPN然后从自下而上生成的特征图序列的顶部（即 <s>最高</s> <strong>最低</strong> 分辨率的特征图）开始，通过上采样将其分辨率加倍，然后将结果与该特征图序列中分辨率较低但语义更高的下一层特征图进行加和，从而获得一组新的特征图。FPN将该过程称为“特征上采样（feature up-sampling）”。（原版有错误，此处进行修改）</p> </li><li> <p>横向连接进行特征融合：接下来，FPN将新生成的高分辨率特征图（上采样后的图）与 与之相对应的浅层特征图进行加和，从而生成新的特征图。这一过程称为“特征横向连接（feature lateral connection）”，可以有效地将低分辨率特征图中的语义信息传递到高分辨率特征图中。</p> </li><li> <p>重复步骤2和3：FPN在步骤2和3中重复使用相同的操作，从而生成多尺度特征图金字塔。在该金字塔中，每个特征图都与不同分辨率的输入图像区域相对应，这使得FPN可以同时对不同尺度的目标进行检测。</p> </li></ol> 
+<p>  总体来说，FPN通过上下采样和横向连接操作实现了浅层和深层特征图的融合，从而提高了检测器对不同尺度目标的检测能力。与PAN不同，FPN使用了上采样操作，这使得FPN生成的特征图具有更高的分辨率，从而能够更好地保留目标的细节信息。<br>   FPN的优点在于能够自然地融合不同尺度的特征图，提高目标检测和分割的准确性。FPN的缺点在于计算量较大，需要耗费较长时间进行训练和推断。</p> 
+<h3><a id="PAN_34"></a>PAN</h3> 
+<p>  PAN全称Path Aggregation Network，是由Megvii在2018年提出的一种处理多尺度问题的方法。</p> 
+<p>  PAN（Path Aggregation Network）是一个用于图像语义分割的深度神经网络架构。PAN的主要思路是通过聚合来自不同层级的特征图，使得每个特征图中的信息都可以被充分利用，从而提高检测精度。与FPN类似，PAN也是一种金字塔式的特征提取网络，但是它采用的是自下而上的特征传播方式。<br>   PAN的构建方式是从低分辨率的特征图开始向上采样，同时从高分辨率的特征图开始向下采样，将它们连接起来形成一条路径。在这个过程中，每一层特征图的信息都会与上下相邻层的特征图融合，但与FPN不同的是，PAN会将不同层级的特征图融合后的结果进行 <s>加和</s> 级联 ，而不是 <s>级联</s> 加和。<strong>这样可以避免在 <em><s>级联</s></em> 加和 过程中信息的损失，同时还可以保留更多的细节信息，从而提高检测精度。</strong>（原版有错误，此处进行修改）<br>   在PAN中，网络的主干部分通常采用ResNet等常用的卷积神经网络结构。在主干网络的后半部分，PAN引入了一个自下而上的侧边分支，用于将低分辨率的特征图传递到高分辨率的层中。这个侧边分支与主干网络是平行的，由一系列卷积和上采样（即反卷积）操作组成，从而将低分辨率的特征图上采样到与高分辨率的特征图相同的分辨率。</p> 
+<p>  在将不同分辨率的特征图进行融合时，PAN采用了一种类似于FPN的方法，但稍有不同。具体而言，PAN中首先将低分辨率的特征图进行上采样，然后将其与高分辨率的特征图进行拼接，得到一个更加丰富的特征图。接着，对这个特征图进行卷积操作，以得到最终的特征表示。</p> 
+<p>  与FPN相比，PAN中自下而上的特征传播方式更为高效，可以在更少的计算资源下实现更好的语义分割效果。同时，PAN中的特征融合方式也具有一定的优势，能够更好地保留低分辨率特征图中的细节信息，从而提高分割的准确性。<br> <img src="https://images2.imgbox.com/94/56/PujqiQLL_o.png" alt="在这里插入图片描述"><br> 如图所示，b区域是PAN多出的一条自底向上的路径。</p> 
+<h3><a id="_47"></a>区别</h3> 
+<p><img src="https://images2.imgbox.com/5f/26/aGLZW738_o.png" alt="在这里插入图片描述"></p> 
+<p>  FPN和PAN的主要区别在于特征融合方式不同，而且PAN比FPN多了一条自底向上的路径。FPN采用 <s>级联</s> <strong>加和</strong> 的方式进行特征融合，会在融合过程中丢失一部分细节信息，因此对于需要高精度检测的场景，可能表现不如PAN。而PAN采用 <s>加和</s> <strong>级联</strong> 的方式进行特征融合，可以保留更多的细节信息，但同时也会增加计算量。</p> 
+<h3><a id="_52"></a>参考及图片来自</h3> 
+<p>版权声明：本文为博主原创文章，遵循 CC 4.0 BY-SA 版权协议，转载请附上原文出处链接和本声明。<br> 本文链接：https://blog.csdn.net/flyfish1986/article/details/110520667<br> ————————————————<br> 版权声明：本文为CSDN博主「西西弗Sisyphus」的原创文章，遵循CC 4.0 BY-SA版权协议，转载请附上原文出处链接及本声明。<br> 原文链接：https://blog.csdn.net/flyfish1986/article/details/110520667</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/2450dc5d7e7e7c11093f31d6abcdca1e/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">小狗伪原创在哪，小狗AI仿写智能写作词典</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0e2899df765517d6e7319dbebf623a4e/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Kali——密码攻击——Hashcat工具使用</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android OTA 升级入门篇 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e5a6c2ec14c7bb0dabcade5bc692b314/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android OTA 升级入门篇">
+  <meta property="og:description" content="简介 第一次接手FOTA ,记录下app 端的实现过程，和一些基本概念，不对的地方，还望指正．
+Android FOTA 广义是Android 实现设备系统无线升级的全部过程和手段。如果一个设备无线升级的系统是完备的话,则一个FOTA过程主要包含以下工作:
+1. 制作FOTA升级包:升级包一种可供设备实现系统更新升级的一个压缩包文件,解压缩后本质是各种img文件、被执行文件和一些配置信息等。Android升级时
+会有对应的程序解析这个文件。
+2. 测试FOTA升级包:在发布这个版本之后,需要测试设备是否可以进行无线升级,是否会出现问题。
+3. 发布升级包:将FOTA升级包发给客户或者上传客户服务器
+其实和app 升级是一个道理，下载－安装－重启生效
+升级 google 已经为我们集成了升级方式，AB 升级和Recovery 升级，相对来说recovery 会进入系统recovery mode ,影响用户使用，而AB 升级是无感升级，两个slot 重启切换，不影响用户使用，体验更好.
+目前android 11 默认是开启　virtural AB，对于上层来说其实没啥区别，都是调用updata_engine就可以了，参考了一部分文章，两者主要是super 分区的差异
+bootloader_a
+bootloader_b
+boot_a
+boot_b
+vendor_boot_a
+vendor_boot_b
+dtbo_a
+dtbo_b
+vbmeta_a
+vbmeta_b
+super
+virtualAB 通过快照方式写入 super 分区，只保留一份 system
+product
+vendor
+AB　传统分区，两个slot
+system_a
+product_a
+vendor_a
+system_b
+product_b
+vendor_b
+app 实现 第一次接触的，可以参考packages/apps/Car/SystemUpdater　android 系统为我们提供的demo
+好了直接上代码,我把安装流程集成到service 里面．actvity 等要是想要进度条，实现 ResultReceiver，传递过来就可以了
+/** 安装软件的服务 */ public class InstallService extends IntentService { private static final String TAG = &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-11-18T09:46:48+08:00">
+    <meta property="article:modified_time" content="2023-11-18T09:46:48+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android OTA 升级入门篇</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <h2>简介</h2> 
+<p>第一次接手FOTA ,记录下app 端的实现过程，和一些基本概念，不对的地方，还望指正．</p> 
+<p></p> 
+<p style="margin-left:.0001pt;text-align:justify;">Android FOTA 广义是Android 实现设备系统无线升级的全部过程和手段。如果一个设备无线升级的系统是完备的话,则一个FOTA过程主要包含以下工作:</p> 
+<p style="margin-left:.0001pt;text-align:justify;">1. 制作FOTA升级包:升级包一种可供设备实现系统更新升级的一个压缩包文件,解压缩后本质是各种img文件、被执行文件和一些配置信息等。Android升级时</p> 
+<p style="margin-left:.0001pt;text-align:justify;">会有对应的程序解析这个文件。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">2. 测试FOTA升级包:在发布这个版本之后,需要测试设备是否可以进行无线升级,是否会出现问题。</p> 
+<p style="margin-left:.0001pt;text-align:justify;">3. 发布升级包:将FOTA升级包发给客户或者上传客户服务器</p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<p style="margin-left:.0001pt;text-align:justify;"><span style="color:#fe2c24;"><strong>其实和app 升级是一个道理，下载－安装－重启生效</strong></span></p> 
+<p style="margin-left:.0001pt;text-align:justify;"></p> 
+<h2 style="margin-left:.0001pt;text-align:justify;"><span style="color:#0d0016;">升级</span></h2> 
+<p>google 已经为我们集成了升级方式，AB 升级和Recovery 升级，相对来说recovery 会进入系统recovery mode ,影响用户使用，而AB 升级是无感升级，两个slot 重启切换，不影响用户使用，体验更好.</p> 
+<p>目前android 11 默认是开启　virtural AB，对于上层来说其实没啥区别，都是调用updata_engine就可以了，参考了一部分文章，两者主要是super 分区的差异</p> 
+<table border="1" cellspacing="0" style="margin-left:6.75pt;"><tbody><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">bootloader_a</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">bootloader_b</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">boot_a</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">boot_b</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">vendor_boot_a</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">vendor_boot_b</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">dtbo_a</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">dtbo_b</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">vbmeta_a</span></p> </td></tr><tr><td style="background-color:#fabf8f;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">vbmeta_b</span></p> </td></tr><tr><td style="background-color:#ff0000;width:92.05pt;"> <p style="margin-left:.0001pt;text-align:center;"><span style="color:#000000;">super</span></p> </td></tr></tbody></table> 
+<p style="margin-left:.0001pt;text-align:justify;">virtualAB        通过快照方式写入 super 分区，只保留一份                         </p> 
+<table border="1" cellspacing="0" style="margin-left:6.75pt;"><tbody><tr><td style="background-color:#8db3e2;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:center;">system</p> </td><td style="background-color:#8db3e2;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:center;">product</p> </td><td style="background-color:#8db3e2;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:center;">vendor</p> </td></tr></tbody></table> 
+<p>   AB　传统分区，两个slot</p> 
+<table border="1" cellspacing="0" style="margin-left:6.75pt;"><tbody><tr><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">system_a</p> </td><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">product_a</p> </td><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">vendor_a</p> </td></tr><tr><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">system_b</p> </td><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">product_b</p> </td><td style="background-color:#95b3d7;width:64.8pt;"> <p style="margin-left:.0001pt;text-align:justify;">vendor_b</p> </td></tr></tbody></table> 
+<p></p> 
+<h2>app 实现</h2> 
+<p>第一次接触的，可以参考packages/apps/Car/SystemUpdater　android 系统为我们提供的demo</p> 
+<p></p> 
+<p>好了直接上代码,我把安装流程集成到service 里面．actvity 等要是想要进度条，实现 ResultReceiver，传递过来就可以了</p> 
+<pre><code class="language-java">
+/**
+    安装软件的服务
+ */
+public class InstallService extends IntentService {
+
+    private static final String TAG = "InstallService";
+    private final UpdateEngine mUpdateEngine = new UpdateEngine();
+    private final SimUpdateEngineCallback mSimUpdateEngineCallback = new SimUpdateEngineCallback();
+    public static final String EXTRA_PARAM_RESULT_RECEIVER = "result-receiver";
+
+
+    public InstallService() {
+        super("InstallService");
+    }
+
+    WeakReference&lt;ResultReceiver&gt; resultCallbackWeak;
+    @Override
+    protected void onHandleIntent(Intent intent) {
+        Log.d(TAG, "On handle intent is called");
+        spec = new PayloadSpec();
+        ResultReceiver resultCallback = (ResultReceiver)intent.getParcelableExtra(EXTRA_PARAM_RESULT_RECEIVER);
+        this.resultCallbackWeak = new WeakReference&lt;ResultReceiver&gt;(resultCallback);
+        Log.d(TAG, "resultCallback = "+resultCallback);
+        File otaFile = new File(CommonUtils.INSTALL_PATH);
+        if(otaFile.exists()){
+            execute(otaFile);
+        }
+    }
+
+    PayloadSpec spec;
+
+    @Override
+    public void onCreate() {
+        super.onCreate();
+    }
+
+    @Override
+    public void onStart(Intent intent, int startId) {
+        super.onStart(intent, startId);
+    }
+
+
+
+    @Override
+    public android.os.IBinder onBind(Intent intent) {
+        return null;
+    }
+
+
+    android.os.Handler mHandler = new android.os.Handler() {
+        @Override
+        public void handleMessage(android.os.Message msg) {
+
+        }
+    };
+
+    /**
+     * Starts InstallService.
+     *
+     * @param context        application context
+     * @param resultCallback callback that will be called when the update is ready to be installed
+     */
+    public static void startService(Context context,
+            ResultReceiver resultCallback) {
+        Log.d(TAG, "Starting InstallService");
+        Intent intent = new Intent(context, InstallService.class);
+        intent.putExtra(EXTRA_PARAM_RESULT_RECEIVER, resultCallback);
+        context.startService(intent);
+    }
+
+
+    private void  execute(File file){
+        // Preconditions.checkArgument(files.length &gt; 0, "No file specified");
+        try {
+            UpdateParser.ParsedUpdate result = UpdateParser.parse(file);   
+            if (result == null) {
+                spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                spec.description = "Failed verification";
+                Log.e(TAG, String.format("Failed verification"));
+                updateResult(spec);
+                return;
+            }
+            if (!result.isValid()) {
+                spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                spec.description = "file invalid";
+                Log.e(TAG, String.format("Failed verification %s", result));
+                updateResult(spec);
+                return;
+            }
+            if (Log.isLoggable(TAG, Log.INFO)) {
+                Log.i(TAG, result.toString());
+            }
+            mUpdateEngine.bind(mSimUpdateEngineCallback, handler);
+            mUpdateEngine.applyPayload(
+                result.mUrl, result.mOffset, result.mSize, result.mProps);
+
+        } catch (IOException e) {
+            Log.e(TAG, String.format("For file %s", file), e);
+            spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+            spec.description = "IOException";
+            updateResult(spec);
+        }
+
+
+    }
+ 
+    /** Handles events from the UpdateEngine. */
+    public class SimUpdateEngineCallback extends UpdateEngineCallback {
+
+        @Override
+        public void onStatusUpdate(int status, float percent) {
+            Log.d(TAG, String.format("onStatusUpdate %d, Percent %.2f", status, percent));
+            switch (status) {
+                case UpdateEngine.UpdateStatusConstants.IDLE:
+                    //todo ,Update status code: update engine is in idle state.
+                     break;
+                case UpdateEngine.UpdateStatusConstants.CHECKING_FOR_UPDATE:
+                    //todo ,Update status code: update engine is checking for update.
+                     break;
+                case 11:
+                    //todo ,i do not know why
+                     break;
+                case UpdateEngine.UpdateStatusConstants.UPDATE_AVAILABLE:
+                    //todo ,Update status code: an update is available.
+                     break;
+                case UpdateEngine.UpdateStatusConstants.DOWNLOADING:
+                    Log.d(TAG, "UpdateEngine.UpdateStatusConstants.DOWNLOADING progress = "+percent);
+                    int progress = (int) (percent * 100);
+                    spec.resultCode = MessageContant.FOTA_UPDATE_PROGRESS;
+                    spec.progress = progress;
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.UpdateStatusConstants.VERIFYING:
+                    //todo ,Update status code: update engine is verifying an update.
+                     break;    
+                case UpdateEngine.UpdateStatusConstants.FINALIZING :
+                    //todo Update status code: update engine is finalizing an update.
+                    break;
+                case UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT:
+                    spec.resultCode = MessageContant.FOTA_FINISH_REBOOT;
+                    spec.description = "更新成功";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.UpdateStatusConstants.REPORTING_ERROR_EVENT:
+                    //出错
+                    // spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    // spec.description = "系统更新失败";
+                    // updateResult(spec);
+                    break;
+                case UpdateEngine.UpdateStatusConstants.ATTEMPTING_ROLLBACK:
+                    //系统回滚
+                    // spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    // spec.description = "系统更新失败";
+                    // updateResult(spec);
+                    break;
+                case UpdateEngine.UpdateStatusConstants.DISABLED:
+                    //update engine disable
+                    break;
+            
+                default:
+                    // spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    // spec.description = "系统更新失败";
+                    // updateResult(spec);
+                    break;
+                    // noop
+            }
+        }
+
+
+        @Override
+        public void onPayloadApplicationComplete(int errorCode) {
+            Log.w(TAG, String.format("ErrorCodeConstants　onPayloadApplicationComplete %d", errorCode));
+            mUpdateEngine.unbind();
+            switch(errorCode){
+                case UpdateEngine.ErrorCodeConstants.SUCCESS:
+                    //todo 升级成功
+                    break;
+                case UpdateEngine.ErrorCodeConstants.ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "ERROR";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.NOT_ENOUGH_SPACE:
+                    spec.resultCode = MessageContant.FOTA_NOT_ENOUGH_SPACE;
+                    spec.description = "存储空间不足";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.PAYLOAD_TIMESTAMP_ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "时间戳不对";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.PAYLOAD_HASH_MISMATCH_ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "hash值不对";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.PAYLOAD_SIZE_MISMATCH_ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "大小不对";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.DOWNLOAD_PAYLOAD_VERIFICATION_ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "签名不对";
+                    updateResult(spec);
+                    break;
+                case UpdateEngine.ErrorCodeConstants.PAYLOAD_MISMATCHED_TYPE_ERROR:
+                    spec.resultCode = MessageContant.FOTA_FILE_INVAlID;
+                    spec.description = "类型不匹配";
+                    updateResult(spec);
+                    break;
+                
+                default:
+                    //升级失败
+                    spec.resultCode = MessageContant.FOTA_UPGRADE_FAIL;
+                    spec.description = "系统更新失败";
+                    updateResult(spec);
+                    break;
+
+            }
+        }
+    }
+
+    private Handler handler=new Handler(){
+        @Override
+        public void handleMessage(Message msg) {
+            // switch (msg.what){
+            //     case MessageContant.FOTA_START_UPDATE:
+            //         Log.e(TAG,"FOTA_START_UPDATE");
+            //         break;
+            //     case MessageContant.FOTA_UPDATE_PROGRESS:
+            //         Log.e(TAG,"FOTA_UPDATE_PROGRESS");
+            //         //通过 msg.obj 获取 ProgressBar 的进度，然后显示进度值
+            //         int process = (int) msg.obj;
+            //         break;
+            // }
+            super.handleMessage(msg);
+        }
+    };
+
+    Bundle resultData = new Bundle();
+
+    /**
+        return to UI
+     */
+    private void updateResult(PayloadSpec spec){
+        //非法安装包，则统一删除
+        if(spec.description != null){
+            Log.e(TAG, "spec.description = "+spec.description);
+        }
+        if(spec.resultCode == MessageContant.FOTA_FILE_INVAlID){
+                Log.e(TAG, "parse file error");
+                UpdateUtil.showUpdateResult(getApplicationContext());
+                SharedPreferences sp = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+                SharedPreferences.Editor pEdits = sp.edit();
+                pEdits.putInt ("INSTALL",0);
+                pEdits.putInt ("DOWNLOADING",0);
+                pEdits.commit();
+        }
+        if(null != resultCallbackWeak.get()){
+            Log.i(TAG,"updateResult");
+            resultData.putSerializable("result",spec);
+            resultCallbackWeak.get().send(0, resultData);
+        }
+    }
+
+
+}
+</code></pre> 
+<p>PayloadSpec.java</p> 
+<pre><code class="language-java">public class PayloadSpec implements Serializable {
+
+    private static final long serialVersionUID = 41043L;
+
+    /**
+        返回结果码
+     */
+    public int resultCode;
+    /**
+        描述
+     */
+    public String description;
+    /**
+        进度条
+     */
+    public int progress;
+
+}</code></pre> 
+<h3></h3> 
+<p>只需调用</p> 
+<p>/**</p> 
+<p>mResultReceiver 为ResultReceiver　实例</p> 
+<p>*/</p> 
+<p>InstallService.startService(mContext,mResultReceiver);</p> 
+<p>我们主要关注几个状态码</p> 
+<p> case UpdateEngine.UpdateStatusConstants.UPDATED_NEED_REBOOT:</p> 
+<p>升级成功，提示您是否重启<br> public void onPayloadApplicationComplete(int errorCode) <br> 中的      </p> 
+<p>case UpdateEngine.ErrorCodeConstants.SUCCESS:<br> 提示升级完成，</p> 
+<p>升级失败的，主要监听这里面的，这个是最终状态．             </p> 
+<p></p> 
+<h2>OTA 包</h2> 
+<h3>整包升级</h3> 
+<p>  make otapackage</p> 
+<p>out/target/product/(device)/(device)ota-eng.xss.zip</p> 
+<p>编译出整包，优点是只保留最新版本就可以了，缺点是下载包太大．</p> 
+<h3>差分包</h3> 
+<p>差分包顾名思义，就是两个版本的差异，通过以下命令．<br><span style="color:#fe2c24;"><strong>./build/make/tools/releasetools/ota_from_target_files.py -v -p</strong></span> ./out/host/linux-x86/ -i old-target-files.zip new-target-files.zip 　fota.zip</p> 
+<p>old-target-files.zip</p> 
+<p>new-target-files.zip 这两个target 包，整编后位置在out/disk 下面</p> 
+<p>或者out/target/product/(device)/obj/PACKAGING/target_files_intermediates</p> 
+<p></p> 
+<p>差分包升级缺点是每次都得备份target 包，优点是差分包比较小，节约流量；</p> 
+<h3>命令升级</h3> 
+<p>为了验证差分包是否ok, 可以先通过命令升级，看看是否ok.</p> 
+<p>制作完差分包后　adb shell ，输入下面命令</p> 
+<p>update_engine_client --payload=f<span style="color:#fe2c24;">ile:///sdcard/payload.bin </span>--update --headers="<br> FILE_HASH=<span style="color:#fe2c24;">osa/esLUKk6WPwoZkIehvz4JB/PVO7j15DEBaHKhr/s=</span><br> FILE_SIZE=<span style="color:#fe2c24;">192242848</span><br> METADATA_HASH=<span style="color:#fe2c24;">pdqbMcHlZpKSPll7XRMUz8wN/demqmgRy3fOIiPpQ50=</span><br> METADATA_SIZE=<span style="color:#fe2c24;">95795</span>"</p> 
+<p>注意换行，标注红色部分的，需要手动修改对应差分包里面的信息，解压差分包得到下面信息</p> 
+<p><img alt="" height="177" src="https://images2.imgbox.com/df/85/PGkm3lUi_o.png" width="1200"></p> 
+<p>打开payload_properties.txt　就能看到上面需要的参数信息了，对应填上就可以了，</p> 
+<p><img alt="" height="116" src="https://images2.imgbox.com/e7/07/UGoJW2JL_o.png" width="844"></p> 
+<p>注意把payload.bin　push 到设置升级的位置，我这边选择的是f<span style="color:#fe2c24;">ile:///sdcard/payload.bin </span></p> 
+<p></p> 
+<h2>错误分析</h2> 
+<p>１，针对http 下载的文件，一定要主要文件权限问题，我这边下载到/data/ota_package/ 后发现文件权限变成，-rw-------  1 system system ,这样升级就会遇到权限问题，其他分组的就没有读写权限．</p> 
+<p>修改方式：修改下载文件的权限，注意一点要下载之前，就修改，下载后修改就不行了．</p> 
+<pre><code class="language-java">public static void changemode(File destFile){
+        try{
+            if(!destFile.exists()){
+                destFile.createNewFile();
+            }
+            /* file.createNewFile();*/
+            destFile.setWritable(Boolean.TRUE);
+            destFile.setReadable (Boolean.TRUE);
+            String command = "chmod 666 " + destFile.getAbsolutePath();
+            Log.i(TAG, "command = " + command);
+            Runtime runtime = Runtime.getRuntime(); 
+            Process proc = runtime.exec(command);
+        } catch (IOException e) {
+            Log.i(TAG,"chmod fail!!!!");
+            e.printStackTrace();
+        }
+    }</code></pre> 
+<h3></h3> 
+<p>２，刚开始升级会抛出状态码</p> 
+<p>onStatusUpdate</p> 
+<p><span style="color:#fe2c24;"><strong>2  11  3</strong></span></p> 
+<p>其中11 ，我查了值是大小不匹配，我以为是异常情况，认为安装包不对，直接删除了，导致后面更新进行不下去了，莫名其妙</p> 
+<p>所以onStatusUpdate　　中的状态码，我们主要关注reboot 的，即可，</p> 
+<p>onPayloadApplicationComplete　中返回的，才是真正是否升级成功状态．</p> 
+<p></p> 
+<p><span style="color:#fe2c24;"><strong>参考system/update_engine/common/error_code.h 中状态码</strong></span></p> 
+<p></p> 
+<h3></h3> 
+<h3>　</h3> 
+<p></p> 
+<h2>注意事项</h2> 
+<p>１，android 默认升级文件是放在/data/ota_package/,建议保留，但是data 分区随着时间的推移，空间可能不够了，所以，也可以创建一个单独的分区放升级文件 eg:/fota/</p> 
+<p>２，测试的时候一定要把selinux 关掉，adb shell setenforce 0,可以专注升级流程是否ok,最后通过dmesg ,把权限都加上．</p> 
+<p></p> 
+<p></p> 
+<p></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/b3571b1e04de0166bcc4b36b4a8038d8/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">SQL-多表查询-联合查询 union, union all</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/ebdfec8c871d8f3a8224749e93165e91/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【WebSocket项目实战】聊天室（前端vue3、后端spring框架）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

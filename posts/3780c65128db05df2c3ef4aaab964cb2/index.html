@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>一文速学-XGBoost模型算法原理以及实现&#43;Python项目实战 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3780c65128db05df2c3ef4aaab964cb2/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="一文速学-XGBoost模型算法原理以及实现&#43;Python项目实战">
+  <meta property="og:description" content="目录
+前言
+一、XGBoost模型概述
+1.发展历史
+2.算法改进之处
+1.损失函数
+2.分裂点选择
+3.剪枝策略
+4.正则化
+5.学习率
+6.提前停止
+二、XGBoost算法原理
+1.初始化构造目标函数
+2.目标函数变换
+变换优势总结
+3.将树引入目标函数
+4.构建最优树(贪心算法)
+三、XGBoost实战-贷款违约预测模型
+1.数据背景及描述
+字段表
+2.数据质量校验
+查看重复值：
+缺失值统计
+异常值分析-MAD异常值识别法：
+3.特征类别处理
+1.grade
+2.subGrade
+4.XGBoost模型训练
+1.xgboost.get_config()
+2.树的最大深度以及最小叶子节点样本权重
+3.gamma
+4.subsample 和 colsample_bytree
+5.正则项
+6.学习速率
+前言 集成模型Boosting补完计划第三期了，之前我们已经详细描述了AdaBoost算法模型和GBDT原理以及实践。通过这两类算法就可以明白Boosting算法的核心思想以及基本的运行计算框架，余下几种Boosting算法都是在前者的算法之上改良得到，尤其是以GBDT算法为基础改进衍生出的三种Boosting算法：XGBoost、LightGBM、CatBoost。大家应该都对XGBoost算法模型熟悉但是对GBDT模型一无所知，看过之前GBDT的读者应该对GBDT模型有了一个很清楚的认知，对于理解XGBoost算法有一定的基础。
+XGBoost在各种数据挖掘、预测和分类任务中取得了极高的准确率和性能。是目前应用最广泛的机器学习算法之一。可以说，XGBoost的快速发展和广泛应用，推动了机器学习算法的进一步发展和优化，为人工智能技术的普及和应用打下了坚实的基础。那么此篇文章我将尽力让大家了解并熟悉XGBoost模型算法框架，保证能够理解通畅以及推演顺利的条件之下，尽量不使用过多的数学公式和专业理论知识。以一篇文章快速了解并实现该算法，以效率最高的方式熟练使用此方法。
+博主专注建模四年，参与过大大小小数十来次数学建模，理解各类模型原理以及每种模型的建模流程和各类题目分析方法。此专栏的目的就是为了让零基础快速使用各类数学模型以及代码，每一篇文章都包含实战项目以及可运行代码。博主紧跟各类数模比赛，每场数模竞赛博主都会将最新的思路和代码写进此专栏以及详细思路和完全代码。希望有需求的小伙伴不要错过笔者精心打造的专栏。
+以下是整篇文章内容。
+一、XGBoost模型概述 1.发展历史 2014年：XGBoost由陈天奇在《XGBoost: A Scalable Tree Boosting System》一文中首次提出。
+2015年：XGBoost在Kaggle竞赛中大放异彩，成为数据科学家和机器学习工程师的首选算法之一。
+2016年：XGBoost发布了C&#43;&#43;和Python两个版本，支持更多的特征工程和模型调优功能，极大地提高了算法的效率和可扩展性。
+2017年：XGBoost获得了KDD Cup 2017竞赛中的多个奖项，并且成为Spark MLlib中的重要组件。
+2018年：XGBoost在Microsoft Azure ML Studio中被引入，成为Azure Machine Learning的核心组件之一。
+2019年：XGBoost发布了GPU版本，可以在GPU上加速模型训练和预测，大大提高了算法的计算速度。
+2020年：XGBoost被应用在各种领域，如金融、医疗、自然语言处理和图像识别等，成为机器学习领域的一个重要里程碑。
+这里通过简述的发展史可以得到我们可以通过python调用此算法，而且也可以通过调用GPU提高了算法的计算速度。由此可见XGBoost算法的受欢迎程度。
+2.算法改进之处 XGBoost是一种基于梯度提升决策树（Gradient Boosting Decision Tree，GBDT）的机器学习算法，旨在优化和加速GBDT的训练过程，并提高模型的准确性和泛化能力。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-04-03T17:58:01+08:00">
+    <meta property="article:modified_time" content="2023-04-03T17:58:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">一文速学-XGBoost模型算法原理以及实现&#43;Python项目实战</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%89%8D%E8%A8%80-toc" style="margin-left:0px;"><a href="#%E5%89%8D%E8%A8%80" rel="nofollow">前言</a></p> 
+<p id="%E4%B8%80%E3%80%81XGBoost%E6%A8%A1%E5%9E%8B%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#%E4%B8%80%E3%80%81XGBoost%E6%A8%A1%E5%9E%8B%E6%A6%82%E8%BF%B0" rel="nofollow">一、XGBoost模型概述</a></p> 
+<p id="1.%E5%8F%91%E5%B1%95%E5%8E%86%E5%8F%B2-toc" style="margin-left:40px;"><a href="#1.%E5%8F%91%E5%B1%95%E5%8E%86%E5%8F%B2" rel="nofollow">1.发展历史</a></p> 
+<p id="2.%E7%AE%97%E6%B3%95%E6%94%B9%E8%BF%9B%E4%B9%8B%E5%A4%84-toc" style="margin-left:40px;"><a href="#2.%E7%AE%97%E6%B3%95%E6%94%B9%E8%BF%9B%E4%B9%8B%E5%A4%84" rel="nofollow">2.算法改进之处</a></p> 
+<p id="1.%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#1.%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0" rel="nofollow">1.损失函数</a></p> 
+<p id="2.%E5%88%86%E8%A3%82%E7%82%B9%E9%80%89%E6%8B%A9-toc" style="margin-left:80px;"><a href="#2.%E5%88%86%E8%A3%82%E7%82%B9%E9%80%89%E6%8B%A9" rel="nofollow">2.分裂点选择</a></p> 
+<p id="3.%E5%89%AA%E6%9E%9D%E7%AD%96%E7%95%A5-toc" style="margin-left:80px;"><a href="#3.%E5%89%AA%E6%9E%9D%E7%AD%96%E7%95%A5" rel="nofollow">3.剪枝策略</a></p> 
+<p id="4.%E6%AD%A3%E5%88%99%E5%8C%96-toc" style="margin-left:80px;"><a href="#4.%E6%AD%A3%E5%88%99%E5%8C%96" rel="nofollow">4.正则化</a></p> 
+<p id="5.%E5%AD%A6%E4%B9%A0%E7%8E%87-toc" style="margin-left:80px;"><a href="#5.%E5%AD%A6%E4%B9%A0%E7%8E%87" rel="nofollow">5.学习率</a></p> 
+<p id="6.%E6%8F%90%E5%89%8D%E5%81%9C%E6%AD%A2-toc" style="margin-left:80px;"><a href="#6.%E6%8F%90%E5%89%8D%E5%81%9C%E6%AD%A2" rel="nofollow">6.提前停止</a></p> 
+<p id="%E4%BA%8C%E3%80%81XGBoost%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86-toc" style="margin-left:0px;"><a href="#%E4%BA%8C%E3%80%81XGBoost%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86" rel="nofollow">二、XGBoost算法原理</a></p> 
+<p id="1.%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9E%84%E9%80%A0%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0-toc" style="margin-left:40px;"><a href="#1.%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9E%84%E9%80%A0%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0" rel="nofollow">1.初始化构造目标函数</a></p> 
+<p id="%C2%A02.%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%8F%98%E6%8D%A2-toc" style="margin-left:40px;"><a href="#%C2%A02.%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%8F%98%E6%8D%A2" rel="nofollow"> 2.目标函数变换</a></p> 
+<p id="%C2%A0%E5%8F%98%E6%8D%A2%E4%BC%98%E5%8A%BF%E6%80%BB%E7%BB%93-toc" style="margin-left:80px;"><a href="#%C2%A0%E5%8F%98%E6%8D%A2%E4%BC%98%E5%8A%BF%E6%80%BB%E7%BB%93" rel="nofollow"> 变换优势总结</a></p> 
+<p id="3.%E5%B0%86%E6%A0%91%E5%BC%95%E5%85%A5%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0-toc" style="margin-left:40px;"><a href="#3.%E5%B0%86%E6%A0%91%E5%BC%95%E5%85%A5%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0" rel="nofollow">3.将树引入目标函数</a></p> 
+<p id="4.%E6%9E%84%E5%BB%BA%E6%9C%80%E4%BC%98%E6%A0%91(%E8%B4%AA%E5%BF%83%E7%AE%97%E6%B3%95)-toc" style="margin-left:40px;"><a href="#4.%E6%9E%84%E5%BB%BA%E6%9C%80%E4%BC%98%E6%A0%91%28%E8%B4%AA%E5%BF%83%E7%AE%97%E6%B3%95%29" rel="nofollow">4.构建最优树(贪心算法)</a></p> 
+<p id="%E4%B8%89%E3%80%81XGBoost%E5%AE%9E%E6%88%98-%E8%B4%B7%E6%AC%BE%E8%BF%9D%E7%BA%A6%E9%A2%84%E6%B5%8B%E6%A8%A1%E5%9E%8B-toc" style="margin-left:0px;"><a href="#%E4%B8%89%E3%80%81XGBoost%E5%AE%9E%E6%88%98-%E8%B4%B7%E6%AC%BE%E8%BF%9D%E7%BA%A6%E9%A2%84%E6%B5%8B%E6%A8%A1%E5%9E%8B" rel="nofollow">三、XGBoost实战-贷款违约预测模型</a></p> 
+<p id="1.%E6%95%B0%E6%8D%AE%E8%83%8C%E6%99%AF%E5%8F%8A%E6%8F%8F%E8%BF%B0-toc" style="margin-left:40px;"><a href="#1.%E6%95%B0%E6%8D%AE%E8%83%8C%E6%99%AF%E5%8F%8A%E6%8F%8F%E8%BF%B0" rel="nofollow">1.数据背景及描述</a></p> 
+<p id="%E5%AD%97%E6%AE%B5%E8%A1%A8-toc" style="margin-left:80px;"><a href="#%E5%AD%97%E6%AE%B5%E8%A1%A8" rel="nofollow">字段表</a></p> 
+<p id="%C2%A02.%E6%95%B0%E6%8D%AE%E8%B4%A8%E9%87%8F%E6%A0%A1%E9%AA%8C-toc" style="margin-left:40px;"><a href="#%C2%A02.%E6%95%B0%E6%8D%AE%E8%B4%A8%E9%87%8F%E6%A0%A1%E9%AA%8C" rel="nofollow"> 2.数据质量校验</a></p> 
+<p id="%E6%9F%A5%E7%9C%8B%E9%87%8D%E5%A4%8D%E5%80%BC%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%E6%9F%A5%E7%9C%8B%E9%87%8D%E5%A4%8D%E5%80%BC%EF%BC%9A" rel="nofollow">查看重复值：</a></p> 
+<p id="%C2%A0%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%BB%9F%E8%AE%A1-toc" style="margin-left:80px;"><a href="#%C2%A0%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%BB%9F%E8%AE%A1" rel="nofollow"> 缺失值统计</a></p> 
+<p id="%C2%A0%E5%BC%82%E5%B8%B8%E5%80%BC%E5%88%86%E6%9E%90-MAD%E5%BC%82%E5%B8%B8%E5%80%BC%E8%AF%86%E5%88%AB%E6%B3%95%EF%BC%9A-toc" style="margin-left:80px;"><a href="#%C2%A0%E5%BC%82%E5%B8%B8%E5%80%BC%E5%88%86%E6%9E%90-MAD%E5%BC%82%E5%B8%B8%E5%80%BC%E8%AF%86%E5%88%AB%E6%B3%95%EF%BC%9A" rel="nofollow"> 异常值分析-MAD异常值识别法：</a></p> 
+<p id="3.%E7%89%B9%E5%BE%81%E7%B1%BB%E5%88%AB%E5%A4%84%E7%90%86-toc" style="margin-left:40px;"><a href="#3.%E7%89%B9%E5%BE%81%E7%B1%BB%E5%88%AB%E5%A4%84%E7%90%86" rel="nofollow">3.特征类别处理</a></p> 
+<p id="1.grade-toc" style="margin-left:80px;"><a href="#1.grade" rel="nofollow">1.grade</a></p> 
+<p id="%C2%A02.subGrade-toc" style="margin-left:80px;"><a href="#%C2%A02.subGrade" rel="nofollow"> 2.subGrade</a></p> 
+<p id="4.XGBoost%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83-toc" style="margin-left:40px;"><a href="#4.XGBoost%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83" rel="nofollow">4.XGBoost模型训练</a></p> 
+<p id="1.xgboost.get_config()-toc" style="margin-left:80px;"><a href="#1.xgboost.get_config%28%29" rel="nofollow">1.xgboost.get_config()</a></p> 
+<p id="2.%E6%A0%91%E7%9A%84%E6%9C%80%E5%A4%A7%E6%B7%B1%E5%BA%A6%E4%BB%A5%E5%8F%8A%E6%9C%80%E5%B0%8F%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E6%A0%B7%E6%9C%AC%E6%9D%83%E9%87%8D-toc" style="margin-left:80px;"><a href="#2.%E6%A0%91%E7%9A%84%E6%9C%80%E5%A4%A7%E6%B7%B1%E5%BA%A6%E4%BB%A5%E5%8F%8A%E6%9C%80%E5%B0%8F%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E6%A0%B7%E6%9C%AC%E6%9D%83%E9%87%8D" rel="nofollow">2.树的最大深度以及最小叶子节点样本权重</a></p> 
+<p id="%C2%A03.gamma-toc" style="margin-left:80px;"><a href="#%C2%A03.gamma" rel="nofollow"> 3.gamma</a></p> 
+<p id="%C2%A04.subsample%20%E5%92%8C%20colsample_bytree-toc" style="margin-left:80px;"><a href="#%C2%A04.subsample%20%E5%92%8C%20colsample_bytree" rel="nofollow"> 4.subsample 和 colsample_bytree</a></p> 
+<p id="%C2%A05.%E6%AD%A3%E5%88%99%E9%A1%B9-toc" style="margin-left:80px;"><a href="#%C2%A05.%E6%AD%A3%E5%88%99%E9%A1%B9" rel="nofollow"> 5.正则项</a></p> 
+<p id="%C2%A06.%E5%AD%A6%E4%B9%A0%E9%80%9F%E7%8E%87-toc" style="margin-left:80px;"><a href="#%C2%A06.%E5%AD%A6%E4%B9%A0%E9%80%9F%E7%8E%87" rel="nofollow"> 6.学习速率</a></p> 
+<hr> 
+<h2 id="%E5%89%8D%E8%A8%80"><a id="_7"></a>前言</h2> 
+<p>集成模型Boosting补完计划第三期了，之前我们已经详细描述了AdaBoost算法模型和GBDT原理以及实践。通过这两类算法就可以明白Boosting算法的核心思想以及基本的运行计算框架，余下几种Boosting算法都是在前者的算法之上改良得到，尤其是以GBDT算法为基础改进衍生出的三种Boosting算法：XGBoost、LightGBM、CatBoost。大家应该都对XGBoost算法模型熟悉但是对GBDT模型一无所知，看过之前GBDT的读者应该对GBDT模型有了一个很清楚的认知，对于理解XGBoost算法有一定的基础。</p> 
+<p>XGBoost在各种数据挖掘、预测和分类任务中取得了极高的准确率和性能。是目前应用最广泛的机器学习算法之一。可以说，XGBoost的快速发展和广泛应用，推动了机器学习算法的进一步发展和优化，为人工智能技术的普及和应用打下了坚实的基础。那么此篇文章我将尽力让大家了解并熟悉XGBoost模型算法框架，保证能够理解通畅以及推演顺利的条件之下，尽量不使用过多的数学公式和专业理论知识。以一篇文章快速了解并实现该算法，以效率最高的方式熟练使用此方法。</p> 
+<p>博主专注建模四年，参与过大大小小数十来次数学建模，理解各类模型原理以及每种模型的建模流程和各类题目分析方法。此专栏的目的就是为了让零基础快速使用各类数学模型以及代码，每一篇文章都包含实战项目以及可运行代码。博主紧跟各类数模比赛，每场数模竞赛博主都会将最新的思路和代码写进此专栏以及详细思路和完全代码。希望有需求的小伙伴不要错过笔者精心打造的专栏。</p> 
+<p>以下是整篇文章内容。</p> 
+<hr> 
+<h2 id="%E4%B8%80%E3%80%81XGBoost%E6%A8%A1%E5%9E%8B%E6%A6%82%E8%BF%B0">一、XGBoost模型概述</h2> 
+<h3 id="1.%E5%8F%91%E5%B1%95%E5%8E%86%E5%8F%B2">1.发展历史</h3> 
+<ol><li> <p>2014年：XGBoost由陈天奇在《XGBoost: A Scalable Tree Boosting System》一文中首次提出。</p> </li><li> <p>2015年：XGBoost在Kaggle竞赛中大放异彩，成为数据科学家和机器学习工程师的首选算法之一。</p> </li><li> <p>2016年：XGBoost发布了C++和Python两个版本，支持更多的特征工程和模型调优功能，极大地提高了算法的效率和可扩展性。</p> </li><li> <p>2017年：XGBoost获得了KDD Cup 2017竞赛中的多个奖项，并且成为Spark MLlib中的重要组件。</p> </li><li> <p>2018年：XGBoost在Microsoft Azure ML Studio中被引入，成为Azure Machine Learning的核心组件之一。</p> </li><li> <p>2019年：XGBoost发布了GPU版本，可以在GPU上加速模型训练和预测，大大提高了算法的计算速度。</p> </li><li> <p>2020年：XGBoost被应用在各种领域，如金融、医疗、自然语言处理和图像识别等，成为机器学习领域的一个重要里程碑。</p> </li></ol> 
+<p>这里通过简述的发展史可以得到我们可以通过python调用此算法，而且也可以通过调用GPU提高了算法的计算速度。由此可见XGBoost算法的受欢迎程度。</p> 
+<h3 id="2.%E7%AE%97%E6%B3%95%E6%94%B9%E8%BF%9B%E4%B9%8B%E5%A4%84"><strong>2.算法改进之处</strong></h3> 
+<p>XGBoost是一种基于梯度提升决策树（Gradient Boosting Decision Tree，GBDT）的机器学习算法，旨在优化和加速GBDT的训练过程，并提高模型的准确性和泛化能力。</p> 
+<p>我们拿这个XGBoost与其他GBDT的算法进行对比：</p> 
+<table border="1" cellpadding="1" cellspacing="1"><tbody><tr><td>算法差异点</td><td>GBDT</td><td>XGBoost</td><td>LightGBM</td><td>CatBoost</td></tr><tr><td>弱学习器</td><td>CART回归树</td><td> <p>1.CART回归树</p> <p>2.线性学习器</p> <p>3.Dart树</p> </td><td>Leaf-wise树</td><td>对称树</td></tr><tr><td>寻找分裂点</td><td>贪心算法</td><td>近似算法</td><td>直方图算法</td><td>预排序算法</td></tr><tr><td>稀疏值处理</td><td>无</td><td>稀疏感知算法</td><td>EFB(互斥特征捆绑)</td><td>无</td></tr><tr><td>类别特征</td><td>不直接支持，可自行编码后输入模型</td><td>同GBDT</td><td>直接支持，GS编码</td><td>直接支持，Ordered TS编码</td></tr><tr><td>并行支持</td><td>不可以</td><td>可以</td><td>可以</td><td>可以</td></tr></tbody></table> 
+<p><a id="_19"></a>XGBoost的算法原理较于GBDT算法的改进包括以下几个方面：</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/03/5d/TzBo9qo1_o.png"></p> 
+<h4 id="1.%E6%8D%9F%E5%A4%B1%E5%87%BD%E6%95%B0">1.损失函数</h4> 
+<p>XGBoost采用泰勒展开式（Taylor expansion）来近似损失函数，其中损失函数可以是回归问题中的均方误差（MSE）或分类问题中的交叉熵（cross-entropy）。XGBoost通过二阶泰勒展开式考虑了损失函数的一、二阶导数，从而提高了模型的预测精度。</p> 
+<h4 id="2.%E5%88%86%E8%A3%82%E7%82%B9%E9%80%89%E6%8B%A9">2.分裂点选择</h4> 
+<p>XGBoost使用贪心算法来选择最优的分裂点（split point），即使得损失函数最小的分裂点。在寻找最优分裂点的过程中，XGBoost通过对特征值进行排序来加速计算，同时引入了直方图（histogram）和近似算法（approximate algorithm）来进一步提高计算效率。</p> 
+<h4 id="3.%E5%89%AA%E6%9E%9D%E7%AD%96%E7%95%A5">3.剪枝策略</h4> 
+<p>XGBoost采用与CART决策树类似的剪枝策略，通过设定叶子节点的最小权重和最大深度来控制模型的复杂度，并避免过拟合。剪枝策略可以在模型训练过程中或之后进行。</p> 
+<h4 id="4.%E6%AD%A3%E5%88%99%E5%8C%96">4.正则化</h4> 
+<p>XGBoost还采用正则化方法来控制模型的复杂度，避免过拟合。具体来说，XGBoost支持两种正则化方法：L1正则化和L2正则化。通过调节正则化参数的值，可以实现对模型复杂度的灵活控制。</p> 
+<h4 id="5.%E5%AD%A6%E4%B9%A0%E7%8E%87">5.学习率</h4> 
+<p>XGBoost还引入了学习率（learning rate）的概念，用于控制每次迭代时模型参数的更新幅度，避免过拟合。学习率通常设置为小于1的值，例如0.1或0.01。</p> 
+<h4 id="6.%E6%8F%90%E5%89%8D%E5%81%9C%E6%AD%A2">6.提前停止</h4> 
+<p>为了避免过拟合和提高模型的训练效率，XGBoost还支持提前停止（early stopping）功能。该功能会在训练过程中监测验证集的损失函数，当连续若干次迭代中验证集的损失函数没有下降时，就停止训练，避免过拟合和浪费计算资源。</p> 
+<h2 id="%E4%BA%8C%E3%80%81XGBoost%E7%AE%97%E6%B3%95%E5%8E%9F%E7%90%86">二、XGBoost算法原理</h2> 
+<p>在了解了XGBoost与GBDT算法差距之后我们不妨和学习GBDT算法一样整体来一遍清楚哪些计算节点增加了新的处理。</p> 
+<p><img alt="" height="573" src="https://images2.imgbox.com/9b/68/QOvgJJfK_o.png" width="1200"></p> 
+<p>首先基础的流程还是和GBDT一致的：</p> 
+<h3 id="1.%E5%88%9D%E5%A7%8B%E5%8C%96%E6%9E%84%E9%80%A0%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0">1.初始化构造目标函数</h3> 
+<p>将所有样本的权重设置为相等的值，建立一个初始模型作为基准模型，可以设置为简单的平均值或者是中位数，而XGBoost中加入了正则项，用来控制基学习器树的结构，目标函数定义如下：</p> 
+<p>例如建立一个弱分类器<img alt="F0(x)=argmin_{c}\sum_{i=1}^{N}L(y_{i},c)" src="https://images2.imgbox.com/6b/95/aqJzoUp9_o.png">,c即为平均值。但是我们在每次迭代的过程中添加一个新函数<img alt="f(x)" class="mathcode" src="https://images2.imgbox.com/d6/55/BkCm1Efj_o.png">:</p> 
+<p class="img-center"><img alt="" height="177" src="https://images2.imgbox.com/41/6f/evigLE53_o.png" width="352"></p> 
+<p></p> 
+<ul><li> <img alt="\hat{y}_{i}^{(t)}" class="mathcode" src="https://images2.imgbox.com/a4/bc/hr94tSYH_o.png">是第<img alt="t" class="mathcode" src="https://images2.imgbox.com/d7/44/hpaywlrG_o.png">次迭代的预测值。</li><li><img alt="\hat{y}_{t}^{(t-1)}" class="mathcode" src="https://images2.imgbox.com/21/aa/QjXBQoO4_o.png">是<img alt="t-1" class="mathcode" src="https://images2.imgbox.com/54/8d/eUdvsqAy_o.png">次迭代的预测值。</li><li><img alt="f_{t}(x_{i})" class="mathcode" src="https://images2.imgbox.com/c0/4f/vJNxhFLv_o.png">是第<img alt="t" class="mathcode" src="https://images2.imgbox.com/58/5a/35ZCgM6c_o.png">颗树，也就是我们第<img alt="t" class="mathcode" src="https://images2.imgbox.com/02/1d/iHAgjjsX_o.png">次迭代需要得到的树。</li></ul> 
+<p>也就是t个模型的预测值等于前t个模型的预测值+当前正在训练第t个模型的预测值。</p> 
+<p>那么上述公式简化为：</p> 
+<p style="text-align:center;"><img alt="Obj^{t}=\sum_{i=1}^{n}l(y_{i},\hat{y}_{i}^{(t)})+\sum_{k=1}^{t}\Omega (f_{k})" class="mathcode" src="https://images2.imgbox.com/bb/d5/TJ5l2NrG_o.png"></p> 
+<h3 id="%C2%A02.%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0%E5%8F%98%E6%8D%A2"> 2.目标函数变换</h3> 
+<p>我们可以讲上述公式变换：</p> 
+<p>首先将算法模型<img alt="y_{i}^{t}=y_{i}^{t-1}+f_{t}(x_{i})" class="mathcode" src="https://images2.imgbox.com/09/7d/lKd4sQiV_o.png">带入取代<img alt="y_{i}^{t}" class="mathcode" src="https://images2.imgbox.com/d3/ae/bJjQGq1F_o.png">，将后面基学习器树的复杂度进行拆分，拆成前t-1棵树的复杂度加上当前模型树的复杂度，又因为我们当时正在训练第t棵树，所以针对于前k棵树都是常量，所以现在我们的目标函数又可以写成：</p> 
+<p style="text-align:center;"><img alt="Obj^{t}=\sum_{i=1}^{n}l(y_{i},\hat{y}_{i}^{(t-1)}+f_{t}(x_{i}))+\Omega (f_{t})+constant" class="mathcode" src="https://images2.imgbox.com/d5/7a/uuNGJWqs_o.png"></p> 
+<p> 这里我们考虑平方损失，此时目标函数又可以变形为：</p> 
+<p style="text-align:center;"><img alt="Obj^{(t)}=\sum_{i=1}^{n}(2(y_{i}-\hat{y}_{i}^{(t-1)})f_{t}(x_{i})+f_{t}(x_{i})+f_{t}(x_{i})^{2})+\Omega (f_{t})+constant" class="mathcode" src="https://images2.imgbox.com/40/7f/Skm0TXak_o.png"></p> 
+<p>根据上面我们就构造好了目标函数，但是为了将其进行简化，我们将其进行泰勒二阶展开</p> 
+<p>泰勒二阶展开式一般形式如下：</p> 
+<p style="text-align:center;"><img alt="f(x+\Delta x)=f(x)+f{}'(x)\Delta x+\frac{1}{2}f{}'{}'(x)\Delta x^{2}" class="mathcode" src="https://images2.imgbox.com/f0/83/3bwyoFSu_o.png"></p> 
+<p> 此时我们定义<img alt="f(x)=\sum_{i=1}^{n}l(y_{i},\hat{y}_{i}^{(t)})" class="mathcode" src="https://images2.imgbox.com/72/d6/mZ5dYF0l_o.png">,<img alt="\Delta x=f_{t}" class="mathcode" src="https://images2.imgbox.com/23/92/MrZdfV7W_o.png">.</p> 
+<p>目标函数利用泰勒展开式就可以变成：</p> 
+<p style="text-align:center;"><img alt="Obj^{t}=\sum_{i=1}^{n}l(y_{i},\hat{y}_{i}^{(t-1)}+g_{i}f_{t}(x_{i})+\frac{1}{2}h_{i}f{}'{}'(x_{i})^{(2)})+\Omega (f_{t})+constant" class="mathcode" src="https://images2.imgbox.com/52/95/7wUjDojE_o.png"></p> 
+<p> 其中<img alt="" height="77" src="https://images2.imgbox.com/58/12/xnXktOyO_o.png" width="180"></p> 
+<p>因为我们的<img alt="g_{i}" class="mathcode" src="https://images2.imgbox.com/63/f9/vDJN5W03_o.png">和<img alt="h_{i}" class="mathcode" src="https://images2.imgbox.com/74/f9/vO2TDZ9G_o.png">都是和前<img alt="t-1" class="mathcode" src="https://images2.imgbox.com/a7/45/5qINkjsq_o.png">个学习器相关，所以都为常数，那么简化后的目标函数就为：</p> 
+<p style="text-align:center;"><img alt="min\sum_{i=1}^{n}[L(y_{i},y_{i}^{t-1})+g_{i}f_{t}(x_{i})+\frac{1}{2}h_{i}f_{t}^{2}(x_{i})]+\Omega (f_{t})" class="mathcode" src="https://images2.imgbox.com/ef/ec/qhVjldoX_o.png"></p> 
+<h4 id="%C2%A0%E5%8F%98%E6%8D%A2%E4%BC%98%E5%8A%BF%E6%80%BB%E7%BB%93"> 变换优势总结</h4> 
+<ol><li> <p>变换后的目标函数可以被二阶泰勒展开，使得目标函数在每个节点的损失函数可以被表示为关于该节点预测值的二次函数，这样可以在计算最优分裂点时，使用牛顿法或拟牛顿法等高效的优化算法来求解。</p> </li><li> <p>变换后的目标函数可以解决梯度爆炸和梯度消失问题，这是由于使用指数函数和对数函数进行变换，将目标函数的值范围映射到了一个合适的区间，从而避免了数值溢出和数值不稳定的情况。</p> </li><li> <p>变换后的目标函数可以解决分类问题的类别不平衡问题，这是由于在分类问题中，负样本数量通常远大于正样本数量，导致算法容易偏向于负样本。通过将目标函数变换为指数损失函数或对数损失函数，可以对正负样本进行加权，从而解决类别不平衡问题。</p> </li></ol> 
+<h3 id="3.%E5%B0%86%E6%A0%91%E5%BC%95%E5%85%A5%E7%9B%AE%E6%A0%87%E5%87%BD%E6%95%B0">3.将树引入目标函数</h3> 
+<p>那么得到了想要的目标函数，我们现在就需要将树引入到我们的目标计算函数中，去取代<img alt="f_{t}(x_{i})" class="mathcode" src="https://images2.imgbox.com/e4/be/aYi0hpi4_o.png">和<img alt="\Omega (k_{t})" class="mathcode" src="https://images2.imgbox.com/fb/12/ACzIi46B_o.png">，我们依旧参照GBDT的计算原理和过程，也就是XGBoost的预测原理。</p> 
+<p>使用<img alt="f_{t}(x)=\omega _{q}(x),\omega \epsilon R^{T},q:R^{d}-&gt;{1,2,3,...,T}" class="mathcode" src="https://images2.imgbox.com/ba/11/liPkUxzf_o.png"></p> 
+<ul><li><img alt="\omega" class="mathcode" src="https://images2.imgbox.com/08/eb/l8PgQtWO_o.png">代表树中叶子节点的权重</li><li><img alt="q" class="mathcode" src="https://images2.imgbox.com/ab/1c/7Irk6FoI_o.png">代表的是树的结构</li></ul> 
+<p>对于决策树的例子大家可以参考我的上篇文章：</p> 
+<p><a class="link-info" href="https://blog.csdn.net/master_hunter/article/details/129245620?spm=1001.2014.3001.5501" title="一文速学-GBDT模型算法原理以及实现+Python项目实战">一文速学-GBDT模型算法原理以及实现+Python项目实战</a></p> 
+<p>这里不再复述，仅讲XGBoost改动，我们知道单独的使用GBDT模型，容易出现过拟合，在实际应用中往往使用 GBDT＋LR的方式做模型训练。一般情况下，我们的树模型越深越茂密那么复杂度越高，或者叶子节点值越大模型复杂度越高。</p> 
+<p>在XGBoost算法的实现中，是采用下式来衡量模型复杂度的：</p> 
+<p style="text-align:center;"><img alt="\Omega (f_{k})=\alpha T+\frac{1}{2}\lambda \sum_{j=1}^{J}w_{j}^{2}" class="mathcode" src="https://images2.imgbox.com/cd/5f/Wtz3wLKc_o.png"></p> 
+<p> 其中<img alt="T" class="mathcode" src="https://images2.imgbox.com/e3/8f/0ilJQc7H_o.png">代表叶子节点个数，<img alt="\sum_{j=1}^{J}w_{j}^{2}" class="mathcode" src="https://images2.imgbox.com/fe/c2/UuHED8Wd_o.png">:各个叶子节点值的求和，<img alt="\alpha ,\lambda" class="mathcode" src="https://images2.imgbox.com/c4/66/yNkGwyOQ_o.png">：超参数，控制惩罚程度。</p> 
+<p>那么我们将原目标函数的<img alt="f_{t}(x_{i})" class="mathcode" src="https://images2.imgbox.com/aa/b0/7nqV634J_o.png">和<img alt="\Omega (k_{t})" class="mathcode" src="https://images2.imgbox.com/08/0a/cupoFyvG_o.png">给取代掉：</p> 
+<p style="text-align:center;"><img alt="min\sum_{i=1}^{n}[g_{j}w_{q(x_{i})}+\frac{1}{2}h_{i}w_{q(x_{i})}^{2}]+\alpha T+\frac{1}{2}\lambda \sum_{j=1}^{J}\omega _{j}^{2}" class="mathcode" src="https://images2.imgbox.com/bd/42/t0aHqtwY_o.png"></p> 
+<p>那么此时我们定义在叶子结点<img alt="j" class="mathcode" src="https://images2.imgbox.com/8f/2a/jhWPLfvp_o.png">中的实例的集合为：</p> 
+<p class="img-center"><img alt="" height="83" src="https://images2.imgbox.com/36/42/eSYuDWIe_o.png" width="278"></p> 
+<p>计算损失函数时是以样本索引来遍历的<img alt="\sum_{i=1}^{n}" class="mathcode" src="https://images2.imgbox.com/1e/ef/2ZHOYQu5_o.png">总共n个样本，计算所有叶子节点样本的损失可以为：</p> 
+<p style="text-align:center;"><img alt="\sum_{i\epsilon I_{j}}^{}g_{i}w_{j}" class="mathcode" src="https://images2.imgbox.com/d8/c7/2h5iAs7q_o.png"></p> 
+<p>所以此时目标函数就可以写为：</p> 
+<p style="text-align:center;"><img alt="\sum_{j=1}^{J}[(\sum_{i\epsilon I_{j}}^{}g_{i})w_{j}+(\frac{1}{2}\sum_{i\epsilon I_{j}}^{}h_{i})w_{j}^{2}]+\alpha T+\frac{1}{2}\lambda \sum_{j=1}^{J}w_{j}^{2}" class="mathcode" src="https://images2.imgbox.com/4f/6e/kCEB3SmY_o.png"></p> 
+<p style="text-align:center;"><img alt="=\sum_{j=1}^{J}[(\sum_{i\epsilon I_{j}}^{}g_{i})w_{j}+\frac{1}{2}(\sum_{i\epsilon I_{j}}h_{i}+\lambda )w_{j}^{2}]+\alpha T" class="mathcode" src="https://images2.imgbox.com/5d/7d/tTFrh485_o.png"></p> 
+<p>大家如果能看到这里已经差不多能将此目标函数推导出来了，但是这里我们还需要获得最优叶子结点的值，也就是最小值。此时我们需要将上述公式再度变换：</p> 
+<p style="text-align:center;"><img alt="G_{j}=\sum_{i\epsilon I_{j}}^{}g_{i}" class="mathcode" src="https://images2.imgbox.com/3b/f8/5cSBklJX_o.png"></p> 
+<p style="text-align:center;"><img alt="H_{j}+\lambda =\sum_{i\epsilon I_{j}}^{}h_{i}+\lambda" class="mathcode" src="https://images2.imgbox.com/da/56/drSbEQSz_o.png"></p> 
+<p>此时目函数就为<img alt="G_{j}w_{j}+\frac{1}{2}(H_{j}+\lambda )w_{j}^{2}" class="mathcode" src="https://images2.imgbox.com/7d/f2/2W2UOfjM_o.png">是一个二次函数，对于二次函数这里补充一个大家或许真的的知识点，也就是得到这个函数的最小值。我们需要先求导去零得到极值点的x，再带入原方程。</p> 
+<p>那么对其求导很容易得到<img alt="x=-\frac{G}{H}" class="mathcode" src="https://images2.imgbox.com/25/71/SrGkQY8x_o.png">,当<img alt="x=-\frac{G}{H}" class="mathcode" src="https://images2.imgbox.com/07/5b/iN4I2S5b_o.png">时对应方程的值为<img alt="-\frac{1}{2}*\frac{G^{2}}{H}" class="mathcode" src="https://images2.imgbox.com/21/fe/j31R3od3_o.png">.</p> 
+<p>接着我们定义：</p> 
+<ul><li><img alt="G_{j}=\sum_{i\epsilon I_{j}}^{}g_{i}" class="mathcode" src="https://images2.imgbox.com/69/c3/fsndO91x_o.png"></li><li><img alt="H_{j}=\sum_{i\epsilon I_{j}}^{}h_{i}" class="mathcode" src="https://images2.imgbox.com/d8/2c/ZPDqVsDP_o.png"></li></ul> 
+<p></p> 
+<p>那么目标函数就为：</p> 
+<p class="img-center"><img alt="" height="112" src="https://images2.imgbox.com/02/bc/Qh8sQYrZ_o.png" width="534"></p> 
+<p>那么到这一步目标函数最优结构就确定了，但是针对于一棵树，模型的结构可能有很多种，此刻我们需要选择最优树结构，XGBoost算法采用的动态规划为贪心算法，去构建一颗最优的树。</p> 
+<p>不知道大家看到现在还有几个愿意看下去贪心算法构建最优树的，但是XGBoost算法的计算原理就是如此，要了解其计算过程这点是绕不过的，该学习了解的还是得下点功夫。</p> 
+<h3 id="4.%E6%9E%84%E5%BB%BA%E6%9C%80%E4%BC%98%E6%A0%91(%E8%B4%AA%E5%BF%83%E7%AE%97%E6%B3%95)">4.构建最优树(贪心算法)</h3> 
+<p>贪心算法的模板下面给出：</p> 
+<ol><li> <p>确定问题的优化目标，即需要优化的指标。</p> </li><li> <p>将问题分解成若干个子问题，每个子问题都可以采取贪心策略求解。</p> </li><li> <p>对于每个子问题，定义一个局部最优解，然后利用贪心策略选择当前状态下的最优解，更新全局最优解。</p> </li><li> <p>对于更新后的全局最优解，判断是否满足问题的终止条件。如果满足，算法终止；如果不满足，继续执行步骤3。</p> </li></ol> 
+<p>而对于树模型的优劣程度我们是根据信息增益来判断的，也就是使用熵来进行评估不确定度，CART中使用的是基尼系数的概念。对于XGBoost算法来说我们比较<img alt="Obj" class="mathcode" src="https://images2.imgbox.com/44/a5/8EDF7hpP_o.png">的大小差距就可拟作信息增益<img alt="Obj_{new}-Obj_{old}" class="mathcode" src="https://images2.imgbox.com/ca/a2/MTwW8Nds_o.png">。</p> 
+<p>我们是要获得最大信息增益，就需要遍历所以特征计算增益，选取增益大的进行切分构造树模型<img alt="max=Obj_{new}-Obj_{old}" class="mathcode" src="https://images2.imgbox.com/bb/e7/667gdmJo_o.png">。</p> 
+<p>根据这个原理我们就可以构造一棵使目标函数最小的树模型，然后按照这个逻辑，一次构造K棵树，然后最终将所有的树加权就是我们最终的模型：</p> 
+<p style="text-align:center;"><img alt="f_{K}(x)=f_{K-1}(x)+f_{k}(x)=\sum_{k=1}^{K}f_{k}(x)" class="mathcode" src="https://images2.imgbox.com/28/64/ruDQ94mH_o.png"></p> 
+<p>讲到现在XGBoost已经讲完损失函数和分裂点选择两个核心的变动，还有另外四个改进，暂时先不作很深入的讲解，剪枝策略就详细介绍在RF算法中，正则化和提前停止策略我将会在下一篇详细讲述。下面进入实战实现环节。</p> 
+<h2 id="%E4%B8%89%E3%80%81XGBoost%E5%AE%9E%E6%88%98-%E8%B4%B7%E6%AC%BE%E8%BF%9D%E7%BA%A6%E9%A2%84%E6%B5%8B%E6%A8%A1%E5%9E%8B">三、XGBoost实战-贷款违约预测模型</h2> 
+<p>或许大家觉得公式推导很繁琐，但是如果不做以上推导的话，无论是面试还是答辩无法证实你确实会使用XGBoost算法，而且面对XGBoost算法调优以及参数改进都是比较困难的。而且XGBoost一般直接使用自带的XGBoost库Python编程就好了，很少自行构造XGBoost树，大家可以参照我上篇文章GBDT流程一样构造XGBoost算法结构树。</p> 
+<p>对于贷款违约预测这个比较经典的课题，我们很容易拿到现成的数据，对于建模来讲，我们最缺的就是数据，而阿里天池提供了一份开源贷款违约数据，大家直接下载即可。</p> 
+<p><a class="link-info" href="https://tianchi.aliyun.com/competition/entrance/531830/information" rel="nofollow" title="贷款违约预测">贷款违约预测</a></p> 
+<p>那么我们就开始实现逐步进行建模。</p> 
+<h3 id="1.%E6%95%B0%E6%8D%AE%E8%83%8C%E6%99%AF%E5%8F%8A%E6%8F%8F%E8%BF%B0">1.数据背景及描述</h3> 
+<p>赛题以预测用户贷款是否违约为任务，数据集报名后可见并可下载，该数据来自某信贷平台的贷款记录，总数据量超过120w，包含47列变量信息，其中15列为匿名变量。为了保证比赛的公平性，将会从中抽取80万条作为训练集，20万条作为测试集A，20万条作为测试集B，同时会对employmentTitle、purpose、postCode和title等信息进行脱敏。</p> 
+<h4 id="%E5%AD%97%E6%AE%B5%E8%A1%A8">字段表</h4> 
+<table><thead><tr><th><strong>Field</strong></th><th><strong>Description</strong></th></tr></thead><tbody><tr><td>id</td><td>为贷款清单分配的唯一信用证标识</td></tr><tr><td>loanAmnt</td><td>贷款金额</td></tr><tr><td>term</td><td>贷款期限（year）</td></tr><tr><td>interestRate</td><td>贷款利率</td></tr><tr><td>installment</td><td>分期付款金额</td></tr><tr><td>grade</td><td>贷款等级</td></tr><tr><td>subGrade</td><td>贷款等级之子级</td></tr><tr><td>employmentTitle</td><td>就业职称</td></tr><tr><td>employmentLength</td><td>就业年限（年）</td></tr><tr><td>homeOwnership</td><td>借款人在登记时提供的房屋所有权状况</td></tr><tr><td>annualIncome</td><td>年收入</td></tr><tr><td>verificationStatus</td><td>验证状态</td></tr><tr><td>issueDate</td><td>贷款发放的月份</td></tr><tr><td>purpose</td><td>借款人在贷款申请时的贷款用途类别</td></tr><tr><td>postCode</td><td>借款人在贷款申请中提供的邮政编码的前3位数字</td></tr><tr><td>regionCode</td><td>地区编码</td></tr><tr><td>dti</td><td>债务收入比</td></tr><tr><td>delinquency_2years</td><td>借款人过去2年信用档案中逾期30天以上的违约事件数</td></tr><tr><td>ficoRangeLow</td><td>借款人在贷款发放时的fico所属的下限范围</td></tr><tr><td>ficoRangeHigh</td><td>借款人在贷款发放时的fico所属的上限范围</td></tr><tr><td>openAcc</td><td>借款人信用档案中未结信用额度的数量</td></tr><tr><td>pubRec</td><td>贬损公共记录的数量</td></tr><tr><td>pubRecBankruptcies</td><td>公开记录清除的数量</td></tr><tr><td>revolBal</td><td>信贷周转余额合计</td></tr><tr><td>revolUtil</td><td>循环额度利用率，或借款人使用的相对于所有可用循环信贷的信贷金额</td></tr><tr><td>totalAcc</td><td>借款人信用档案中当前的信用额度总数</td></tr><tr><td>initialListStatus</td><td>贷款的初始列表状态</td></tr><tr><td>applicationType</td><td>表明贷款是个人申请还是与两个共同借款人的联合申请</td></tr><tr><td>earliesCreditLine</td><td>借款人最早报告的信用额度开立的月份</td></tr><tr><td>title</td><td>借款人提供的贷款名称</td></tr><tr><td>policyCode</td><td>公开可用的策略_代码=1新产品不公开可用的策略_代码=2</td></tr><tr><td>n系列匿名特征</td><td>匿名特征n0-n14，为一些贷款人行为计数特征的处理</td></tr></tbody></table> 
+<p> 这里借用一下<a class="link-info" href="https://blog.csdn.net/submarineas/article/details/108562718" title="贷款违约预测学习笔记 ">贷款违约预测学习笔记 </a>submarineas博主 的图片<img alt="" height="1200" src="https://images2.imgbox.com/b9/d2/ZfYwXmkg_o.png" width="1200"></p> 
+<p> 数据展示：<img alt="" height="509" src="https://images2.imgbox.com/33/ec/zXCW0BJH_o.png" width="1200"></p> 
+<h3 id="%C2%A02.%E6%95%B0%E6%8D%AE%E8%B4%A8%E9%87%8F%E6%A0%A1%E9%AA%8C"> 2.数据质量校验</h3> 
+<p>使用pandas进行数据分析，也就是查看数据中的空缺值，重复值和异常值，以及相对应的数据描述。</p> 
+<pre><code class="language-python">import pandas as pd
+df=pd.read_csv("train.csv")
+test=pd.read_csv("testA.csv")
+</code></pre> 
+<p> 基本数据情况：</p> 
+<pre><code class="language-python">df.shape
+(800000, 47)
+test.shape
+(200000, 46)
+</code></pre> 
+<pre><code class="language-python">df.info()
+
+&lt;class 'pandas.core.frame.DataFrame'&gt;
+RangeIndex: 800000 entries, 0 to 799999
+Data columns (total 47 columns):
+ #   Column              Non-Null Count   Dtype  
+---  ------              --------------   -----  
+ 0   id                  800000 non-null  int64  
+ 1   loanAmnt            800000 non-null  float64
+ 2   term                800000 non-null  int64  
+ 3   interestRate        800000 non-null  float64
+ 4   installment         800000 non-null  float64
+ 5   grade               800000 non-null  object 
+ 6   subGrade            800000 non-null  object 
+ 7   employmentTitle     799999 non-null  float64
+ 8   employmentLength    753201 non-null  object 
+ 9   homeOwnership       800000 non-null  int64  
+ 10  annualIncome        800000 non-null  float64
+ 11  verificationStatus  800000 non-null  int64  
+ 12  issueDate           800000 non-null  object 
+ 13  isDefault           800000 non-null  int64  
+ 14  purpose             800000 non-null  int64  
+ 15  postCode            799999 non-null  float64
+ 16  regionCode          800000 non-null  int64  
+ 17  dti                 799761 non-null  float64
+ 18  delinquency_2years  800000 non-null  float64
+ 19  ficoRangeLow        800000 non-null  float64
+ 20  ficoRangeHigh       800000 non-null  float64
+ 21  openAcc             800000 non-null  float64
+ 22  pubRec              800000 non-null  float64
+ 23  pubRecBankruptcies  799595 non-null  float64
+ 24  revolBal            800000 non-null  float64
+ 25  revolUtil           799469 non-null  float64
+ 26  totalAcc            800000 non-null  float64
+ 27  initialListStatus   800000 non-null  int64  
+ 28  applicationType     800000 non-null  int64  
+ 29  earliesCreditLine   800000 non-null  object 
+ 30  title               799999 non-null  float64
+ 31  policyCode          800000 non-null  float64
+ 32  n0                  759730 non-null  float64
+ 33  n1                  759730 non-null  float64
+ 34  n2                  759730 non-null  float64
+ 35  n3                  759730 non-null  float64
+ 36  n4                  766761 non-null  float64
+ 37  n5                  759730 non-null  float64
+ 38  n6                  759730 non-null  float64
+ 39  n7                  759730 non-null  float64
+ 40  n8                  759729 non-null  float64
+ 41  n9                  759730 non-null  float64
+ 42  n10                 766761 non-null  float64
+ 43  n11                 730248 non-null  float64
+ 44  n12                 759730 non-null  float64
+ 45  n13                 759730 non-null  float64
+ 46  n14                 759730 non-null  float64
+dtypes: float64(33), int64(9), object(5)</code></pre> 
+<h4 id="%E6%9F%A5%E7%9C%8B%E9%87%8D%E5%A4%8D%E5%80%BC%EF%BC%9A">查看重复值：</h4> 
+<pre><code class="language-python">df[df.duplicated()==True]#打印重复值</code></pre> 
+<p><img alt="" height="114" src="https://images2.imgbox.com/71/cb/PRGxov65_o.png" width="807"></p> 
+<h4 id="%C2%A0%E7%BC%BA%E5%A4%B1%E5%80%BC%E7%BB%9F%E8%AE%A1"> 缺失值统计</h4> 
+<pre><code class="language-python"># nan可视化
+missing = df.isnull().sum()/len(df)
+missing = missing[missing &gt; 0]
+missing.sort_values(inplace=True)
+missing.plot.bar()</code></pre> 
+<p class="img-center"><img alt="" height="380" src="https://images2.imgbox.com/14/99/Pj4sG3oV_o.png" width="406"></p> 
+<h4 id="%C2%A0%E5%BC%82%E5%B8%B8%E5%80%BC%E5%88%86%E6%9E%90-MAD%E5%BC%82%E5%B8%B8%E5%80%BC%E8%AF%86%E5%88%AB%E6%B3%95%EF%BC%9A"> 异常值分析-MAD异常值识别法：</h4> 
+<p id="1.MAD%E5%BC%82%E5%B8%B8%E5%80%BC%E8%AF%86%E5%88%AB%E6%B3%95">这里仅检测为数值的特征，对该方法不清楚的可以去看看我的另一篇文章<a class="link-info" href="https://blog.csdn.net/master_hunter/article/details/124384870?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522168051135416782427478079%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=168051135416782427478079&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-124384870-null-null.blog_rank_default&amp;utm_term=%E5%BC%82%E5%B8%B8%E5%80%BC&amp;spm=1018.2226.3001.4450" title="一文速学(六)-数据分析之Pandas异常值检测及处理操作各类方法详解+代码展示">一文速学(六)-数据分析之Pandas异常值检测及处理操作各类方法详解+代码展示</a>：</p> 
+<h3 id="3.%E7%89%B9%E5%BE%81%E7%B1%BB%E5%88%AB%E5%A4%84%E7%90%86">3.特征类别处理</h3> 
+<p> 此时我们可以发现有五个特征为object特征，对于此特征我们需要进行特征转换，大家可以参考我的<a class="link-info" href="https://blog.csdn.net/master_hunter/article/details/126139761?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522168048607516800197043996%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=168048607516800197043996&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-126139761-null-null.blog_rank_default&amp;utm_term=%E7%89%B9%E5%BE%81&amp;spm=1018.2226.3001.4450" title="一文速学-特征数据类别分析与预处理方法详解+Python代码">一文速学-特征数据类别分析与预处理方法详解+Python代码</a>，处理定类特征。</p> 
+<h4 id="1.grade">1.grade</h4> 
+<p>该特征为贷款等级，总共有A,B,C,D,E,F,G七个等级，使用OneHot Encoding方法可行：</p> 
+<pre><code class="language-python">pd.get_dummies(df.grade,drop_first=False) </code></pre> 
+<p class="img-center"><img alt="" height="444" src="https://images2.imgbox.com/08/8c/MfbxSYaL_o.png" width="318"></p> 
+<h4 id="%C2%A02.subGrade"> 2.subGrade</h4> 
+<p>该特征为贷款等级之子级，命名规则为贷款等级加上[1,2,3,4,5]这五个等级，这显然用OneHot Encoding方法就不行了，而且与上个grade方法存在信息冗余，因此可以将此特征与上个特征grade特征进行合并处理，通过适当加入一定的量纲即可。当然有更好的方法，我这里便于大家理解，采用一下方法：</p> 
+<pre><code class="language-python">df_grade=pd.get_dummies(df.grade,drop_first=False) 
+def shine_convert(x):
+    x=x*2
+    return x/10 
+se_subGrade=df.subGrade.str[1:].astype(int).apply(shine_convert)
+
+for i in range(df_grade.shape[0]):
+    data=df_grade.iloc[i,:]
+    non_zero_index = data != 0
+    data.loc[non_zero_index] += se_subGrade[i]
+    print(data)</code></pre> 
+<p><img alt="" height="343" src="https://images2.imgbox.com/33/12/ljQYYFsV_o.png" width="356"></p> 
+<p>这里就实现了在定类数据上面再作等级的划分的条件。当然跑80w数据我这电脑以及够慢了，这里并没有跑完，大家可以去尝试一下。</p> 
+<h3 id="4.XGBoost%E6%A8%A1%E5%9E%8B%E8%AE%AD%E7%BB%83">4.XGBoost模型训练</h3> 
+<p>数据处理的问题我这里不演示太多，毕竟主要是写XGBoost的运用，文章太长了也容易造成知识疲劳，这里我们就直接使用XGBoost算法，大家默认数据已经是处理好的就好了。这里详细讲一下XGBoost算法调参该如何调。</p> 
+<h4 id="1.xgboost.get_config()">1.xgboost.get_config()</h4> 
+<p>获取全局配置的当前值。<br> 全局配置由可在全局范围中应用的参数集合组成。有关全局配置中支持的参数的完整列表：<a class="link-info" href="https://xgboost.readthedocs.io/en/stable/parameter.html#global-config" rel="nofollow" title="Global Configuration">Global Configuration</a></p> 
+<pre><code class="language-python">import xgboost as xgb
+xgb.get_config()</code></pre> 
+<p> <img alt="" height="115" src="https://images2.imgbox.com/0c/b2/XTK7GVfN_o.png" width="360"></p> 
+<h4 id="2.%E6%A0%91%E7%9A%84%E6%9C%80%E5%A4%A7%E6%B7%B1%E5%BA%A6%E4%BB%A5%E5%8F%8A%E6%9C%80%E5%B0%8F%E5%8F%B6%E5%AD%90%E8%8A%82%E7%82%B9%E6%A0%B7%E6%9C%AC%E6%9D%83%E9%87%8D">2.树的最大深度以及最小叶子节点样本权重</h4> 
+<p>首先对这个值为树的最大深度以及最小叶子节点样本权重和这个组合进行调整。最大深度控 制了树的结构，最小叶子节点样本权重这个参数用于避免过拟合。当它的值较大时，可以避免模 型学习到局部的特殊样本。但是如果这个值过高，会导致欠拟合。</p> 
+<pre><code class="language-python">param_test1 = {'max_depth':range(3,10,2),'min_child_weight':range(2,7,2)}
+ 
+gsearch1 = GridSearchCV(estimator =XGBR( learning_rate =0.1, n_estimators=140, max_depth=5,
+                                         min_child_weight=1, gamma=0, subsample=0.8, colsample_bytree=0.8, objective= 'reg:linear',
+                                         nthread=4, scale_pos_weight=1, seed=27),
+                                         param_grid = param_test1, scoring='r2',n_jobs=4, cv=5)
+gsearch1.fit(Xtrain,Ytrain)
+gsearch1.best_params_, gsearch1.best_score_</code></pre> 
+<h4 id="%C2%A03.gamma"> 3.gamma</h4> 
+<p>再对参数 gamma 进行调整。在XGBoost 节点分裂时，只有分裂后损失函数的值下降了，才会分裂这个节点。gamma 指定了节点分裂所需的最小损失函数下降值。这个参数的大小决定了模型的保守程度。参数越高，模型越不保守。</p> 
+<pre><code class="language-python">param_test3 = {
+ 'gamma':[i/10.0 for i in range(0,5)]
+}
+gsearch3 = GridSearchCV(estimator = xgb.XGBClassifier( learning_rate =0.1, n_estimators=8, max_depth=8,
+ min_child_weight=3, gamma=0, subsample=0.8, colsample_bytree=0.8,
+ objective= 'binary:logistic', nthread=4, scale_pos_weight=1,seed=27), 
+ param_grid = param_test3, scoring='roc_auc',iid=False, cv=5)
+gsearch3.fit(X,y)
+gsearch3.best_params_, gsearch3.best_score_</code></pre> 
+<h4 id="%C2%A04.subsample%20%E5%92%8C%20colsample_bytree"> 4.subsample 和 colsample_bytree</h4> 
+<p>再对参数 subsample 和 colsample_bytree 进行调整。subsample 控制对于每棵树的随机采样的 比例。减小这个参数的值，算法会更加保守，避免过拟合。但是，如果这个值设置得过小，它可 能会导致欠拟合。colsample_bytree 用来控制每棵随机采样的列数的占比(每一列是一个特征)。</p> 
+<pre><code class="language-python">param_test4 = {
+ 'subsample':[i/100.0 for i in range(75,90,5)],
+ 'colsample_bytree':[i/100.0 for i in range(75,90,5)]
+}
+gsearch5 = GridSearchCV(estimator = xgb.XGBClassifier( learning_rate =0.1, n_estimators=8, max_depth=8,
+ min_child_weight=3, gamma=0.4, subsample=0.8, colsample_bytree=0.8,
+ objective= 'binary:logistic', nthread=4, scale_pos_weight=1,seed=27), 
+ param_grid = param_test5, scoring='roc_auc',iid=False, cv=5)
+gsearch5.fit(X_train,y_train)
+gsearch5.best_params_, gsearch5.best_score_</code></pre> 
+<h4 id="%C2%A05.%E6%AD%A3%E5%88%99%E9%A1%B9"> 5.正则项</h4> 
+<p>控制模型的正则项，防止出现过拟合的现象。</p> 
+<pre><code class="language-python">param_test5 = {
+ 'reg_alpha':[1e-5, 1e-2, 0.1, 1, 100]
+}
+gsearch6 = GridSearchCV(estimator = xgb.XGBClassifier( learning_rate =0.1, n_estimators=8, max_depth=8,
+ min_child_weight=3, gamma=0.2, subsample=0.85, colsample_bytree=0.85,
+ objective= 'binary:logistic', nthread=4, scale_pos_weight=1,seed=27), 
+ param_grid = param_test6, scoring='roc_auc',iid=False, cv=5)
+gsearch6.fit(X_train,y_train)
+gsearch6.best_params_, gsearch6.best_score_</code></pre> 
+<h4 id="%C2%A06.%E5%AD%A6%E4%B9%A0%E9%80%9F%E7%8E%87"> 6.学习速率</h4> 
+<p>最后进行学习速率的调整，选择最优的学习速率最终确定适合的模型。</p> 
+<pre><code class="language-python">param_test6 = {
+ 'learning_rate':[0.01, 0.02, 0.1, 0.2]
+}
+gsearch6 = GridSearchCV(estimator = xgb.XGBClassifier( learning_rate =0.1, n_estimators=8, max_depth=8,
+ min_child_weight=1, gamma=0.2, subsample=0.8, colsample_bytree=0.85,
+ objective= 'binary:logistic', nthread=4, scale_pos_weight=1,seed=27), 
+ param_grid = param_test6, scoring='roc_auc',iid=False, cv=5)
+gsearch6.fit(X_train,y_train)
+gsearch6.best_params_, gsearch6.best_score_</code></pre> 
+<p> 无参数XGBoost：</p> 
+<pre><code class="language-python">from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split  
+import xgboost as xgb
+from sklearn.model_selection import KFold
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+train=pd.read_csv("df2.csv")
+train=train.iloc[:10000,:] 
+testA2=pd.read_csv("testA.csv")
+    
+# 划分特征变量与目标变量
+X=train.drop(columns='isDefault')
+Y=train['isDefault']
+# 划分训练及测试集
+x_train,x_test,y_train,y_test=train_test_split(X,Y,test_size=0.2,random_state=0)
+# 模型训练
+clf=xgb.XGBClassifier() 
+result = []
+mean_score = 0
+labels=[0,1]
+clf.fit(x_train,y_train)
+y_pred=clf.predict_proba(x_test)[:,1]
+def classify_convert(x):
+    if x &gt;0.5:
+        return 1
+    else:
+        return 0
+list_predict=[]
+for i in y_pred:
+    list_predict.append(classify_convert(i))
+
+    
+cm= confusion_matrix(y_test.values, list_predict)
+sns.heatmap(cm,annot=True ,fmt="d",xticklabels=labels,yticklabels=labels)
+print('验证集auc:{}'.format(roc_auc_score(y_test, y_pred)))
+mean_score += roc_auc_score(y_test, y_pred)
+plt.title('confusion matrix')  # 标题
+plt.xlabel('Predict lable')  # x轴
+plt.ylabel('True lable')  # y轴
+plt.show()
+# 模型评估
+print('mean 验证集Auc:{}'.format(mean_score))
+cat_pre=sum(result)  
+from sklearn.metrics import f1_score
+print('F1_socre:{}'.format(f1_score(y_test.values, list_predict, average='weighted')))
+from sklearn.metrics import recall_score
+print('Recall_score:{}'.format(recall_score(y_test.values, list_predict, average='weighted')))
+from sklearn.metrics import precision_score
+print('Percosopn:{}'.format(precision_score(y_test.values, list_predict, average='weighted')))</code></pre> 
+<p> <img alt="" height="598" src="https://images2.imgbox.com/cf/17/WNMcT89E_o.png" width="733"></p> 
+<p><img alt="" height="103" src="https://images2.imgbox.com/e3/b6/j2KEicH5_o.png" width="321"></p> 
+<p>参数调整：</p> 
+<pre><code class="language-python">from sklearn.metrics import roc_auc_score
+from sklearn.model_selection import train_test_split  
+import xgboost as xgb
+from sklearn.model_selection import KFold
+from sklearn.metrics import confusion_matrix
+import seaborn as sns
+import matplotlib.pyplot as plt
+train=pd.read_csv("df2.csv")
+train=train.iloc[:10000,:] 
+testA2=pd.read_csv("testA.csv")
+    
+# 划分特征变量与目标变量
+X=train.drop(columns='isDefault')
+Y=train['isDefault']
+# 划分训练及测试集
+x_train,x_test,y_train,y_test=train_test_split(X,Y,test_size=0.2,random_state=0)
+# 模型训练
+clf=xgb.XGBClassifier(eta=0.1,
+                      n_estimators=8,
+                      max_depth=8,
+                      min_child_weight=2,
+                      gamma=0.8,
+                      subsample=0.85,
+                      colsample_bytree=0.8
+                     ) 
+result = []
+mean_score = 0
+labels=[0,1]
+clf.fit(x_train,y_train)
+y_pred=clf.predict_proba(x_test)[:,1]
+def classify_convert(x):
+    if x &gt;0.5:
+        return 1
+    else:
+        return 0
+list_predict=[]
+for i in y_pred:
+    list_predict.append(classify_convert(i))
+
+    
+cm= confusion_matrix(y_test.values, list_predict)
+sns.heatmap(cm,annot=True ,fmt="d",xticklabels=labels,yticklabels=labels)
+print('验证集auc:{}'.format(roc_auc_score(y_test, y_pred)))
+mean_score += roc_auc_score(y_test, y_pred)
+plt.title('confusion matrix')  # 标题
+plt.xlabel('Predict lable')  # x轴
+plt.ylabel('True lable')  # y轴
+plt.show()
+# 模型评估
+print('mean 验证集Auc:{}'.format(mean_score))
+cat_pre=sum(result)  
+from sklearn.metrics import f1_score
+print('F1_socre:{}'.format(f1_score(y_test.values, list_predict, average='weighted')))
+from sklearn.metrics import recall_score
+print('Recall_score:{}'.format(recall_score(y_test.values, list_predict, average='weighted')))
+from sklearn.metrics import precision_score
+print('Percosopn:{}'.format(precision_score(y_test.values, list_predict, average='weighted')))</code></pre> 
+<p> <img alt="" height="643" src="https://images2.imgbox.com/f8/50/DfnZBCeM_o.png" width="594"></p> 
+<p>并不是最优参数，大家可以自行调整看，至此模型建立完毕。</p> 
+<p>那么让我们总结一下XGBoost模型特性：</p> 
+<p>XGBoost算法的核心思想是通过最小化损失函数来学习弱分类器，并将多个弱分类器组合成一个强分类器，以提高模型的准确性和泛化能力。XGBoost采用梯度提升算法和正则化方法来训练模型，引入学习率和提前停止等功能，进一步提高模型的效率和鲁棒性。</p> 
+<p>那么下一章将继续把Boosting模型大家庭补全-LightGBM。</p> 
+<hr>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/ddbb8f603307379bb5ba43e51e9be874/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">国内外交通数据集介绍（附参数说明）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/306d5e2d6ee9477257522bcedac78813/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【Rabbitmq详解】</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

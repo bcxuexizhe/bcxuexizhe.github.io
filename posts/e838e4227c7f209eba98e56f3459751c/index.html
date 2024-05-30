@@ -1,0 +1,1446 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Elasticsearch 核心技术（十）：GEO 地理查询（geo_bounding_box、geo_distance、geo_shape） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/e838e4227c7f209eba98e56f3459751c/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Elasticsearch 核心技术（十）：GEO 地理查询（geo_bounding_box、geo_distance、geo_shape）">
+  <meta property="og:description" content="❤️ 博客主页：水滴技术
+🚀 支持水滴：点赞👍 &#43; 收藏⭐ &#43; 留言💬
+🌸 订阅专栏：大数据核心技术从入门到精通
+文章目录 一、地理数据类型1.1、geo_point 地理点类型1.1.1、创建一个含有 geo_point 字段的索引1.1.2、通过“对象”指定 geo_point1.1.3、通过“字符串”指定 geo_point1.1.4、通过“地理哈希”指定 geo_point1.1.5、通过“数组”指定 geo_point1.1.6、通过“WKT”指定 geo_point 1.2、geo_shape 地理形状类型1.2.1、创建一个含有 geo_shape 字段的索引1.2.2、通过 Point 指定单个地理坐标1.2.3、通过 LineString 指定一条线1.2.4、通过 Polygon 指定一个多边形1.2.5、通过 MultiPoint 指定多个点1.2.6、通过 MultiLineString 指定多条线1.2.7、通过 MultiPolygon 指定多个多边形1.2.8、通过 GeometryCollection 指定地理形状的集合1.2.9、通过 envelope 指定矩形或包络线1.2.10、通过 circle 指定圆形 二、地理查询2.1、geo_bounding_box 矩形过滤2.1.1、查询矩形内的定位点（文档） 2.2、geo_distance 距离查询（圆形过滤）2.2.1、查询“附近的人”2.2.2、查询“附近的人”并按距离排序 2.3、geo_polygon 多边形查询（已过时）2.4、geo_shape 地理形状查询2.4.1、查询 intersects 相交关系2.4.2、查询 disjoint 不相交关系2.4.3、查询 within 在...之内关系2.4.4、查询 contains 包含关系 三、附录附录一：es_location_001 索引附录二：es_location_002 索引附录三：地图工具 系列文章热门专栏 大家好，我是水滴~~
+地理信息查询是 Elasticsearch 的重要特性之一，其 GEO 功能主要用于地理信息的存储和搜索。本篇主要内容：介绍 Elasticsearch 的两种地理数据类型，并通过一些实例来讲述geo_bounding_box 查询、geo_distance 查询和 geo_shape 查询。">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-05-16T21:26:52+08:00">
+    <meta property="article:modified_time" content="2023-05-16T21:26:52+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Elasticsearch 核心技术（十）：GEO 地理查询（geo_bounding_box、geo_distance、geo_shape）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/41/03/JU3zAf8U_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>❤️ 博客主页：<a href="https://blog.csdn.net/weixin_67276852">水滴技术</a><br> 🚀 支持水滴：<strong>点赞</strong>👍 + <strong>收藏</strong>⭐ + <strong>留言</strong>💬<br> 🌸 订阅专栏：<a href="https://blog.csdn.net/weixin_67276852/category_12152310.html">大数据核心技术从入门到精通</a></p> 
+</blockquote> 
+<p></p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_17" rel="nofollow">一、地理数据类型</a></li><li><ul><li><a href="#11geo_point__23" rel="nofollow">1.1、geo_point 地理点类型</a></li><li><ul><li><a href="#111_geo_point__29" rel="nofollow">1.1.1、创建一个含有 geo_point 字段的索引</a></li><li><a href="#112_geo_point_50" rel="nofollow">1.1.2、通过“对象”指定 geo_point</a></li><li><a href="#113_geo_point_66" rel="nofollow">1.1.3、通过“字符串”指定 geo_point</a></li><li><a href="#114_geo_point_81" rel="nofollow">1.1.4、通过“地理哈希”指定 geo_point</a></li><li><a href="#115_geo_point_94" rel="nofollow">1.1.5、通过“数组”指定 geo_point</a></li><li><a href="#116WKT_geo_point_107" rel="nofollow">1.1.6、通过“WKT”指定 geo_point</a></li></ul> 
+   </li><li><a href="#12geo_shape__120" rel="nofollow">1.2、geo_shape 地理形状类型</a></li><li><ul><li><a href="#121_geo_shape__130" rel="nofollow">1.2.1、创建一个含有 geo_shape 字段的索引</a></li><li><a href="#122_Point__153" rel="nofollow">1.2.2、通过 Point 指定单个地理坐标</a></li><li><a href="#123_LineString__171" rel="nofollow">1.2.3、通过 LineString 指定一条线</a></li><li><a href="#124_Polygon__189" rel="nofollow">1.2.4、通过 Polygon 指定一个多边形</a></li><li><a href="#125_MultiPoint__228" rel="nofollow">1.2.5、通过 MultiPoint 指定多个点</a></li><li><a href="#126_MultiLineString__248" rel="nofollow">1.2.6、通过 MultiLineString 指定多条线</a></li><li><a href="#127_MultiPolygon__270" rel="nofollow">1.2.7、通过 MultiPolygon 指定多个多边形</a></li><li><a href="#128_GeometryCollection__292" rel="nofollow">1.2.8、通过 GeometryCollection 指定地理形状的集合</a></li><li><a href="#129_envelope__319" rel="nofollow">1.2.9、通过 envelope 指定矩形或包络线</a></li><li><a href="#1210_circle__337" rel="nofollow">1.2.10、通过 circle 指定圆形</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_376" rel="nofollow">二、地理查询</a></li><li><ul><li><a href="#21geo_bounding_box__382" rel="nofollow">2.1、geo_bounding_box 矩形过滤</a></li><li><ul><li><a href="#211_388" rel="nofollow">2.1.1、查询矩形内的定位点（文档）</a></li></ul> 
+   </li><li><a href="#22geo_distance__491" rel="nofollow">2.2、geo_distance 距离查询（圆形过滤）</a></li><li><ul><li><a href="#221_497" rel="nofollow">2.2.1、查询“附近的人”</a></li><li><a href="#222_607" rel="nofollow">2.2.2、查询“附近的人”并按距离排序</a></li></ul> 
+   </li><li><a href="#23geo_polygon__741" rel="nofollow">2.3、geo_polygon 多边形查询（已过时）</a></li><li><a href="#24geo_shape__746" rel="nofollow">2.4、geo_shape 地理形状查询</a></li><li><ul><li><a href="#241_intersects__762" rel="nofollow">2.4.1、查询 intersects 相交关系</a></li><li><a href="#242_disjoint__894" rel="nofollow">2.4.2、查询 disjoint 不相交关系</a></li><li><a href="#243_within__994" rel="nofollow">2.4.3、查询 within 在...之内关系</a></li><li><a href="#244_contains__1257" rel="nofollow">2.4.4、查询 contains 包含关系</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#_1446" rel="nofollow">三、附录</a></li><li><ul><li><a href="#es_location_001__1450" rel="nofollow">附录一：es_location_001 索引</a></li><li><a href="#es_location_002__1514" rel="nofollow">附录二：es_location_002 索引</a></li><li><a href="#_1575" rel="nofollow">附录三：地图工具</a></li></ul> 
+  </li><li><a href="#_1587" rel="nofollow">系列文章</a></li><li><a href="#_1599" rel="nofollow">热门专栏</a></li></ul> 
+</div> 
+<p></p> 
+<hr> 
+<p>大家好，我是水滴~~</p> 
+<p>地理信息查询是 Elasticsearch 的重要特性之一，其 GEO 功能主要用于地理信息的存储和搜索。本篇主要内容：介绍 Elasticsearch 的两种地理数据类型，并通过一些实例来讲述<code>geo_bounding_box</code> 查询、<code>geo_distance</code> 查询和 <code>geo_shape</code> 查询。</p> 
+<h2><a id="_17"></a>一、地理数据类型</h2> 
+<p>在介绍地理查询前，我们先来了解下地理数据类型。Elasticsearch 支持两种地理数据类型：<code>geo_point</code> 和 <code>geo_shape</code>。在之前的文章《<a href="https://blog.csdn.net/weixin_67276852/article/details/129291844">Elasticsearch 核心技术（五）：常用数据类型详解</a>》中有介绍过，学过的友友可以跳过本章节。</p> 
+<blockquote> 
+ <p>注意：Elasticsearch 使用的是 <code>WGS-84</code> 坐标系，如果你是直接从高德地图中获取的经纬度坐标，需要转换一下再存储，否则会有精度问题。当然，如果对精度要求没有那么高，请忽略。</p> 
+</blockquote> 
+<h3><a id="11geo_point__23"></a>1.1、geo_point 地理点类型</h3> 
+<blockquote> 
+ <p><code>geo_point</code> 数据类型用来存储一个由经纬度组成的地理点，也就是地理坐标。</p> 
+</blockquote> 
+<p>地理坐标在生活中有很多用处，比如：在一个陌生的城市，可以导航到指定的酒店；点外卖时可以查看附近有哪些好吃的；走累了可以看看哪里有共享单车等等。</p> 
+<h4><a id="111_geo_point__29"></a>1.1.1、创建一个含有 geo_point 字段的索引</h4> 
+<p>下面示例创建一个 <code>index_geo_point</code> 索引，其中 <code>location</code> 字段为 <code>geo_point</code> 类型。</p> 
+<pre><code class="prism language-json"><span class="token constant">PUT</span> index_geo_point
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"mappings"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"id"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"keyword"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"geo_point"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="112_geo_point_50"></a>1.1.2、通过“对象”指定 geo_point</h4> 
+<p>可以通过一个对象来表示地理点，其中 <code>lat</code> 表示纬度，<code>lon</code> 表示经度。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_point<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">1</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span> 
+    <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.917846</span><span class="token punctuation">,</span>
+    <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.397058</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="113_geo_point_66"></a>1.1.3、通过“字符串”指定 geo_point</h4> 
+<p>可以通过一个字符串表示地理点，格式为：<code>"lat, lon"</code>。</p> 
+<blockquote> 
+ <p>注意：字符串的地理点的顺序为 lat,lon，这与数组和WKT相反。</p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_point<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">2</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token string">"39.917846, 116.397058"</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="114_geo_point_81"></a>1.1.4、通过“地理哈希”指定 geo_point</h4> 
+<p>可以通过地理点的哈希值来表示地理点。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_point<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">3</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token string">"drm3btev3e86"</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="115_geo_point_94"></a>1.1.5、通过“数组”指定 geo_point</h4> 
+<p>可以通过一个数组来表示地理点，格式为：<code>[lon, lat]</code></p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_point<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">4</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.397058</span><span class="token punctuation">,</span> <span class="token number">39.917846</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="116WKT_geo_point_107"></a>1.1.6、通过“WKT”指定 geo_point</h4> 
+<p>可以通过 <a href="https://docs.opengeospatial.org/is/12-063r5/12-063r5.html" rel="nofollow">Well-Known Text</a> 格式的 <code>POINT</code> 来表示地理点，格式为：<code>"POINT(lon, lat)"</code></p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_point<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">5</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token string">"POINT(116.397058, 39.917846)"</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="12geo_shape__120"></a>1.2、geo_shape 地理形状类型</h3> 
+<blockquote> 
+ <p><code>geo_shape</code> 数据类型用于存储地理形状，例如：直线、矩形、多边形等。</p> 
+</blockquote> 
+<p>也有很多场景只使用一个地理点是无法满足的，比如：一所学校、一处旅游景点、一座城市等等，想要表示这样大面积的地点，就需要用到 <code>geo_shape</code> 了。</p> 
+<p>下面一起看下 <code>geo_shape</code> 类型是如何指定的。</p> 
+<h4><a id="121_geo_shape__130"></a>1.2.1、创建一个含有 geo_shape 字段的索引</h4> 
+<p>下面示例创建一个 <code>index_geo_shape</code> 索引，其中 <code>location</code> 字段为 <code>geo_shape</code> 类型。</p> 
+<pre><code class="prism language-json"><span class="token constant">PUT</span> index_geo_shape
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"mappings"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"id"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"keyword"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"geo_shape"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="122_Point__153"></a>1.2.2、通过 Point 指定单个地理坐标</h4> 
+<p><code>Point</code> 类型用于指定单个地理坐标点，坐标数组格式为：<code>[lon, lat]</code></p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">1</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Point"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.397058</span><span class="token punctuation">,</span> <span class="token number">39.917846</span><span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="123_LineString__171"></a>1.2.3、通过 LineString 指定一条线</h4> 
+<p><code>LineString</code> 类型用于指定一条线，该线由两个或多个位置点组成。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">2</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"LineString"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.397058</span><span class="token punctuation">,</span> <span class="token number">39.917846</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.397058</span><span class="token punctuation">,</span> <span class="token number">38.111111</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="124_Polygon__189"></a>1.2.4、通过 Polygon 指定一个多边形</h4> 
+<p><code>Polygon</code> 类型用于指定一个多边形，该多边形要求第一个点和最后一个点必须相同，表示该多边形是闭合的。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">3</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<blockquote> 
+ <p>这里要注意，<code>coordinates</code> 是一个数组，表示可以指定多个多边形。</p> 
+</blockquote> 
+<p>下面示例指定了两个多边形，一个数组表示多边形的外部边界，另一个数组表示多边形的内部边界，即表示一个带孔的多边形。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">4</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="125_MultiPoint__228"></a>1.2.5、通过 MultiPoint 指定多个点</h4> 
+<p><code>MultiPoint</code> 类型用于指定多个点。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">5</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"MultiPoint"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">103.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="126_MultiLineString__248"></a>1.2.6、通过 MultiLineString 指定多条线</h4> 
+<p><code>MultiLineString</code> 类型用于指定多条线。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">6</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">6</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"MultiLineString"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">103.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">103.0</span><span class="token punctuation">,</span> <span class="token number">3.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">3.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="127_MultiPolygon__270"></a>1.2.7、通过 MultiPolygon 指定多个多边形</h4> 
+<p><code>MultiPolygon</code> 类型用于指定多个多边形。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">7</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">7</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"MultiPolygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">103.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">103.0</span><span class="token punctuation">,</span> <span class="token number">3.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">3.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">2.0</span><span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token punctuation">]</span><span class="token punctuation">,</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+        <span class="token punctuation">[</span><span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.8</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.8</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">100.2</span><span class="token punctuation">,</span> <span class="token number">0.2</span><span class="token punctuation">]</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="128_GeometryCollection__292"></a>1.2.8、通过 GeometryCollection 指定地理形状的集合</h4> 
+<p><code>GeometryCollection</code> 类型用于指定一个地理形状的集合，即可以包含多个上面所属的地理形状。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">8</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">8</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"GeometryCollection"</span><span class="token punctuation">,</span>
+    <span class="token string">"geometries"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Point"</span><span class="token punctuation">,</span>
+        <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"LineString"</span><span class="token punctuation">,</span>
+        <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">102.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="129_envelope__319"></a>1.2.9、通过 envelope 指定矩形或包络线</h4> 
+<p><code>envelope</code> 类型用于指定一个矩形或包络线，它由两个坐标组成，分别表示左上角和右下角的坐标。</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">9</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">9</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"envelope"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">100.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">0.0</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h4><a id="1210_circle__337"></a>1.2.10、通过 circle 指定圆形</h4> 
+<p><code>circle</code> 类型用于指定一个圆形，需要指定圆心坐标和半径。</p> 
+<blockquote> 
+ <p>注意：映射字段时，圆形不能使用默认的策略，需要将 <code>strategy</code> 指定为 <code>recursive</code>。如下：</p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token constant">PUT</span> index_geo_shape2
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"mappings"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"id"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"keyword"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"geo_shape"</span><span class="token punctuation">,</span>
+        <span class="token string">"strategy"</span><span class="token operator">:</span> <span class="token string">"recursive"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>添加文档时，<code>radius</code> 用于指定半径，如果未指定单位，默认为米</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> index_geo_shape<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">10</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">10</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"circle"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">101.0</span><span class="token punctuation">,</span> <span class="token number">1.0</span><span class="token punctuation">]</span><span class="token punctuation">,</span>
+    <span class="token string">"radius"</span> <span class="token operator">:</span> <span class="token string">"100m"</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h2><a id="_376"></a>二、地理查询</h2> 
+<p>地理查询主要用于上文讲的两种地理数据类型 <code>geo_point</code> 和 <code>geo_shape</code> 的查询，查询的方法包括下面四种：<code>geo_bounding_box</code>、<code>geo_distance</code>、<code>geo_polygon</code> 和 <code>geo_shape</code>。</p> 
+<p>下面我们分别介绍它们具体的应用。</p> 
+<h3><a id="21geo_bounding_box__382"></a>2.1、geo_bounding_box 矩形过滤</h3> 
+<p><code>geo_bounding_box</code> 用于查询所有落入矩形的地理点所属文档。查询时需要指定两个坐标点左上角和右下角，这两个点就可以确定一个矩形，而查询的结果为，所有定位点落入该矩形的文档。</p> 
+<p>下面我们举例说明：</p> 
+<h4><a id="211_388"></a>2.1.1、查询矩形内的定位点（文档）</h4> 
+<blockquote> 
+ <p>我们以“故宫博物院”为例，取其左上角和右下角的坐标点，会形成一个矩形，然后查询该矩形内的坐标点（所属文档）。</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/af/8e/kW7NDYZa_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>上图中，故宫的左上角坐标点为 <code>116.391978,39.922561</code>，右下角坐标点为 <code>116.402149,39.913443</code>。<br> 另外找了 6 个点，分别代表 6 个文档的位置，它们的坐标点如下：<br> 1：<code>116.39775,39.92029</code><br> 2：<code>116.395947,39.916208</code><br> 3：<code>116.410624,39.91871</code><br> 4：<code>116.397235,39.909823</code><br> 5：<code>116.385304,39.917591</code><br> 6：<code>116.396548,39.92832</code></p> 
+</blockquote> 
+<p>从肉眼可以看出，1 和 2 号坐标点在故宫的矩形框内，我们通过该实例，看能否准确的查出内容。</p> 
+<p>我们使用索引 <code>es_location_001</code> 演示该示例，索引的创建，及文档的添加请见<strong>附录一</strong>，这里我们只讲查询**。**</p> 
+<blockquote> 
+ <p>查询时需要指定 <code>geo_bounding_box</code> 类型，并指定 <code>top_left</code> 左上角的坐标，<code>bottom_right</code> 右下角的坐标。</p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_001<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_bounding_box"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"top_left"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.922561</span><span class="token punctuation">,</span>
+              <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.391978</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"bottom_right"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.913443</span><span class="token punctuation">,</span>
+              <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.402149</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：通过查询结果可以看出 1、2 文档被查出，正是我们猜测的结果。</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">929</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.39775</span><span class="token punctuation">,</span>
+            <span class="token number">39.92029</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.395947</span><span class="token punctuation">,</span>
+            <span class="token number">39.916208</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h3><a id="22geo_distance__491"></a>2.2、geo_distance 距离查询（圆形过滤）</h3> 
+<blockquote> 
+ <p><code>geo_distance</code> 用于查询距离中心点指定范围内的地理点所属文档，也就是圆形过滤。查询时需要指定圆心的坐标，以及半径长度，就可以查询方圆内的文档了。</p> 
+</blockquote> 
+<p>下面我们举例说明：</p> 
+<h4><a id="221_497"></a>2.2.1、查询“附近的人”</h4> 
+<p>我们还是使用 <code>es_location_001</code> 索引那 6 个坐标点来演示，而假设“我”当前的坐标为 <code>116.410539,39.912983</code>，然后看下附近两公里内的人，如下图：</p> 
+<p><img src="https://images2.imgbox.com/c5/52/ju9EA4yC_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>查询时需要指 <code>geo_distance</code> 并指定定圆心坐标（“我”的位置）和半径距离 <code>distance</code></p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> <span class="token operator">/</span>es_location_001<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_distance"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"distance"</span><span class="token operator">:</span> <span class="token string">"2km"</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.912983</span><span class="token punctuation">,</span>
+            <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.410539</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：通过查询结果可以看出，1、2、3、4个点距离“我”在两公里内。</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.39775</span><span class="token punctuation">,</span>
+            <span class="token number">39.92029</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.395947</span><span class="token punctuation">,</span>
+            <span class="token number">39.916208</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.410624</span><span class="token punctuation">,</span>
+            <span class="token number">39.91871</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"4"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.397235</span><span class="token punctuation">,</span>
+            <span class="token number">39.909823</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="222_607"></a>2.2.2、查询“附近的人”并按距离排序</h4> 
+<p>上面的示例只显示了查询结果，并没有显示每个“人”距离“我”有多远，也没有排序。下面我们看怎么实现排序的。</p> 
+<p><img src="https://images2.imgbox.com/e5/00/5r3sqlQM_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>按距离排序，需要在上面查询基础上增加 <code>sort</code> 选项，其中：<code>_geo_distance</code> 为“我”的坐标；<code>order</code>指定 <code>asc</code> 表示由近到远排序；<code>unit</code> 指定 <code>km</code>，表示结果显示的距离单位。</p> 
+</blockquote> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> <span class="token operator">/</span>es_location_001<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_distance"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"distance"</span><span class="token operator">:</span> <span class="token string">"2km"</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.912983</span><span class="token punctuation">,</span>
+            <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.410539</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"sort"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+   <span class="token punctuation">{<!-- --></span>
+     <span class="token string">"_geo_distance"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+       <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+         <span class="token string">"lat"</span><span class="token operator">:</span> <span class="token number">39.912983</span><span class="token punctuation">,</span>
+         <span class="token string">"lon"</span><span class="token operator">:</span> <span class="token number">116.410539</span>
+       <span class="token punctuation">}</span><span class="token punctuation">,</span>
+       <span class="token string">"order"</span><span class="token operator">:</span> <span class="token string">"asc"</span><span class="token punctuation">,</span>
+       <span class="token string">"unit"</span><span class="token operator">:</span> <span class="token string">"km"</span>
+     <span class="token punctuation">}</span>
+   <span class="token punctuation">}</span>
+ <span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：查询结果便是按距离排序的结果，并且返回的 <code>sort</code> 选项为每个“人”距离“我”的距离</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">26</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.410624</span><span class="token punctuation">,</span>
+            <span class="token number">39.91871</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token string">"sort"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token number">0.6368510653173584</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"4"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.397235</span><span class="token punctuation">,</span>
+            <span class="token number">39.909823</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token string">"sort"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token number">1.187873070108458</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.395947</span><span class="token punctuation">,</span>
+            <span class="token number">39.916208</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token string">"sort"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token number">1.2951412302092007</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_001"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token keyword">null</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+            <span class="token number">116.39775</span><span class="token punctuation">,</span>
+            <span class="token number">39.92029</span>
+          <span class="token punctuation">]</span>
+        <span class="token punctuation">}</span><span class="token punctuation">,</span>
+        <span class="token string">"sort"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+          <span class="token number">1.360073305586383</span>
+        <span class="token punctuation">]</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h3><a id="23geo_polygon__741"></a>2.3、geo_polygon 多边形查询（已过时）</h3> 
+<p>在 <code>7.12</code> 版本中已弃用，官方推荐使用 <code>geo_shape</code>。</p> 
+<p><img src="https://images2.imgbox.com/ec/5d/hlcjYCNN_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="24geo_shape__746"></a>2.4、geo_shape 地理形状查询</h3> 
+<blockquote> 
+ <p><code>geo_shape</code> 用于查询地理形状的空间关系。例如：与指定地理形状相交、包含、不相交的地理形状等。</p> 
+</blockquote> 
+<p>而 Elasticsearch 支持四种空间关系：</p> 
+<ul><li><code>intersects</code>：相交，用于查询所有与指定图形相交的文档。</li><li><code>disjoint</code>：不相交，用于查询所有与指定图形不相交的文档。</li><li><code>within</code>：在…之内，用于查询所有在指定图形之内的文档。</li><li><code>contains</code>：包含，用于查询所有包含指定图形的文档。</li></ul> 
+<p>下面我们举例说明：</p> 
+<p>我们先准备三个图形，我用的是矩形，如下图所示。并将它们添加到 <code>es_location_002</code> 索引中，索引的创建，及文档的添加请见<strong>附录二。</strong><br> <img src="https://images2.imgbox.com/eb/02/iUzwssxZ_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="241_intersects__762"></a>2.4.1、查询 intersects 相交关系</h4> 
+<p>如下图，查询与蓝色三角形“相交”的图形有哪些，通过肉眼可以看出，1 和 2 与之相交。</p> 
+<p><img src="https://images2.imgbox.com/a4/72/QBJP61dp_o.png" alt="在这里插入图片描述"><br> 查询相交的语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.382215</span><span class="token punctuation">,</span><span class="token number">39.921606</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.396892</span><span class="token punctuation">,</span><span class="token number">39.919039</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.387965</span><span class="token punctuation">,</span><span class="token number">39.912719</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.382215</span><span class="token punctuation">,</span><span class="token number">39.921606</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"intersects"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：1 和 2 图形被查出，验证成功</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.40187</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922396</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.402127</span><span class="token punctuation">,</span>
+                  <span class="token number">39.91318</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.392085</span><span class="token punctuation">,</span>
+                  <span class="token number">39.913114</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.92233</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="242_disjoint__894"></a>2.4.2、查询 disjoint 不相交关系</h4> 
+<p>还是刚才的蓝色三角形，查询与蓝色三角形“不相交”的图形有哪些，通过肉眼可以看出，3 与之不相交。</p> 
+<p><img src="https://images2.imgbox.com/ba/d6/zBiz8vYU_o.png" alt="在这里插入图片描述"><br> 查询不相交的语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.382215</span><span class="token punctuation">,</span><span class="token number">39.921606</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.396892</span><span class="token punctuation">,</span><span class="token number">39.919039</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.387965</span><span class="token punctuation">,</span><span class="token number">39.912719</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.382215</span><span class="token punctuation">,</span><span class="token number">39.921606</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"disjoint"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：3 图形被查询，验证成功</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">115</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417405</span><span class="token punctuation">,</span>
+                  <span class="token number">39.924437</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417491</span><span class="token punctuation">,</span>
+                  <span class="token number">39.912127</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407277</span><span class="token punctuation">,</span>
+                  <span class="token number">39.911863</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="243_within__994"></a>2.4.3、查询 within 在…之内关系</h4> 
+<p>如下图，我画了一个大的蓝色矩形，将 1 和 2 包含在内，那么查询所有在蓝色矩形内的文档，看下 1 和 2 图形能否被查出。</p> 
+<p><img src="https://images2.imgbox.com/cd/5d/mZSupWhu_o.png" alt="在这里插入图片描述"><br> 查询在蓝色矩形之内语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.374404</span><span class="token punctuation">,</span><span class="token number">39.92391</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.404616</span><span class="token punctuation">,</span><span class="token number">39.924108</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.404359</span><span class="token punctuation">,</span><span class="token number">39.911732</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.374576</span><span class="token punctuation">,</span><span class="token number">39.911337</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.374404</span><span class="token punctuation">,</span><span class="token number">39.92391</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"within"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：1 和 2 图形被查出</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.40187</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922396</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.402127</span><span class="token punctuation">,</span>
+                  <span class="token number">39.91318</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.392085</span><span class="token punctuation">,</span>
+                  <span class="token number">39.913114</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.92233</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<blockquote> 
+ <p>注意：在…之内关系也属于相交关系，通过查询相交的图形，也能查出 1 和 2 图形来。</p> 
+</blockquote> 
+<p>查询相交语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.374404</span><span class="token punctuation">,</span><span class="token number">39.92391</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.404616</span><span class="token punctuation">,</span><span class="token number">39.924108</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.404359</span><span class="token punctuation">,</span><span class="token number">39.911732</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.374576</span><span class="token punctuation">,</span><span class="token number">39.911337</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.374404</span><span class="token punctuation">,</span><span class="token number">39.92391</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"intersects"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：1 和 2 图形被查出</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"2"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.40187</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922396</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.402127</span><span class="token punctuation">,</span>
+                  <span class="token number">39.91318</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.392085</span><span class="token punctuation">,</span>
+                  <span class="token number">39.913114</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.391913</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"1"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.92233</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.385819</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.914958</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.378009</span><span class="token punctuation">,</span>
+                  <span class="token number">39.922199</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h4><a id="244_contains__1257"></a>2.4.4、查询 contains 包含关系</h4> 
+<p>如下图，在 3 图形内画了一个蓝色的三角形，查询所有包含三角形的文档，看能否将 3 图形查出来。</p> 
+<p><img src="https://images2.imgbox.com/2b/27/qiYPXtaL_o.png" alt="在这里插入图片描述"><br> 查询包含语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.41071</span><span class="token punctuation">,</span><span class="token number">39.921014</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.41483</span><span class="token punctuation">,</span><span class="token number">39.917064</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.409766</span><span class="token punctuation">,</span><span class="token number">39.915748</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.41071</span><span class="token punctuation">,</span><span class="token number">39.921014</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"contains"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>输出结果：3 图形被查出来</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417405</span><span class="token punctuation">,</span>
+                  <span class="token number">39.924437</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417491</span><span class="token punctuation">,</span>
+                  <span class="token number">39.912127</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407277</span><span class="token punctuation">,</span>
+                  <span class="token number">39.911863</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<blockquote> 
+ <p>注意：包含关系也属于相交关系，通过查询相交的图形，也能查出 3 图形来。</p> 
+</blockquote> 
+<p>查询相交语句：</p> 
+<pre><code class="prism language-json"><span class="token constant">GET</span> es_location_002<span class="token operator">/</span>_search
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"query"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"bool"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"must"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"match_all"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"filter"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"geo_shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"shape"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+              <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.41071</span><span class="token punctuation">,</span><span class="token number">39.921014</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.41483</span><span class="token punctuation">,</span><span class="token number">39.917064</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.409766</span><span class="token punctuation">,</span><span class="token number">39.915748</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.41071</span><span class="token punctuation">,</span><span class="token number">39.921014</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+            <span class="token punctuation">}</span><span class="token punctuation">,</span>
+            <span class="token string">"relation"</span><span class="token operator">:</span> <span class="token string">"intersects"</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>查询结果：同样 3 图形被查询出来</p> 
+<pre><code class="prism language-json"><span class="token punctuation">{<!-- --></span>
+  <span class="token string">"took"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+  <span class="token string">"timed_out"</span> <span class="token operator">:</span> <span class="token boolean">false</span><span class="token punctuation">,</span>
+  <span class="token string">"_shards"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"successful"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+    <span class="token string">"skipped"</span> <span class="token operator">:</span> <span class="token number">0</span><span class="token punctuation">,</span>
+    <span class="token string">"failed"</span> <span class="token operator">:</span> <span class="token number">0</span>
+  <span class="token punctuation">}</span><span class="token punctuation">,</span>
+  <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"total"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"value"</span> <span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+      <span class="token string">"relation"</span> <span class="token operator">:</span> <span class="token string">"eq"</span>
+    <span class="token punctuation">}</span><span class="token punctuation">,</span>
+    <span class="token string">"max_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+    <span class="token string">"hits"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"_index"</span> <span class="token operator">:</span> <span class="token string">"es_location_002"</span><span class="token punctuation">,</span>
+        <span class="token string">"_type"</span> <span class="token operator">:</span> <span class="token string">"_doc"</span><span class="token punctuation">,</span>
+        <span class="token string">"_id"</span> <span class="token operator">:</span> <span class="token string">"3"</span><span class="token punctuation">,</span>
+        <span class="token string">"_score"</span> <span class="token operator">:</span> <span class="token number">1.0</span><span class="token punctuation">,</span>
+        <span class="token string">"_source"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token string">"id"</span> <span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+          <span class="token string">"location"</span> <span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token string">"type"</span> <span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+            <span class="token string">"coordinates"</span> <span class="token operator">:</span> <span class="token punctuation">[</span>
+              <span class="token punctuation">[</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417405</span><span class="token punctuation">,</span>
+                  <span class="token number">39.924437</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.417491</span><span class="token punctuation">,</span>
+                  <span class="token number">39.912127</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407277</span><span class="token punctuation">,</span>
+                  <span class="token number">39.911863</span>
+                <span class="token punctuation">]</span><span class="token punctuation">,</span>
+                <span class="token punctuation">[</span>
+                  <span class="token number">116.407105</span><span class="token punctuation">,</span>
+                  <span class="token number">39.923844</span>
+                <span class="token punctuation">]</span>
+              <span class="token punctuation">]</span>
+            <span class="token punctuation">]</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+</code></pre> 
+<h2><a id="_1446"></a>三、附录</h2> 
+<h3><a id="es_location_001__1450"></a>附录一：es_location_001 索引</h3> 
+<p>创建 <code>es_location_001</code> 索引：</p> 
+<pre><code class="prism language-json"><span class="token constant">PUT</span> es_location_001
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"mappings"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"id"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"keyword"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"geo_point"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>添加 6 个文档：</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">1</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.39775</span><span class="token punctuation">,</span><span class="token number">39.92029</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">2</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.395947</span><span class="token punctuation">,</span><span class="token number">39.916208</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">3</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.410624</span><span class="token punctuation">,</span><span class="token number">39.91871</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">4</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">4</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.397235</span><span class="token punctuation">,</span><span class="token number">39.909823</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">5</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">5</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.385304</span><span class="token punctuation">,</span><span class="token number">39.917591</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_001<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">6</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">6</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">[</span><span class="token number">116.396548</span><span class="token punctuation">,</span><span class="token number">39.92832</span><span class="token punctuation">]</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="es_location_002__1514"></a>附录二：es_location_002 索引</h3> 
+<p>创建 <code>es_location_002</code> 索引：</p> 
+<pre><code class="prism language-json"><span class="token constant">PUT</span> es_location_002
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"mappings"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"properties"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token string">"id"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"keyword"</span>
+      <span class="token punctuation">}</span><span class="token punctuation">,</span>
+      <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"geo_shape"</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>添加 3 个矩形文档：</p> 
+<pre><code class="prism language-json"><span class="token constant">POST</span> es_location_002<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">1</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">1</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.378009</span><span class="token punctuation">,</span><span class="token number">39.922199</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.385819</span><span class="token punctuation">,</span><span class="token number">39.92233</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.385819</span><span class="token punctuation">,</span><span class="token number">39.914958</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.378009</span><span class="token punctuation">,</span><span class="token number">39.914958</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.378009</span><span class="token punctuation">,</span><span class="token number">39.922199</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_002<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">2</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">2</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.391913</span><span class="token punctuation">,</span><span class="token number">39.922199</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.40187</span><span class="token punctuation">,</span><span class="token number">39.922396</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.402127</span><span class="token punctuation">,</span><span class="token number">39.91318</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.392085</span><span class="token punctuation">,</span><span class="token number">39.913114</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.391913</span><span class="token punctuation">,</span><span class="token number">39.922199</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+
+<span class="token constant">POST</span> es_location_002<span class="token operator">/</span>_doc<span class="token operator">/</span><span class="token number">3</span>
+<span class="token punctuation">{<!-- --></span>
+  <span class="token string">"id"</span><span class="token operator">:</span> <span class="token number">3</span><span class="token punctuation">,</span>
+  <span class="token string">"location"</span><span class="token operator">:</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token string">"type"</span><span class="token operator">:</span> <span class="token string">"Polygon"</span><span class="token punctuation">,</span>
+    <span class="token string">"coordinates"</span><span class="token operator">:</span> <span class="token punctuation">[</span>
+      <span class="token punctuation">[</span> <span class="token punctuation">[</span><span class="token number">116.407105</span><span class="token punctuation">,</span><span class="token number">39.923844</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.417405</span><span class="token punctuation">,</span><span class="token number">39.924437</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.417491</span><span class="token punctuation">,</span><span class="token number">39.912127</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.407277</span><span class="token punctuation">,</span><span class="token number">39.911863</span><span class="token punctuation">]</span><span class="token punctuation">,</span> <span class="token punctuation">[</span><span class="token number">116.407105</span><span class="token punctuation">,</span><span class="token number">39.923844</span><span class="token punctuation">]</span> <span class="token punctuation">]</span>
+    <span class="token punctuation">]</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<h3><a id="_1575"></a>附录三：地图工具</h3> 
+<ul><li> <p><a href="https://lbs.amap.com/tools/picker" rel="nofollow">高德坐标拾取器</a></p> </li><li> <p><a href="https://lbs.amap.com/api/javascript-api-v2/guide/transform/convertfrom" rel="nofollow">坐标系转换</a></p> </li></ul> 
+<hr> 
+<h2><a id="_1587"></a>系列文章</h2> 
+<p>🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/128438528">Elasticsearch 核心技术（一）：Elasticsearch 安装、配置、运行（Windows 版）</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/128440982">Elasticsearch 核心技术（二）：elasticsearch-head 插件安装和使用</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/128441822">Elasticsearch 核心技术（三）：Kibana 安装、配置、运行（Windows 版）</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/128648993">Elasticsearch 核心技术（四）：索引管理、映射管理、文档管理（REST API）</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/129291844">Elasticsearch 核心技术（五）：常用数据类型详解</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/129404568">Elasticsearch 核心技术（六）：内置的 8 种分词器详解 + 代码示例</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/129423235">Elasticsearch 核心技术（七）：IK 中文分词器的安装、使用、自定义字典</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/129821934">Elasticsearch 核心技术（八）：常用 DSL 查询（全文搜索、精确匹配、布尔查询）</a><br> 🔥 <a href="https://blog.csdn.net/weixin_67276852/article/details/129935335">Elasticsearch 核心技术（九）：搜索结果处理（分页、排序、指定返回字段、去重、高亮显示）</a></p> 
+<h2><a id="_1599"></a>热门专栏</h2> 
+<p>👍 《<a href="https://blog.csdn.net/weixin_67276852/category_12111894.html">Python入门核心技术</a>》<br> 👍 《<a href="https://blog.csdn.net/weixin_67276852/category_11729708.html">IDEA 教程：从入门到精通</a>》<br> 👍 《<a href="https://blog.csdn.net/weixin_67276852/category_11899454.html">Java 教程：从入门到精通</a>》<br> 👍 《<a href="https://blog.csdn.net/weixin_67276852/category_11698474.html">MySQL 教程：从入门到精通</a>》<br> 👍 《<a href="https://blog.csdn.net/weixin_67276852/category_12152310.html">大数据核心技术从入门到精通</a>》</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/2d3cea717f71206020273435367ffbe2/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">双层优化入门(2)—基于yalmip的双层优化求解(附matlab代码)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/d5bcc8b094a9c9af030010e972af1770/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【LLM】Windows本地CPU部署民间版中文羊驼模型（Chinese-LLaMA-Alpaca）踩坑记录</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

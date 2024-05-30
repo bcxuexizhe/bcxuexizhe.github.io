@@ -1,0 +1,818 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Fast-Planner(一)前端详解kinodynamic A* - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/5eb087f128d64600354f05bc00e35e11/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Fast-Planner(一)前端详解kinodynamic A*">
+  <meta property="og:description" content="作为无人机自主运动的入门路径规划算法，详细表述了路径规划的前端和后端，前端为路径搜索，后端未路径优化。具体参考代码。
+一、kinodynamic a_star 路径搜索 这里参考的文章是Path Planning for Autonomous Vehicles in Unknown Semi-structured Environments
+总的可以概括为融合动力学约束的A*搜索，通过共轭梯度下降求局部最优。
+解析kinodynamic_astar.cpp Pathnode类(文章中motion Primitives)反向链表 class PathNode { public: /* -------------------- */ Eigen::Vector3i index; //voxel坐标 Eigen::Matrix&lt;double, 6, 1&gt; state; //基元状态,分别为xyz及其一阶导(vel) double g_score, f_score; //代价函数、启发函数 Eigen::Vector3d input; //输入，分别为xyz上的二阶导(acc) double duration; //输入持续时间 double time; // dyn int time_idx; PathNode* parent; //父节点 char node_state; /* -------------------- */ PathNode() { parent = NULL; node_state = NOT_EXPAND; } ~PathNode(){}; EIGEN_MAKE_ALIGNED_OPERATOR_NEW }; typedef PathNode* PathNodePtr; 主函数 /* kinodynamic A*的主函数 parameter： - start_pt：起点位置 - start_v: 起始速度 - start_a: 起始加速度 - end_pt: 终点位置 - end_v: 终点速度 - init： 初始化成功标志位 - dynamic：动静规划标志位 - time_start:起始时间 */ int KinodynamicAstar::search(Eigen::Vector3d start_pt, Eigen::Vector3d start_v, Eigen::Vector3d start_a, Eigen::Vector3d end_pt, Eigen::Vector3d end_v, bool init, bool dynamic, double time_start) 读取传入参数">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-03-11T21:33:46+08:00">
+    <meta property="article:modified_time" content="2024-03-11T21:33:46+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Fast-Planner(一)前端详解kinodynamic A*</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>作为无人机自主运动的入门路径规划算法，详细表述了路径规划的前端和后端，前端为路径搜索，后端未路径优化。具体参考<a href="https://github.com/HKUST-Aerial-Robotics/Fast-Planner">代码</a>。</p> 
+<h2><a id="kinodynamic_a_star__1"></a>一、kinodynamic a_star 路径搜索</h2> 
+<p>这里参考的文章是Path Planning for Autonomous Vehicles in Unknown Semi-structured Environments<br> 总的可以概括为融合动力学约束的A*搜索，通过共轭梯度下降求局部最优。</p> 
+<h3><a id="kinodynamic_astarcpp_4"></a>解析kinodynamic_astar.cpp</h3> 
+<h4><a id="Pathnodemotion_Primitives_5"></a>Pathnode类(文章中motion Primitives)反向链表</h4> 
+<pre><code class="prism language-cpp"><span class="token keyword">class</span> <span class="token class-name">PathNode</span> <span class="token punctuation">{<!-- --></span>
+<span class="token keyword">public</span><span class="token operator">:</span>
+  <span class="token comment">/* -------------------- */</span>
+  Eigen<span class="token double-colon punctuation">::</span>Vector3i index<span class="token punctuation">;</span>  <span class="token comment">//voxel坐标</span>
+  Eigen<span class="token double-colon punctuation">::</span>Matrix<span class="token operator">&lt;</span><span class="token keyword">double</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token operator">&gt;</span> state<span class="token punctuation">;</span>  <span class="token comment">//基元状态,分别为xyz及其一阶导(vel)</span>
+  <span class="token keyword">double</span> g_score<span class="token punctuation">,</span> f_score<span class="token punctuation">;</span>   <span class="token comment">//代价函数、启发函数</span>
+  Eigen<span class="token double-colon punctuation">::</span>Vector3d input<span class="token punctuation">;</span>    <span class="token comment">//输入，分别为xyz上的二阶导(acc)</span>
+  <span class="token keyword">double</span> duration<span class="token punctuation">;</span>    <span class="token comment">//输入持续时间</span>
+  <span class="token keyword">double</span> time<span class="token punctuation">;</span>  <span class="token comment">// dyn</span>
+  <span class="token keyword">int</span> time_idx<span class="token punctuation">;</span>
+  PathNode<span class="token operator">*</span> parent<span class="token punctuation">;</span>   <span class="token comment">//父节点</span>
+  <span class="token keyword">char</span> node_state<span class="token punctuation">;</span>
+
+  <span class="token comment">/* -------------------- */</span>
+  <span class="token function">PathNode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    parent <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>
+    node_state <span class="token operator">=</span> NOT_EXPAND<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  <span class="token operator">~</span><span class="token function">PathNode</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token punctuation">}</span><span class="token punctuation">;</span>
+  EIGEN_MAKE_ALIGNED_OPERATOR_NEW
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token keyword">typedef</span> PathNode<span class="token operator">*</span> PathNodePtr<span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="_30"></a>主函数</h4> 
+<pre><code class="prism language-cpp"><span class="token comment">/*
+  kinodynamic A*的主函数
+    parameter：
+      - start_pt：起点位置
+      - start_v: 起始速度
+      - start_a: 起始加速度
+      - end_pt:  终点位置
+      - end_v:   终点速度
+      - init：   初始化成功标志位
+      - dynamic：动静规划标志位
+      - time_start:起始时间
+*/</span>
+<span class="token keyword">int</span> <span class="token class-name">KinodynamicAstar</span><span class="token double-colon punctuation">::</span><span class="token function">search</span><span class="token punctuation">(</span>Eigen<span class="token double-colon punctuation">::</span>Vector3d start_pt<span class="token punctuation">,</span> Eigen<span class="token double-colon punctuation">::</span>Vector3d start_v<span class="token punctuation">,</span> Eigen<span class="token double-colon punctuation">::</span>Vector3d start_a<span class="token punctuation">,</span>
+                             Eigen<span class="token double-colon punctuation">::</span>Vector3d end_pt<span class="token punctuation">,</span> Eigen<span class="token double-colon punctuation">::</span>Vector3d end_v<span class="token punctuation">,</span> <span class="token keyword">bool</span> init<span class="token punctuation">,</span> <span class="token keyword">bool</span> dynamic<span class="token punctuation">,</span>
+                             <span class="token keyword">double</span> time_start<span class="token punctuation">)</span>
+</code></pre> 
+<p><strong>读取传入参数</strong></p> 
+<pre><code class="prism language-cpp">  <span class="token comment">//读取传入参数</span>
+  start_vel_ <span class="token operator">=</span> start_v<span class="token punctuation">;</span>
+  start_acc_ <span class="token operator">=</span> start_a<span class="token punctuation">;</span>
+
+  PathNodePtr cur_node <span class="token operator">=</span> path_node_pool_<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span><span class="token punctuation">;</span>  <span class="token comment">//取出第一个路径点赋给当前节点</span>
+  cur_node<span class="token operator">-&gt;</span>parent <span class="token operator">=</span> <span class="token constant">NULL</span><span class="token punctuation">;</span>  <span class="token comment">//父节点</span>
+  cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> start_pt<span class="token punctuation">;</span>
+  cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">.</span><span class="token function">tail</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> start_v<span class="token punctuation">;</span>
+  cur_node<span class="token operator">-&gt;</span>index <span class="token operator">=</span> <span class="token function">posToIndex</span><span class="token punctuation">(</span>start_pt<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//获得全局坐标系下的位置索引</span>
+  cur_node<span class="token operator">-&gt;</span>g_score <span class="token operator">=</span> <span class="token number">0.0</span><span class="token punctuation">;</span>    <span class="token comment">//记录当前成本代价</span>
+
+  Eigen<span class="token double-colon punctuation">::</span>VectorXd <span class="token function">end_state</span><span class="token punctuation">(</span><span class="token number">6</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Eigen<span class="token double-colon punctuation">::</span>Vector3i end_index<span class="token punctuation">;</span>
+  <span class="token keyword">double</span> time_to_goal<span class="token punctuation">;</span>    <span class="token comment">//路径规划时间</span>
+
+  end_state<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> end_pt<span class="token punctuation">;</span>
+  end_state<span class="token punctuation">.</span><span class="token function">tail</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">=</span> end_v<span class="token punctuation">;</span>
+  end_index <span class="token operator">=</span> <span class="token function">posToIndex</span><span class="token punctuation">(</span>end_pt<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  cur_node<span class="token operator">-&gt;</span>f_score <span class="token operator">=</span> lambda_heu_ <span class="token operator">*</span> <span class="token function">estimateHeuristic</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">,</span> end_state<span class="token punctuation">,</span> time_to_goal<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">//计算启发函数</span>
+  cur_node<span class="token operator">-&gt;</span>node_state <span class="token operator">=</span> IN_OPEN_SET<span class="token punctuation">;</span> <span class="token comment">//标记为OPEN</span>
+  open_set_<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>cur_node<span class="token punctuation">)</span><span class="token punctuation">;</span>      <span class="token comment">//将该点放入OPEN集，即论文中的C</span>
+  use_node_num_ <span class="token operator">+=</span> <span class="token number">1</span><span class="token punctuation">;</span>            <span class="token comment">//扩展点数计数</span>
+</code></pre> 
+<h4><a id="_74"></a>启发函数</h4> 
+<p>该文利用<strong>Pontryagins minimum principle</strong>计算从Xc到Xg轨迹的启发函数。笔者根据自身能力进行推导，具体参考A Computationally Efficient Motion Primitive for Quadrocopter Trajectory Generation及D. P. Bertsekas的《动态规划和最优控制》。<br> 3D运动的<strong>cost function</strong>，Jk为投影到三轴上的加加速度<br> <img src="https://images2.imgbox.com/43/f3/zKUfpgT4_o.png" alt="在这里插入图片描述"><br> 状态：<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+        
+        
+          S 
+         
+        
+          k 
+         
+        
+       
+         = 
+        
+       
+         ( 
+        
+        
+        
+          p 
+         
+        
+          k 
+         
+        
+       
+         , 
+        
+        
+        
+          v 
+         
+        
+          k 
+         
+        
+       
+         , 
+        
+        
+        
+          a 
+         
+        
+          k 
+         
+        
+       
+         ) 
+        
+       
+      
+        S_k=(p_k,v_k,a_k) 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord"><span style="margin-right: 0.0576em;" class="mord mathnormal">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0576em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0359em;" class="mord mathnormal">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0359em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span><br> 状态方程：<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+        
+         
+         
+           S 
+          
+         
+           ˙ 
+          
+         
+        
+          k 
+         
+        
+       
+         = 
+        
+        
+        
+          f 
+         
+        
+          s 
+         
+        
+       
+         ( 
+        
+        
+        
+          S 
+         
+        
+          k 
+         
+        
+       
+         , 
+        
+        
+        
+          j 
+         
+        
+          k 
+         
+        
+       
+         ) 
+        
+       
+         = 
+        
+       
+         ( 
+        
+        
+        
+          v 
+         
+        
+          k 
+         
+        
+       
+         , 
+        
+        
+        
+          a 
+         
+        
+          k 
+         
+        
+       
+         , 
+        
+        
+        
+          j 
+         
+        
+          k 
+         
+        
+       
+         ) 
+        
+       
+      
+        \dot{S}_k=f_s(S_k,j_k)=(v_k,a_k,j_k) 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1.0702em; vertical-align: -0.15em;"></span><span class="mord"><span class="mord accent"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height: 0.9202em;"><span class="" style="top: -3em;"><span class="pstrut" style="height: 3em;"></span><span style="margin-right: 0.0576em;" class="mord mathnormal">S</span></span><span class="" style="top: -3.2523em;"><span class="pstrut" style="height: 3em;"></span><span class="accent-body" style="left: -0.0556em;"><span class="mord">˙</span></span></span></span></span></span></span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0576em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord"><span style="margin-right: 0.1076em;" class="mord mathnormal">f</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.1514em;"><span class="" style="top: -2.55em; margin-left: -0.1076em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mathnormal mtight">s</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mopen">(</span><span class="mord"><span style="margin-right: 0.0576em;" class="mord mathnormal">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0576em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0572em;" class="mord mathnormal">j</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0572em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord"><span style="margin-right: 0.0359em;" class="mord mathnormal">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0359em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0572em;" class="mord mathnormal">j</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0572em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.0315em;" class="mord mathnormal mtight">k</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span><br> 构建Hamiltonian函数和协态方程：<br> <img src="https://images2.imgbox.com/7f/34/JjIdFuc6_o.png" alt="在这里插入图片描述"><br> 求解costate的微分方程得<br> <img src="https://images2.imgbox.com/29/16/9lpX8Vhs_o.png" alt="在这里插入图片描述"></p> 
+<p>最佳输入轨迹J*(t)通过求最小化Hamiltonian函数(PMP原理)获得，即<br> <img src="https://images2.imgbox.com/a9/6b/RXb14elj_o.png" alt="在这里插入图片描述"></p> 
+<p>j*(t)为加加速度的轨迹，<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+        
+        
+          S 
+         
+        
+          0 
+         
+        
+       
+         = 
+        
+       
+         ( 
+        
+        
+        
+          p 
+         
+        
+          0 
+         
+        
+       
+         , 
+        
+        
+        
+          v 
+         
+        
+          0 
+         
+        
+       
+         , 
+        
+        
+        
+          a 
+         
+        
+          0 
+         
+        
+       
+         ) 
+        
+       
+      
+        S_0=(p_0,v_0,a_0) 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.8333em; vertical-align: -0.15em;"></span><span class="mord"><span style="margin-right: 0.0576em;" class="mord mathnormal">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0576em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0359em;" class="mord mathnormal">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: -0.0359em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3011em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mord mtight">0</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.15em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>通过积分可以获<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+        
+        
+          a 
+         
+        
+          ∗ 
+         
+        
+       
+         ( 
+        
+       
+         t 
+        
+       
+         ) 
+        
+       
+         , 
+        
+        
+        
+          v 
+         
+        
+          ∗ 
+         
+        
+       
+         ( 
+        
+       
+         t 
+        
+       
+         ) 
+        
+       
+         , 
+        
+       
+         p 
+        
+       
+         ∗ 
+        
+       
+         ( 
+        
+       
+         t 
+        
+       
+         ) 
+        
+       
+      
+        a^*(t),v^*(t),p*(t) 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height: 0.6887em;"><span class="" style="top: -3.063em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">∗</span></span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0359em;" class="mord mathnormal">v</span><span class="msupsub"><span class="vlist-t"><span class="vlist-r"><span class="vlist" style="height: 0.6887em;"><span class="" style="top: -3.063em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span class="mbin mtight">∗</span></span></span></span></span></span></span></span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mclose">)</span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord mathnormal">p</span><span class="mspace" style="margin-right: 0.2222em;"></span><span class="mbin">∗</span><span class="mspace" style="margin-right: 0.2222em;"></span></span><span class="base"><span class="strut" style="height: 1em; vertical-align: -0.25em;"></span><span class="mopen">(</span><span class="mord mathnormal">t</span><span class="mclose">)</span></span></span></span></span><br> <img src="https://images2.imgbox.com/97/15/JmZiaY5Z_o.png" alt="在这里插入图片描述"><br> 目标状态<span class="katex--inline"><span class="katex"><span class="katex-mathml"> 
+     
+      
+       
+        
+        
+          S 
+         
+        
+          f 
+         
+        
+       
+         = 
+        
+       
+         ( 
+        
+        
+        
+          p 
+         
+        
+          f 
+         
+        
+       
+         , 
+        
+        
+        
+          v 
+         
+        
+          f 
+         
+        
+       
+         , 
+        
+        
+        
+          a 
+         
+        
+          f 
+         
+        
+       
+         ) 
+        
+       
+      
+        S_f=(p_f,v_f,a_f) 
+       
+      
+    </span><span class="katex-html"><span class="base"><span class="strut" style="height: 0.9694em; vertical-align: -0.2861em;"></span><span class="mord"><span style="margin-right: 0.0576em;" class="mord mathnormal">S</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0576em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.1076em;" class="mord mathnormal mtight">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.2861em;"><span class=""></span></span></span></span></span></span><span class="mspace" style="margin-right: 0.2778em;"></span><span class="mrel">=</span><span class="mspace" style="margin-right: 0.2778em;"></span></span><span class="base"><span class="strut" style="height: 1.0361em; vertical-align: -0.2861em;"></span><span class="mopen">(</span><span class="mord"><span class="mord mathnormal">p</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.1076em;" class="mord mathnormal mtight">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.2861em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span style="margin-right: 0.0359em;" class="mord mathnormal">v</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: -0.0359em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.1076em;" class="mord mathnormal mtight">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.2861em;"><span class=""></span></span></span></span></span></span><span class="mpunct">,</span><span class="mspace" style="margin-right: 0.1667em;"></span><span class="mord"><span class="mord mathnormal">a</span><span class="msupsub"><span class="vlist-t vlist-t2"><span class="vlist-r"><span class="vlist" style="height: 0.3361em;"><span class="" style="top: -2.55em; margin-left: 0em; margin-right: 0.05em;"><span class="pstrut" style="height: 2.7em;"></span><span class="sizing reset-size6 size3 mtight"><span style="margin-right: 0.1076em;" class="mord mathnormal mtight">f</span></span></span></span><span class="vlist-s">​</span></span><span class="vlist-r"><span class="vlist" style="height: 0.2861em;"><span class=""></span></span></span></span></span></span><span class="mclose">)</span></span></span></span></span>，<br> <img src="https://images2.imgbox.com/0a/4c/r8CJVuVy_o.png" alt="请添加图片描述"><br> <img src="https://images2.imgbox.com/c2/03/NbdKAnoM_o.png" alt="请添加图片描述"><br> 解得：<br> <img src="https://images2.imgbox.com/b2/25/VYBJxIZW_o.png" alt="请添加图片描述"><br> <img src="https://images2.imgbox.com/3a/bb/EIZuBhXq_o.png" alt="请添加图片描述"><br> FAST-Planner当中最小化加速度，故与上述最小化加加速度不同，文中给出的公式如下：<br> <img src="https://images2.imgbox.com/8f/8c/AARQcbim_o.png" alt="请添加图片描述"><br> 启发函数代码(即上述使J取最小的T)：</p> 
+<pre><code class="prism language-cpp"><span class="token comment">/*
+  计算启发函数
+    parameters：
+      - x1,x2:起点和终点状态
+      - optimal_time:达到最终点的最优时间
+    return:
+      - 代价值
+*/</span>
+<span class="token keyword">double</span> <span class="token class-name">KinodynamicAstar</span><span class="token double-colon punctuation">::</span><span class="token function">estimateHeuristic</span><span class="token punctuation">(</span>Eigen<span class="token double-colon punctuation">::</span>VectorXd x1<span class="token punctuation">,</span> Eigen<span class="token double-colon punctuation">::</span>VectorXd x2<span class="token punctuation">,</span>
+                                           <span class="token keyword">double</span><span class="token operator">&amp;</span>amp<span class="token punctuation">;</span> optimal_time<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+  <span class="token keyword">const</span> Vector3d dp <span class="token operator">=</span> x2<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">-</span> x1<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">//位置变化量</span>
+  <span class="token keyword">const</span> Vector3d v0 <span class="token operator">=</span> x1<span class="token punctuation">.</span><span class="token function">segment</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment">//起点速度矩阵</span>
+  <span class="token keyword">const</span> Vector3d v1 <span class="token operator">=</span> x2<span class="token punctuation">.</span><span class="token function">segment</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>         <span class="token comment">//终点速度矩阵</span>
+
+  <span class="token keyword">double</span> c1 <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">36</span> <span class="token operator">*</span> dp<span class="token punctuation">.</span><span class="token function">dot</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> c2 <span class="token operator">=</span> <span class="token number">24</span> <span class="token operator">*</span> <span class="token punctuation">(</span>v0 <span class="token operator">+</span> v1<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">dot</span><span class="token punctuation">(</span>dp<span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> c3 <span class="token operator">=</span> <span class="token operator">-</span><span class="token number">4</span> <span class="token operator">*</span> <span class="token punctuation">(</span>v0<span class="token punctuation">.</span><span class="token function">dot</span><span class="token punctuation">(</span>v0<span class="token punctuation">)</span> <span class="token operator">+</span> v0<span class="token punctuation">.</span><span class="token function">dot</span><span class="token punctuation">(</span>v1<span class="token punctuation">)</span> <span class="token operator">+</span> v1<span class="token punctuation">.</span><span class="token function">dot</span><span class="token punctuation">(</span>v1<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> c4 <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> c5 <span class="token operator">=</span> w_time_<span class="token punctuation">;</span>
+
+  std<span class="token double-colon punctuation">::</span>vector<span class="token operator">&amp;</span>lt<span class="token punctuation">;</span><span class="token keyword">double</span><span class="token operator">&amp;</span>gt<span class="token punctuation">;</span> ts <span class="token operator">=</span> <span class="token function">quartic</span><span class="token punctuation">(</span>c5<span class="token punctuation">,</span> c4<span class="token punctuation">,</span> c3<span class="token punctuation">,</span> c2<span class="token punctuation">,</span> c1<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//求解获得极值点的T</span>
+
+  <span class="token keyword">double</span> v_max <span class="token operator">=</span> max_vel_ <span class="token operator">*</span> <span class="token number">0.5</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> t_bar <span class="token operator">=</span> <span class="token punctuation">(</span>x1<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">-</span> x2<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token generic-function"><span class="token function">lpNorm</span><span class="token generic class-name"><span class="token operator">&lt;</span>Infinity<span class="token operator">&gt;</span></span></span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">/</span> v_max<span class="token punctuation">;</span>
+  ts<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>t_bar<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+  <span class="token keyword">double</span> cost <span class="token operator">=</span> <span class="token number">100000000</span><span class="token punctuation">;</span>
+  <span class="token keyword">double</span> t_d <span class="token operator">=</span> t_bar<span class="token punctuation">;</span>
+
+	<span class="token comment">//将根带回启发函数求最优Ts</span>
+  <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">auto</span> t <span class="token operator">:</span> ts<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>t <span class="token operator">&amp;</span>lt<span class="token punctuation">;</span> t_bar<span class="token punctuation">)</span> <span class="token keyword">continue</span><span class="token punctuation">;</span>
+    <span class="token keyword">double</span> c <span class="token operator">=</span> <span class="token operator">-</span>c1 <span class="token operator">/</span> <span class="token punctuation">(</span><span class="token number">3</span> <span class="token operator">*</span> t <span class="token operator">*</span> t <span class="token operator">*</span> t<span class="token punctuation">)</span> <span class="token operator">-</span> c2 <span class="token operator">/</span> <span class="token punctuation">(</span><span class="token number">2</span> <span class="token operator">*</span> t <span class="token operator">*</span> t<span class="token punctuation">)</span> <span class="token operator">-</span> c3 <span class="token operator">/</span> t <span class="token operator">+</span> w_time_ <span class="token operator">*</span> t<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>c <span class="token operator">&amp;</span>lt<span class="token punctuation">;</span> cost<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      cost <span class="token operator">=</span> c<span class="token punctuation">;</span>
+      t_d <span class="token operator">=</span> t<span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  optimal_time <span class="token operator">=</span> t_d<span class="token punctuation">;</span>
+
+  <span class="token keyword">return</span> <span class="token number">1.0</span> <span class="token operator">*</span> <span class="token punctuation">(</span><span class="token number">1</span> <span class="token operator">+</span> tie_breaker_<span class="token punctuation">)</span> <span class="token operator">*</span> cost<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>启发函数对T求导获得极值点或者鞍点对应的时间T，然后把多个根代回启发函数获得最优时间T。</p> 
+<h4><a id="_145"></a>搜索</h4> 
+<p>循环搜索第一步判断当前节点是否满足停止搜索的要求</p> 
+<pre><code class="prism language-cpp">   <span class="token comment">// 判断但前节点是否超出horizon或是离终点较近了</span>
+    <span class="token keyword">bool</span> reach_horizon <span class="token operator">=</span> <span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span> <span class="token operator">-</span> start_pt<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">norm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">&gt;=</span> horizon_<span class="token punctuation">;</span>
+    <span class="token keyword">bool</span> near_end <span class="token operator">=</span> <span class="token function">abs</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">end_index</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;=</span> tolerance <span class="token operator">&amp;&amp;</span>
+        <span class="token function">abs</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">end_index</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;=</span> tolerance <span class="token operator">&amp;&amp;</span>
+        <span class="token function">abs</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span><span class="token function">index</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span> <span class="token operator">-</span> <span class="token function">end_index</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&lt;=</span> tolerance<span class="token punctuation">;</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>reach_horizon <span class="token operator">||</span> near_end<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      terminate_node <span class="token operator">=</span> cur_node<span class="token punctuation">;</span>  <span class="token comment">//判断其中一个达到了要求，将该节点设为终点</span>
+      <span class="token function">retrievePath</span><span class="token punctuation">(</span>terminate_node<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//从终点到起点的反向路径存储到path_nodes_</span>
+      <span class="token keyword">if</span> <span class="token punctuation">(</span>near_end<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        <span class="token comment">// Check whether shot traj exist</span>
+        <span class="token function">estimateHeuristic</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">,</span> end_state<span class="token punctuation">,</span> time_to_goal<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">//计算优化的最小时间</span>
+        <span class="token function">computeShotTraj</span><span class="token punctuation">(</span>cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">,</span> end_state<span class="token punctuation">,</span> time_to_goal<span class="token punctuation">)</span><span class="token punctuation">;</span>    <span class="token comment">//带入优化的时间判断轨迹是否合理</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> <span class="token function">ROS_ERROR</span><span class="token punctuation">(</span><span class="token string">"Shot in first search loop!"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>reach_horizon<span class="token punctuation">)</span> 
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>near_end<span class="token punctuation">)</span> 
+</code></pre> 
+<p>其中当满足终点条件时，要重新检查一下轨迹是否合理，即将轨迹带入地图，用到下面这个函数</p> 
+<pre><code class="prism language-cpp"><span class="token comment">//将计算得到的最优轨迹带入地图中检查轨迹是否安全，有没有发生碰撞，速度、加速度是否超过限制</span>
+<span class="token keyword">bool</span> <span class="token class-name">KinodynamicAstar</span><span class="token double-colon punctuation">::</span><span class="token function">computeShotTraj</span><span class="token punctuation">(</span>Eigen<span class="token double-colon punctuation">::</span>VectorXd state1<span class="token punctuation">,</span> Eigen<span class="token double-colon punctuation">::</span>VectorXd state2<span class="token punctuation">,</span>
+                                       <span class="token keyword">double</span> time_to_goal<span class="token punctuation">)</span> 
+</code></pre> 
+<p>当节点不满足终止条件，需要扩展节点，以当前节点为根，离散输入控制量，得到下一状态。</p> 
+<pre><code class="prism language-cpp"><span class="token comment">/* ---3）若当前节点没有抵达终点，就要进行节点扩张 ---------- */</span>
+    <span class="token comment">//1、在open_list中删除节点，并在close_list中添加节点</span>
+    open_set_<span class="token punctuation">.</span><span class="token function">pop</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">//弹出该节点</span>
+    cur_node<span class="token operator">-&gt;</span>node_state <span class="token operator">=</span> IN_CLOSE_SET<span class="token punctuation">;</span>  <span class="token comment">//将该节点放入close节点当中</span>
+    iter_num_ <span class="token operator">+=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+
+    <span class="token comment">//2、初始化状态传递</span>
+    <span class="token keyword">double</span> res <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">/</span> <span class="token number">2.0</span><span class="token punctuation">,</span> time_res <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">/</span> <span class="token number">1.0</span><span class="token punctuation">,</span> time_res_init <span class="token operator">=</span> <span class="token number">1</span> <span class="token operator">/</span> <span class="token number">20.0</span><span class="token punctuation">;</span> <span class="token comment">//时间常数</span>
+    Eigen<span class="token double-colon punctuation">::</span>Matrix<span class="token operator">&lt;</span><span class="token keyword">double</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token operator">&gt;</span> cur_state <span class="token operator">=</span> cur_node<span class="token operator">-&gt;</span>state<span class="token punctuation">;</span>  <span class="token comment">//当前节点状态</span>
+    Eigen<span class="token double-colon punctuation">::</span>Matrix<span class="token operator">&lt;</span><span class="token keyword">double</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token operator">&gt;</span> pro_state<span class="token punctuation">;</span>    <span class="token comment">//下一状态</span>
+    vector<span class="token operator">&lt;</span>PathNodePtr<span class="token operator">&gt;</span> tmp_expand_nodes<span class="token punctuation">;</span>     <span class="token comment">//临时扩展节点列表</span>
+    Eigen<span class="token double-colon punctuation">::</span>Vector3d um<span class="token punctuation">;</span>     <span class="token comment">//控制量，本文是加速度</span>
+    <span class="token keyword">double</span> pro_t<span class="token punctuation">;</span>   <span class="token comment">//扩展节点的时间戳</span>
+    vector<span class="token operator">&lt;</span>Eigen<span class="token double-colon punctuation">::</span>Vector3d<span class="token operator">&gt;</span> inputs<span class="token punctuation">;</span>
+    vector<span class="token operator">&lt;</span><span class="token keyword">double</span><span class="token operator">&gt;</span> durations<span class="token punctuation">;</span> <span class="token comment">//输入控制量的持续时间</span>
+
+    <span class="token comment">//3、判断节点没有被扩展过，把这个节点存下来</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      inputs<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>start_acc_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">double</span> tau <span class="token operator">=</span> time_res_init <span class="token operator">*</span> init_max_tau_<span class="token punctuation">;</span> tau <span class="token operator">&lt;=</span> init_max_tau_ <span class="token operator">+</span> <span class="token number">1e-3</span><span class="token punctuation">;</span>
+           tau <span class="token operator">+=</span> time_res_init <span class="token operator">*</span> init_max_tau_<span class="token punctuation">)</span>
+        durations<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>tau<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      init_search <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span> <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">double</span> ax <span class="token operator">=</span> <span class="token operator">-</span>max_acc_<span class="token punctuation">;</span> ax <span class="token operator">&lt;=</span> max_acc_ <span class="token operator">+</span> <span class="token number">1e-3</span><span class="token punctuation">;</span> ax <span class="token operator">+=</span> max_acc_ <span class="token operator">*</span> res<span class="token punctuation">)</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">double</span> ay <span class="token operator">=</span> <span class="token operator">-</span>max_acc_<span class="token punctuation">;</span> ay <span class="token operator">&lt;=</span> max_acc_ <span class="token operator">+</span> <span class="token number">1e-3</span><span class="token punctuation">;</span> ay <span class="token operator">+=</span> max_acc_ <span class="token operator">*</span> res<span class="token punctuation">)</span>
+          <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">double</span> az <span class="token operator">=</span> <span class="token operator">-</span>max_acc_<span class="token punctuation">;</span> az <span class="token operator">&lt;=</span> max_acc_ <span class="token operator">+</span> <span class="token number">1e-3</span><span class="token punctuation">;</span> az <span class="token operator">+=</span> max_acc_ <span class="token operator">*</span> res<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            um <span class="token operator">&lt;&lt;</span> ax<span class="token punctuation">,</span> ay<span class="token punctuation">,</span> az<span class="token punctuation">;</span>
+            inputs<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>um<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">double</span> tau <span class="token operator">=</span> time_res <span class="token operator">*</span> max_tau_<span class="token punctuation">;</span> tau <span class="token operator">&lt;=</span> max_tau_<span class="token punctuation">;</span> tau <span class="token operator">+=</span> time_res <span class="token operator">*</span> max_tau_<span class="token punctuation">)</span>
+        durations<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>tau<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+
+    <span class="token comment">//4、状态传递循环迭代，检查速度约束，检查碰撞，都通过的话，就计算当前节点的g_score以及f_score.并且对重复的扩展节点进行剪枝</span>
+    <span class="token comment">// cout &lt;&lt; "cur state:" &lt;&lt; cur_state.head(3).transpose() &lt;&lt; endl;</span>
+    <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> inputs<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span>i<span class="token punctuation">)</span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> j <span class="token operator">&lt;</span> durations<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span>j<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        um <span class="token operator">=</span> inputs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token keyword">double</span> tau <span class="token operator">=</span> durations<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">;</span>
+        <span class="token function">stateTransit</span><span class="token punctuation">(</span>cur_state<span class="token punctuation">,</span> pro_state<span class="token punctuation">,</span> um<span class="token punctuation">,</span> tau<span class="token punctuation">)</span><span class="token punctuation">;</span>  <span class="token comment">//状态传递，通过前向积分得到扩展节点的位置和速度</span>
+        pro_t <span class="token operator">=</span> cur_node<span class="token operator">-&gt;</span>time <span class="token operator">+</span> tau<span class="token punctuation">;</span>
+
+        <span class="token comment">// Check inside map range</span>
+        Eigen<span class="token double-colon punctuation">::</span>Vector3d pro_pos <span class="token operator">=</span> pro_state<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>edt_environment_<span class="token operator">-&gt;</span>sdf_map_<span class="token operator">-&gt;</span><span class="token function">isInBox</span><span class="token punctuation">(</span>pro_pos<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"box"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+          <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// Check if in close set</span>
+        Eigen<span class="token double-colon punctuation">::</span>Vector3i pro_id <span class="token operator">=</span> <span class="token function">posToIndex</span><span class="token punctuation">(</span>pro_pos<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">int</span> pro_t_id <span class="token operator">=</span> <span class="token function">timeToIndex</span><span class="token punctuation">(</span>pro_t<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        PathNodePtr pro_node <span class="token operator">=</span>
+            dynamic <span class="token operator">?</span> expanded_nodes_<span class="token punctuation">.</span><span class="token function">find</span><span class="token punctuation">(</span>pro_id<span class="token punctuation">,</span> pro_t_id<span class="token punctuation">)</span> <span class="token operator">:</span> expanded_nodes_<span class="token punctuation">.</span><span class="token function">find</span><span class="token punctuation">(</span>pro_id<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>pro_node <span class="token operator">!=</span> <span class="token constant">NULL</span> <span class="token operator">&amp;&amp;</span> pro_node<span class="token operator">-&gt;</span>node_state <span class="token operator">==</span> IN_CLOSE_SET<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"close"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+          <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// Check maximal velocity</span>
+        Eigen<span class="token double-colon punctuation">::</span>Vector3d pro_v <span class="token operator">=</span> pro_state<span class="token punctuation">.</span><span class="token function">tail</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token function">fabs</span><span class="token punctuation">(</span><span class="token function">pro_v</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&gt;</span> max_vel_ <span class="token operator">||</span> <span class="token function">fabs</span><span class="token punctuation">(</span><span class="token function">pro_v</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&gt;</span> max_vel_ <span class="token operator">||</span> <span class="token function">fabs</span><span class="token punctuation">(</span><span class="token function">pro_v</span><span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token operator">&gt;</span> max_vel_<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"vel"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+          <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// Check not in the same voxel</span>
+        Eigen<span class="token double-colon punctuation">::</span>Vector3i diff <span class="token operator">=</span> pro_id <span class="token operator">-</span> cur_node<span class="token operator">-&gt;</span>index<span class="token punctuation">;</span>
+        <span class="token keyword">int</span> diff_time <span class="token operator">=</span> pro_t_id <span class="token operator">-</span> cur_node<span class="token operator">-&gt;</span>time_idx<span class="token punctuation">;</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>diff<span class="token punctuation">.</span><span class="token function">norm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span> <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">!</span>dynamic<span class="token punctuation">)</span> <span class="token operator">||</span> diff_time <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"same"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+          <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// Check safety</span>
+        Eigen<span class="token double-colon punctuation">::</span>Vector3d pos<span class="token punctuation">;</span>
+        Eigen<span class="token double-colon punctuation">::</span>Matrix<span class="token operator">&lt;</span><span class="token keyword">double</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">1</span><span class="token operator">&gt;</span> xt<span class="token punctuation">;</span>
+        <span class="token keyword">bool</span> is_occ <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> k <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span> k <span class="token operator">&lt;=</span> check_num_<span class="token punctuation">;</span> <span class="token operator">++</span>k<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">double</span> dt <span class="token operator">=</span> tau <span class="token operator">*</span> <span class="token keyword">double</span><span class="token punctuation">(</span>k<span class="token punctuation">)</span> <span class="token operator">/</span> <span class="token keyword">double</span><span class="token punctuation">(</span>check_num_<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token function">stateTransit</span><span class="token punctuation">(</span>cur_state<span class="token punctuation">,</span> xt<span class="token punctuation">,</span> um<span class="token punctuation">,</span> dt<span class="token punctuation">)</span><span class="token punctuation">;</span>
+          pos <span class="token operator">=</span> xt<span class="token punctuation">.</span><span class="token function">head</span><span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>edt_environment_<span class="token operator">-&gt;</span>sdf_map_<span class="token operator">-&gt;</span><span class="token function">getInflateOccupancy</span><span class="token punctuation">(</span>pos<span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">1</span> <span class="token operator">||</span>
+              <span class="token operator">!</span>edt_environment_<span class="token operator">-&gt;</span>sdf_map_<span class="token operator">-&gt;</span><span class="token function">isInBox</span><span class="token punctuation">(</span>pos<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            is_occ <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+            <span class="token keyword">break</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>optimistic_ <span class="token operator">&amp;&amp;</span> edt_environment_<span class="token operator">-&gt;</span>sdf_map_<span class="token operator">-&gt;</span><span class="token function">getOccupancy</span><span class="token punctuation">(</span>pos<span class="token punctuation">)</span> <span class="token operator">==</span> SDFMap<span class="token double-colon punctuation">::</span>UNKNOWN<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            is_occ <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+            <span class="token keyword">break</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span>is_occ<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>init_search<span class="token punctuation">)</span> std<span class="token double-colon punctuation">::</span>cout <span class="token operator">&lt;&lt;</span> <span class="token string">"safe"</span> <span class="token operator">&lt;&lt;</span> std<span class="token double-colon punctuation">::</span>endl<span class="token punctuation">;</span>
+          <span class="token keyword">continue</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">//计算代价值</span>
+        <span class="token keyword">double</span> time_to_goal<span class="token punctuation">,</span> tmp_g_score<span class="token punctuation">,</span> tmp_f_score<span class="token punctuation">;</span>
+        <span class="token comment">//计算当前节点的真实代价</span>
+        tmp_g_score <span class="token operator">=</span> <span class="token punctuation">(</span>um<span class="token punctuation">.</span><span class="token function">squaredNorm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> w_time_<span class="token punctuation">)</span> <span class="token operator">*</span> tau <span class="token operator">+</span> cur_node<span class="token operator">-&gt;</span>g_score<span class="token punctuation">;</span>
+        <span class="token comment">//计算启发函数代价</span>
+        tmp_f_score <span class="token operator">=</span> tmp_g_score <span class="token operator">+</span> lambda_heu_ <span class="token operator">*</span> <span class="token function">estimateHeuristic</span><span class="token punctuation">(</span>pro_state<span class="token punctuation">,</span> end_state<span class="token punctuation">,</span> time_to_goal<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+        <span class="token comment">/* ----------5)在循环中对比扩展节点,进行节点剪枝---------- */</span>
+        <span class="token comment">// Compare nodes expanded from the same parent</span>
+        <span class="token keyword">bool</span> prune <span class="token operator">=</span> <span class="token boolean">false</span><span class="token punctuation">;</span>     <span class="token comment">//剪枝标志位</span>
+        <span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> j <span class="token operator">&lt;</span> tmp_expand_nodes<span class="token punctuation">.</span><span class="token function">size</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token operator">++</span>j<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          PathNodePtr expand_node <span class="token operator">=</span> tmp_expand_nodes<span class="token punctuation">[</span>j<span class="token punctuation">]</span><span class="token punctuation">;</span>
+          <span class="token comment">// 首先判断当前临时扩展节点与current node的其他临时扩展节点是否在同一个voxel中，如果是的话就是扩展的节点多余了，就要进行剪枝。</span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token punctuation">(</span>pro_id <span class="token operator">-</span> expand_node<span class="token operator">-&gt;</span>index<span class="token punctuation">)</span><span class="token punctuation">.</span><span class="token function">norm</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">==</span> <span class="token number">0</span> <span class="token operator">&amp;&amp;</span>
+              <span class="token punctuation">(</span><span class="token punctuation">(</span><span class="token operator">!</span>dynamic<span class="token punctuation">)</span> <span class="token operator">||</span> pro_t_id <span class="token operator">==</span> expand_node<span class="token operator">-&gt;</span>time_idx<span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            prune <span class="token operator">=</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>tmp_f_score <span class="token operator">&lt;</span> expand_node<span class="token operator">-&gt;</span>f_score<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+              expand_node<span class="token operator">-&gt;</span>f_score <span class="token operator">=</span> tmp_f_score<span class="token punctuation">;</span>
+              expand_node<span class="token operator">-&gt;</span>g_score <span class="token operator">=</span> tmp_g_score<span class="token punctuation">;</span>
+              expand_node<span class="token operator">-&gt;</span>state <span class="token operator">=</span> pro_state<span class="token punctuation">;</span>
+              expand_node<span class="token operator">-&gt;</span>input <span class="token operator">=</span> um<span class="token punctuation">;</span>
+              expand_node<span class="token operator">-&gt;</span>duration <span class="token operator">=</span> tau<span class="token punctuation">;</span>
+              <span class="token keyword">if</span> <span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span> expand_node<span class="token operator">-&gt;</span>time <span class="token operator">=</span> cur_node<span class="token operator">-&gt;</span>time <span class="token operator">+</span> tau<span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            <span class="token keyword">break</span><span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+
+        <span class="token comment">// This node end up in a voxel different from others</span>
+        <span class="token keyword">if</span> <span class="token punctuation">(</span><span class="token operator">!</span>prune<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+          <span class="token keyword">if</span> <span class="token punctuation">(</span>pro_node <span class="token operator">==</span> <span class="token constant">NULL</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            pro_node <span class="token operator">=</span> path_node_pool_<span class="token punctuation">[</span>use_node_num_<span class="token punctuation">]</span><span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>index <span class="token operator">=</span> pro_id<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>state <span class="token operator">=</span> pro_state<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>f_score <span class="token operator">=</span> tmp_f_score<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>g_score <span class="token operator">=</span> tmp_g_score<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>input <span class="token operator">=</span> um<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>duration <span class="token operator">=</span> tau<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>parent <span class="token operator">=</span> cur_node<span class="token punctuation">;</span>
+            pro_node<span class="token operator">-&gt;</span>node_state <span class="token operator">=</span> IN_OPEN_SET<span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+              pro_node<span class="token operator">-&gt;</span>time <span class="token operator">=</span> cur_node<span class="token operator">-&gt;</span>time <span class="token operator">+</span> tau<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>time_idx <span class="token operator">=</span> <span class="token function">timeToIndex</span><span class="token punctuation">(</span>pro_node<span class="token operator">-&gt;</span>time<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+            open_set_<span class="token punctuation">.</span><span class="token function">push</span><span class="token punctuation">(</span>pro_node<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span>
+              expanded_nodes_<span class="token punctuation">.</span><span class="token function">insert</span><span class="token punctuation">(</span>pro_id<span class="token punctuation">,</span> pro_node<span class="token operator">-&gt;</span>time<span class="token punctuation">,</span> pro_node<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">else</span>
+              expanded_nodes_<span class="token punctuation">.</span><span class="token function">insert</span><span class="token punctuation">(</span>pro_id<span class="token punctuation">,</span> pro_node<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            tmp_expand_nodes<span class="token punctuation">.</span><span class="token function">push_back</span><span class="token punctuation">(</span>pro_node<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+            use_node_num_ <span class="token operator">+=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>use_node_num_ <span class="token operator">==</span> allocate_num_<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+              cout <span class="token operator">&lt;&lt;</span> <span class="token string">"run out of memory."</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+              <span class="token keyword">return</span> NO_PATH<span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span>
+          <span class="token comment">// 如果不用剪枝的话，则首先判断当前临时扩展节点pro_node是否出现在open集中 </span>
+          <span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>pro_node<span class="token operator">-&gt;</span>node_state <span class="token operator">==</span> IN_OPEN_SET<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+            <span class="token keyword">if</span> <span class="token punctuation">(</span>tmp_g_score <span class="token operator">&lt;</span> pro_node<span class="token operator">-&gt;</span>g_score<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+              <span class="token comment">// pro_node-&gt;index = pro_id;</span>
+              pro_node<span class="token operator">-&gt;</span>state <span class="token operator">=</span> pro_state<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>f_score <span class="token operator">=</span> tmp_f_score<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>g_score <span class="token operator">=</span> tmp_g_score<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>input <span class="token operator">=</span> um<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>duration <span class="token operator">=</span> tau<span class="token punctuation">;</span>
+              pro_node<span class="token operator">-&gt;</span>parent <span class="token operator">=</span> cur_node<span class="token punctuation">;</span>
+              <span class="token keyword">if</span> <span class="token punctuation">(</span>dynamic<span class="token punctuation">)</span> pro_node<span class="token operator">-&gt;</span>time <span class="token operator">=</span> cur_node<span class="token operator">-&gt;</span>time <span class="token operator">+</span> tau<span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+          <span class="token punctuation">}</span> 
+          <span class="token comment">// 如果不是存在于open集的话，则可以直接将pro_node加入open集中</span>
+          <span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+            cout <span class="token operator">&lt;&lt;</span> <span class="token string">"error type in searching: "</span> <span class="token operator">&lt;&lt;</span> pro_node<span class="token operator">-&gt;</span>node_state <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+          <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+      <span class="token punctuation">}</span>
+    <span class="token comment">// init_search = false;</span>
+  <span class="token punctuation">}</span>
+
+  cout <span class="token operator">&lt;&lt;</span> <span class="token string">"open set empty, no path!"</span> <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+  cout <span class="token operator">&lt;&lt;</span> <span class="token string">"use node num: "</span> <span class="token operator">&lt;&lt;</span> use_node_num_ <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+  cout <span class="token operator">&lt;&lt;</span> <span class="token string">"iter num: "</span> <span class="token operator">&lt;&lt;</span> iter_num_ <span class="token operator">&lt;&lt;</span> endl<span class="token punctuation">;</span>
+  <span class="token keyword">return</span> NO_PATH<span class="token punctuation">;</span>
+</code></pre> 
+<h4><a id="_361"></a>获得规划得到的路径点</h4> 
+<p>kinodynamic A*的最后一步</p> 
+<pre><code class="prism language-bash">/*  作用：
+      完成路径搜索后，按照预设的时间分辨率delta_t，通过节点回溯和状态前向积分得到分辨率最高的路径点。
+    param：
+      delta_t:时间分辨率
+    return：
+      <span class="token assign-left variable">state_list</span><span class="token operator">=</span>节点扩张的回溯轨迹+两点边界轨迹
+*/
+std::vector<span class="token operator">&lt;</span>Eigen::Vector3d<span class="token operator">&gt;</span> KinodynamicAstar::getKinoTraj<span class="token punctuation">(</span>double delta_t<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+  vector<span class="token operator">&lt;</span>Vector3d<span class="token operator">&gt;</span> state_list<span class="token punctuation">;</span>
+
+  /* ---------- get traj of searching ---------- */
+  PathNodePtr <span class="token function">node</span> <span class="token operator">=</span> path_nodes_.back<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+  Matrix<span class="token operator">&lt;</span>double, <span class="token number">6</span>, <span class="token operator"><span class="token file-descriptor important">1</span>&gt;</span> x0, xt<span class="token punctuation">;</span>
+
+  <span class="token keyword">while</span> <span class="token punctuation">(</span>node-<span class="token operator">&gt;</span>parent <span class="token operator">!=</span> NULL<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    Vector3d ut <span class="token operator">=</span> node-<span class="token operator">&gt;</span>input<span class="token punctuation">;</span>
+    double duration <span class="token operator">=</span> node-<span class="token operator">&gt;</span>duration<span class="token punctuation">;</span>
+    x0 <span class="token operator">=</span> node-<span class="token operator">&gt;</span>parent-<span class="token operator">&gt;</span>state<span class="token punctuation">;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span>double t <span class="token operator">=</span> duration<span class="token punctuation">;</span> t <span class="token operator">&gt;=</span> -1e-5<span class="token punctuation">;</span> t -<span class="token operator">=</span> delta_t<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      stateTransit<span class="token punctuation">(</span>x0, xt, ut, t<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      state_list.push_back<span class="token punctuation">(</span>xt.head<span class="token punctuation">(</span><span class="token number">3</span><span class="token punctuation">))</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+    <span class="token function">node</span> <span class="token operator">=</span> node-<span class="token operator">&gt;</span>parent<span class="token punctuation">;</span>
+  <span class="token punctuation">}</span>
+  reverse<span class="token punctuation">(</span>state_list.begin<span class="token punctuation">(</span><span class="token punctuation">)</span>, state_list.end<span class="token punctuation">(</span><span class="token punctuation">))</span><span class="token punctuation">;</span>
+
+  /* ---------- get traj of one shot ---------- */
+  <span class="token keyword">if</span> <span class="token punctuation">(</span>is_shot_succ_<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+    Vector3d coord<span class="token punctuation">;</span>
+    VectorXd poly1d, time<span class="token punctuation">(</span><span class="token number">4</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+    <span class="token keyword">for</span> <span class="token punctuation">(</span>double t <span class="token operator">=</span> delta_t<span class="token punctuation">;</span> t <span class="token operator">&lt;=</span> t_shot_<span class="token punctuation">;</span> t <span class="token operator">+=</span> delta_t<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>int j <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> j <span class="token operator">&lt;</span> <span class="token number">4</span><span class="token punctuation">;</span> j++<span class="token punctuation">)</span>
+        time<span class="token punctuation">(</span>j<span class="token punctuation">)</span> <span class="token operator">=</span> pow<span class="token punctuation">(</span>t, j<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+      <span class="token keyword">for</span> <span class="token punctuation">(</span>int dim <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> dim <span class="token operator">&lt;</span> <span class="token number">3</span><span class="token punctuation">;</span> dim++<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+        poly1d <span class="token operator">=</span> coef_shot_.row<span class="token punctuation">(</span>dim<span class="token punctuation">)</span><span class="token punctuation">;</span>
+        coord<span class="token punctuation">(</span>dim<span class="token punctuation">)</span> <span class="token operator">=</span> poly1d.dot<span class="token punctuation">(</span>time<span class="token punctuation">)</span><span class="token punctuation">;</span>
+      <span class="token punctuation">}</span>
+      state_list.push_back<span class="token punctuation">(</span>coord<span class="token punctuation">)</span><span class="token punctuation">;</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token builtin class-name">return</span> state_list<span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p>第一部分结束，未完待续。。。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/4e0ba8caedc131df76bc5071fa7047c6/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">初级爬虫实战——麻省理工学院新闻</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/c1b618d4002856fc03fa8c29b6e83597/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">开源模型应用落地-工具使用篇-Spring AI-高阶用法（九）</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

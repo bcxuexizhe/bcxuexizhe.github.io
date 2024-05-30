@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>《TCP/IP网络编程》（第十二章）I/O复用（1） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/0369de4e97085858045cb10208a09dd4/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="《TCP/IP网络编程》（第十二章）I/O复用（1）">
+  <meta property="og:description" content="本章将讨论实现并发服务器的第二种办法，基于I/O复用的服务器端构建。
+I/O复用它允许单个进程或线程同时处理多个输入/输出（I/O）操作，而无需为每个I/O操作创建一个独立的线程或进程。这种技术可以显著提高应用程序的效率和性能，特别是在需要处理大量并发连接的场景下。
+1.多进程服务器端的缺点 基于进程的并发服务器在创建进程时，需要付出极大的代价，因为需要大量的运算和内存空间，而且由于每个进程具有独立的内存空间，相互间交换数据的方法也很复杂。
+如果使用I/O复用技术，则可以在不创建进程的情况下同时向多个客户端进行服务。
+2.基于I/O复用的服务器端 上图左边时多进程服务器端模型，右边是I/O复用服务器端模型，可以看出后者无论连接多少个客户端，提供服务的进程只有1个
+3.理解select()函数 select() 函数是一种用于I/O复用的系统调用，它允许程序同时监视多个文件描述符（包括套接字），以确定哪些文件描述符已经准备好进行读取或写入操作。select() 函数在Linux系统和Windows系统中都支持，下面是以Linux系统为例，Windows系统示例放在最后。
+①select()函数基本语法
+//发生错误时返回-1； //发生关注的事件返回时，返回该事件的文件描述符（大于0） int select( int maxds, //设置位监视的文件描述符中最大的描述符加1。例如，如果你监视的文件描述符范围是0到5，则maxfds应该设置为6。 fd_set *readfds, //将所有关注“是否有可读数据”的文件描述符注册到fd_set，并传递其地址值 fd_set *writefds,//将所有关注“是否有可写数据”的文件描述符注册到fd_set，并传递其地址值 fd_set *exceptfds, //将所有关注“是否发生异常”的文件描述符注册到fd_set，并传递其地址值 struct timeval *timeout//设置select() 调用的超时时间，为了防止调用select()函数后，陷入无限阻塞 ); //struct timeval的结构体定义 struct timeval{ long tv_sec; //秒数 long tv_usec; //毫秒数 } ②select()函数的调用过程
+select()函数的调用流程如下图所示，本文将逐步介绍
+设置文件描述符： select()可以监视多个文件描述符，将需要监视的文件描述符集中为一个集合fd_set，集中时也要按照读、写、异常进行分为三类，fd_set结构如下图所示:
+设置位为1则代表时监视对象，所以上图中fd1和fd3的是监视对象。在fd_set变量中用下列宏进行操作： FD_ZERO(fd_set* fdset); //将所有fd_set变量的所有位设置位0 FD_SET(int fd, fd_set* fdset); //将fd_set中指定变量的位设置为1 FD_CLR(int fd, fd_set* fdset); //将fd_set中指定变量的位设置为0 FD_ISSET(int fd, fd_set* fdset); //如果文件描述符在集合中，返回非零值；如果不在集合中，返回0。 指定监视范围： 即select() 函数中的第一个参数maxds, 要监视的文件描述符中最大的描述符加1。例如，如果你监视的文件描述符范围是0到5，则maxfds应该设置为6，因为文件描述分值是从0开始">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-28T22:49:08+08:00">
+    <meta property="article:modified_time" content="2024-05-28T22:49:08+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">《TCP/IP网络编程》（第十二章）I/O复用（1）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-light">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <blockquote> 
+ <p>本章将讨论实现并发服务器的第二种办法，<strong>基于I/O复用的服务器端构建</strong>。</p> 
+</blockquote> 
+<blockquote> 
+ <p>I/O复用它允许<strong>单个</strong>进程或线程<strong>同时处理多个</strong>输入/输出（I/O）操作，而<strong>无需</strong>为每个I/O操作<strong>创建一个独立的线程或进程</strong>。这种技术可以显著提高应用程序的效率和性能，特别是在需要处理大量并发连接的场景下。</p> 
+</blockquote> 
+<h3><a id="1_4"></a>1.多进程服务器端的缺点</h3> 
+<p><a href="https://blog.csdn.net/m0_53115174/article/details/139242857?spm=1001.2014.3001.5501">基于进程的并发服务器</a>在创建进程时，需要付出极大的代价，因为需要大量的运算和内存空间，而且由于每个进程具有独立的内存空间，相互间交换数据的方法也很复杂。<br> 如果使用I/O复用技术，则可以在不创建进程的情况下同时向多个客户端进行服务。</p> 
+<h3><a id="2IO_7"></a>2.基于I/O复用的服务器端</h3> 
+<p><img src="https://images2.imgbox.com/03/f8/wgFG8C1g_o.png" alt="在这里插入图片描述"><br> 上图左边时多进程服务器端模型，右边是<strong>I/O复用服务器端模型</strong>，可以看出后者无论连接多少个客户端，提供服务的进程只有1个</p> 
+<h3><a id="3select_11"></a>3.理解<code>select()</code>函数</h3> 
+<p><code>select()</code> 函数是一种用于I/O复用的系统调用，它允许程序同时监视多个文件描述符（包括套接字），以确定哪些文件描述符已经准备好进行读取或写入操作。<strong>select() 函数在Linux系统和Windows系统中都支持</strong>，下面是以Linux系统为例，Windows系统示例放在最后。</p> 
+<p><strong>①<code>select()</code>函数基本语法</strong></p> 
+<pre><code class="prism language-cpp"><span class="token comment">//发生错误时返回-1； </span>
+<span class="token comment">//发生关注的事件返回时，返回该事件的文件描述符（大于0）</span>
+<span class="token keyword">int</span> <span class="token function">select</span><span class="token punctuation">(</span>
+<span class="token keyword">int</span> maxds<span class="token punctuation">,</span> <span class="token comment">//设置位监视的文件描述符中最大的描述符加1。例如，如果你监视的文件描述符范围是0到5，则maxfds应该设置为6。</span>
+fd_set <span class="token operator">*</span>readfds<span class="token punctuation">,</span> <span class="token comment">//将所有关注“是否有可读数据”的文件描述符注册到fd_set，并传递其地址值</span>
+fd_set <span class="token operator">*</span>writefds<span class="token punctuation">,</span><span class="token comment">//将所有关注“是否有可写数据”的文件描述符注册到fd_set，并传递其地址值</span>
+fd_set <span class="token operator">*</span>exceptfds<span class="token punctuation">,</span> <span class="token comment">//将所有关注“是否发生异常”的文件描述符注册到fd_set，并传递其地址值</span>
+<span class="token keyword">struct</span> <span class="token class-name">timeval</span> <span class="token operator">*</span>timeout<span class="token comment">//设置select() 调用的超时时间，为了防止调用select()函数后，陷入无限阻塞</span>
+<span class="token punctuation">)</span><span class="token punctuation">;</span>
+
+<span class="token comment">//struct timeval的结构体定义</span>
+<span class="token keyword">struct</span> <span class="token class-name">timeval</span><span class="token punctuation">{<!-- --></span>
+<span class="token keyword">long</span> tv_sec<span class="token punctuation">;</span>    <span class="token comment">//秒数</span>
+<span class="token keyword">long</span> tv_usec<span class="token punctuation">;</span>   <span class="token comment">//毫秒数</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><strong>②<code>select()</code>函数的调用过程</strong></p> 
+<p><code>select()</code>函数的调用流程如下图所示，本文将逐步介绍</p> 
+<p><img src="https://images2.imgbox.com/c6/76/AocsBhfr_o.png" alt="在这里插入图片描述"></p> 
+<ol><li><strong>设置文件描述符：</strong> <code>select()</code>可以监视多个文件描述符，将需要监视的文件描述符集中为一个集合<code>fd_set</code>，集中时也要按照读、写、异常进行分为三类，<code>fd_set</code>结构如下图所示:<br> <img src="https://images2.imgbox.com/1d/3f/Yqd8TMgo_o.png" alt="在这里插入图片描述"><br> 设置<strong>位</strong>为1则代表时监视对象，所以上图中fd1和fd3的是监视对象。在<code>fd_set</code>变量中用下列宏进行操作：</li></ol> 
+<pre><code class="prism language-cpp"><span class="token function">FD_ZERO</span><span class="token punctuation">(</span>fd_set<span class="token operator">*</span> fdset<span class="token punctuation">)</span><span class="token punctuation">;</span>          <span class="token comment">//将所有fd_set变量的所有位设置位0</span>
+<span class="token function">FD_SET</span><span class="token punctuation">(</span><span class="token keyword">int</span> fd<span class="token punctuation">,</span> fd_set<span class="token operator">*</span> fdset<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">//将fd_set中指定变量的位设置为1</span>
+<span class="token function">FD_CLR</span><span class="token punctuation">(</span><span class="token keyword">int</span> fd<span class="token punctuation">,</span> fd_set<span class="token operator">*</span> fdset<span class="token punctuation">)</span><span class="token punctuation">;</span>   <span class="token comment">//将fd_set中指定变量的位设置为0</span>
+<span class="token function">FD_ISSET</span><span class="token punctuation">(</span><span class="token keyword">int</span> fd<span class="token punctuation">,</span> fd_set<span class="token operator">*</span> fdset<span class="token punctuation">)</span><span class="token punctuation">;</span> <span class="token comment">//如果文件描述符在集合中，返回非零值；如果不在集合中，返回0。</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/f2/e2/KZOB9Erj_o.png" alt="在这里插入图片描述"></p> 
+<ol start="2"><li> <p><strong>指定监视范围：</strong> 即<code>select()</code> 函数中的第一个参数<code>maxds</code>, 要监视的文件描述符中最大的描述符加1。例如，如果你监视的文件描述符范围是0到5，则maxfds应该设置为6，<strong>因为文件描述分值是从0开始</strong></p> </li><li> <p><strong>设置超时：</strong> 如果监视的文件描述符一直没有变化，则会陷入阻塞状态，所以需要设置超时时间，告知服务器超时消息。将秒数填入<code>tv_sec</code>，将毫秒数填入<code>tv_usec</code></p> </li><li> <p><strong>调用select()函数：</strong> 调用 select() 函数，函数会阻塞，直到有文件描述符发生变化或者超时。</p> </li><li> <p><strong>查看调用结果：</strong> 返回-1则发生错误；返回一个整数值，则代表有多少个文件描述符准备好了I/O操作，可以进行读取操作了，下图是变化<br> <img src="https://images2.imgbox.com/36/f3/wzcTKqjw_o.png" alt="在这里插入图片描述"><br> 调用函数前，告诉select()函数，需要监视fd1、fd2、fd3，当调用函数后，首先是将监视的文件描述符的位初始化为0，然后监视到fd1和fd3发生变化，所以fd1和fd3的位又变成了1。</p> </li></ol> 
+<p><strong>③select()函数示例</strong></p> 
+<pre><code class="prism language-cpp"><span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdio.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;stdlib.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;unistd.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sys/time.h&gt;</span></span>
+<span class="token macro property"><span class="token directive-hash">#</span><span class="token directive keyword">include</span> <span class="token string">&lt;sys/select.h&gt;</span></span>
+
+<span class="token keyword">int</span> <span class="token function">main</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+    fd_set reads<span class="token punctuation">,</span>temps<span class="token punctuation">;</span><span class="token comment">// 定义文件描述符集合，reads用于存储关注是否可读的文件描述符，temps用于存储select函数返回时准备好的文件描述符</span>
+    <span class="token keyword">int</span> result<span class="token punctuation">,</span>str_len<span class="token punctuation">;</span><span class="token comment">// result用于存储select函数的返回值，str_len用于存储读取的字节数</span>
+    <span class="token keyword">char</span> buff<span class="token punctuation">[</span><span class="token number">1024</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+    <span class="token keyword">struct</span> <span class="token class-name">timeval</span> timeout<span class="token punctuation">;</span><span class="token comment">// 定义一个timeval结构，用于设置select函数的超时时间</span>
+
+    <span class="token function">FD_ZERO</span><span class="token punctuation">(</span><span class="token operator">&amp;</span>reads<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 清空reads集合</span>
+    <span class="token function">FD_SET</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>reads<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 将文件描述符为0的设置为监视状态，文件描述符0通常代表标准输入（stdin），它是一个特殊的文件描述符，用于从键盘接收输入。</span>
+
+    <span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token punctuation">{<!-- --></span>
+        temps<span class="token operator">=</span>reads<span class="token punctuation">;</span><span class="token comment">/// 复制reads集合到temps集合</span>
+        timeout<span class="token punctuation">.</span>tv_sec<span class="token operator">=</span><span class="token number">5</span><span class="token punctuation">;</span>
+        timeout<span class="token punctuation">.</span>tv_usec<span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+        result<span class="token operator">=</span><span class="token function">select</span><span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>temps<span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>timeout<span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//1表示有1个文件被监视，temps表示被监视“是否可读”的文件描述符集合，0表示“不关注可写”文件描述符，0表示“不关注异常”文件描述符，timeout表示超时时间</span>
+
+        <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token operator">==</span><span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token comment">// 如果select函数返回-1，表示出错</span>
+            <span class="token function">puts</span><span class="token punctuation">(</span><span class="token string">"select error"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token keyword">break</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">else</span> <span class="token keyword">if</span><span class="token punctuation">(</span>result<span class="token operator">==</span><span class="token number">0</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token comment">// 如果select函数返回0，表示超时</span>
+            <span class="token function">puts</span><span class="token punctuation">(</span><span class="token string">"time-out"</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+        <span class="token punctuation">}</span>
+        <span class="token keyword">else</span><span class="token punctuation">{<!-- --></span><span class="token comment">// 如果select函数返回大于0，表示有文件描述符准备好了</span>
+            <span class="token keyword">if</span><span class="token punctuation">(</span><span class="token function">FD_ISSET</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span><span class="token operator">&amp;</span>temps<span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span><span class="token comment">// 检查文件描述符0是否在temps集合中</span>
+                str_len<span class="token operator">=</span><span class="token function">read</span><span class="token punctuation">(</span><span class="token number">0</span><span class="token punctuation">,</span>buff<span class="token punctuation">,</span><span class="token number">1024</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">// 从文件描述符0读取数据到buff缓冲区，最多1024字节</span>
+                buff<span class="token punctuation">[</span>str_len<span class="token punctuation">]</span><span class="token operator">=</span><span class="token number">0</span><span class="token punctuation">;</span>
+                <span class="token function">printf</span><span class="token punctuation">(</span><span class="token string">"message from console: %s"</span><span class="token punctuation">,</span>buff<span class="token punctuation">)</span><span class="token punctuation">;</span>
+            <span class="token punctuation">}</span>
+        <span class="token punctuation">}</span>
+    <span class="token punctuation">}</span>
+    
+    
+    <span class="token keyword">return</span> <span class="token number">0</span><span class="token punctuation">;</span>
+    
+<span class="token punctuation">}</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/e8/e4/MtuA8n0l_o.png" alt="在这里插入图片描述"></p> 
+<p>键盘输入有被正常监视到，如果不输入，5秒后会输出超时信息</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/d927a25222dc5270783c434cfc5ead55/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">module ‘plotting‘ has no attribute ‘EpisodeStats‘</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/07037ddd9a417204f93398e6434d5140/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">（2020|ICML PMLR，线性 Transformer，核函数，RNN）Transformer 是 RNN</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Spark01 —— Spark基础 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ff35ea70cda1caebeb0b2ab7ffea590e/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Spark01 —— Spark基础">
+  <meta property="og:description" content="文章目录 Spark01 —— Spark基础一、为什么选择Spark？1.1 MapReduce编程模型的局限性1.2 Spark与MR的区别1.3 版本1.4 优势1.5 Spark其他知识1、多种运行模式2、技术栈3、spark-shell：Spark自带的交互式工具4、Spark服务 二、Spark的基础配置三、Spark实例Spark WordCount 四、Spark运行架构运行架构架构核心组件SparkContext 五、Spark分区分区过程RDDRDD的相关概念RDD创建方式RDD分区RDD与DAG Spark Shuffle再分区 六、Spark算子转换算子 七、Spark优化数据的本地化读取 八、拓展数据处理提取指标 基本思路： Spark01 —— Spark基础 一、为什么选择Spark？ 1.1 MapReduce编程模型的局限性 1、繁杂：只有Map和Reduce两个操作，复杂的逻辑需要大量的样板代码2、处理效率低： 2.1、Map中间结果写磁盘，Reduce写HDFS，多个Map通过HDFS交换数据2.2、任务调度与启动开销大 3、不适合迭代处理、交互式处理和流式处理 1.2 Spark与MR的区别 Spark是类似Hadoop MapReduce的通用【并行】框架(仿照MR的计算流程)
+1、Job中间输出结果可以保存在内存，不再需要读写HDFS 1.1、内存不够也可以写盘 2、比MapReduce平均快10倍以上 1.3 版本 20141.020162.x20203.x 1.4 优势 1、速度快
+基于内存数据处理，比MR快100个数量级以上（逻辑回归算法测试）
+基于硬盘数据处理，比MR快10个数量级以上
+为了容灾，会将少量核心数据进行持久化。即在计算过程中，会将检查点的数据写入磁盘中，当数据计算失败时，可以基于检查点数据进行恢复。
+2、易用性
+支持Java、【Scala】、【Python：pyspark】、R语言（主流使用Scala，pyspark存在缺陷：只能在单机上计算，对单机内存和算力的要求过高）交互式shell方便开发测试 3、通用性
+一栈式解决方案： 批处理：将数据分批次加载到内存中进行计算交互式查询实时流处理（微批处理）图计算机器学习 1.5 Spark其他知识 1、多种运行模式 YARN ✔、Mesos、EC2、Kubernetes、Standalone、Local[*]
+​ Local[*]：在本地模式下运行，且尝试使用所有可用的核心。
+2、技术栈 Spark Core：核心组件，分布式计算引擎 RDD
+Spark SQL：高性能的基于Hadoop的SQL解决方案
+Spark Streaming：可以实现高吞吐量、具备容错机制的准实时流处理系统
+Spark GraphX：分布式图处理框架
+Spark MLlib：构建在Spark上的分布式机器学习库
+3、spark-shell：Spark自带的交互式工具 local：spark-shell --master local[*]alone：spark-shell --master spark://MASTERHOST:7077yarn ：spark-shell --master yarn（需要先启用Hadoop） 4、Spark服务 Master：Cluster ManagerWorker：Worker Node 二、Spark的基础配置 Spark在IDEA工程中的基础配置">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-04T15:49:18+08:00">
+    <meta property="article:modified_time" content="2024-05-04T15:49:18+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Spark01 —— Spark基础</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p><img src="https://images2.imgbox.com/85/41/5flU1qsf_o.gif" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/1a/f4/CJZzp4ND_o.png" alt="在这里插入图片描述"><br> </p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#Spark01__Spark_4" rel="nofollow">Spark01 —— Spark基础</a></li><li><ul><li><ul><li><a href="#Spark_6" rel="nofollow">一、为什么选择Spark？</a></li><li><ul><li><ul><li><a href="#11_MapReduce_8" rel="nofollow">1.1 MapReduce编程模型的局限性</a></li><li><a href="#12_SparkMR_18" rel="nofollow">1.2 Spark与MR的区别</a></li><li><a href="#13__28" rel="nofollow">1.3 版本</a></li><li><a href="#14__39" rel="nofollow">1.4 优势</a></li><li><a href="#15_Spark_63" rel="nofollow">1.5 Spark其他知识</a></li><li><ul><li><a href="#1_65" rel="nofollow">1、多种运行模式</a></li><li><a href="#2_71" rel="nofollow">2、技术栈</a></li><li><a href="#3sparkshellSpark_80" rel="nofollow">3、spark-shell：Spark自带的交互式工具</a></li><li><a href="#4Spark_86" rel="nofollow">4、Spark服务</a></li></ul> 
+     </li></ul> 
+    </li></ul> 
+    </li><li><a href="#Spark_91" rel="nofollow">二、Spark的基础配置</a></li><li><a href="#Spark_115" rel="nofollow">三、Spark实例</a></li><li><ul><li><ul><li><a href="#Spark_WordCount_117" rel="nofollow">Spark WordCount</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#Spark_140" rel="nofollow">四、Spark运行架构</a></li><li><ul><li><ul><li><a href="#_142" rel="nofollow">运行架构</a></li><li><a href="#_156" rel="nofollow">架构核心组件</a></li><li><a href="#SparkContext_171" rel="nofollow">SparkContext</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#Spark_278" rel="nofollow">五、Spark分区</a></li><li><ul><li><ul><li><a href="#_280" rel="nofollow">分区过程</a></li><li><a href="#RDD_288" rel="nofollow">RDD</a></li><li><ul><li><a href="#RDD_290" rel="nofollow">RDD的相关概念</a></li><li><a href="#RDD_355" rel="nofollow">RDD创建方式</a></li><li><a href="#RDD_382" rel="nofollow">RDD分区</a></li><li><a href="#RDDDAG_407" rel="nofollow">RDD与DAG</a></li></ul> 
+      </li><li><a href="#Spark_Shuffle_417" rel="nofollow">Spark Shuffle</a></li><li><a href="#_430" rel="nofollow">再分区</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#Spark_440" rel="nofollow">六、Spark算子</a></li><li><ul><li><ul><li><a href="#_442" rel="nofollow">转换算子</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#Spark_507" rel="nofollow">七、Spark优化</a></li><li><ul><li><ul><li><a href="#_509" rel="nofollow">数据的本地化读取</a></li></ul> 
+    </li></ul> 
+    </li><li><a href="#_518" rel="nofollow">八、拓展</a></li><li><ul><li><ul><li><a href="#__522" rel="nofollow">数据处理提取指标 基本思路：</a></li></ul> 
+    </li></ul> 
+   </li></ul> 
+  </li></ul> 
+ </li></ul> 
+</div> 
+<p></p> 
+<h2><a id="Spark01__Spark_4"></a>Spark01 —— Spark基础</h2> 
+<h4><a id="Spark_6"></a>一、为什么选择Spark？</h4> 
+<h6><a id="11_MapReduce_8"></a>1.1 MapReduce编程模型的局限性</h6> 
+<ul><li>1、繁杂：只有Map和Reduce两个操作，复杂的逻辑需要大量的样板代码</li><li>2、处理效率低： 
+  <ul><li>2.1、Map中间结果写磁盘，Reduce写HDFS，多个Map通过HDFS交换数据</li><li>2.2、任务调度与启动开销大</li></ul> </li><li>3、不适合迭代处理、交互式处理和流式处理</li></ul> 
+<h6><a id="12_SparkMR_18"></a>1.2 Spark与MR的区别</h6> 
+<p>Spark是类似Hadoop MapReduce的通用【并行】框架(仿照MR的计算流程)</p> 
+<ul><li>1、Job中间输出结果可以保存在内存，不再需要读写HDFS 
+  <ul><li>1.1、内存不够也可以写盘</li></ul> </li><li>2、比MapReduce平均快10倍以上</li></ul> 
+<h6><a id="13__28"></a>1.3 版本</h6> 
+<table><thead><tr><th>2014</th><th>1.0</th></tr></thead><tbody><tr><td>2016</td><td>2.x</td></tr><tr><td>2020</td><td>3.x</td></tr></tbody></table> 
+<h6><a id="14__39"></a>1.4 优势</h6> 
+<p>1、速度快</p> 
+<ul><li> <p>基于内存数据处理，比MR快100个数量级以上（逻辑回归算法测试）</p> </li><li> <p>基于硬盘数据处理，比MR快10个数量级以上</p> </li></ul> 
+<p>为了容灾，会将<mark>少量核心数据</mark>进行持久化。即在计算过程中，会将检查点的数据写入磁盘中，当数据计算失败时，可以基于检查点数据进行恢复。</p> 
+<p>2、易用性</p> 
+<ul><li>支持Java、【Scala】、【Python：pyspark】、R语言（主流使用Scala，pyspark存在缺陷：<mark>只能在单机上计算，对单机内存和算力的要求过高</mark>）</li><li>交互式shell方便开发测试</li></ul> 
+<p>3、通用性</p> 
+<ul><li>一栈式解决方案： 
+  <ul><li>批处理：将数据分批次加载到内存中进行计算</li><li>交互式查询</li><li>实时流处理（微批处理）</li><li>图计算</li><li>机器学习</li></ul> </li></ul> 
+<h6><a id="15_Spark_63"></a>1.5 Spark其他知识</h6> 
+<h6><a id="1_65"></a>1、多种运行模式</h6> 
+<p><mark>YARN</mark> ✔、Mesos、EC2、Kubernetes、<mark>Standalone</mark>、<mark>Local[*]</mark></p> 
+<p>​ Local[*]：在本地模式下运行，且尝试使用所有可用的核心。</p> 
+<h6><a id="2_71"></a>2、技术栈</h6> 
+<ul><li> <p>Spark Core：核心组件，分布式计算引擎 RDD</p> </li><li> <p>Spark SQL：高性能的基于Hadoop的SQL解决方案</p> </li><li> <p>Spark Streaming：可以实现高吞吐量、具备容错机制的准实时流处理系统</p> </li><li> <p>Spark GraphX：分布式图处理框架</p> </li><li> <p>Spark MLlib：构建在Spark上的分布式机器学习库</p> </li></ul> 
+<h6><a id="3sparkshellSpark_80"></a>3、spark-shell：Spark自带的交互式工具</h6> 
+<ul><li>local：spark-shell --master local[*]</li><li>alone：spark-shell --master spark://MASTERHOST:7077</li><li>yarn ：spark-shell --master yarn（需要先启用Hadoop）</li></ul> 
+<h6><a id="4Spark_86"></a>4、Spark服务</h6> 
+<ul><li>Master：Cluster Manager</li><li>Worker：Worker Node</li></ul> 
+<h4><a id="Spark_91"></a>二、Spark的基础配置</h4> 
+<p>Spark在IDEA工程中的基础配置</p> 
+<pre><code class="prism language-xml"><span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>properties</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>maven.compiler.source</span><span class="token punctuation">&gt;</span></span>8<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>maven.compiler.source</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>maven.compiler.target</span><span class="token punctuation">&gt;</span></span>8<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>maven.compiler.target</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>project.build.sourceEncoding</span><span class="token punctuation">&gt;</span></span>UTF-8<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>project.build.sourceEncoding</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>spark.version</span><span class="token punctuation">&gt;</span></span>3.1.2<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>spark.version</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>spark.scala.version</span><span class="token punctuation">&gt;</span></span>2.12<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>spark.scala.version</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>properties</span><span class="token punctuation">&gt;</span></span>
+
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependencies</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>dependency</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>groupId</span><span class="token punctuation">&gt;</span></span>org.apache.spark<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>groupId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>artifactId</span><span class="token punctuation">&gt;</span></span>spark-core_${spark.scala.version}<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>artifactId</span><span class="token punctuation">&gt;</span></span>
+    <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;</span>version</span><span class="token punctuation">&gt;</span></span>${spark.version}<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>version</span><span class="token punctuation">&gt;</span></span>
+  <span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependency</span><span class="token punctuation">&gt;</span></span>
+<span class="token tag"><span class="token tag"><span class="token punctuation">&lt;/</span>dependencies</span><span class="token punctuation">&gt;</span></span>
+</code></pre> 
+<h4><a id="Spark_115"></a>三、Spark实例</h4> 
+<h6><a id="Spark_WordCount_117"></a>Spark WordCount</h6> 
+<pre><code class="prism language-scala"><span class="token keyword">val</span> conf<span class="token operator">:</span> SparkConf <span class="token operator">=</span> <span class="token keyword">new</span> SparkConf<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>setAppName<span class="token punctuation">(</span><span class="token string">"spark01"</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>setMaster<span class="token punctuation">(</span><span class="token string">"local[*]"</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> sc<span class="token operator">:</span> SparkContext <span class="token operator">=</span> SparkContext<span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span>conf<span class="token punctuation">)</span> <span class="token comment">// 获取SparkContext，Spark应用程序的入口点</span>
+
+<span class="token keyword">val</span> storyPath <span class="token operator">=</span> <span class="token string">"E:\\BigData\\projects\\scala01\\data\\story.txt"</span>
+sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span>storyPath，<span class="token number">4</span><span class="token punctuation">)</span><span class="token comment">// 读取文本文件，将其转化为一个RDD</span>
+  <span class="token punctuation">.</span>flatMap<span class="token punctuation">(</span>_<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">"[^a-zA-Z]+"</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 将文本文件按段落按句子分割单词</span>
+  <span class="token punctuation">.</span>filter<span class="token punctuation">(</span>_<span class="token punctuation">.</span>nonEmpty<span class="token punctuation">)</span> <span class="token comment">// 过滤掉空单词</span>
+  <span class="token punctuation">.</span>map<span class="token punctuation">(</span><span class="token punctuation">(</span>_<span class="token punctuation">,</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span> <span class="token comment">// 将单词映射成(单词,1)</span>
+  <span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span>_ <span class="token operator">+</span> _<span class="token punctuation">)</span> <span class="token comment">// 将相同单词出现的次数求和 reduceByKey()的含义是：对相同键对应的值进行聚合操作，这个函数是Spark独有的</span>
+  <span class="token punctuation">.</span>sortBy<span class="token punctuation">(</span>_<span class="token punctuation">.</span>_2<span class="token punctuation">,</span> <span class="token boolean">false</span><span class="token punctuation">)</span> <span class="token comment">// 按出现次数降序排序</span>
+  <span class="token punctuation">.</span>collect<span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token comment">// 获取结果 Spark的转换操作是惰性的，仅仅定义了要进行的计算，而不立即执行它们。当调用collect()时，Spark会触发所有前面定义的转换操作，实际进行数据的处理。</span>
+  <span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>println<span class="token punctuation">)</span>
+
+sc<span class="token punctuation">.</span>stop<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="Spark_140"></a>四、Spark运行架构</h4> 
+<h6><a id="_142"></a>运行架构</h6> 
+<p>①、在驱动程序<code>Driver Program</code>中，通过<code>SparkContext</code>主导应用的执行</p> 
+<p>②、<code>SparkContext</code>可以连接不同类型的 <code>CM</code>(CM的类型<mark>与运行模式相关</mark>),连接后,获得节点上的 <code>Executor</code></p> 
+<p>③、一个节点默认一个<code>Executor</code>，可通过<code>SPARK_WORKER_INSTANCES</code>调整</p> 
+<p>④、<code>Executor</code>一般Spark启动时由<code>Cluster Manager</code>创建并管理，创建<code>Executor</code>是一个初始化过程的一部分，其中包括为每个<code>Executor</code>分配资源(CPU、内存等)，<code>Executor</code>的作用是并行处理<code>Driver</code>分配的多个任务。</p> 
+<p>⑤、每个Task处理一个RDD分区</p> 
+<p><img src="https://images2.imgbox.com/fa/d5/gzKmGCzd_o.png" alt="请添加图片描述"><br> <img src="https://images2.imgbox.com/f9/00/Q8gjeeYY_o.png" alt="在这里插入图片描述"></p> 
+<h6><a id="_156"></a>架构核心组件</h6> 
+<ul><li>Application 建立在Spark上的<mark>用户程序</mark>，包括<mark>Driver代码</mark>和<mark>运行在集群各节点Executor中的代码</mark></li><li>Driver program 驱动程序，Application中的<mark>main函数</mark>，并<mark>创建SparkContext</mark></li><li>Spark Context 整个应用程序的入口</li><li>Cluster Manager 在<mark>集群(StandAlone、Mesos、YARN)上获取资源的外部服务</mark></li><li>Worker Node 集群中任何可以<mark>运行Application代码</mark>的节点</li><li>Executor 某个Application<mark>运行在Worker节点上的一个进程</mark></li><li>Task 被送到某个Executor上的<mark>工作单元</mark></li><li>Job <mark>多个Task组成的并行计算</mark>，由Action触发生成，一个Application中含多个Job</li><li>Stage <mark>每个Job会被拆分成多组Task，作为一个TaskSet</mark>，其名称为Stage</li><li>ZooKeeper 用于管理Spark集群中的Master节点，确保在一个Master节点故障时，能够迅速切换到备用的Master节点，以保证集群的高可用性。</li></ul> 
+<h6><a id="SparkContext_171"></a>SparkContext</h6> 
+<p>连接<code>Driver</code>和<code>Spark Cluster</code>(<code>Workers</code>)</p> 
+<p><code>Spark</code>执行的主入口</p> 
+<p>每个<code>JVM</code>仅能有一个活跃的<code>SparkContext</code>,需要有多个<code>SparkContext</code>需要开多台虚拟机。</p> 
+<ul><li>配置<code>SparkContext</code></li></ul> 
+<pre><code class="prism language-scala"><span class="token keyword">val</span> conf<span class="token operator">:</span>SparkConf <span class="token operator">=</span> <span class="token keyword">new</span> SparkConf<span class="token punctuation">(</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>setAppName<span class="token punctuation">(</span>name<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span>
+	  	 <span class="token punctuation">.</span>set<span class="token punctuation">(</span>key<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span>value<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span> <span class="token comment">// 多项设置</span>
+      <span class="token punctuation">.</span>setMaster<span class="token punctuation">(</span>master<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> sc<span class="token operator">:</span> SparkContext <span class="token operator">=</span> SparkContext<span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span>conf<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li> <p><code>master</code></p> 
+  <ul><li> <p><code>local[*]</code>【推荐】：CPU核数为当前环境的最大值</p> </li><li> <p><code>local[2]</code>：CPU核数为2</p> </li><li> <p><code>local</code>：CPU核数为1</p> </li><li> <p><code>yarn</code></p> </li></ul> </li><li> <p>实例：<code>SparkContext</code>的工厂化方法</p> 
+  <ul><li>使用<code>lazy val</code>对重要资源实现==“需要时再创建”==</li><li>使用<code>Seq()</code>实现对配置项的包装</li></ul> </li></ul> 
+<pre><code class="prism language-scala"><span class="token keyword">package</span> <span class="token namespace">cha05</span>
+
+<span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span>api<span class="token punctuation">.</span>java<span class="token punctuation">.</span></span>JavaSparkContext<span class="token punctuation">.</span>fromSparkContext
+<span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span></span><span class="token punctuation">{<!-- --></span>SparkConf<span class="token punctuation">,</span> SparkContext<span class="token punctuation">}</span>
+
+<span class="token keyword">class</span> SparkCom<span class="token punctuation">(</span>appName<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span>master<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span>options<span class="token operator">:</span>Seq<span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token builtin">String</span><span class="token punctuation">,</span><span class="token builtin">String</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+  <span class="token keyword">private</span> <span class="token keyword">lazy</span> <span class="token keyword">val</span> _conf<span class="token operator">:</span>SparkConf <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">val</span> conf <span class="token operator">=</span> <span class="token keyword">new</span> SparkConf<span class="token punctuation">(</span><span class="token punctuation">)</span>
+    conf<span class="token punctuation">.</span>setAppName<span class="token punctuation">(</span>appName<span class="token punctuation">)</span>
+    conf<span class="token punctuation">.</span>setMaster<span class="token punctuation">(</span>master<span class="token punctuation">)</span>
+    options<span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>o <span class="token keyword">=&gt;</span> conf<span class="token punctuation">.</span>set<span class="token punctuation">(</span>o<span class="token punctuation">.</span>_1<span class="token punctuation">,</span>o<span class="token punctuation">.</span>_2<span class="token punctuation">)</span><span class="token punctuation">)</span>
+    conf
+  <span class="token punctuation">}</span>
+  <span class="token keyword">private</span> <span class="token keyword">lazy</span> <span class="token keyword">val</span> _sc <span class="token operator">=</span> SparkContext<span class="token punctuation">.</span>getOrCreate<span class="token punctuation">(</span>_conf<span class="token punctuation">)</span>
+ 
+  <span class="token keyword">def</span> <span class="token keyword">this</span><span class="token punctuation">(</span>appName<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span> <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">this</span><span class="token punctuation">(</span>appName<span class="token punctuation">,</span><span class="token string">"local[*]"</span><span class="token punctuation">,</span>Seq<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">def</span> sc <span class="token operator">=</span> _sc
+  <span class="token keyword">def</span> logLevel<span class="token punctuation">(</span>level<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">Unit</span> <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    <span class="token keyword">if</span><span class="token punctuation">(</span>level<span class="token punctuation">.</span>matches<span class="token punctuation">(</span><span class="token string">"ERROR|INFO|WARN|FATAL"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">{<!-- --></span>
+      _sc<span class="token punctuation">.</span>setLogLevel<span class="token punctuation">(</span>level<span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+  <span class="token punctuation">}</span>
+
+  <span class="token keyword">def</span> close<span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token operator">:</span> <span class="token builtin">Unit</span> <span class="token operator">=</span> <span class="token punctuation">{<!-- --></span>
+    _sc<span class="token punctuation">.</span>stop<span class="token punctuation">(</span><span class="token punctuation">)</span>
+  <span class="token punctuation">}</span>
+<span class="token punctuation">}</span>
+<span class="token keyword">object</span> SparkCom<span class="token punctuation">{<!-- --></span>
+  <span class="token keyword">def</span> apply<span class="token punctuation">(</span>appName<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span>master<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span>options<span class="token operator">:</span>Seq<span class="token punctuation">[</span><span class="token punctuation">(</span><span class="token builtin">String</span><span class="token punctuation">,</span><span class="token builtin">String</span><span class="token punctuation">)</span><span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token operator">:</span> SparkCom <span class="token operator">=</span> <span class="token keyword">new</span> SparkCom<span class="token punctuation">(</span>appName<span class="token punctuation">,</span>master<span class="token punctuation">,</span>options<span class="token punctuation">)</span>
+  <span class="token keyword">def</span> apply<span class="token punctuation">(</span>appName<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">)</span><span class="token operator">:</span> SparkCom <span class="token operator">=</span> <span class="token keyword">new</span> SparkCom<span class="token punctuation">(</span>appName<span class="token punctuation">)</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<ul><li>调用示例</li></ul> 
+<pre><code class="prism language-scala"><span class="token comment">// 引入必要的 Spark 类库</span>
+<span class="token keyword">import</span> <span class="token namespace">org<span class="token punctuation">.</span>apache<span class="token punctuation">.</span>spark<span class="token punctuation">.</span></span><span class="token punctuation">{<!-- --></span>SparkConf<span class="token punctuation">,</span> SparkContext<span class="token punctuation">}</span>
+
+<span class="token comment">// 定义一个包含配置选项的SparkCom对象</span>
+<span class="token keyword">val</span> customOptions <span class="token operator">=</span> Seq<span class="token punctuation">(</span>
+  <span class="token punctuation">(</span><span class="token string">"spark.executor.memory"</span><span class="token punctuation">,</span> <span class="token string">"4g"</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token comment">// 为每个执行器分配4GB内存</span>
+  <span class="token punctuation">(</span><span class="token string">"spark.executor.cores"</span><span class="token punctuation">,</span> <span class="token string">"4"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>   <span class="token comment">// 为每个执行器分配4个核心</span>
+  <span class="token punctuation">(</span><span class="token string">"spark.cores.max"</span><span class="token punctuation">,</span> <span class="token string">"40"</span><span class="token punctuation">)</span><span class="token punctuation">,</span>       <span class="token comment">// 最多使用40个核心</span>
+  <span class="token punctuation">(</span><span class="token string">"spark.local.dir"</span><span class="token punctuation">,</span> <span class="token string">"/tmp/spark-temp"</span><span class="token punctuation">)</span> <span class="token comment">// 指定Spark的临时目录</span>
+<span class="token punctuation">)</span>
+
+<span class="token comment">// 创建一个SparkCom实例，应用名称为"MySparkApp"，使用本地模式运行</span>
+<span class="token keyword">val</span> sparkApp <span class="token operator">=</span> SparkCom<span class="token punctuation">(</span><span class="token string">"MySparkApp"</span><span class="token punctuation">,</span> <span class="token string">"local[*]"</span><span class="token punctuation">,</span> customOptions<span class="token punctuation">)</span>
+
+<span class="token comment">// 获取SparkContext</span>
+<span class="token keyword">val</span> sc <span class="token operator">=</span> sparkApp<span class="token punctuation">.</span>sc
+
+<span class="token comment">// 可以使用sc来进行一些Spark操作，例如读取数据、执行转换等</span>
+<span class="token comment">// 示例：读取本地系统的一个文件并计算其行数</span>
+<span class="token keyword">val</span> lines <span class="token operator">=</span> sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span><span class="token string">"path/to/your/file.txt"</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> lineCount <span class="token operator">=</span> lines<span class="token punctuation">.</span>count<span class="token punctuation">(</span><span class="token punctuation">)</span>
+
+println<span class="token punctuation">(</span><span class="token string-interpolation"><span class="token id function">s</span><span class="token string">"Total lines in the file: </span><span class="token interpolation"><span class="token punctuation">$</span><span class="token expression">lineCount</span></span><span class="token string">"</span></span><span class="token punctuation">)</span>
+
+<span class="token comment">// 设置日志级别为ERROR，减少控制台日志量</span>
+sparkApp<span class="token punctuation">.</span>logLevel<span class="token punctuation">(</span><span class="token string">"ERROR"</span><span class="token punctuation">)</span>
+
+<span class="token comment">// 应用完成后，关闭SparkContext</span>
+sparkApp<span class="token punctuation">.</span>close<span class="token punctuation">(</span><span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="Spark_278"></a>五、Spark分区</h4> 
+<h6><a id="_280"></a>分区过程</h6> 
+<p><img src="https://images2.imgbox.com/32/46/rGFRiGTB_o.png" alt="请添加图片描述"></p> 
+<p>1 File —— N Blocks —— 1 InputSplit —— 1 Task —— 1 RDD Partition</p> 
+<h6><a id="RDD_288"></a>RDD</h6> 
+<h6><a id="RDD_290"></a>RDD的相关概念</h6> 
+<p>RDD是描述数据存储位置的(主要数据抽象)，并不实际存储数据。</p> 
+<p>RDD是一个大的<code>不可变、分区、并行处理</code>的数据集合，每个子集合就是一个分区，存储在集群的工作节点上的内存和硬盘。</p> 
+<p>RDD是数据转换的接口，数据规模经过转换越来越小，最终指向目标数据类型，</p> 
+<p>RDD指向了</p> 
+<p>​ 或存储在<code>Hive(HDFS)、Cassandra、HBase</code>等</p> 
+<p>​ 或缓存(内存、内存+磁盘、仅磁盘等)</p> 
+<p>​ 或在故障或缓存收回时重新计算其他RDD分区中的数据</p> 
+<p>RDD是弹性分布式数据集(<code>Resilient Distributed Datasets</code>)</p> 
+<ul><li> <p>分布式数据集</p> 
+  <ul><li> <p>RDD是只读的、<mark>分区记录</mark>的集合，每个分区<mark>分布在集群的不同节点</mark>上。</p> </li><li> <p>RDD并不存储真正的数据，只是【<mark>对数据和操作</mark>】的描述。</p> </li></ul> </li><li> <p>弹性</p> 
+  <ul><li>RDD默认存放在内存中，当内存不足，Spark自动将RDD写入磁盘</li></ul> </li><li> <p>容错性</p> 
+  <ul><li> <p>根据<mark>数据血统</mark>，可以自动从节点失败中恢复分区。</p> <p><img src="https://images2.imgbox.com/83/cb/MhwF8X6i_o.png" alt="请添加图片描述"></p> </li></ul> </li><li> <p>RDD的特性</p> 
+  <ul><li>一系列的分区(分片)信息，每个任务处理一个分区</li><li>每个分区上都有<code>compute</code>函数，计算该分区中的数据</li><li>RDD之间有一系列的依赖</li><li>分区器决定数据会被分在那个分区</li><li>将计算任务分派到其所在处理数据块的存储位置</li></ul> </li></ul> 
+<p>RDD可以<mark>跨集群的多个节点</mark>存储数据，支持两种类型的操作：<code>转换和行动</code>。</p> 
+<p>RDD操作类型：分为<code>lazy</code>和<code>non-lazy</code>两种</p> 
+<ul><li> <p>转换操作(<code>lazy</code>)：定义了一个操作序列，实际计算则被推迟到触发动作时。常见的转换操作包括 <code>map</code>, <code>filter</code>, <code>flatMap</code>, <code>reduceByKey</code> 等。</p> 
+  <ul><li> <p>每一个RDD都由转换操作生成，一个 RDD 由另一个 RDD 通过某种转换操作生成时，原始的 RDD 称为<code>父 RDD</code>，新生成的 RDD 称为<code>子 RDD</code></p> </li><li> <p>转换操作普遍会丢失父RDD的分区信息，因为分器依赖于键的不变性，但是转换操作可能改变元素的数量和类型。</p> </li></ul> </li><li> <p>动作算子(<code>non-lazy</code>)：动作会触发前面定义的所有转换的实际执行。常见的动作操作包括 <code>count</code>, <code>collect</code>, <code>reduce</code>, <code>foreach</code> 等。</p> </li></ul> 
+<p>一个<code>InputSplit</code>对应的多个<code>Blocks</code>只能位于一个<code>File</code>中。</p> 
+<p>这些<code>Task</code>会被分配到集群上的某个节点的某个<code>Executor</code>去执行，会尽量使执行任务的计算节点(<code>Worker</code>)与存储数据的节点(<code>DataNode</code>)是同一台机器。</p> 
+<p>每个<code>Executor</code>由若干<code>core</code>组成，每个<code>Executor</code>的每个<code>core</code>一次只能执行一个<code>Task</code>。</p> 
+<p>每个<code>Task</code>的执行结果就是生成了RDD的一个<code>Partition</code>。</p> 
+<h6><a id="RDD_355"></a>RDD创建方式</h6> 
+<pre><code class="prism language-scala"><span class="token comment">// 集合创建：小数据集，可通过 numSlices 指定并行度(分区数)</span>
+<span class="token keyword">val</span> rdd<span class="token operator">:</span> RDD<span class="token punctuation">[</span>T<span class="token punctuation">]</span> <span class="token operator">=</span> sc<span class="token punctuation">.</span>parallelize<span class="token punctuation">(</span>seq<span class="token operator">:</span>Seq<span class="token punctuation">[</span>T<span class="token punctuation">]</span><span class="token punctuation">,</span> numSlices<span class="token operator">:</span><span class="token builtin">Int</span><span class="token punctuation">)</span> <span class="token comment">// ✔</span>
+<span class="token keyword">val</span> rdd<span class="token operator">:</span> RDD<span class="token punctuation">[</span>T<span class="token punctuation">]</span> <span class="token operator">=</span> sc<span class="token punctuation">.</span>makeRDD<span class="token punctuation">(</span>seq<span class="token operator">:</span>Seq<span class="token punctuation">[</span>T<span class="token punctuation">]</span><span class="token punctuation">,</span> numSlices<span class="token operator">:</span><span class="token builtin">Int</span><span class="token punctuation">)</span> <span class="token comment">// 调用了 parallelize</span>
+</code></pre> 
+<pre><code class="prism language-scala"><span class="token comment">// 将序列分为3个分区，并且进行数字的频次统计</span>
+<span class="token comment">// val rddInt: RDD[Int] = sc.makeRDD(Seq(2, 3, 4, 5, 6, 7, 8, 9, 10), 3)</span>
+<span class="token keyword">val</span> rddInt<span class="token operator">:</span> RDD<span class="token punctuation">[</span><span class="token builtin">Int</span><span class="token punctuation">]</span> <span class="token operator">=</span> sc<span class="token punctuation">.</span>parallelize<span class="token punctuation">(</span>Seq<span class="token punctuation">(</span><span class="token number">2</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">,</span> <span class="token number">5</span><span class="token punctuation">,</span> <span class="token number">6</span><span class="token punctuation">,</span> <span class="token number">7</span><span class="token punctuation">,</span> <span class="token number">8</span><span class="token punctuation">,</span> <span class="token number">9</span><span class="token punctuation">,</span> <span class="token number">10</span><span class="token punctuation">)</span><span class="token punctuation">,</span> <span class="token number">3</span><span class="token punctuation">)</span>
+rddInt
+  <span class="token punctuation">.</span>map<span class="token punctuation">(</span><span class="token punctuation">(</span>_<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span>_<span class="token operator">+</span>_<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>println<span class="token punctuation">)</span>
+</code></pre> 
+<pre><code class="prism language-scala"><span class="token comment">// 外部数据源创建: 可通过 minPartitions 指定最小分区数</span>
+<span class="token comment">// 文件系统：local(file:///...)或hadoop(hdfs://)</span>
+<span class="token keyword">val</span> rdd<span class="token operator">:</span> RDD<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span> <span class="token operator">=</span> sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span>path<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span> minPartitions<span class="token operator">:</span><span class="token builtin">Int</span><span class="token punctuation">)</span>
+<span class="token keyword">val</span> rdd<span class="token operator">:</span> RDD<span class="token punctuation">[</span><span class="token builtin">String</span><span class="token punctuation">]</span> <span class="token operator">=</span> sc<span class="token punctuation">.</span>wholeTextFiles<span class="token punctuation">(</span>dir<span class="token operator">:</span><span class="token builtin">String</span><span class="token punctuation">,</span> minPartitions<span class="token operator">:</span><span class="token builtin">Int</span><span class="token punctuation">)</span>
+</code></pre> 
+<h6><a id="RDD_382"></a>RDD分区</h6> 
+<ul><li> <p>分区概念</p> 
+  <ul><li>每个分区都是被分发到不同<code>worker node</code>的候选者</li><li>每个分区对应一个<code>Task</code></li></ul> </li><li> <p>分区数量</p> 
+  <ul><li> <p>分区数量最好从源头设计，尽量不在过程中修改分区数量，会造成数据迁移，增加网络负载。同时引发不必要的<code>Shuffle</code>过程。</p> </li><li> <p>使用<code>textFile()</code>方法创建RDD时可以传入第二个参数指定<mark>最小分区数量</mark>，最小分区数量只是期望的数量，Spark会根据实际文件大小、<code>Block</code>大小等情况确定最终分区数量。</p> </li><li> <p>分区数要等于集群CPU核数，也要等于<code>1/Block数</code></p> </li></ul> </li><li> <p>分区方式</p> 
+  <ul><li>分区器主要用于<mark>键值对的RDD</mark>，如通过<code>reduceByKey</code>等操作创建的RDD。</li><li>有<code>HashPartition(默认)</code>和<code>RangePartition</code>两种分区方式 
+    <ul><li><code>HashPartitioner</code>：它使用键的哈希值来分配记录，尽量保证数据在不同分区间的均匀分布。</li><li><code>RangePartitioner</code>：它将键排序后分成若干连续的范围，每个范围对应一个分区，这样可以让范围内的键都分到一个分区。</li></ul> </li></ul> </li></ul> 
+<h6><a id="RDDDAG_407"></a>RDD与DAG</h6> 
+<p><img src="https://images2.imgbox.com/48/54/eVvr9zJW_o.png" alt="请添加图片描述"></p> 
+<p>每个<code>Stage</code>由n个<code>Task</code>组成，每个<code>Task</code>构成一个<code>TaskSet</code>。</p> 
+<p>有多少个<code>Partition</code>，<code>TaskSet</code>中就有多少个<code>Task</code></p> 
+<h6><a id="Spark_Shuffle_417"></a>Spark Shuffle</h6> 
+<blockquote> 
+ <p>在Spark中，Shuffle是代价较大的操作，应该尽量避免。</p> 
+</blockquote> 
+<ul><li>过程：基本与MR中的<code>Shuffle</code>过程类似。 
+  <ul><li>分区Partition</li><li>Sort根据Key排序</li><li>Combiner进行Value的合并</li></ul> </li><li>需要进行<code>Shuffle</code>的Spark算子 
+  <ul><li><code>reduceByKey</code>：需要通过网络对不同的<code>Executor</code>中相同<code>key</code>对应的值进行分组<code>Pull(拉取)</code>操作</li><li><code>repartition</code>：当RDD的分区数量和父RDD分区数量不同时，就会引起数据的重新组织。</li><li><code>sortByKey</code>：当需要进行排序操作时</li></ul> </li></ul> 
+<h6><a id="_430"></a>再分区</h6> 
+<p>默认算子间的分区数不发生变化，如果需要进行<mark>再分区操作</mark>，可以<mark>通过在可带分区参数的方法调用时设置分区参数</mark>或<mark>调用重新设置分区的算子</mark></p> 
+<ul><li> <p><code>numPartitions</code>：指定分区数</p> </li><li> <p><code>partitioner</code>：指定分区器</p> </li><li> <p><code>repartition(numPartitions:Int)</code>：进行重分区操作，必定会触发<code>Shuffle</code>操作</p> </li></ul> 
+<h4><a id="Spark_440"></a>六、Spark算子</h4> 
+<h6><a id="_442"></a>转换算子</h6> 
+<pre><code class="prism language-scala"><span class="token comment">/*
+	简单类型 RDD[T]
+*/</span>
+
+<span class="token comment">// 【逐条处理】</span>
+<span class="token keyword">val</span> rdd2<span class="token operator">:</span> RDD<span class="token punctuation">[</span>U<span class="token punctuation">]</span> <span class="token operator">=</span> rdd<span class="token punctuation">.</span>map<span class="token punctuation">(</span>f<span class="token operator">:</span>T<span class="token keyword">=&gt;</span>U<span class="token punctuation">)</span>
+<span class="token comment">// 【扁平化处理】：TraversableOnce : Trait用于遍历和处理集合类型元素，类似于java:Iterable</span>
+<span class="token keyword">val</span> rdd2<span class="token operator">:</span> RDD<span class="token punctuation">[</span>U<span class="token punctuation">]</span> <span class="token operator">=</span> rdd<span class="token punctuation">.</span>flatMap<span class="token punctuation">(</span>f<span class="token operator">:</span>T<span class="token keyword">=&gt;</span>TraversableOnce<span class="token punctuation">[</span>U<span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token comment">/* 【分区内逐行处理】：以分区为单位(分区不变)逐行处理数据 ✔
+	
+*/</span>
+<span class="token keyword">val</span> rdd2<span class="token operator">:</span> RDD<span class="token punctuation">[</span>U<span class="token punctuation">]</span> <span class="token operator">=</span> rdd<span class="token punctuation">.</span>mapPartitions<span class="token punctuation">(</span>f<span class="token operator">:</span>Iterator<span class="token punctuation">[</span>T<span class="token punctuation">]</span><span class="token keyword">=&gt;</span>Iterator<span class="token punctuation">[</span>U<span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">,</span>preservePar<span class="token operator">:</span><span class="token builtin">Boolean</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+<span class="token comment">// 【分区内逐行处理】：以分区为单位逐行处理数据，并追加分区编号。</span>
+<span class="token keyword">val</span> rdd2<span class="token operator">:</span> RDD<span class="token punctuation">[</span>U<span class="token punctuation">]</span> <span class="token operator">=</span> rdd<span class="token punctuation">.</span>mapPartitionsWithIndex<span class="token punctuation">(</span>f<span class="token operator">:</span><span class="token punctuation">(</span><span class="token builtin">Int</span><span class="token punctuation">,</span>Iterator<span class="token punctuation">[</span>T<span class="token punctuation">]</span><span class="token punctuation">)</span><span class="token keyword">=&gt;</span>Iterator<span class="token punctuation">[</span>U<span class="token punctuation">]</span><span class="token punctuation">[</span><span class="token punctuation">,</span>preservePar<span class="token operator">:</span><span class="token builtin">Boolean</span><span class="token punctuation">]</span><span class="token punctuation">)</span>
+</code></pre> 
+<ul><li><code>mapPartitions</code> 
+  <ul><li>如何判断是否需要保留父RDD的分区器设置？ 
+    <ul><li>优化键值对操作：如果输入数据已经根据键正确分区，Spark可以在每个分区内独立地进行规约，无需跨节点传输大量数据。</li><li>如果某个操作(如<code>map</code>)不改变键的映射关系(则数据的键仍然映射到同一个分区)</li></ul> </li><li><code>map</code>和<code>mapPartitions</code>的区别 
+    <ul><li>1.IO数量： 
+      <ul><li><code>map</code>：对<mark>每个输入RDD中的元素</mark>都执行一次转换函数，因此输入和输出的元素数量是一致的，<mark>一进一出</mark>。</li><li><code>mapPartitions</code>：对<mark>每个分区中的元素进行处理，每个分区只会产生一个输出</mark>。因此，如果有多个分区，输入和输出的元素数量不一定是一致的，多进多出。</li></ul> </li><li>2.性能： 
+      <ul><li><code>map</code>：对于每个元素，都会启动一次函数调用，适用于简单的转换。但是，如果有大量的小任务，这可能会导致性能下降，因为函数调用的开销可能会很高。</li><li><code>mapPartitions</code>：对于每个分区，只会启动一次函数调用。这样可以减少函数调用的开销，特别是当处理的操作比较复杂时，效率更高。此外，可以在每个分区中累积一些状态信息，从而进一步提高性能。</li></ul> </li><li>3.内存占用： 
+      <ul><li><code>map</code>：由于每个元素都会单独处理，可能会占用大量的内存，尤其是在处理大规模数据时容易导致OOM（Out Of Memory）错误。</li><li><code>mapPartitions</code>：由于对每个分区进行处理，可以控制每次处理的数据量，因此更容易管理内存。</li></ul> </li><li>总结：<code>map</code>适用于简单的转换操作，而<code>mapPartitions</code>适用于复杂的转换操作，当数据量较大时，<code>map</code>针对每个元素都进行单独处理的特性会导致过高的性能和内存开销。</li></ul> </li></ul> </li></ul> 
+<pre><code class="prism language-scala"><span class="token keyword">val</span> storyPath <span class="token operator">=</span> <span class="token string">"E:\\BigData\\projects\\scala01\\data\\story.txt"</span>
+<span class="token comment">// 按顺序形成四个分区</span>
+sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span>storyPath<span class="token punctuation">,</span><span class="token number">4</span><span class="token punctuation">)</span>
+<span class="token comment">// mapPartitions()的第一个参数是应用于每个分区的函数，第二个参数`preservePartitioning`指示是否保持父RDD的分区器设置。如果设置为`true`，Spark将使用相同的分区器来创建结果RDD。</span>
+  <span class="token punctuation">.</span>mapPartitions<span class="token punctuation">(</span>_<span class="token punctuation">.</span>flatMap<span class="token punctuation">(</span>_<span class="token punctuation">.</span>split<span class="token punctuation">(</span><span class="token string">"^[a-zA-Z]+"</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">.</span>map<span class="token punctuation">(</span><span class="token punctuation">(</span>_<span class="token punctuation">,</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">)</span><span class="token punctuation">,</span><span class="token boolean">true</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span>_<span class="token operator">+</span>_<span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>println<span class="token punctuation">)</span>
+</code></pre> 
+<ul><li><code>mapPartitionsWithIndex</code></li></ul> 
+<pre><code class="prism language-scala">sc<span class="token punctuation">.</span>textFile<span class="token punctuation">(</span><span class="token string">"hdfs://single01:9000/hadoop/data/movies.csv"</span><span class="token punctuation">,</span> <span class="token number">4</span><span class="token punctuation">)</span>
+  <span class="token punctuation">.</span>mapPartitionsWithIndex<span class="token punctuation">(</span><span class="token punctuation">(</span>parIx<span class="token punctuation">,</span> it<span class="token punctuation">)</span> <span class="token keyword">=&gt;</span> <span class="token punctuation">{<!-- --></span> <span class="token comment">// (parIx,it) =&gt; (分区索引，迭代器)</span>
+ <span class="token comment">// 对第一个分区，删除第一行 =&gt; 即删除全文的首行</span>
+    <span class="token keyword">if</span> <span class="token punctuation">(</span>parIx <span class="token operator">==</span> <span class="token number">0</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+      it<span class="token punctuation">.</span>drop<span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span>
+    <span class="token punctuation">}</span>
+    it<span class="token punctuation">.</span>flatMap<span class="token punctuation">(</span>_<span class="token punctuation">.</span>lat2<span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>toArray
+      <span class="token punctuation">.</span>groupBy<span class="token punctuation">(</span>_<span class="token punctuation">.</span>_1<span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>map<span class="token punctuation">(</span>tp2<span class="token keyword">=&gt;</span><span class="token punctuation">(</span>tp2<span class="token punctuation">.</span>_1<span class="token punctuation">,</span>tp2<span class="token punctuation">.</span>_2<span class="token punctuation">.</span>size<span class="token punctuation">)</span><span class="token punctuation">)</span>
+      <span class="token punctuation">.</span>toIterator <span class="token comment">// mapPartitionsWithIndex()需要迭代器作为返回类型</span>
+  <span class="token punctuation">}</span><span class="token punctuation">)</span><span class="token punctuation">.</span>reduceByKey<span class="token punctuation">(</span>_<span class="token operator">+</span>_<span class="token punctuation">)</span> <span class="token comment">// 在不同分区间对具有相同键的值进行汇总。</span>
+  <span class="token punctuation">.</span>foreach<span class="token punctuation">(</span>println<span class="token punctuation">)</span>
+</code></pre> 
+<h4><a id="Spark_507"></a>七、Spark优化</h4> 
+<h6><a id="_509"></a>数据的本地化读取</h6> 
+<p><code>SparkContext</code>会从<code>NameNode</code>获取数据片存储在哪些<code>DataNode</code>上面，<code>SparkContext</code>在建任务的时候会通过<code>Cluster Manager</code>获取这些位置机器的<code>Executor</code>，并直接从<code>DataNode</code>读取数据，实现数据的本地化读取。</p> 
+<p><img src="https://images2.imgbox.com/de/96/eW6ITHxB_o.png" alt="请添加图片描述"></p> 
+<h4><a id="_518"></a>八、拓展</h4> 
+<h6><a id="__522"></a>数据处理提取指标 基本思路：</h6> 
+<ol><li> <p><strong>查询集群资源</strong> - 确认<mark>可用的机器数量</mark>和<mark>每台机器的配置</mark>（CPU核心数、线程数、内存大小）。这有助于了解集群的计算能力和分配任务的基础。</p> </li><li> <p><strong>数据和指标概览</strong> - 明确要提取的若干个指标，并了解这些指标<mark>涉及的数据及其规模</mark>。</p> </li><li> <p><strong>检查分组聚合操作</strong> - 确定是否需要对数据进行分组和聚合。</p> </li><li> <p><strong>处理数据倾斜</strong> - 分组聚合操作可能会导致数据倾斜，即某些分组的数据量远大于其他分组。通过<mark>数据抽样</mark>来评估倾斜程度，并根据需要启用倾斜优化配置。</p> </li></ol> 
+<pre><code class="prism language-hive">set hive.groupby.skewindata=true;
+</code></pre> 
+<ol start="5"><li><strong>优化并行处理</strong> - 分析各个数据处理阶段（stage）的<mark>依赖关系</mark>，确定是否可以通过并行处理来优化性能。</li></ol> 
+<pre><code class="prism language-hive">set hive.exec.parallel=true;
+</code></pre> 
+<p>附：3、4、5属于常见思路，还可以存在有其他思路。<br> <img src="https://images2.imgbox.com/75/af/5eTBIu1H_o.png" alt="在这里插入图片描述"></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/fe5e235c56d328cd12690bc07ec6d873/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">收藏！2024 年最具潜力 44 个顶级开源项目，涵盖 11 类 AI 学习框架、平台_序列大数据的智能计算 开源项目(3)</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/e72d6491d0c830e24cf037c1a223db35/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【C语言视角】数据结构之~二叉树</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

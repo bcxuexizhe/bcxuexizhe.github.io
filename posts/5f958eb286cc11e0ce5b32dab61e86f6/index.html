@@ -1,0 +1,392 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android 5.0 ~ 14访问Android/data(obb)目录的方法 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/5f958eb286cc11e0ce5b32dab61e86f6/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android 5.0 ~ 14访问Android/data(obb)目录的方法">
+  <meta property="og:description" content="众所周知，安卓每次出新版本的时候都会收紧权限，存储权限也不例外。虽说官方的意思是为了保护隐私安全，但这些改动着实令开发者和用户感到头疼，尤其是Android/data、Android/obb目录的访问。毕竟用户更难操作，开发者也要费力适配。那么今天就来探索下怎么适配这些变更点吧。
+不同安卓版本存储权限差异 1、Android 6.0 之前 应用只需要在 AndroidManifest.xml 下声明以下权限即可自动获取存储权限： &lt;uses-permission android:name=&#34;android.permission.READ_EXTERNAL_STORAGE&#34; /&gt; &lt;uses-permission android:name=&#34;android.permission.WRITE_EXTERNAL_STORAGE&#34; /&gt; 2、Android 6.0 起 从Android 6.0开始，除了以上操作以外，还需要在代码中动态申请权限。
+// 检查是否有存储权限 boolean granted = context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) == PackageManager.PERMISSION_GRANTED; // 在activity中请求存储权限 requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0); 3、Android 10 Android 10 开始引入了沙盒机制，应用在 sdcard 中默认只能读写私有目录（即/sdcard/Android/data/[应用包名]/），其他目录即便执行前面的操作也无法读写。除非在 AndroidManifest.xml 下声明以下属性：
+&lt;application ... android:requestLegacyExternalStorage=&#34;true&#34;&gt; 这样的话就会暂时停用沙盒机制，正常读写/sdcard下文件。
+4、Android 11 Android 11开始，且应用的目标版本在30及以上，以上的操作也无法再读写sdcard目录。需要声明以下权限：
+&lt;uses-permission android:name=&#34;android.permission.MANAGE_EXTERNAL_STORAGE&#34; /&gt; 再动态申请权限：
+// 检查是否有存储权限 boolean granted = Environment.isExternalStorageManager(); // 在activity中请求存储权限 Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION) .">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-18T16:29:32+08:00">
+    <meta property="article:modified_time" content="2024-05-18T16:29:32+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android 5.0 ~ 14访问Android/data(obb)目录的方法</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p>众所周知，安卓每次出新版本的时候都会收紧权限，存储权限也不例外。虽说官方的意思是为了保护隐私安全，但这些改动着实令开发者和用户感到头疼，尤其是Android/data、Android/obb目录的访问。毕竟用户更难操作，开发者也要费力适配。那么今天就来探索下怎么适配这些变更点吧。</p> 
+<h3>不同安卓版本存储权限差异</h3> 
+<h4>1、Android 6.0 之前</h4> 
+<p>应用只需要在 AndroidManifest.xml 下声明以下权限即可自动获取存储权限： </p> 
+<pre><code class="language-XML">&lt;uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" /&gt;
+&lt;uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE" /&gt;</code></pre> 
+<h4>2、Android 6.0 起</h4> 
+<p>从Android 6.0开始，除了以上操作以外，还需要在代码中动态申请权限。</p> 
+<pre><code class="language-java">// 检查是否有存储权限
+boolean granted = context.checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE) ==
+    PackageManager.PERMISSION_GRANTED;
+// 在activity中请求存储权限
+requestPermissions(new String[] { Manifest.permission.WRITE_EXTERNAL_STORAGE }, 0);</code></pre> 
+<h4>3、Android 10</h4> 
+<p>Android 10 开始引入了沙盒机制，应用在 sdcard 中默认只能读写私有目录（即/sdcard/Android/data/[应用包名]/），其他目录即便执行前面的操作也无法读写。除非在 AndroidManifest.xml 下声明以下属性：</p> 
+<pre><code class="language-XML">&lt;application
+        ...
+        android:requestLegacyExternalStorage="true"&gt;</code></pre> 
+<p>这样的话就会暂时停用沙盒机制，正常读写/sdcard下文件。</p> 
+<h4>4、Android 11</h4> 
+<p>Android 11开始，且应用的目标版本在30及以上，以上的操作也无法再读写sdcard目录。需要声明以下权限：</p> 
+<pre><code class="language-XML">&lt;uses-permission android:name="android.permission.MANAGE_EXTERNAL_STORAGE" /&gt;</code></pre> 
+<p>再动态申请权限：</p> 
+<pre><code class="language-java">// 检查是否有存储权限
+boolean granted = Environment.isExternalStorageManager();</code></pre> 
+<pre><code class="language-java">// 在activity中请求存储权限
+Intent intent = new Intent(Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION)
+    .setData(Uri.parse("package:"+getPackageName()));
+startActivityForResult(intent, 0);</code></pre> 
+<p>执行以上操作后，sdcard已能够正常读写。</p> 
+<p>但是，有2个特殊的目录仍然无法读写：</p> 
+<p><strong>/sdcard/Android/data</strong> 和 <strong>/sdcard/Android/obb</strong> 。</p> 
+<p>这两个路径需要安卓自带的 <strong>DocumentsUI </strong>授权才能访问。</p> 
+<p>首先，最重要的一点，添加 documentfile 依赖（SDK自带的那个版本有问题）：</p> 
+<pre><code class="language-Groovy">implementation "androidx.documentfile:documentfile:1.0.1"</code></pre> 
+<p>Activity请求授权：</p> 
+<pre><code class="language-java">Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT_TREE);
+intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION |
+                Intent.FLAG_GRANT_PERSISTABLE_URI_PERMISSION | Intent.FLAG_GRANT_PREFIX_URI_PERMISSION);
+if (Build.VERSION.SDK_INT &gt;= Build.VERSION_CODES.O) {
+    // 请求Android/data目录的权限，Android/obb目录则把data替换成obb即可。
+    Uri treeUri = Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata/document/primary%3AAndroid%2Fdata");
+    DocumentFile df = DocumentFile.fromTreeUri(this, treeUri);
+    if (df != null) {
+        intent.putExtra(DocumentsContract.EXTRA_INITIAL_URI, df.getUri());
+    }
+}
+startActivityForResult(intent, 1);</code></pre> 
+<p>还需要在回调中保存权限：</p> 
+<pre><code class="language-java">@Override
+protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
+    super.onActivityResult(requestCode, resultCode, data);
+    Uri uri;
+    if (data != null &amp;&amp; (uri = data.getData()) != null) {
+        // 授权成功
+        getContentResolver().takePersistableUriPermission(uri, Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_GRANT_WRITE_URI_PERMISSION);
+    } else {
+        // 授权失败
+    }
+}</code></pre> 
+<p>在请求授权时，会跳转到以下界面。点击下方按钮授权即可。</p> 
+<p><img alt="" height="715" src="https://images2.imgbox.com/e2/fb/TvzSPXHG_o.png" width="330"></p> 
+<p><img alt="" height="722" src="https://images2.imgbox.com/ce/fe/6uc9qRL7_o.png" width="333"></p> 
+<p>然后，使用接口获取文件列表：</p> 
+<pre><code class="language-java">// Android 11~12转换路径。例如：/sdcard/Android/data，转换成：
+// Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata/document/primary%3AAndroid%2Fdata")
+
+// 路径 /sdcard/Android/data/com.xxx.yyy，转换成：
+// Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata/document/primary%3AAndroid%2Fdata%2Fcom.xxx.yyy")
+// 以此类推。
+Uri pathUri = pathToUri(path);
+DocumentFile documentFile = DocumentFile.fromTreeUri(context, pathUri);
+if (documentFile != null) {
+    DocumentFile[] documentFiles = documentFile.listFiles();
+    for (DocumentFile df : documentFiles) {
+        // 文件名
+        String fName = df.getName();
+        // 路径
+        String fPath = path + "/" + fName;
+    }
+}</code></pre> 
+<h4>5、Android 13</h4> 
+<p>Android 13 开始，上面提到的授权 Android/data、Android/obb目录的方法失效了。请求授权会出现如下界面：</p> 
+<p><img alt="" height="657" src="https://images2.imgbox.com/e5/ad/P7vj4ijH_o.png" width="303"></p> 
+<p>点击下方按钮会提示：</p> 
+<p><img alt="" height="667" src="https://images2.imgbox.com/41/68/b3l2xuYY_o.png" width="308"></p> 
+<p>说明安卓13无法再直接授权 Android/data 和 Android/obb 这两个目录了。但也并非无计可施。我们可以授权他们的子目录。</p> 
+<p>我们知道，这个目录下的文件夹名称一般都是应用的包名。我们可以直接用应用包名的路径来请求授权。</p> 
+<p><strong>这里要注意，Android 13和Android 11~12的路径转换规则不一样。</strong></p> 
+<p>// Android 13转换路径。例如：/sdcard/Android/data/com.xxx.yyy，转换成：<br> // Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata%2Fcom.xxx.yyy/document/primary%3AAndroid%2Fdata%2Fcom.xxx.yyy")</p> 
+<p>// 路径 /sdcard/Android/data/com.xxx.yyy/files，转换成：<br> // Uri.parse("content://com.android.externalstorage.documents/tree/primary%3AAndroid%2Fdata%2Fcom.xxx.yyy/document/primary%3AAndroid%2Fdata%2Fcom.xxx.yyy%2Ffiles")<br> // 以此类推。</p> 
+<p></p> 
+<p>请求授权时，出现如下界面。照常授权即可。</p> 
+<p><img alt="" height="667" src="https://images2.imgbox.com/b9/00/icFGQLqo_o.png" width="308"></p> 
+<h4>6、Android 14</h4> 
+<p>Android 14对于data、obb目录的授权进一步收紧。在Android 14的后期版本和Android 15预览版中，以上方法已失效（传入uri请求授权只会跳转到sdcard根目录）。这种情况下，想要访问data和obb目录就需要使用Shizuku了。（目前MT、FV就是用这种方法访问的）</p> 
+<p>Shizuku的用法可以查阅相关教程，这里不多赘述。请先将Shizuku启动，便于后续使用。</p> 
+<p>首先，添加Shizuku的依赖：</p> 
+<pre><code class="language-Groovy">def shizuku_version = "13.1.5"
+implementation "dev.rikka.shizuku:api:$shizuku_version"
+// Add this line if you want to support Shizuku
+implementation "dev.rikka.shizuku:provider:$shizuku_version"</code></pre> 
+<p>AndroidManifest.xml添加以下内容：</p> 
+<pre><code class="language-XML">&lt;?xml version="1.0" encoding="utf-8"?&gt;
+&lt;manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"&gt;
+
+    &lt;uses-sdk tools:overrideLibrary="rikka.shizuku.api, rikka.shizuku.provider, rikka.shizuku.shared, rikka.shizuku.aidl" /&gt;
+    &lt;uses-permission android:name="moe.shizuku.manager.permission.API_V23" /&gt;
+
+    &lt;application&gt;
+        &lt;provider
+            android:name="rikka.shizuku.ShizukuProvider"
+            android:authorities="${applicationId}.shizuku"
+            android:enabled="true"
+            android:exported="true"
+            android:multiprocess="false"
+            android:permission="android.permission.INTERACT_ACROSS_USERS_FULL" /&gt;
+        &lt;meta-data
+            android:name="moe.shizuku.client.V3_SUPPORT"
+            android:value="true" /&gt;
+    &lt;/application&gt;
+&lt;/manifest&gt;</code></pre> 
+<p>判断Shizuku是否安装：</p> 
+<pre><code class="language-java">private static boolean isShizukuInstalled() {
+    try {
+        context.getPackageManager().getPackageInfo("moe.shizuku.privileged.api", 0);
+        return true;
+    } catch (PackageManager.NameNotFoundException e) {
+        e.printStackTrace();
+    }
+    return false;
+}</code></pre> 
+<p>判断Shizuku是否可用：</p> 
+<pre><code class="language-java">boolean available = Shizuku.pingBinder();</code></pre> 
+<p>检查Shizuku是否授权：</p> 
+<pre><code class="language-java">boolean granted = Shizuku.checkSelfPermission() == PackageManager.PERMISSION_GRANTED;</code></pre> 
+<p>请求Shizuku权限：</p> 
+<pre><code class="language-java">Shizuku.requestPermission(0);</code></pre> 
+<p>监听授权结果：</p> 
+<pre><code class="language-java">Shizuku.addRequestPermissionResultListener(listener);
+Shizuku.removeRequestPermissionResultListener(listener);</code></pre> 
+<p>授权后，自己定义一个aidl文件：</p> 
+<p><strong>IFileExplorerService.aidl</strong></p> 
+<pre><code class="language-java">package com.magicianguo.fileexplorer.userservice;
+
+import com.magicianguo.fileexplorer.bean.BeanFile;
+
+interface IFileExplorerService {
+    List&lt;BeanFile&gt; listFiles(String path);
+}</code></pre> 
+<p><strong>BeanFile.java</strong></p> 
+<pre><code class="language-java">public class BeanFile implements Parcelable {
+    public BeanFile(String name, String path, boolean isDir, boolean isGrantedPath, String pathPackageName) {
+        this.name = name;
+        this.path = path;
+        this.isDir = isDir;
+        this.isGrantedPath = isGrantedPath;
+        this.pathPackageName = pathPackageName;
+    }
+
+    /**
+     * 文件名
+     */
+    public String name;
+    /**
+     * 文件路径
+     */
+    public String path;
+    /**
+     * 是否文件夹
+     */
+    public boolean isDir;
+    /**
+     * 是否被Document授权的路径
+     */
+    public boolean isGrantedPath;
+    /**
+     * 如果文件夹名称是应用包名，则将包名保存到该字段
+     */
+    public String pathPackageName;
+
+    protected BeanFile(Parcel in) {
+        name = in.readString();
+        path = in.readString();
+        isDir = in.readByte() != 0;
+        isGrantedPath = in.readByte() != 0;
+        pathPackageName = in.readString();
+    }
+
+    public static final Creator&lt;BeanFile&gt; CREATOR = new Creator&lt;BeanFile&gt;() {
+        @Override
+        public BeanFile createFromParcel(Parcel in) {
+            return new BeanFile(in);
+        }
+
+        @Override
+        public BeanFile[] newArray(int size) {
+            return new BeanFile[size];
+        }
+    };
+
+    @Override
+    public int describeContents() {
+        return 0;
+    }
+
+    @Override
+    public void writeToParcel(@NonNull Parcel dest, int flags) {
+        dest.writeString(name);
+        dest.writeString(path);
+        dest.writeByte((byte) (isDir ? 1 : 0));
+        dest.writeByte((byte) (isGrantedPath ? 1 : 0));
+        dest.writeString(pathPackageName);
+    }
+}</code></pre> 
+<p><strong>IFileExplorerService实现类：</strong></p> 
+<pre><code class="language-java">public class FileExplorerService extends IFileExplorerService.Stub {
+
+    @Override
+    public List&lt;BeanFile&gt; listFiles(String path) throws RemoteException {
+        List&lt;BeanFile&gt; list = new ArrayList&lt;&gt;();
+        File[] files = new File(path).listFiles();
+        if (files != null) {
+            for (File f : files) {
+                list.add(new BeanFile(f.getName(), f.getPath(), f.isDirectory(), false, f.getName()));
+            }
+        }
+        return list;
+    }
+}</code></pre> 
+<p>然后使用Shizuku绑定UserService：</p> 
+<pre><code class="language-java">private static final Shizuku.UserServiceArgs USER_SERVICE_ARGS = new Shizuku.UserServiceArgs(
+    new ComponentName(packageName, FileExplorerService.class.getName())
+).daemon(false).debuggable(BuildConfig.DEBUG).processNameSuffix("file_explorer_service").version(1);
+
+public static IFileExplorerService iFileExplorerService;
+
+private static final ServiceConnection SERVICE_CONNECTION = new ServiceConnection() {
+    @Override
+    public void onServiceConnected(ComponentName name, IBinder service) {
+        Log.d(TAG, "onServiceConnected: ");
+        iFileExplorerService = IFileExplorerService.Stub.asInterface(service);
+    }
+
+    @Override
+    public void onServiceDisconnected(ComponentName name) {
+        Log.d(TAG, "onServiceDisconnected: ");
+        iFileExplorerService = null;
+    }
+};
+
+// 绑定服务
+public static void bindService() {
+    Shizuku.bindUserService(USER_SERVICE_ARGS, SERVICE_CONNECTION);
+}</code></pre> 
+<p>绑定之后，调用 aidl 里面的方法来管理文件即可。</p> 
+<p></p> 
+<p><span style="color:#fe2c24;"><strong>2024/05/18 更新</strong></span></p> 
+<p>目前发现了新的Document授权方式，能够在Android 13、14上直接授权Android/data(obb)目录。</p> 
+<p>例1：Android/data目录请求授权，可使用如下Uri（<span style="color:#4da8ee;">“\u200B”是零宽空格</span>）：</p> 
+<pre><code class="language-java">    Uri.Builder uriBuilder = new Uri.Builder()
+        .scheme("content")
+        .authority("com.android.externalstorage.documents")
+        .appendPath("tree")
+        .appendPath("primary:A\u200Bndroid/data")
+        .appendPath("document")
+        .appendPath("primary:A\u200Bndroid/data");
+// 相当于 content://com.android.externalstorage.documents/tree/primary%3AA%E2%80%8Bndroid%2Fdata/document/primary%3AA%E2%80%8Bndroid%2Fdata</code></pre> 
+<p>例2：Android/data/com.xxx.yyy目录请求授权，可使用如下Uri：</p> 
+<pre><code class="language-java">    Uri.Builder uriBuilder = new Uri.Builder()
+        .scheme("content")
+        .authority("com.android.externalstorage.documents")
+        .appendPath("tree")
+        .appendPath("primary:A\u200Bndroid/data")
+        .appendPath("document")
+        .appendPath("primary:A\u200Bndroid/data/com.xxx.yyy");
+// 相当于 content://com.android.externalstorage.documents/tree/primary%3AA%E2%80%8Bndroid%2Fdata/document/primary%3AA%E2%80%8Bndroid%2Fdata%2Fcom.xxx.yyy</code></pre> 
+<p>也就是说，和之前安卓11、12的唯一区别就是把“<span style="color:#4da8ee;">Android</span>”改成“<span style="color:#4da8ee;">A\u200Bndroid</span>”。</p> 
+<p></p> 
+<p>源代码：<a href="https://github.com/MagicianGuo/Android-FileExplorerDemo" title="GitHub - MagicianGuo/Android-FileExplorerDemo: 能够访问Android/data(obb)目录，已适配Android 5.0 ~ 14。安卓高版本可以使用Shizuku授权。">GitHub - MagicianGuo/Android-FileExplorerDemo: 能够访问Android/data(obb)目录，已适配Android 5.0 ~ 14。安卓高版本可以使用Shizuku授权。</a></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/16826c97b47e4f5a24c0b66b629f9c86/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">[JAVASE] 类和对象(二) -- 封装</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/10de4526aafbfefcbf36f123b3d0d4bb/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【数据结构】双向循环链表专题解析</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

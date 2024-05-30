@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【监控】Spring Boot&#43;Prometheus&#43;Grafana实现可视化监控 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/d55e95f20ae0b7fa17df93e14fada099/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【监控】Spring Boot&#43;Prometheus&#43;Grafana实现可视化监控">
+  <meta property="og:description" content="目录
+1.概述
+2.spring actuator
+3.Prometheus
+3.1.介绍
+3.2.使用
+1.client端的配置
+2.server端的配置
+4.grafana
+5.留个尾巴
+1.概述 本文是博主JAVA监控技术系列的第四篇，前面已经聊过了JMX、Spring actuator等技术，本文我们就将依托于Spring actuator&#43;监控组件prometheus&#43;数据可视化组件grafana来实现对Spring Boot应用的可视化监控。
+关于Spring actuator的相关内容，可移步：
+Spring Boot 监控_springboot 监控-CSDN博客
+【监控】spring actuator源码速读-CSDN博客
+2.spring actuator Spring actuator是spring体系中自带的监控组件，用来监测应用本身以及所处环境等内容。前文已经详细介绍过了，自处就不再重复和展开了。
+依赖：
+&lt;dependency&gt;
+&lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;
+&lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;
+&lt;version&gt;&lt;/version&gt;
+&lt;/dependency&gt;
+配置：
+management:
+endpoints:
+web:
+exposure:
+include: &#34;*&#34;
+看一下效果：
+以上这些指标都是actuator自带的，要适配Prometheus的数据采集格式的话需要引入promethus的适配层。ok，接下来我们讲一下Prometheus。
+3.Prometheus 3.1.介绍 先看看整个prometheus的架构：
+看起来很复杂对吧？其实并不复杂，最核心的就是Prometheus Server，其内置一个时序数据库，用来存采集上来的监控指标。然后就是Prometheus提供了很多client端，放在应用侧采集监控指标然后pull metrics（推送采集到的监控指标）个Prometheus Server。然后就是支持对接多种图形化界面如grafana来进行图形化的展示。最后就是支持各种方式的告警，如发送email等。
+3.2.使用 1.client端的配置 即应用内的配置。
+依赖：
+&lt;!--prometheus --&gt; &lt;dependency&gt; &lt;groupId&gt;io.micrometer&lt;/groupId&gt; &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt; &lt;scope&gt;runtime&lt;/scope&gt; &lt;/dependency&gt; 配置：
+management: endpoints: web: exposure: include: &#34;*&#34; endpoint: prometheus: enabled: true health: show-details: always 可以看到promethus的监控指标已经出来了：">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-02-22T23:15:01+08:00">
+    <meta property="article:modified_time" content="2024-02-22T23:15:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【监控】Spring Boot&#43;Prometheus&#43;Grafana实现可视化监控</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p id="main-toc"><strong>目录</strong></p> 
+<p id="1.%E6%A6%82%E8%BF%B0-toc" style="margin-left:0px;"><a href="#1.%E6%A6%82%E8%BF%B0" rel="nofollow">1.概述</a></p> 
+<p id="2.spring%20actuator-toc" style="margin-left:0px;"><a href="#2.spring%20actuator" rel="nofollow">2.spring actuator</a></p> 
+<p id="3.Prometheus-toc" style="margin-left:0px;"><a href="#3.Prometheus" rel="nofollow">3.Prometheus</a></p> 
+<p id="3.1.%E4%BB%8B%E7%BB%8D-toc" style="margin-left:40px;"><a href="#3.1.%E4%BB%8B%E7%BB%8D" rel="nofollow">3.1.介绍</a></p> 
+<p id="3.2.%E4%BD%BF%E7%94%A8-toc" style="margin-left:40px;"><a href="#3.2.%E4%BD%BF%E7%94%A8" rel="nofollow">3.2.使用</a></p> 
+<p id="1.client%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#1.client%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE" rel="nofollow">1.client端的配置</a></p> 
+<p id="2.server%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE-toc" style="margin-left:80px;"><a href="#2.server%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE" rel="nofollow">2.server端的配置</a></p> 
+<p id="4.grafana-toc" style="margin-left:0px;"><a href="#4.grafana" rel="nofollow">4.grafana</a></p> 
+<p id="5.%E7%95%99%E4%B8%AA%E5%B0%BE%E5%B7%B4-toc" style="margin-left:0px;"><a href="#5.%E7%95%99%E4%B8%AA%E5%B0%BE%E5%B7%B4" rel="nofollow">5.留个尾巴</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h2 id="1.%E6%A6%82%E8%BF%B0" style="background-color:transparent;">1.概述</h2> 
+<p>本文是博主JAVA监控技术系列的第四篇，前面已经聊过了JMX、Spring actuator等技术，本文我们就将依托于Spring actuator+监控组件prometheus+数据可视化组件grafana来实现对Spring Boot应用的可视化监控。</p> 
+<p>关于Spring actuator的相关内容，可移步：</p> 
+<p><a href="https://blog.csdn.net/Joker_ZJN/article/details/130140761?ops_request_misc=%257B%2522request%255Fid%2522%253A%2522170861167316800186576298%2522%252C%2522scm%2522%253A%252220140713.130102334.pc%255Fblog.%2522%257D&amp;request_id=170861167316800186576298&amp;biz_id=0&amp;utm_medium=distribute.pc_search_result.none-task-blog-2~blog~first_rank_ecpm_v1~rank_v31_ecpm-1-130140761-null-null.nonecase&amp;utm_term=spring%20boot%20%E7%9B%91%E6%8E%A7&amp;spm=1018.2226.3001.4450" title="Spring Boot 监控_springboot 监控-CSDN博客">Spring Boot 监控_springboot 监控-CSDN博客</a></p> 
+<p><a href="https://blog.csdn.net/Joker_ZJN/article/details/136154345?spm=1001.2014.3001.5501" title="【监控】spring actuator源码速读-CSDN博客">【监控】spring actuator源码速读-CSDN博客</a></p> 
+<h2 id="2.spring%20actuator">2.spring actuator</h2> 
+<p>Spring actuator是spring体系中自带的监控组件，用来监测应用本身以及所处环境等内容。前文已经详细介绍过了，自处就不再重复和展开了。</p> 
+<p>依赖：</p> 
+<blockquote> 
+ <p>&lt;dependency&gt;<br>     &lt;groupId&gt;org.springframework.boot&lt;/groupId&gt;<br>     &lt;artifactId&gt;spring-boot-starter-actuator&lt;/artifactId&gt;</p> 
+ <p>    &lt;version&gt;&lt;/version&gt;<br> &lt;/dependency&gt;</p> 
+</blockquote> 
+<p>配置：</p> 
+<blockquote> 
+ <p>management:<br>   endpoints:<br>     web:<br>       exposure:<br>         include: "*"</p> 
+</blockquote> 
+<p>看一下效果：</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/ce/ca/6bpWwjHF_o.png"></p> 
+<p>以上这些指标都是actuator自带的，要适配Prometheus的数据采集格式的话需要引入promethus的适配层。ok，接下来我们讲一下Prometheus。</p> 
+<h2 id="3.Prometheus" style="background-color:transparent;">3.Prometheus</h2> 
+<h3 id="3.1.%E4%BB%8B%E7%BB%8D">3.1.介绍</h3> 
+<p>先看看整个prometheus的架构：</p> 
+<p style="text-align:center;"><img alt="" height="326" src="https://images2.imgbox.com/b6/e0/zUNuZJHe_o.png" width="577"></p> 
+<p>看起来很复杂对吧？其实并不复杂，最核心的就是Prometheus Server，其内置一个时序数据库，用来存采集上来的监控指标。然后就是Prometheus提供了很多client端，放在应用侧采集监控指标然后pull metrics（推送采集到的监控指标）个Prometheus Server。然后就是支持对接多种图形化界面如grafana来进行图形化的展示。最后就是支持各种方式的告警，如发送email等。</p> 
+<h3 id="3.2.%E4%BD%BF%E7%94%A8" style="background-color:transparent;">3.2.使用</h3> 
+<h4 id="1.client%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE" style="background-color:transparent;">1.client端的配置</h4> 
+<p>即应用内的配置。</p> 
+<p>依赖：</p> 
+<blockquote> 
+ <pre> &lt;!--prometheus --&gt;
+        &lt;dependency&gt;
+            &lt;groupId&gt;io.micrometer&lt;/groupId&gt;
+            &lt;artifactId&gt;micrometer-registry-prometheus&lt;/artifactId&gt;
+            &lt;scope&gt;runtime&lt;/scope&gt;
+        &lt;/dependency&gt;</pre> 
+</blockquote> 
+<p>配置：</p> 
+<blockquote> 
+ <pre>management:
+  endpoints:
+    web:
+      exposure:
+        include: "*"
+  endpoint:
+    prometheus:
+      enabled: true
+    health:
+      show-details: always</pre> 
+</blockquote> 
+<p>可以看到promethus的监控指标已经出来了：</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/3f/20/jvpmPQm4_o.png"></p> 
+<p>在主启动类里面，将应用的名字告诉Prometheus：</p> 
+<pre><code class="language-java">@SpringBootApplication
+public class Main {
+    public static void main(String[] args) {
+        SpringApplication.run(Main.class);
+    }
+​
+    @Bean
+    MeterRegistryCustomizer&lt;MeterRegistry&gt; configure(@Value("${spring.application.name}") String applicationName){
+        return register -&gt; {
+            register.config().commonTags("application", applicationName);
+        };
+    }
+}</code></pre> 
+<p>配置一下应用名：</p> 
+<blockquote> 
+ <pre>spring:
+  application:
+    name: myApplicationDemo</pre> 
+</blockquote> 
+<h4 id="2.server%E7%AB%AF%E7%9A%84%E9%85%8D%E7%BD%AE">2.server端的配置</h4> 
+<p>先下载Prometheus，然后解压：</p> 
+<p><a href="https://prometheus.io/download/" rel="nofollow" title="Download | Prometheus">Download | Prometheus</a></p> 
+<p>配置Prometheus的prometheus.yml配置文件：</p> 
+<p style="text-align:center;"><img alt="" height="321" src="https://images2.imgbox.com/75/9e/mEaehKir_o.png" width="511"></p> 
+<p>上面标红的要和应用对齐，否则会出现：</p> 
+<p style="text-align:center;"><img alt="" height="150" src="https://images2.imgbox.com/88/8b/RB5NsBaJ_o.png" width="651"></p> 
+<p>./prometheus启动Prometheus：</p> 
+<p>可以看到：</p> 
+<p style="text-align:center;"><img alt="" src="https://images2.imgbox.com/9e/a8/9xASHWSW_o.png"></p> 
+<h2 id="4.grafana" style="background-color:transparent;">4.grafana</h2> 
+<p></p> 
+<p>Grafana 是一个流行的开源数据可视化和监控工具，它提供了丰富的图表和仪表盘功能，用于展示和分析时间序列数据以及其他类型的数据。</p> 
+<p>官网下载地址：</p> 
+<p><a href="https://grafana.com/grafana/download?platform=linux" rel="nofollow" title="Download Grafana | Grafana Labs">Download Grafana | Grafana Labs</a></p> 
+<p>Linux的下载方式，官网上写的很清楚：</p> 
+<p><img alt="" height="628" src="https://images2.imgbox.com/39/c6/ZVe7m1Qc_o.png" width="1200"></p> 
+<p>下载后解压即可使用。</p> 
+<p>./grafana-server启动应用，默认访问地址是IP:3000，默认账号密码都是admin。首次登录会要求修改密码。</p> 
+<p>登陆后，新建一个promethus的连接，配置好自己的promethus的地址和端口号保存即可：</p> 
+<p style="text-align:center;"><img alt="" height="265" src="https://images2.imgbox.com/70/ae/0MRGuSvY_o.png" width="509"></p> 
+<p class="img-center"><img alt="" height="251" src="https://images2.imgbox.com/aa/32/id9fqsuQ_o.png" width="512"></p> 
+<p>在配置数据源的同时，可以选择grafana为我们准备的几套Prometheus的监控面板来使用：</p> 
+<p style="text-align:center;"><img alt="" height="146" src="https://images2.imgbox.com/4c/cf/1c8qypB0_o.png" width="538"></p> 
+<p>我们选择其中一个，可以看到我们自己的应用了：</p> 
+<p style="text-align:center;"><img alt="" height="329" src="https://images2.imgbox.com/08/9e/1Vi4FP14_o.png" width="566"></p> 
+<h2 id="5.%E7%95%99%E4%B8%AA%E5%B0%BE%E5%B7%B4">5.留个尾巴</h2> 
+<p>ok，到这里聊完了吗？当然没有！</p> 
+<p>首先是如何自定义Prometheus的监控指标？其次grafana作为一款强大的数据可视化组件，功能当然很丰富，本文先讲解如何使用spring actuator+Prometheus+grafana实现基础的可视化监控，下文会详细介绍Prometheus和grafana的使用。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/761811fb0726d0a6aaa1e0267ad1e553/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Hive On Spark 报错：Failed to get a spark session: org.apache.hadoop.hive.ql.metadata.HiveException</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/534b0ed31181d5f33b9ead019a319e4f/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">番外篇 Vue和Django 前后端交互</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

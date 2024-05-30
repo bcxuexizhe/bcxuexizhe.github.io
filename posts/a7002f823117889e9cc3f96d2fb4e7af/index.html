@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【hadoop】hbase的安装部署以及相关操作（图文详解） - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/a7002f823117889e9cc3f96d2fb4e7af/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【hadoop】hbase的安装部署以及相关操作（图文详解）">
+  <meta property="og:description" content="​
+文章目录 引言1、准备环节1.1设备基本要求1.2安装包 2、修改相关信息2.1修改ip2.2修改ip映射 3、安装与部署3.1.上传安装包3.2.解压安装包3.3.配置HBASE_HOME3.3.1修改hbase-env.sh3.3.2修改core-site.xml3.3.4拷贝文件 4、启动4.1启动zookeeper4.2启动hdfs4.3启动hbase 5、问题详情及解决方式5.1.启动报错5.2.启动后只有一个相关进程5.3.启动成功了，但是HMster掉线了5.3.1.防火墙设置5.3.2.时间同步5.3.3.hdfs与hbase端口号一致 6、hbase操作6.1.建表6.2.插入数据6.3.查看数据6.4.删除表 7.停止hbase收获总结 引言 HBase是一种基于列存储的分布式数据库系统，它能够快速地存储和处理大规模数据。与传统的关系型数据库不同，HBase采用了分布式的架构，能够实现数据的高可靠性、高可扩展性和高性能。在实际应用中，正确地安装和部署HBase集群是非常重要的。
+1、准备环节 1.1设备基本要求 在安装hbase之前，需要虚拟机满足以下几个条件：
+1.HBase集群需要依赖Hadoop和Zookeeper，所以 必须保证自己的集群装好了hadoop和zookeeper。在Hadoop中，需要配置HDFS和YARN，以支持HBase的分布式部署和资源管理。在Zookeeper中，需要配置Zookeeper集群，以支持HBase的分布式环境下的协调和管理。
+2.存储：HBase需要大量的内存来存储数据，建议虚拟机的磁盘空间不少于100GB。如果虚拟机的存储空间不足，可能会导致HBase无法存储数据或者出现存储空间不足的错误。
+3.虚拟化技术：HBase可以在虚拟机中运行，需要选择支持硬件虚拟化的虚拟化技术，例如Hyper-V、VMware等，如图1所示。
+图1·更新后的VMware 1.2安装包 在安装和部署HBase时，需要注意Hadoop与HBase的版本兼容性问题。因为HBase依赖于Hadoop的分布式文件系统HDFS和资源管理框架YARN，而且HBase的各个版本都会对Hadoop的版本有一定的要求。如果选用了不兼容的版本，可能会导致HBase无法正常工作或者出现各种错误。
+想要快速了解自己使用的hadoop版本与hbase版本是否兼容，可参考下图。
+下图没有的，可以打开该网址进行查看：hadoop与hbase版本兼容性查看
+本文使用的hadoop版本与hbase版本分别是hadoop-2.7.1，hbase-1.4.8。
+需要下载hbase安装包的可以去以下网址：hbase安装包下载
+2、修改相关信息 本文所使用的虚拟机来自于队友，与队友使用的机器不是同一台，所以需要修改IP和IP映射。假如你也是从其他渠道取到别人配置好的hadoop与zookeeper环境的虚拟机，记得修改哦，否则导致无法连接网络等一系列问题。
+2.1修改ip 输入一下命令，进入ifcfg-ens33这个文件修改ip,所有集群都要改。
+进入后按以下说明修改：
+1.设置IP，要和你电脑的VMnet8的IP在同一个网段。假设VMnet8的IP是192.168.233.1，子网掩码是255.255.255.0，那么你的IP就可以设置192.168.233.3 ~ 192.168.233.254中的任意一个IP。
+2.设置子网掩码，和你电脑VMnet8的子网掩码一致
+3.设置网关，默认xxx.XXX.XXx.2，网段和VMnet8一致
+vi /etc/sysconfig/network-scripts/ifcfg-ens33 修改完后输入以下命令重启网卡，重启后ping一下外网，能ping通的话就说明成功了。
+systemctl restart network 2.2修改ip映射 输入以下命令，编辑/etc/hosts文件，修改ip映射，所有集群都要改，与前面修改好的ip一致。
+vi /etc/hosts 3、安装与部署 3.1.上传安装包 将hbase-1.4.8.tar.gz上传到虚拟机的/usr/local路径。
+3.2.解压安装包 解压hhbase-1.4.8.tar.gz到当前路径。
+tar -xzvf hbase-1.4.8.tar.gz 3.3.配置HBASE_HOME 3.3.1修改hbase-env.sh 进入hbase-1.4.8/conf/路径下，输入以下命令编辑hbase-env.sh文件，配置JAVA环境变量。
+vi hbase-env.sh 3.3.2修改core-site.xml 输入以下命令编辑hbase-site.xml文件， 配置文件如下，可直接复制。然后根据实际情况进行修改。
+以下是几个比较重要的配置信息说明：
+hbase.rootdir
+这个目录是region server的共享目录，用来持久化HBase。URL需要是’完全正确’的。例如，要表示hdfs中的’/hbase’目录，namenode 运行在namenode.example.org的9090端口。则需要设置为hdfs://namenode.example.org:9000/hbase。默认情况下HBase是写到/tmp的。不改这个配置，数据会在重启的时候丢失。
+默认: file:///tmp/hbase-${user.name}/hbase
+hbase.master.port">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2023-06-28T12:26:08+08:00">
+    <meta property="article:modified_time" content="2023-06-28T12:26:08+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【hadoop】hbase的安装部署以及相关操作（图文详解）</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <p>​<br> </p> 
+<div class="toc"> 
+ <h4>文章目录</h4> 
+ <ul><li><a href="#_3" rel="nofollow">引言</a></li><li><a href="#1_6" rel="nofollow">1、准备环节</a></li><li><ul><li><a href="#11_7" rel="nofollow">1.1设备基本要求</a></li><li><a href="#12_17" rel="nofollow">1.2安装包</a></li></ul> 
+  </li><li><a href="#2_26" rel="nofollow">2、修改相关信息</a></li><li><ul><li><a href="#21ip_29" rel="nofollow">2.1修改ip</a></li><li><a href="#22ip_49" rel="nofollow">2.2修改ip映射</a></li></ul> 
+  </li><li><a href="#3_57" rel="nofollow">3、安装与部署</a></li><li><ul><li><a href="#31_58" rel="nofollow">3.1.上传安装包</a></li><li><a href="#32_62" rel="nofollow">3.2.解压安装包</a></li><li><a href="#33HBASE_HOME_69" rel="nofollow">3.3.配置HBASE_HOME</a></li><li><ul><li><a href="#331hbaseenvsh_70" rel="nofollow">3.3.1修改hbase-env.sh</a></li><li><a href="#332coresitexml_78" rel="nofollow">3.3.2修改core-site.xml</a></li><li><a href="#334_160" rel="nofollow">3.3.4拷贝文件</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#4_168" rel="nofollow">4、启动</a></li><li><ul><li><a href="#41zookeeper_171" rel="nofollow">4.1启动zookeeper</a></li><li><a href="#42hdfs_180" rel="nofollow">4.2启动hdfs</a></li><li><a href="#43hbase_192" rel="nofollow">4.3启动hbase</a></li></ul> 
+  </li><li><a href="#5_202" rel="nofollow">5、问题详情及解决方式</a></li><li><ul><li><a href="#51_203" rel="nofollow">5.1.启动报错</a></li><li><a href="#52_208" rel="nofollow">5.2.启动后只有一个相关进程</a></li><li><a href="#53HMster_215" rel="nofollow">5.3.启动成功了，但是HMster掉线了</a></li><li><ul><li><a href="#531_229" rel="nofollow">5.3.1.防火墙设置</a></li><li><a href="#532_246" rel="nofollow">5.3.2.时间同步</a></li><li><a href="#533hdfshbase_261" rel="nofollow">5.3.3.hdfs与hbase端口号一致</a></li></ul> 
+  </li></ul> 
+  </li><li><a href="#6hbase_269" rel="nofollow">6、hbase操作</a></li><li><ul><li><a href="#61_277" rel="nofollow">6.1.建表</a></li><li><a href="#62_286" rel="nofollow">6.2.插入数据</a></li><li><a href="#63_302" rel="nofollow">6.3.查看数据</a></li><li><a href="#64_308" rel="nofollow">6.4.删除表</a></li></ul> 
+  </li><li><a href="#7hbase_312" rel="nofollow">7.停止hbase</a></li><li><a href="#_336" rel="nofollow">收获总结</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="_3"></a>引言</h2> 
+<p>HBase是一种基于列存储的分布式数据库系统，它能够快速地存储和处理大规模数据。与传统的关系型数据库不同，HBase采用了分布式的架构，能够实现数据的高可靠性、高可扩展性和高性能。在实际应用中，正确地安装和部署HBase集群是非常重要的。</p> 
+<h2><a id="1_6"></a>1、准备环节</h2> 
+<h3><a id="11_7"></a>1.1设备基本要求</h3> 
+<p>在安装hbase之前，需要虚拟机满足以下几个条件：</p> 
+<blockquote> 
+ <p><em><strong>1.HBase集群需要依赖Hadoop和Zookeeper</strong></em>，所以 必须保证自己的集群装好了hadoop和zookeeper。在Hadoop中，需要配置HDFS和YARN，以支持HBase的分布式部署和资源管理。在Zookeeper中，需要配置Zookeeper集群，以支持HBase的分布式环境下的协调和管理。<br> <em><strong>2.存储</strong></em>：HBase需要大量的内存来存储数据，建议虚拟机的磁盘空间不少于100GB。如果虚拟机的存储空间不足，可能会导致HBase无法存储数据或者出现存储空间不足的错误。</p> 
+ <p><em><strong>3.虚拟化技术</strong></em>：HBase可以在虚拟机中运行，需要选择支持硬件虚拟化的虚拟化技术，例如Hyper-V、VMware等，如图1所示。</p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/38/4d/VsYJB1Ed_o.png" alt="在这里插入图片描述"></p> 
+<ul><li>图1·更新后的VMware</li></ul> 
+<h3><a id="12_17"></a>1.2安装包</h3> 
+<p>在安装和部署HBase时，需要注意<mark>Hadoop与HBase的版本兼容性问题</mark>。因为HBase依赖于Hadoop的分布式文件系统HDFS和资源管理框架YARN，而且HBase的各个版本都会对Hadoop的版本有一定的要求。如果选用了不兼容的版本，可能会导致HBase无法正常工作或者出现各种错误。</p> 
+<blockquote> 
+ <p>想要快速了解自己使用的hadoop版本与hbase版本是否兼容，可参考下图。<br> 下图没有的，可以打开该网址进行查看：<a href="http://hbase.apache.org/book.html#arch.overview" rel="nofollow">hadoop与hbase版本兼容性查看</a></p> 
+</blockquote> 
+<blockquote> 
+ <p>本文使用的hadoop版本与hbase版本分别是hadoop-2.7.1，hbase-1.4.8。<br> 需要下载hbase安装包的可以去以下网址：<a href="http://hbase.apache.org/" rel="nofollow">hbase安装包下载</a></p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/f6/19/5zhNFYE0_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="2_26"></a>2、修改相关信息</h2> 
+<p>本文所使用的虚拟机来自于队友，与队友使用的机器不是同一台，所以需要<mark>修改IP和IP映射</mark>。假如你也是从其他渠道取到别人配置好的hadoop与zookeeper环境的虚拟机，记得修改哦，否则导致无法连接网络等一系列问题。</p> 
+<h3><a id="21ip_29"></a>2.1修改ip</h3> 
+<p>输入一下命令，进入ifcfg-ens33这个文件修改ip,所有集群都要改。</p> 
+<p>进入后按以下说明修改：</p> 
+<blockquote> 
+ <p><em><strong>1.设置IP</strong></em>，要和你电脑的VMnet8的IP在同一个网段。假设VMnet8的IP是192.168.233.1，子网掩码是255.255.255.0，那么你的IP就可以设置192.168.233.3 ~ 192.168.233.254中的任意一个IP。<br> <em><strong>2.设置子网掩码</strong></em>，和你电脑VMnet8的子网掩码一致<br> <em><strong>3.设置网关</strong></em>，默认xxx.XXX.XXx.2，网段和VMnet8一致</p> 
+</blockquote> 
+<pre><code class="prism language-python">vi <span class="token operator">/</span>etc<span class="token operator">/</span>sysconfig<span class="token operator">/</span>network<span class="token operator">-</span>scripts<span class="token operator">/</span>ifcfg<span class="token operator">-</span>ens33
+</code></pre> 
+<p><img src="https://images2.imgbox.com/63/45/CcKUAdvF_o.png" alt="在这里插入图片描述"><br> 修改完后输入以下命令重启网卡，重启后ping一下外网，能ping通的话就说明成功了。</p> 
+<pre><code class="prism language-python">systemctl restart network
+</code></pre> 
+<p><img src="https://images2.imgbox.com/3d/38/RZthJIRD_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="22ip_49"></a>2.2修改ip映射</h3> 
+<p>输入以下命令，编辑/etc/hosts文件，修改ip映射，所有集群都要改，与前面修改好的ip一致。</p> 
+<pre><code class="prism language-python">vi <span class="token operator">/</span>etc<span class="token operator">/</span>hosts
+</code></pre> 
+<p><img src="https://images2.imgbox.com/ad/20/e1Yjgk6O_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="3_57"></a>3、安装与部署</h2> 
+<h3><a id="31_58"></a>3.1.上传安装包</h3> 
+<p>将hbase-1.4.8.tar.gz上传到虚拟机的/usr/local路径。<br> <img src="https://images2.imgbox.com/3b/5d/MdC1Li23_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="32_62"></a>3.2.解压安装包</h3> 
+<p>解压hhbase-1.4.8.tar.gz到当前路径。</p> 
+<pre><code class="prism language-python">tar <span class="token operator">-</span>xzvf hbase<span class="token operator">-</span><span class="token number">1.4</span><span class="token number">.8</span><span class="token punctuation">.</span>tar<span class="token punctuation">.</span>gz
+</code></pre> 
+<p><img src="https://images2.imgbox.com/14/82/vlthbzXW_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="33HBASE_HOME_69"></a>3.3.配置HBASE_HOME</h3> 
+<h4><a id="331hbaseenvsh_70"></a>3.3.1修改hbase-env.sh</h4> 
+<p>进入hbase-1.4.8/conf/路径下，输入以下命令编辑hbase-env.sh文件，配置JAVA环境变量。</p> 
+<pre><code class="prism language-python">vi hbase<span class="token operator">-</span>env<span class="token punctuation">.</span>sh
+</code></pre> 
+<p><img src="https://images2.imgbox.com/c3/eb/a7WtaWCF_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="332coresitexml_78"></a>3.3.2修改core-site.xml</h4> 
+<p>输入以下命令编辑hbase-site.xml文件， 配置文件如下，可直接复制。然后根据实际情况进行修改。</p> 
+<blockquote> 
+ <p><em><strong><strong>以下是几个比较重要的配置信息说明：</strong></strong></em></p> 
+ <p><em><strong>hbase.rootdir</strong></em><br> 这个目录是region server的共享目录，用来持久化HBase。URL需要是’完全正确’的。例如，要表示hdfs中的’/hbase’目录，namenode 运行在namenode.example.org的9090端口。则需要设置为hdfs://namenode.example.org:9000/hbase。默认情况下HBase是写到/tmp的。不改这个配置，数据会在重启的时候丢失。<br> 默认: file:///tmp/hbase-${user.name}/hbase<br> <em><strong>hbase.master.port</strong></em><br> HBase的Master的端口.<br> 默认: 60000</p> 
+ <p><em><strong>hbase.master.info.port</strong></em><br> HBase Master web 界面端口. 设置为-1 意味着你不想让他运行。<br> 0.98 版本以后默认: 16010 以前是 60010</p> 
+ <p><em><strong>hbase.cluster.distributed</strong></em><br> HBase的运行模式。false是单机模式，true是分布式模式。若为false,HBase和Zookeeper会运行在同一个JVM里面。</p> 
+ <p><em><strong>hbase.zookeeper.quorum</strong></em><br> Zookeeper集群的地址列表，用逗号分割。例如：“host1.mydomain.com,host2.mydomain.com,host3.mydomain.com”.默认是localhost,是给伪分布式用的。要修改才能在完全分布式的情况下使用。如果在hbase-env.sh设置了HBASE_MANAGES_ZK，这些ZooKeeper节点就会和HBase一起启动。</p> 
+</blockquote> 
+<pre><code class="prism language-python"><span class="token operator">&lt;</span>configuration<span class="token operator">&gt;</span>
+ <span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>cluster<span class="token punctuation">.</span>distributed<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>true<span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+  <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+  <span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">:</span>zookeeper<span class="token punctuation">.</span><span class="token builtin">property</span><span class="token punctuation">.</span>dataDir<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+  <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>zookeeper<span class="token punctuation">.</span>quorum<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+         <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>master<span class="token punctuation">,</span>slave1<span class="token punctuation">,</span>slave2<span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+ <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+
+  <span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>master<span class="token punctuation">.</span>maxclockskew<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+    <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token number">180000</span><span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+  <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+     <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>dfs<span class="token punctuation">.</span>replication<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+       <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token number">2</span><span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+ <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+        <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>rootdir<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+         <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>hdfs<span class="token punctuation">:</span><span class="token operator">//</span>master<span class="token punctuation">:</span><span class="token number">8020</span><span class="token operator">/</span>hbase<span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+ <span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>unsafe<span class="token punctuation">.</span>stream<span class="token punctuation">.</span>capability<span class="token punctuation">.</span>enforce<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>flase<span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>master<span class="token punctuation">.</span>info<span class="token punctuation">.</span>port<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+                <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span><span class="token number">16010</span><span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+  <span class="token operator">&lt;</span>name<span class="token operator">&gt;</span>hbase<span class="token punctuation">.</span>unsafe<span class="token punctuation">.</span>stream<span class="token punctuation">.</span>capability<span class="token punctuation">.</span>enforce<span class="token operator">&lt;</span><span class="token operator">/</span>name<span class="token operator">&gt;</span>
+  <span class="token operator">&lt;</span>value<span class="token operator">&gt;</span>false<span class="token operator">&lt;</span><span class="token operator">/</span>value<span class="token operator">&gt;</span>
+<span class="token operator">&lt;</span><span class="token operator">/</span><span class="token builtin">property</span><span class="token operator">&gt;</span>
+
+<span class="token operator">&lt;</span><span class="token operator">/</span>configuration<span class="token operator">&gt;</span>
+</code></pre> 
+<p>3.3.3修改/etc/profile<br> 用以下命令进入/etc/profile文件，编辑hbase的环境变量，然后使用source方法使profile文件生效。</p> 
+<pre><code class="prism language-python">vi <span class="token operator">/</span>etc<span class="token operator">/</span>profile
+</code></pre> 
+<pre><code class="prism language-python">source <span class="token operator">/</span>etc<span class="token operator">/</span>profile
+</code></pre> 
+<p><img src="https://images2.imgbox.com/04/e4/pVQ8jBQI_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="334_160"></a>3.3.4拷贝文件</h4> 
+<p>使用scp方法，拷贝hbase-1.4.8文件到其他两个集群的/us/local/下。其中，@后面的参数是集群的名称，冒号后面的参数是目标路径。</p> 
+<pre><code class="prism language-python">scp <span class="token operator">-</span>r hbase<span class="token operator">-</span><span class="token number">1.4</span><span class="token number">.8</span> root@slave1<span class="token punctuation">:</span><span class="token operator">/</span>usr<span class="token operator">/</span>local
+</code></pre> 
+<p><img src="https://images2.imgbox.com/b5/20/e0pDIQn8_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="4_168"></a>4、启动</h2> 
+<p>启动habse时，由于<mark>hbase依赖于hdfs和zookeeper,所以要先启动hadoop和zookeeper</mark>，然后再启动hbase。</p> 
+<h3><a id="41zookeeper_171"></a>4.1启动zookeeper</h3> 
+<p>先使用以下命令对所有集群启动zookeeper，然后使用catjps查看所有集群的进程。看到QuorumPeerMain进程表示启动成功了。</p> 
+<pre><code class="prism language-python">zkServer<span class="token punctuation">.</span>sh start
+</code></pre> 
+<p><img src="https://images2.imgbox.com/eb/d4/LLRiTsrp_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="42hdfs_180"></a>4.2启动hdfs</h3> 
+<p>使用以下两条命令启动hdfs进程和yarn服务。</p> 
+<pre><code class="prism language-python">start<span class="token operator">-</span>dfs<span class="token punctuation">.</span>sh 
+</code></pre> 
+<pre><code class="prism language-python">start<span class="token operator">-</span>yarn<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>启动hadoop后，进入web端查看是否启动成功，顺便检查HV有无问题。<br> <img src="https://images2.imgbox.com/f7/49/xoh7wMMH_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="43hbase_192"></a>4.3启动hbase</h3> 
+<p>以上操作都没问题后，我们就来启动hbase。输入以下命令启动。</p> 
+<blockquote> 
+ <p>然后我们使用catjps查看进程时发现，没有相关的进程在，并没有启动成功，先别急，看下一个章节。（假如是把我的配置文件全部复制去配置，也许到这一步可以启动成功了）</p> 
+</blockquote> 
+<pre><code class="prism language-python">start<span class="token operator">-</span>hbase<span class="token punctuation">.</span>sh
+</code></pre> 
+<p><img src="https://images2.imgbox.com/38/c6/6syjGDkB_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="5_202"></a>5、问题详情及解决方式</h2> 
+<h3><a id="51_203"></a>5.1.启动报错</h3> 
+<p>进入hbase配置文件路径，编辑hbase-env.sh配置文件，然后把以下圈起来的两行给注释掉，就不会报错了。</p> 
+<p><img src="https://images2.imgbox.com/7a/e7/nGybjiDO_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="52_208"></a>5.2.启动后只有一个相关进程</h3> 
+<p>启动成功后，<em><strong>HMater进程却不在，这个进程非常重要，不可以忽视</strong></em>。</p> 
+<p>需要在配置文件<strong>hbase-site.xml中添加以下信息</strong>。需要添加的信息在3.3.2步骤中，已经给出了，可直接复制。<br> <img src="https://images2.imgbox.com/b7/a3/X5IuLi5d_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/4f/63/iO5HOfaP_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="53HMster_215"></a>5.3.启动成功了，但是HMster掉线了</h3> 
+<p>好不容易搭好了，启动hbase后，发现进程也都在了。<br> <img src="https://images2.imgbox.com/fd/eb/crve8jxm_o.png" alt="在这里插入图片描述"><br> 迫不及待的去web端查看详情，然后发现打不开，被拒绝连接了。</p> 
+<p><img src="https://images2.imgbox.com/87/f3/1XTNSVHT_o.png" alt="在这里插入图片描述"><br> 然后又回去查看进程，发现HMaster掉线了</p> 
+<p><img src="https://images2.imgbox.com/d7/34/t0ROSNih_o.png" alt="在这里插入图片描述"></p> 
+<p>出现这样的问题有很多种情况，这里主要介绍以下三种可能，可查看日志（hbase的日志文件在安装路径的log文件夹下），可根据实际情况逐一排查。</p> 
+<h4><a id="531_229"></a>5.3.1.防火墙设置</h4> 
+<p>可输入以下命令进行查看防火墙状态，假如未关闭则需要设置成关闭的状态。</p> 
+<pre><code class="prism language-python">systemctl start firewalld<span class="token comment">#开启</span>
+</code></pre> 
+<pre><code class="prism language-python">systemctl stop firewalld<span class="token comment">#关闭</span>
+</code></pre> 
+<p>​<br> 想要方便一点的可以输入一下命令，防止防火墙自开启，这样就不需要每次都查看防火墙的状态了。</p> 
+<pre><code class="prism language-python">systemctl disable firewalld
+</code></pre> 
+<h4><a id="532_246"></a>5.3.2.时间同步</h4> 
+<p>假如说防火墙是关闭的，但问题暂时没有解决。可根据以下方法继续修改。</p> 
+<blockquote> 
+ <p>1.安装ntpdate工具，网上同步时间<br> 2.设置系统时间与网络时间同步</p> 
+</blockquote> 
+<pre><code class="prism language-python">sudo apt<span class="token operator">-</span>get install ntpdate
+</code></pre> 
+<pre><code class="prism language-python">sudo apt<span class="token operator">-</span>get install ntpdate
+</code></pre> 
+<h4><a id="533hdfshbase_261"></a>5.3.3.hdfs与hbase端口号一致</h4> 
+<p>如果按照步骤做了以上两个步骤还是没有解决，就继续跟着排查吧。在<mark>配置文件hbase-site.xml中hbase.rootdir这一项需要和core-site.xml中的fs.defaultFS的地址保持一致</mark>，因为这一步是去hdfs上创建hbase的指定文件夹，8020是namenode节点active状态下的端口号，9000端口是fileSystem默认的端口号。<mark>由于hdfs的队友搭建的，我们之间缺乏沟通，我的core-site.xml里写的9000，hdfs的端口号是8202，所以启动成功后又挂掉了，导致web端打不开</mark>。经过沟通处理后，终于成功了，这就是分组的意义吧，合作沟通。</p> 
+<p>如以下两张图所示，我们启动后进程都在，也不会自己挂掉了，web端也能打开看到相关信息了，启动成功。</p> 
+<p><img src="https://images2.imgbox.com/89/bc/luiUMPx9_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/4a/32/M0gRtiDk_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="6hbase_269"></a>6、hbase操作</h2> 
+<blockquote> 
+ <p><em><strong>目的：</strong></em><br> （1）理解 HBase 在 Hadoop 体系结构中的角色。<br> （2）熟练使用 HBase 操作常用的 Shell 命令。<br> <em><strong>&gt; 目标：</strong></em><br> （1）熟悉hbase相关操作，掌握建表、增数据、查表、删除表等操作。<br> （2）可以自己建一个表，熟悉上述操作，并插入数据，方便理解与掌握。</p> 
+</blockquote> 
+<h3><a id="61_277"></a>6.1.建表</h3> 
+<p>进行相关操作的步骤：启动zookerper–&gt;启动hadoop–&gt;启动hbase–&gt;打开hbase shell<br> 我用的是以下这种方式建表，需要可直接复制。<br> <img src="https://images2.imgbox.com/0f/78/YafvbIbv_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-python">
+create <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'student'</span><span class="token punctuation">,</span><span class="token string">'course1'</span><span class="token punctuation">,</span><span class="token string">'course2'</span><span class="token punctuation">,</span><span class="token string">'course3'</span>
+</code></pre> 
+<h3><a id="62_286"></a>6.2.插入数据</h3> 
+<p>插入几条数据测试一下。</p> 
+<pre><code class="prism language-python">put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'student:S_Name'</span><span class="token punctuation">,</span><span class="token string">'Zhangsan'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'student:S_Sex'</span><span class="token punctuation">,</span><span class="token string">'male'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'student:S_Age'</span><span class="token punctuation">,</span><span class="token string">'23'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course1:C_No'</span><span class="token punctuation">,</span><span class="token string">'123001'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course1:C_Name'</span><span class="token punctuation">,</span><span class="token string">'Math'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course1:C_Credit'</span><span class="token punctuation">,</span><span class="token string">'2.0'</span>
+put <span class="token string">'StudentAndCourse'</span><span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course1:Score'</span><span class="token punctuation">,</span><span class="token string">'86'</span>
+put <span class="token string">'StudentAndCourse'</span> <span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course3:C_No'</span><span class="token punctuation">,</span><span class="token string">'123003'</span>
+put <span class="token string">'StudentAndCourse'</span> <span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course3:C_Name'</span><span class="token punctuation">,</span><span class="token string">'English'</span>
+put <span class="token string">'StudentAndCourse'</span> <span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course3:C_Credit'</span><span class="token punctuation">,</span><span class="token string">'3.0'</span>
+put <span class="token string">'StudentAndCourse'</span> <span class="token punctuation">,</span><span class="token string">'2015001'</span><span class="token punctuation">,</span><span class="token string">'course3:Score'</span><span class="token punctuation">,</span><span class="token string">'69'</span>
+</code></pre> 
+<h3><a id="63_302"></a>6.3.查看数据</h3> 
+<pre><code class="prism language-python">scan <span class="token string">'StudentAndCourse'</span>
+</code></pre> 
+<p><img src="https://images2.imgbox.com/fc/76/nxTrPoqa_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="64_308"></a>6.4.删除表</h3> 
+<p>使用drop删除表people，然后使用list方法查看当前数据库现有表发现people库已被删除。</p> 
+<p><img src="https://images2.imgbox.com/1b/a2/LmKPzNYa_o.png" alt="在这里插入图片描述"></p> 
+<h2><a id="7hbase_312"></a>7.停止hbase</h2> 
+<p>使用以下命令停止hbase服务。</p> 
+<pre><code class="prism language-python">stop<span class="token operator">-</span>hbase<span class="token punctuation">.</span>sh
+</code></pre> 
+<p>在执行stop-hbase.sh之后.用jps查看进程之后还是发现<mark>HRegionServer没有关闭</mark>。查看日志并没有报错，经查阅资料发现，执行完操作后，hbase的RegionServer在后台做compact等操作呢，当然关不掉。<br> <img src="https://images2.imgbox.com/43/60/kIiPQGfK_o.png" alt="在这里插入图片描述"><br> 对此，分享几个可以单独关闭HRegionServer和HMaster进程的方法，也许在后续学习时，需要单独关掉hbase的某个相关进程，还是很实用的，需要的话可以自取</p> 
+<blockquote> 
+ <p><em><strong>#单独启动一个HMaster进程：</strong></em><br> bin/hbase-daemon.sh start master<br> <em><strong>#单独停止一个HMaster进程：</strong></em><br> bin/hbase-daemon.sh stop master<br> <em><strong>#单独启动一个HRegionServer进程：</strong></em><br> bin/hbase-daemon.sh start regionserver<br> <em><strong>#单独停止一个HRegionServer进程：</strong></em><br> bin/hbase-daemon.sh stop regionserver</p> 
+</blockquote> 
+<p>单独停止HRegionServer进程后，使用catjps查看所有集群的进程，已经成功关掉了。<br> <img src="https://images2.imgbox.com/2b/89/SfUmjaQS_o.png" alt="在这里插入图片描述"></p> 
+<p>​</p> 
+<h2><a id="_336"></a>收获总结</h2> 
+<p>HBase是一个基于Hadoop的分布式非关系型数据库，其数据模型类似于Google的Bigtable。在HV（Hadoop+Hive）环境中安装和部署HBase需要进行一系列的配置和操作，以确保HBase能够正常工作。以下是我在学习时的收获：</p> 
+<p><em><strong>1. 环境确认</strong></em>：在安装和部署HBase之前，需要确认Hadoop和Hive已经正确安装和配置，并且集群中的所有节点都能够相互通信。</p> 
+<p><em><strong>2. 下载和解压</strong></em>：从HBase官网下载与hadoop版本对应的HBase，并解压到指定的目录下。</p> 
+<p><em><strong>3. 配置文件</strong></em>：修改HBase的配置文件，主要包括<code>hbase-env.sh</code>、<code>hbase-site.xml</code>和<code>/etc/profile</code>等文件。其中，<code>hbase-env.sh</code>文件中需要设置JDK的路径和；<code>hbase-site.xml</code>文件中需要设置HBase的一些参数，比如Zookeeper的地址和端口、HDFS的地址和端口等。</p> 
+<p><em><strong>4. 启动HBase</strong></em>：执行start-hbase.sh<code>命令启动HBase。启动成功后，可以使用</code>catjps` 命令查看所有进程HBase进程是否正常运行。</p> 
+<p><em><strong>5. 测试HBase</strong></em>：可以使用HBase Shell或Java API等方式测试HBase是否正常工作。在HBase Shell中，可以使用 <code>create</code> 命令创建一个新的表，使用 <code>put</code> 命令向表中插入数据，使用 <code>get</code> 命令查询数据等。</p> 
+<p><em><strong>6. 关闭HBase</strong></em>：在HBase的下执行 <code>stop-hbase.sh</code> 命令关闭HBase。</p> 
+<p>需要注意的是，HBase的配置和使用方法比较复杂，需要根据实际情况进行调整和优化。在实际应用中，还需要考虑HBase的高可用性、负载均衡、数据备份和恢复等问题。因此，在安装和部署HBase之前，需要充分了解HBase的特点和使用方法，同时还需要对Hadoop、Zookeeper等相关技术有一定的了解和掌握。</p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f91919e673d8234738f7a1ca93ae2e70/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Android Studio 使用SQLite数据库来创建数据库&#43;创建数据库表&#43;更新表再次往表添加字段</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/26f5adf57f27892613f8962187a60682/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">Java8日期类LocalDate、LocalTime、LocalDateTime使用详解</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

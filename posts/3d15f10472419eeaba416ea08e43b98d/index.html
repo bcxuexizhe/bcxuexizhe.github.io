@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>C&#43;&#43;使用类的一些注意事项 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/3d15f10472419eeaba416ea08e43b98d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="C&#43;&#43;使用类的一些注意事项">
+  <meta property="og:description" content="前言： 本篇内容为前面的补充，介绍了我们使用类时需要注意些什么以及一些编译器的优化，可能有些理解不到位或者错误，请斧正。 目录
+前言：
+1.再谈构造函数
+2.（c&#43;&#43;98）隐式类型转换中的编译器的优化
+3.explicit关键字
+4.static成员
+5.匿名对象
+6.友元函数
+7.内部类
+8.编译器的一些场上的优化
+总结：
+若有歧义，请指出，感谢阅读！
+1.再谈构造函数 我们在构造函数体中，给成员变量赋值能叫做成员变量的初始化吗？并不可以，这种行为只是给成员变量赋初值，在函数体中，我们可以多次赋值，而初始化只能初始化一次。
+那该如何初始化呢？
+使用初始化列表。以一个冒号开始，接着是一个以逗号分割的数据成员列表，每个成员变量的后面跟一个放在括号中的初始值表达式。
+class Date { public: Date(int year, int month, int day) :_year(year) ,_month(month) ,_day(day) {} private: int _year; int _month; int _day; }; 那像const这样的必须在定义位置的初始化的，放在成员变量里面该怎么初始化呢？
+可以给缺省值，但不是初始化：
+class A { public: A() :_x(1) { _a1&#43;&#43;; } private: int _a1 = 1; int _a2 = 2; const int _x;//可以给缺省值，但不是初始化 }; 另外，缺省值也会在初始化列表进行初始化：
+如上图我们可以看到， _a1的结果是2，虽然没有在初始化列表中显示的初始化，但是还是会走初始化列表初始化；其次_a2的结果是0，虽然_a2的缺省值是2，但是在初始化列表中显示的初始化为了1，所以再--就是0。而对于即不给缺省值也不给初始化的普通成员变量，经过测试，那就是随机值。
+对于成员变量是引用的与成员变量是自定义类型的：
+class B { public: B(int b) :_b(0) { cout &lt;&lt; &#34;">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-04-04T14:03:01+08:00">
+    <meta property="article:modified_time" content="2024-04-04T14:03:01+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">C&#43;&#43;使用类的一些注意事项</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="htmledit_views">
+                    <p></p> 
+<h3 style="text-align:center;"><img alt="" src="https://images2.imgbox.com/ce/ae/HQlgsXuz_o.jpg"></h3> 
+<h3 id="%E5%89%8D%E8%A8%80%EF%BC%9A">前言：</h3> 
+<h3 id="%E6%9C%AC%E7%AF%87%E5%86%85%E5%AE%B9%E4%B8%BA%E5%89%8D%E9%9D%A2%E7%9A%84%E8%A1%A5%E5%85%85%EF%BC%8C%E4%BB%8B%E7%BB%8D%E4%BA%86%E6%88%91%E4%BB%AC%E4%BD%BF%E7%94%A8%E7%B1%BB%E6%97%B6%E9%9C%80%E8%A6%81%E6%B3%A8%E6%84%8F%E4%BA%9B%E4%BB%80%E4%B9%88%E4%BB%A5%E5%8F%8A%E4%B8%80%E4%BA%9B%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%BC%98%E5%8C%96%EF%BC%8C%E5%8F%AF%E8%83%BD%E6%9C%89%E4%BA%9B%E7%90%86%E8%A7%A3%E4%B8%8D%E5%88%B0%E4%BD%8D%E6%88%96%E8%80%85%E9%94%99%E8%AF%AF%EF%BC%8C%E8%AF%B7%E6%96%A7%E6%AD%A3%E3%80%82">本篇内容为前面的补充，介绍了我们使用类时需要注意些什么以及一些编译器的优化，可能有些理解不到位或者错误，请斧正。</h3> 
+<p id="main-toc"><strong>目录</strong></p> 
+<p id="%E5%89%8D%E8%A8%80%EF%BC%9A-toc" style="margin-left:40px;"><a href="#%E5%89%8D%E8%A8%80%EF%BC%9A" rel="nofollow">前言：</a></p> 
+<p id="1.%E5%86%8D%E8%B0%88%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#1.%E5%86%8D%E8%B0%88%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0" rel="nofollow">1.再谈构造函数</a></p> 
+<p id="2.%EF%BC%88c%2B%2B98%EF%BC%89%E9%9A%90%E5%BC%8F%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E4%B8%AD%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%BC%98%E5%8C%96-toc" style="margin-left:80px;"><a href="#2.%EF%BC%88c%2B%2B98%EF%BC%89%E9%9A%90%E5%BC%8F%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E4%B8%AD%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%BC%98%E5%8C%96" rel="nofollow">2.（c++98）隐式类型转换中的编译器的优化</a></p> 
+<p id="3.explicit%E5%85%B3%E9%94%AE%E5%AD%97-toc" style="margin-left:80px;"><a href="#3.explicit%E5%85%B3%E9%94%AE%E5%AD%97" rel="nofollow">3.explicit关键字</a></p> 
+<p id="4.static%E6%88%90%E5%91%98-toc" style="margin-left:80px;"><a href="#4.static%E6%88%90%E5%91%98" rel="nofollow">4.static成员</a></p> 
+<p id="5.%E5%8C%BF%E5%90%8D%E5%AF%B9%E8%B1%A1-toc" style="margin-left:80px;"><a href="#5.%E5%8C%BF%E5%90%8D%E5%AF%B9%E8%B1%A1" rel="nofollow">5.匿名对象</a></p> 
+<p id="6.%E5%8F%8B%E5%85%83%E5%87%BD%E6%95%B0-toc" style="margin-left:80px;"><a href="#6.%E5%8F%8B%E5%85%83%E5%87%BD%E6%95%B0" rel="nofollow">6.友元函数</a></p> 
+<p id="7.%E5%86%85%E9%83%A8%E7%B1%BB-toc" style="margin-left:80px;"><a href="#7.%E5%86%85%E9%83%A8%E7%B1%BB" rel="nofollow">7.内部类</a></p> 
+<p id="8.%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%B8%80%E4%BA%9B%E5%9C%BA%E4%B8%8A%E7%9A%84%E4%BC%98%E5%8C%96-toc" style="margin-left:80px;"><a href="#8.%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%B8%80%E4%BA%9B%E5%9C%BA%E4%B8%8A%E7%9A%84%E4%BC%98%E5%8C%96" rel="nofollow">8.编译器的一些场上的优化</a></p> 
+<p id="%E6%80%BB%E7%BB%93%EF%BC%9A-toc" style="margin-left:40px;"><a href="#%E6%80%BB%E7%BB%93%EF%BC%9A" rel="nofollow">总结：</a></p> 
+<p id="%E8%8B%A5%E6%9C%89%E6%AD%A7%E4%B9%89%EF%BC%8C%E8%AF%B7%E6%8C%87%E5%87%BA%EF%BC%8C%E6%84%9F%E8%B0%A2%E9%98%85%E8%AF%BB%EF%BC%81-toc" style="margin-left:40px;"><a href="#%E8%8B%A5%E6%9C%89%E6%AD%A7%E4%B9%89%EF%BC%8C%E8%AF%B7%E6%8C%87%E5%87%BA%EF%BC%8C%E6%84%9F%E8%B0%A2%E9%98%85%E8%AF%BB%EF%BC%81" rel="nofollow">若有歧义，请指出，感谢阅读！</a></p> 
+<hr id="hr-toc"> 
+<p></p> 
+<h4 id="1.%E5%86%8D%E8%B0%88%E6%9E%84%E9%80%A0%E5%87%BD%E6%95%B0">1.再谈构造函数</h4> 
+<p>我们在构造函数体中，给成员变量赋值能叫做成员变量的初始化吗？并不可以，这种行为只是给成员变量赋初值，在函数体中，我们可以多次赋值，而初始化只能初始化一次。</p> 
+<p>那该如何初始化呢？</p> 
+<p>使用初始化列表。以一个冒号开始，接着是一个以逗号分割的数据成员列表，每个成员变量的后面跟一个放在括号中的初始值表达式。</p> 
+<pre><code class="language-cpp">class Date
+{
+public:
+	Date(int year, int month, int day)
+		:_year(year)
+		,_month(month)
+		,_day(day)
+	{}
+
+private:
+	int _year;
+	int _month;
+	int _day;
+};
+</code></pre> 
+<p> 那像const这样的必须在定义位置的初始化的，放在成员变量里面该怎么初始化呢？</p> 
+<p>可以给缺省值，但不是初始化：</p> 
+<pre><code class="language-cpp">class A
+{
+public:
+	A()
+		:_x(1)
+	{
+		_a1++;
+	}
+
+private:
+	int _a1 = 1;
+	int _a2 = 2;
+
+	const int _x;//可以给缺省值，但不是初始化
+
+};
+</code></pre> 
+<p></p> 
+<p>另外，缺省值也会在初始化列表进行初始化：</p> 
+<p><img alt="" height="300" src="https://images2.imgbox.com/b2/02/g4HbKovS_o.png" width="1092"></p> 
+<p>如上图我们可以看到， _a1的结果是2，虽然没有在初始化列表中显示的初始化，但是还是会走初始化列表初始化；其次_a2的结果是0，虽然_a2的缺省值是2，但是在初始化列表中显示的初始化为了1，所以再--就是0。而对于即不给缺省值也不给初始化的普通成员变量，经过测试，那就是随机值。</p> 
+<p></p> 
+<p>对于成员变量是引用的与成员变量是自定义类型的：</p> 
+<pre><code class="language-cpp">class B
+{
+public:
+	B(int b)
+		:_b(0)
+	{
+		cout &lt;&lt; "B()" &lt;&lt; endl;
+	}
+
+private:
+	int _b;
+};
+
+class A
+{
+public:
+	A()
+		:_x(1)
+		,_ref(_a1)
+		,_bb(0)
+	{
+		_a1++;
+	}
+
+private:
+	int _a1 = 1;
+	int _a2 = 2;
+
+	int&amp; _ref;
+	B _bb;
+
+	const int _x;//可以给缺省值，但不是初始化
+
+};
+</code></pre> 
+<p>成员变量是引用的，跟const一样，本身引用就是要在定义的位置初始化，所以我们可以给缺省值，或者要在初始化列表初始化。</p> 
+<p>对于自定义类型的成员变量，_bb会去调用它的构造函数初始化吗？经过我的测试，_bb这个自定义类型的成员变量，如果不在A中的初始化列表初始化，就要去调用它的构造函数，<span style="color:#fe2c24;"><strong>但是一定要确保B中的构造函数一定是默认的</strong></span>，也就是说必须是全缺省的或者是不写编译器自动生成的。而上面的代码中B中的构造函数不是默认的构造函数，所以我们如果在A的类中不对_bb进行初始化列表的初始化，就会报错。</p> 
+<p></p> 
+<p>再看一个例子：</p> 
+<p><img alt="" height="495" src="https://images2.imgbox.com/dc/9d/A313hKK2_o.png" width="813"></p> 
+<p> 注释部分的构造函数可以，对两个自定义类型的成员进行了初始化列表的初始化，而内置类型由于没有显示的写就使用了缺省值，所以可以；如果Stack这个自定义类型中的构造函数是默认的，什么也没写的构造函数也是可以的，对于自定义类型初始化去调用它的默认构造函数，内置类型的初始化由于没有显示的写就使用它的缺省值。</p> 
+<p></p> 
+<p>其次还需要注意一个点：</p> 
+<pre><code class="language-cpp">class A1
+{
+public:
+	A1(int a)
+		:_a1(a)
+		,_a2(_a1)
+	{}
+
+	void Print()
+	{
+		cout &lt;&lt; _a1 &lt;&lt; " " &lt;&lt; _a2 &lt;&lt; endl;
+	}
+
+private:
+	int _a2;//声明的次序就是在初始化列表中的初始化的顺序
+	int _a1;
+};
+
+int main()
+
+{
+	//A aa;
+	A1 aa(1);
+	aa.Print();
+	return 0;
+}</code></pre> 
+<p>上面的结果应该是什么？结果是输出1和随机值。</p> 
+<p><strong><span style="color:#fe2c24;">这是因为成员变量在类中的声明次序就是其在初始化列表中的初始化顺序，与其在初始化列表中的先后次序无关。</span></strong></p> 
+<p></p> 
+<p>总结：</p> 
+<p>首先不管在初始化列表中显示的写没写初始化，都会在初始化的列表中走一遍。</p> 
+<p>其次记住一个原则：给初始化就在初始化列表中给初始化。</p> 
+<p><img alt="" height="669" src="https://images2.imgbox.com/8e/2d/ohNIiOab_o.png" width="1200"></p> 
+<p></p> 
+<h4></h4> 
+<h4 id="2.%EF%BC%88c%2B%2B98%EF%BC%89%E9%9A%90%E5%BC%8F%E7%B1%BB%E5%9E%8B%E8%BD%AC%E6%8D%A2%E4%B8%AD%E7%9A%84%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%BC%98%E5%8C%96">2.（c++98）隐式类型转换中的编译器的优化</h4> 
+<pre><code class="language-cpp">class A
+{
+public:
+	A(int a)
+		: _a1(a)
+	{
+		cout &lt;&lt; "A(int a)" &lt;&lt; endl;
+	}
+
+	A(const A&amp; aa)
+		:_a1(aa._a1)
+	{
+		cout &lt;&lt; "A(const A&amp; aa)" &lt;&lt; endl;
+	}
+
+private:
+	int _a1;
+};
+
+
+int main()
+
+{
+	A aa1(1);//构造函数
+	A aa2 = 1;//隐式类型转换
+
+
+	return 0;
+}</code></pre> 
+<p>根据我们之前的隐式类型转换的知识，我们可以知道这里对aa2这个对象赋值就是在进行隐式类型转换：首先1先构造一个临时对象，这个临时对象再拷贝给aa2，所以会去调用拷贝构造（注意拷贝构造也是构造，所以也有初始化列表）。</p> 
+<p>但是我们看到结果不是这样的：</p> 
+<p><img alt="" height="186" src="https://images2.imgbox.com/e8/55/maIfDhb1_o.png" width="273"></p> 
+<p>为什么呢？这就是编译器所做的优化，因为编译器觉得自定义类型的这种初始化写起来还要调用拷贝构造，所以直接就优化了，直接就优化为了一步构造，1直接构造aa2。<strong><span style="color:#fe2c24;">（注意这里的优化只限定于c++98的单参数的构造）</span></strong></p> 
+<p></p> 
+<p><img alt="" height="36" src="https://images2.imgbox.com/5f/0b/hGEhV5Hd_o.png" width="267"></p> 
+<p>而对于这一种，编译器还能这样优化吗？答案是不能的，因为我们知道，10先构造出一个A类型的临时变量，而这个临时变量又具有常性且ref是这个临时变量的别名，所以需要加上const，而就是由于这个临时变量具有常性，<strong><span style="color:#fe2c24;">编译器在这里就不会优化掉这个临时变量</span></strong>，所以10就没法直接构造ref了，而是先构造这个临时变量<span style="color:#fe2c24;"><strong>（这里使用的vs2022的编译器发现也没有调用拷贝构造，可能是编译器做的更极端了，也优化了，但是我们知道其后的原来即可）。</strong></span></p> 
+<p></p> 
+<p></p> 
+<h4 id="3.explicit%E5%85%B3%E9%94%AE%E5%AD%97">3.explicit关键字</h4> 
+<p><img alt="" height="342" src="https://images2.imgbox.com/48/b7/0nziegDl_o.png" width="564"></p> 
+<p>explicit的引入就是为了防止隐式类型转换，这里加上了explicit， A aa2=1和const A&amp; ref=10的隐式类型转换就没有了，就编不过了。</p> 
+<p></p> 
+<p>但是上面的隐式类型转换都是对于单参数的构造，对于多参数的构造，c++11可以使用多参数的构造来进行隐式类型转换：</p> 
+<p><img alt="" height="111" src="https://images2.imgbox.com/9a/2b/ZZZB957y_o.png" width="351"></p> 
+<p><img alt="" height="33" src="https://images2.imgbox.com/c2/51/AXm23nTA_o.png" width="366"></p> 
+<p>其实也都是先调用构造，然后再进行隐式类型转换，再经过编译器的优化， 会节省一次隐式类型转换产生的拷贝。</p> 
+<p>同样的，如果不想使用隐式类型转换，就在构造函数上加上explicit，防止构造函数的隐式类型转换，这时A aa(1,1)这样需要隐式类型转换的就编不过了。</p> 
+<p>如果想使用隐式类型转换，让编译器进行优化，节省一次拷贝，就可以不加explicit。 </p> 
+<h4></h4> 
+<h4></h4> 
+<h4 id="4.static%E6%88%90%E5%91%98">4.static成员</h4> 
+<p>我们将声明为static的类成员称为类的静态成员，用static修饰的成员变量，称为静态成员变量；用static修饰的成员函数，称之为静态成员函数。注意的是，静态成员函数没有this指针，静态成员变量在类中声明，在类外进行初始化。</p> 
+<p></p> 
+<p>统计程序中创建出了多少个类对象：</p> 
+<pre><code class="language-cpp">class A
+{
+public:
+	A(int a = 0)
+	{
+		cout &lt;&lt; "构造" &lt;&lt; endl;
+	}
+
+	A(const A&amp; aa)
+	{
+		cout &lt;&lt; "拷贝构造" &lt;&lt; endl;
+		++count;
+	}
+
+	static int GetCount()//没有this指针
+	{
+		return count;//static函数没有this指针，访问不到成员count，只能读不能写
+	}
+
+private:
+	static int count;//声明，属于所有对象，属于整个类
+
+};
+
+int A::count = 0;//定义初始化
+void func(A a)
+{
+
+}
+
+int main()
+{
+	A aa1;//调用构造
+
+	A aa2(aa1);//调用拷贝构造
+
+	func(aa1);//函数传参，且参数是A类型的，所以调用拷贝构造
+
+	A aa3 = 1;//隐式类型转换，经过编译器的优化，优化掉了拷贝构造，只有构造
+	
+	A aa4[10];//调用10次构造
+
+	cout &lt;&lt; aa3.GetCount() &lt;&lt; endl;//如果GetCount是个static修饰的，只能接受返回的count，不能改
+
+	//类中的静态成员也受访问限定符的限制，如果我们不让静态成员count设为私有，如何访问count？
+	//A::count;
+	//aa2.count或者aa3.count      count属于所有对象
+	//A* ptr=nullptr;ptr-&gt;count   这里不会去解引用，会直接去静态区中找
+
+	return 0;
+}</code></pre> 
+<p> 首先上面代码需要注意的是，GetCount是一个静态成员函数，所以访问它可以通过对象访问即aa3.GetCount（），或者指定内域访问，A::GetCount（），但是由于静态成员函数没有this指针，所以函数内不能访问非静态成员变量（这里返回count就是因为count是个静态成员变量，换成是普通的变量就不行了）：</p> 
+<p><img alt="" height="582" src="https://images2.imgbox.com/b2/ec/ImsRD5vS_o.png" width="819"></p> 
+<p></p> 
+<p></p> 
+<p>其次类中的静态成员也是受类的访问限定符的限制的，像这里count为私有，虽然是静态的全局的变量，但是在类外面还是访问不到的。</p> 
+<p>如果我们不将count设为私有，那怎么访问这个静态成员变量呢？</p> 
+<p>1.A::count  直接指定内域访问</p> 
+<p>2.aa2.count或者aa3.count    因为static成员是属于所有对象的，所以可以</p> 
+<p>3.A* ptr=nullptr；ptr-&gt;count    这里不会解引用，直接去静态区找</p> 
+<p></p> 
+<p>同时我们上方的代码也复习之前的知识：</p> 
+<p><img alt="" height="639" src="https://images2.imgbox.com/2d/aa/ZK41c4BE_o.png" width="816"></p> 
+<p>分析结果：</p> 
+<p>前两个分别调用构造与拷贝构造，没什么说的；第三个是函数传参，由于参数也是A，也就是类类型的，所以会调用拷贝构造；然后是下面的隐式类型转换，编译器优化掉了拷贝，直接就是构造；然后可以看到如果自定义对象是数组，可以看到调用了10次。</p> 
+<p></p> 
+<p>总结：</p> 
+<p><img alt="" height="1020" src="https://images2.imgbox.com/2a/8b/FC9Ub1ZZ_o.png" width="1200"></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h4 id="5.%E5%8C%BF%E5%90%8D%E5%AF%B9%E8%B1%A1">5.匿名对象</h4> 
+<p>当我们需要调用某个类的成员函数时需要先创建一个对象，所以我们引入了一个匿名对象，可以直接不创建对象直接去调用，写法为：类名（）</p> 
+<p><img alt="" height="285" src="https://images2.imgbox.com/f8/c7/2GPCVsPs_o.png" width="924"></p> 
+<p>通过析构函数可知，匿名对象的周期只在它出现的这一行，到下一行就会销毁。</p> 
+<p></p> 
+<p><img alt="" height="240" src="https://images2.imgbox.com/19/ef/g4pPVYNR_o.png" width="411"></p> 
+<p>返回值也可以使用匿名对象，更加简洁。</p> 
+<p></p> 
+<h4></h4> 
+<h4 id="6.%E5%8F%8B%E5%85%83%E5%87%BD%E6%95%B0">6.友元函数</h4> 
+<p>友元函数在我们之前提到过，现在再来细看一下。</p> 
+<p><img alt="" height="1011" src="https://images2.imgbox.com/b9/a6/tNe0npHP_o.png" width="1200"></p> 
+<p></p> 
+<h4></h4> 
+<h4 id="7.%E5%86%85%E9%83%A8%E7%B1%BB">7.内部类</h4> 
+<p>内部类c++很少用，隔壁Java常用。</p> 
+<p><img alt="" height="564" src="https://images2.imgbox.com/73/6a/1CtaUYuu_o.png" width="876"></p> 
+<p style="margin-left:0;"></p> 
+<p style="margin-left:0;">首先，如果B这个类在A中是公有的，可以直接在外面指明内域访问例如A::B bb；</p> 
+<p style="margin-left:0;">其次，如果B是私有的，那就不能通过A来访问了，所以B这个内部类既受A的类域的</p> 
+<p style="margin-left:0;">限制（因为B为公有在外面需要指定在A的内域），又受到A的访问限定符的限制</p> 
+<p style="margin-left:0;">然后，B这个内部类天生就是A的友元，所以可以通过内部类访问外部类的成员（静态的也可以）</p> 
+<p style="margin-left:0;">补充：一个类里面，公有可以访问私有</p> 
+<p style="margin-left:0;"></p> 
+<p style="margin-left:0;">总结：<img alt="" height="714" src="https://images2.imgbox.com/6a/dc/9cvvoApa_o.png" width="1098"></p> 
+<p></p> 
+<h4></h4> 
+<h4 id="8.%E7%BC%96%E8%AF%91%E5%99%A8%E7%9A%84%E4%B8%80%E4%BA%9B%E5%9C%BA%E4%B8%8A%E7%9A%84%E4%BC%98%E5%8C%96">8.编译器的一些场上的优化</h4> 
+<p>首先先来分析3个优化：</p> 
+<pre><code class="language-cpp">class A
+{
+public:
+	A(int a = 0)
+	{
+		cout &lt;&lt; "构造" &lt;&lt; endl;
+	}
+
+	A(const A&amp; a)
+	{
+		cout &lt;&lt; "拷贝构造" &lt;&lt; endl;
+	}
+
+	~A()
+	{
+		cout &lt;&lt; "~A" &lt;&lt; endl;
+	}
+};
+
+void func1(A aa)
+{
+
+}
+
+void  func2(A&amp; aa)
+{
+	
+}
+
+A func3()
+{
+	return A();
+}
+
+int main()
+{
+	A aa1 = 1;
+	
+	func1(aa1);
+
+	func1(2);
+
+	func1(A(3));
+	return 0;
+}</code></pre> 
+<p>第一个就是隐式类型转换编译器会将隐式类型转换产生的拷贝优化掉，所以就只有一个构造。</p> 
+<p>第二个是传参调用拷贝构造，但是这个拷贝构造不会被优化（大部分情况下只有c++98中的那个单参数构造和c++11的多参数构造会优化），但是可以使用传引用传参来减少拷贝。由于拷贝构造产生了临时变量，所以在func1函数结束时，会调用析构销毁这个临时变量。</p> 
+<p>第三个与第四个也都是传参调用拷贝构造，但是结果发现，拷贝构造被优化为了构造？！理想的结果不应该是拷贝构造，然后跟析构吗？？？当时我也疑惑了好久，其实这是因为编译器的处理，在我的vs2022的编译器下，可能由于编译器太新，优化的比较极端，编译器看到你func1函数什么也没写，干嘛要在拷贝构造一次，干脆直接就优化为了拿形参构造实参，可以看到构造后紧跟的就是析构，这也表明还是存在拷贝产生的临时变量需要销毁。</p> 
+<p>最后主函数结束aa1销毁调用析构。</p> 
+<p><img alt="" height="280" src="https://images2.imgbox.com/b4/b7/iG4Tsrxk_o.png" width="337"></p> 
+<p></p> 
+<p>另外，如果我们使用func2的传引用传参，后两个传参会直接报错，因为它们是临时变量，使用引用后，传过去后函数作用域销毁，这个变量就找不到了；而aa1的作用域在main函数中，尽管fun2的函数结束，但是还是能找到aa1。</p> 
+<p></p> 
+<p>再看一种优化：</p> 
+<p><img alt="" height="396" src="https://images2.imgbox.com/c7/ba/rYqtOssi_o.png" width="489"></p> 
+<p>在这个场景下， A aa先构造，返回aa再调用拷贝构造（因为没有创造对象，所以这个拷贝构造有可能被优化掉），拷贝的临时变量销毁调用一次析构，aa这个局部对象销毁再调用一次析构，<strong><span style="color:#fa0000;">那这两个析构谁先调用的呢？拷贝构造后面经跟的就是拷贝时创建的临时变量销毁调用的析构</span></strong></p> 
+<p>此时还没有优化，但是当我们来接受它的返回值时：</p> 
+<p> <img alt="" height="486" src="https://images2.imgbox.com/14/2a/YbD4H5rq_o.png" width="390"></p> 
+<p>aa拷贝给一个临时变量，临时变量再拷贝给给aa1，这里就会被优化为一个拷贝构造。 </p> 
+<p></p> 
+<p>如果我们在将赋值重载再写出来（下面的称为赋值接受）：</p> 
+<p><img alt="" height="69" src="https://images2.imgbox.com/64/15/JkxOomRB_o.png" width="216"></p> 
+<p>就会得到下面的结果：</p> 
+<p><img alt="" height="189" src="https://images2.imgbox.com/e7/0a/Hu5WWZjy_o.png" width="270"></p> 
+<p> 如果先定义一个对象，再接收返回值，就是aa2先构造，func3里aa构造，返回时一个拷贝构造（这个拷贝构造有可能会被优化，因为没有创造新的对象来接收返回值，看编译器，这里就是被优化了）然后没有被优化，那会多出来一对拷贝构造+析构。结果中的两个析构分别是func3函数结束aa销毁调用的析构和main函数结束aa2销毁的析构。</p> 
+<p></p> 
+<p>如果是下面的场景（下面的称为拷贝构造接受）：</p> 
+<p><img alt="" height="223" src="https://images2.imgbox.com/63/92/qwuzprtl_o.png" width="403"></p> 
+<p style="margin-left:0;">如果直接调用fun2，返回的匿名对象调用一次构造，匿名对象出了fun2析构一次。</p> 
+<p style="margin-left:0;">如果接收fun2的返回值，匿名对象A()先构造一次，返回时拷贝构造一次，返回给aa2再拷贝一次编译器会优化用 匿名对象直接构造aa2，直接就是构造一次，所以最后一次析构是aa2销毁的析构</p> 
+<p></p> 
+<p>总结：</p> 
+<p>优化的场景很多，我们只要记住：</p> 
+<p><img alt="" height="264" src="https://images2.imgbox.com/2b/1e/rG7hZtPC_o.png" width="621"></p> 
+<p></p> 
+<p></p> 
+<p></p> 
+<h3 id="%E6%80%BB%E7%BB%93%EF%BC%9A">总结：</h3> 
+<h3 id="%E8%8B%A5%E6%9C%89%E6%AD%A7%E4%B9%89%EF%BC%8C%E8%AF%B7%E6%8C%87%E5%87%BA%EF%BC%8C%E6%84%9F%E8%B0%A2%E9%98%85%E8%AF%BB%EF%BC%81">若有歧义，请指出，感谢阅读！</h3>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/9a5b4b7540dc113ac023f605e508357d/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">Kafka的配置和使用</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/0386aec8ca55100d15521104a158ef78/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">植物大战僵尸Python版，附带源码注解</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

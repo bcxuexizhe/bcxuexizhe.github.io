@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>【高阶数据结构(六)】B-树详解 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/febab887af203ad70220ec1b62b63e5d/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="【高阶数据结构(六)】B-树详解">
+  <meta property="og:description" content="💓博主CSDN主页:杭电码农-NEO💓
+⏩专栏分类:高阶数据结构专栏⏪
+🚚代码仓库:NEO的学习日记🚚
+🌹关注我🫵带你学习更多数据结构
+🔝🔝
+高阶数据结构 1. 前言2. 初识B树3. B树的插入分析4. B树的规则再分析5. B树模拟实现6. 总结以及拓展 1. 前言 相信大家之前或多或少都听说过B树或B&#43;树,奔跑文章将从认识B树到手撕B树(注意不是B减树,是B树),一步一步带你吃透它!
+本章重点:
+本篇文章着重讲解B树的概念和它的性质,并且回一步一步分析它的插入规则,为后续手撕B树做铺垫. 手撕B树指挥实现插入版本,删除过于复杂这里不多做讨论, 期间回将B树和传统的搜索结构如哈希,红黑树等做对比.
+B树学习难度较大, 请大家耐心学习
+2. 初识B树 首先要明确一点, B树是一个搜索结构.那么它和传统的搜索结构,比如红黑树, 哈希等有什么区别呢?先请看下图:
+以上结构适合用于数据量相对不是很大，能够一次性存放在内存中，进行数据查找的场景。如果数据量很大，比如有100G数据，无法一次放进内存中，那就只能放在磁盘上了. 是的传统的搜索结构用于内查找,也就是在内存中查找,但B树是用于外查找,就是磁盘或文件中的查找
+一棵m阶(m&gt;2)的B树，是一棵平衡的M路平衡搜索树，可以是空树或者满足一下性质：
+根节点至少有两个孩子每个分支节点都包含k-1个关键字和k个孩子，其中 ceil(m/2) ≤ k ≤ m ceil是向上取整函数每个叶子节点都包含k-1个关键字，其中 ceil(m/2) ≤ k ≤ m所有的叶子节点都在同一层每个节点中的关键字从小到大排列，节点当中k-1个元素正好是k个孩子包含的元素的值域划分每个结点的结构为：（n，A0，K1，A1，K2，A2，… ，Kn，An）其中，Ki(1≤i≤n)为关键字，且Ki&lt;Ki&#43;1(1≤i≤n-1)。Ai(0≤i≤n)为指向子树根结点的指针。且Ai所指子树所有结点中的关键字均小于Ki&#43;1。n为结点中关键字的个数，满足ceil(m/2)-1≤n≤m-1。 光看B树的定义是非常抽象的, 但定义中你需要记住的关键点是每个节点中的关键字是有序的, 并且节点的结构是: 关键字,孩子,关键字,孩子…实际上当M=2时,B树就是一颗二叉树, B树的节点中是一个数组,可存放多个数据
+3. B树的插入分析 现在我们使用一个B树做插入的案例,来解释B树的这些性质. 设M=3,即三叉树,每个节点存两个数据,和三个孩子区域的划分
+注意：孩子永远比数据多一个。
+用后面的图可以更好的演示B树的分裂
+用序列{53, 139, 75, 49, 145, 36, 101}构建B树的过程如下： 第一步:
+由于M=3,一个节点只能存储两个数据,所以当插入75时,需要对这棵树做分裂. 怎样分裂呢? 普遍的做法是: 1. 找到节点中的中间数据(图中为75). 2. 创建一个新节点, 将中间数据挪动到新节点.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-23T09:15:00+08:00">
+    <meta property="article:modified_time" content="2024-05-23T09:15:00+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">【高阶数据结构(六)】B-树详解</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-tomorrow-night">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <blockquote> 
+ <p>💓博主CSDN主页:<a href="https://blog.csdn.net/m0_61982936?spm=1000.2115.3001.5343">杭电码农-NEO</a>💓<br>   <br> ⏩专栏分类:<a href="https://blog.csdn.net/m0_61982936/category_12660316.html?spm=1001.2014.3001.5482">高阶数据结构专栏</a>⏪<br>   <br> 🚚代码仓库:<a href="https://gitee.com/NEO_kou" rel="nofollow">NEO的学习日记</a>🚚<br>   <br> 🌹关注我🫵带你学习更多数据结构<br>   🔝🔝</p> 
+</blockquote> 
+<hr> 
+<p><img src="https://images2.imgbox.com/b3/b7/2VW5ZSCR_o.gif" alt="在这里插入图片描述"></p> 
+<p></p> 
+<div class="toc"> 
+ <h4>高阶数据结构</h4> 
+ <ul><li><a href="#1__15" rel="nofollow">1. 前言</a></li><li><a href="#2_B_25" rel="nofollow">2. 初识B树</a></li><li><a href="#3_B_47" rel="nofollow">3. B树的插入分析</a></li><li><a href="#4_B_93" rel="nofollow">4. B树的规则再分析</a></li><li><a href="#5_B_103" rel="nofollow">5. B树模拟实现</a></li><li><a href="#6__268" rel="nofollow">6. 总结以及拓展</a></li></ul> 
+</div> 
+<p></p> 
+<h2><a id="1__15"></a>1. 前言</h2> 
+<p>相信大家之前或多或少都听说过B树或B+树,奔跑文章将从认识B树到手撕B树(注意不是B减树,是B树),一步一步带你吃透它!</p> 
+<p><mark>本章重点:</mark></p> 
+<blockquote> 
+ <p><font color="purple"><strong>本篇文章着重讲解B树的概念和它的性质,并且回一步一步分析它的插入规则,为后续手撕B树做铺垫. 手撕B树指挥实现插入版本,删除过于复杂这里不多做讨论, 期间回将B树和传统的搜索结构如哈希,红黑树等做对比.</strong></font></p> 
+</blockquote> 
+<p>B树学习难度较大, 请大家耐心学习</p> 
+<hr> 
+<h2><a id="2_B_25"></a>2. 初识B树</h2> 
+<p>首先要明确一点, B树是一个搜索结构.那么它和传统的搜索结构,比如红黑树, 哈希等有什么区别呢?先请看下图:</p> 
+<p><img src="https://images2.imgbox.com/a2/03/Ee7T7NiH_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><font color="orange"><strong>以上结构适合用于数据量相对不是很大，能够一次性存放在内存中，进行数据查找的场景。如果数据量很大，比如有100G数据，无法一次放进内存中，那就只能放在磁盘上了. 是的传统的搜索结构用于内查找,也就是在内存中查找,但B树是用于外查找,就是磁盘或文件中的查找</strong></font></p> 
+</blockquote> 
+<p>一棵m阶(m&gt;2)的B树，是一棵平衡的M路平衡搜索树，可以是空树或者满足一下性质：</p> 
+<ol><li>根节点至少有两个孩子</li><li>每个分支节点都包含k-1个关键字和k个孩子，其中 ceil(m/2) ≤ k ≤ m ceil是向上取整函数</li><li>每个叶子节点都包含k-1个关键字，其中 ceil(m/2) ≤ k ≤ m</li><li>所有的叶子节点都在同一层</li><li>每个节点中的关键字从小到大排列，节点当中k-1个元素正好是k个孩子包含的元素的值域划分</li><li>每个结点的结构为：（n，A0，K1，A1，K2，A2，… ，Kn，An）其中，Ki(1≤i≤n)为关键字，且Ki&lt;Ki+1(1≤i≤n-1)。Ai(0≤i≤n)为指向子树根结点的指针。且Ai所指子树所有结点中的关键字均小于Ki+1。n为结点中关键字的个数，满足ceil(m/2)-1≤n≤m-1。</li></ol> 
+<p><img src="https://images2.imgbox.com/71/a9/VkNlIQtF_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p>光看B树的定义是非常抽象的, 但定义中你需要记住的关键点是每个节点中的关键字是有序的, 并且节点的结构是: 关键字,孩子,关键字,孩子…实际上当M=2时,B树就是一颗二叉树, B树的节点中是一个数组,可存放多个数据</p> 
+</blockquote> 
+<hr> 
+<h2><a id="3_B_47"></a>3. B树的插入分析</h2> 
+<p>现在我们使用一个B树做插入的案例,来解释B树的这些性质. 设M=3,即三叉树,每个节点存两个数据,和三个孩子区域的划分</p> 
+<p><img src="https://images2.imgbox.com/79/37/aIDfuJL9_o.png" alt="在这里插入图片描述"><br> <code>注意：孩子永远比数据多一个。</code></p> 
+<p><mark>用后面的图可以更好的演示B树的分裂</mark></p> 
+<pre><code class="prism language-cpp">用序列<span class="token punctuation">{<!-- --></span><span class="token number">53</span><span class="token punctuation">,</span> <span class="token number">139</span><span class="token punctuation">,</span> <span class="token number">75</span><span class="token punctuation">,</span> <span class="token number">49</span><span class="token punctuation">,</span> <span class="token number">145</span><span class="token punctuation">,</span> <span class="token number">36</span><span class="token punctuation">,</span> <span class="token number">101</span><span class="token punctuation">}</span>构建B树的过程如下：
+</code></pre> 
+<p><mark>第一步:</mark><br> <img src="https://images2.imgbox.com/ca/40/dClcIaaj_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><font color="gree"><strong>由于M=3,一个节点只能存储两个数据,所以当插入75时,需要对这棵树做分裂. 怎样分裂呢? 普遍的做法是: 1. 找到节点中的中间数据(图中为75). 2. 创建一个新节点, 将中间数据挪动到新节点. 3. 以中间数据(75)作为分割, 将中间数据左边的所有节点保持不动, 将中间数据右边的所有节点移动至另外一个新节点. 4. 将中间数据所在的新节点当父亲, 左右两个兄弟节点当儿子, 连接起来. 具体结果看下图:</strong></font></p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/a4/6e/qvc0qlz9_o.png" alt="在这里插入图片描述"></p> 
+<p>这样做恰好满足了B树的一个性质: A1,K1,A2,K2数组中, A1,这里代表75的左孩子,是小于K1的,K1也就是75. 而A2,对应是139所在的节点, 是大于K1的.</p> 
+<p><mark>第二步:</mark><br> <strong>注意: B树的插入都是在叶子节点进行的,当叶子节点不符合B树规则时才会向上形成新的节点,也就是所谓的分裂操作</strong></p> 
+<p><img src="https://images2.imgbox.com/92/a6/ufdueJXM_o.png" alt="在这里插入图片描述"><br> <code>这两次插入都没违反规则</code></p> 
+<p><mark>第三步:</mark></p> 
+<p><img src="https://images2.imgbox.com/91/99/9J2Oj2E4_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><font color="purple"><strong>这一次插入36,会导致左下角的节点违反B树的规则,所以需要进行分裂. 本次分裂和上次分裂基本一致,唯一的区别就是, 中间数据,也就是49,不需要再重新形成一个新节点并将49放入,数据49可以直接被放在数据75所在的节点中. 具体的结果图如下:</strong></font></p> 
+</blockquote> 
+<p><img src="https://images2.imgbox.com/6b/47/NJ5jT7i9_o.png" alt="在这里插入图片描述"></p> 
+<p><code>并且也要满足上面所说的A1&lt;K1&lt;A2&lt;K2&lt;A3</code><br> 注意, 节点中只存了两个数据, 数据下面的数据存储的是孩子节点的地址</p> 
+<p><mark>第四步:</mark></p> 
+<p><img src="https://images2.imgbox.com/80/c4/8yHNReFU_o.png" alt="在这里插入图片描述"></p> 
+<blockquote> 
+ <p><strong>看见此图,聪明的你肯定已经想到了需要进行分裂, 将中间数据139提到父亲节点. 那么更聪明的人也发现了,此时父亲节点的数据也是三个,不符合规则, 所以父亲节点也需要进行分裂. 分裂的规则和之前是一样的,这里就不再画图了,大家可以自己尝试去画一下图.</strong></p> 
+</blockquote> 
+<hr> 
+<h2><a id="4_B_93"></a>4. B树的规则再分析</h2> 
+<p>了解了B树是如何分裂了之后,我们在倒过来看看B树的规则,就好理解多了:</p> 
+<ol><li>根节点至少有两个孩子: 为什么呢?因为B树进行一次分裂之后, 至少会分裂出两个孩子.</li><li>第二点解释: 孩子的数量永远比数据多一个,K一般就取值为M</li></ol> 
+<p>剩下的我相信大家都能理解了</p> 
+<hr> 
+<h2><a id="5_B_103"></a>5. B树模拟实现</h2> 
+<p><mark>首先是基本的B树节点的结构:</mark></p> 
+<pre><code class="prism language-cpp"><span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">K</span><span class="token punctuation">,</span> size_t M<span class="token operator">&gt;</span>
+<span class="token keyword">struct</span> <span class="token class-name">BTreeNode</span>
+<span class="token punctuation">{<!-- --></span>
+	K _keys<span class="token punctuation">[</span>M<span class="token punctuation">]</span><span class="token punctuation">;</span><span class="token comment">//m个孩子,m-1个关键字.但为了方便插入再分裂,定义为M个关键字,M+1个child</span>
+	BTreeNode<span class="token operator">&lt;</span>K<span class="token punctuation">,</span> M<span class="token operator">&gt;</span><span class="token operator">*</span> _childs<span class="token punctuation">[</span>M <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+	BTreeNode<span class="token operator">&lt;</span>K<span class="token punctuation">,</span> M<span class="token operator">&gt;</span><span class="token operator">*</span> _parent<span class="token punctuation">;</span> <span class="token comment">//存父亲节点,分裂时需要用</span>
+	size_t _num<span class="token punctuation">;</span><span class="token comment">//记录实际存储了多少个key(记录key或child都行)</span>
+
+	<span class="token function">BTreeNode</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span> i <span class="token operator">&lt;</span> M<span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+			_keys<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">K</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+		_num <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+		_childs<span class="token punctuation">[</span>M<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+		_parent <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+<span class="token comment">//数据是存在磁盘, K就是磁盘地址</span>
+<span class="token keyword">template</span><span class="token operator">&lt;</span><span class="token keyword">class</span> <span class="token class-name">K</span><span class="token punctuation">,</span>size_t M<span class="token operator">&gt;</span>
+<span class="token keyword">class</span> <span class="token class-name">BTree</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">typedef</span> BTreeNode<span class="token operator">&lt;</span>K<span class="token punctuation">,</span> M<span class="token operator">&gt;</span> Node<span class="token punctuation">;</span>
+<span class="token keyword">private</span><span class="token operator">:</span>
+	Node<span class="token operator">*</span> _root <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span><span class="token punctuation">;</span>
+</code></pre> 
+<blockquote> 
+ <p>当然在实现B树的插入之前, 我们需要先实现Find函数, 如果插入的值已存在,那么就什么都不用做了. 当前我们也可以提前封装好插入节点的逻辑</p> 
+</blockquote> 
+<pre><code class="prism language-cpp">pair<span class="token operator">&lt;</span>Node<span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">&gt;</span> <span class="token function">Find</span><span class="token punctuation">(</span><span class="token keyword">const</span> K<span class="token operator">&amp;</span> key<span class="token punctuation">)</span><span class="token comment">//返回这个值以及它的下标</span>
+<span class="token punctuation">{<!-- --></span>
+	Node<span class="token operator">*</span> cur <span class="token operator">=</span> _root<span class="token punctuation">;</span>
+	<span class="token comment">//记录路径,最后会获得叶子节点</span>
+	Node<span class="token operator">*</span> prev <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span>cur<span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		size_t i <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+		<span class="token comment">//下面的逻辑表示在一个节点中查找</span>
+		<span class="token keyword">while</span> <span class="token punctuation">(</span>cur <span class="token operator">&amp;&amp;</span> i <span class="token operator">&lt;</span> cur<span class="token operator">-&gt;</span>_num<span class="token punctuation">)</span>
+		<span class="token punctuation">{<!-- --></span>
+			<span class="token comment">//在左孩子中去找,左孩子的数组的下标等于当前下标</span>
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">&lt;</span> cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+				<span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token comment">//比当前值大就往后++,直到值比key大</span>
+			<span class="token keyword">else</span> <span class="token keyword">if</span> <span class="token punctuation">(</span>key <span class="token operator">&gt;</span> cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+				i<span class="token operator">++</span><span class="token punctuation">;</span>
+			<span class="token keyword">else</span> <span class="token keyword">return</span> <span class="token function">make_pair</span><span class="token punctuation">(</span>cur<span class="token punctuation">,</span> i<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+		<span class="token comment">//往孩子去跳</span>
+		prev <span class="token operator">=</span> cur<span class="token punctuation">;</span>
+		cur <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">return</span> <span class="token function">make_pair</span><span class="token punctuation">(</span>prev<span class="token punctuation">,</span> <span class="token operator">-</span><span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+
+<span class="token comment">//给一个节点的指针,插入key和children</span>
+<span class="token keyword">void</span> <span class="token function">InsertKey</span><span class="token punctuation">(</span>Node<span class="token operator">*</span> node<span class="token punctuation">,</span> <span class="token keyword">const</span> K<span class="token operator">&amp;</span> key<span class="token punctuation">,</span> Node<span class="token operator">*</span> children<span class="token punctuation">)</span>
+<span class="token punctuation">{<!-- --></span>
+	<span class="token keyword">int</span> end <span class="token operator">=</span> node<span class="token operator">-&gt;</span>_num <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span>
+	<span class="token comment">//插入排序,若插入的数据较小,原先的数据会往后移动</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span>end <span class="token operator">&gt;=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+	<span class="token punctuation">{<!-- --></span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>node<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>end<span class="token punctuation">]</span> <span class="token operator">&gt;</span> key<span class="token punctuation">)</span>
+		<span class="token punctuation">{<!-- --></span>
+			<span class="token comment">//不仅要挪动key,还要挪动它的右孩子</span>
+			node<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>end <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> node<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>end<span class="token punctuation">]</span><span class="token punctuation">;</span>
+			node<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>end <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">]</span> <span class="token operator">=</span> node<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>end <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span><span class="token punctuation">;</span>
+			end<span class="token operator">--</span><span class="token punctuation">;</span>
+		<span class="token punctuation">}</span>
+		<span class="token keyword">else</span> <span class="token keyword">break</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	<span class="token comment">//插入在end位置的后面,可能比所有值都小,end+1=0</span>
+	node<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>end <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> key<span class="token punctuation">;</span>
+	node<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>end <span class="token operator">+</span> <span class="token number">2</span><span class="token punctuation">]</span> <span class="token operator">=</span> children<span class="token punctuation">;</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>children<span class="token punctuation">)</span>
+		children<span class="token operator">-&gt;</span>_parent <span class="token operator">=</span> node<span class="token punctuation">;</span>
+	node<span class="token operator">-&gt;</span>_num<span class="token operator">++</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<blockquote> 
+ <p><strong>对于B树的插入来说, 步骤就是上面分析过的步骤,但是代码实现是比较抽象,比较难懂的, B树的模拟实现本身就属于拓展内容, 如果你理解不了也是没关系的, 知道B树的性质和用途就好了</strong></p> 
+</blockquote> 
+<pre><code class="prism language-cpp"><span class="token keyword">bool</span> <span class="token function">Insert</span><span class="token punctuation">(</span><span class="token keyword">const</span> K<span class="token operator">&amp;</span> key<span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+	<span class="token comment">//第一次插入的逻辑</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>_root <span class="token operator">==</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		_root <span class="token operator">=</span> <span class="token keyword">new</span> Node<span class="token punctuation">;</span>
+		_root<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> key<span class="token punctuation">;</span>
+		_root<span class="token operator">-&gt;</span>_num<span class="token operator">++</span><span class="token punctuation">;</span>
+		<span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+	<span class="token punctuation">}</span>
+	pair<span class="token operator">&lt;</span>Node<span class="token operator">*</span><span class="token punctuation">,</span> <span class="token keyword">int</span><span class="token operator">&gt;</span> ret <span class="token operator">=</span> <span class="token function">Find</span><span class="token punctuation">(</span>key<span class="token punctuation">)</span><span class="token punctuation">;</span>
+	<span class="token comment">//key已经存在,插入失败</span>
+	<span class="token keyword">if</span> <span class="token punctuation">(</span>ret<span class="token punctuation">.</span>second  <span class="token operator">&gt;=</span> <span class="token number">0</span><span class="token punctuation">)</span>
+		<span class="token keyword">return</span> <span class="token boolean">false</span><span class="token punctuation">;</span>
+	<span class="token comment">//若key不存在,find顺便带回来了要插入的叶子节点</span>
+	Node<span class="token operator">*</span> cur <span class="token operator">=</span> ret<span class="token punctuation">.</span>first<span class="token punctuation">;</span>
+	K newKey <span class="token operator">=</span> key<span class="token punctuation">;</span>
+	Node<span class="token operator">*</span> children <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+	<span class="token comment">//循环每次往cur插入newkey和child</span>
+	<span class="token keyword">while</span> <span class="token punctuation">(</span><span class="token number">1</span><span class="token punctuation">)</span> <span class="token punctuation">{<!-- --></span>
+		<span class="token function">InsertKey</span><span class="token punctuation">(</span>cur<span class="token punctuation">,</span> newKey<span class="token punctuation">,</span>children<span class="token punctuation">)</span><span class="token punctuation">;</span>
+		<span class="token comment">//判断此节点满没有</span>
+		<span class="token keyword">if</span> <span class="token punctuation">(</span>cur<span class="token operator">-&gt;</span>_num <span class="token operator">&lt;</span> M<span class="token punctuation">)</span>
+			<span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+		<span class="token comment">//需要分裂,创建一个兄弟节点</span>
+		<span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+			size_t mid <span class="token operator">=</span> M <span class="token operator">/</span> <span class="token number">2</span><span class="token punctuation">;</span>
+			<span class="token comment">//[mid+1,M-1]给兄弟</span>
+			Node<span class="token operator">*</span> brother <span class="token operator">=</span> <span class="token keyword">new</span> Node<span class="token punctuation">;</span>
+			<span class="token keyword">int</span> j <span class="token operator">=</span> <span class="token number">0</span><span class="token punctuation">;</span>
+			<span class="token keyword">for</span> <span class="token punctuation">(</span><span class="token keyword">int</span> i <span class="token operator">=</span> mid <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">;</span> i <span class="token operator">&lt;=</span> M <span class="token operator">-</span> <span class="token number">1</span><span class="token punctuation">;</span> i<span class="token operator">++</span><span class="token punctuation">)</span>
+			<span class="token punctuation">{<!-- --></span>
+				brother<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+				<span class="token comment">//不仅仅要拷贝走一半的数据,并且还需要将这一半数据的孩子一起拷贝给brother</span>
+				<span class="token comment">//拷走一个key就要拷走这个key的左孩子.孩子的父亲变了,需要修改</span>
+				brother<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">;</span>
+				<span class="token keyword">if</span> <span class="token punctuation">(</span>cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token punctuation">)</span>
+					cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span><span class="token operator">-&gt;</span>_parent <span class="token operator">=</span> brother<span class="token punctuation">;</span>
+				<span class="token comment">//将拷贝走的数据重置</span>
+				cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">K</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+				cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>i<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+				j<span class="token operator">++</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+			<span class="token comment">//拷贝完后还有最后一个右孩子,最右的孩子需要拷贝走</span>
+			brother<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>j<span class="token punctuation">]</span> <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>M<span class="token punctuation">]</span><span class="token punctuation">;</span>
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>M<span class="token punctuation">]</span><span class="token punctuation">)</span>
+				cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>M<span class="token punctuation">]</span><span class="token operator">-&gt;</span>_parent <span class="token operator">=</span> brother<span class="token punctuation">;</span>
+			cur<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span>M<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token keyword">nullptr</span><span class="token punctuation">;</span>
+			brother<span class="token operator">-&gt;</span>_num <span class="token operator">=</span> j<span class="token punctuation">;</span>
+			cur<span class="token operator">-&gt;</span>_num <span class="token operator">-=</span> <span class="token punctuation">(</span>j <span class="token operator">+</span> <span class="token number">1</span><span class="token punctuation">)</span><span class="token punctuation">;</span><span class="token comment">//拷走了j个,mid也被提取了</span>
+			<span class="token comment">//分裂后转换成往cur-&gt;parent插入mid和brother</span>
+			K midKey <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>mid<span class="token punctuation">]</span><span class="token punctuation">;</span>
+			<span class="token comment">//cur等于空证明分裂的是根节点</span>
+			cur<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span>mid<span class="token punctuation">]</span> <span class="token operator">=</span> <span class="token function">K</span><span class="token punctuation">(</span><span class="token punctuation">)</span><span class="token punctuation">;</span>
+			<span class="token keyword">if</span> <span class="token punctuation">(</span>cur<span class="token operator">-&gt;</span>_parent <span class="token operator">==</span> <span class="token keyword">nullptr</span><span class="token punctuation">)</span>
+			<span class="token punctuation">{<!-- --></span>
+				_root <span class="token operator">=</span> <span class="token keyword">new</span> Node<span class="token punctuation">;</span>
+				_root<span class="token operator">-&gt;</span>_keys<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> midKey<span class="token punctuation">;</span>
+				_root<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span><span class="token number">0</span><span class="token punctuation">]</span> <span class="token operator">=</span> cur<span class="token punctuation">;</span>
+				_root<span class="token operator">-&gt;</span>_childs<span class="token punctuation">[</span><span class="token number">1</span><span class="token punctuation">]</span> <span class="token operator">=</span> brother<span class="token punctuation">;</span>
+				_root<span class="token operator">-&gt;</span>_num <span class="token operator">=</span> <span class="token number">1</span><span class="token punctuation">;</span>
+				cur<span class="token operator">-&gt;</span>_parent <span class="token operator">=</span> _root<span class="token punctuation">;</span>
+				brother<span class="token operator">-&gt;</span>_parent <span class="token operator">=</span> _root<span class="token punctuation">;</span>
+				<span class="token keyword">break</span><span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+			<span class="token keyword">else</span> <span class="token punctuation">{<!-- --></span>
+				newKey <span class="token operator">=</span> midKey<span class="token punctuation">;</span>
+				<span class="token comment">//中位数给父亲了,也重置一下</span>
+				children <span class="token operator">=</span> brother<span class="token punctuation">;</span>
+				cur <span class="token operator">=</span> cur<span class="token operator">-&gt;</span>_parent<span class="token punctuation">;</span>
+			<span class="token punctuation">}</span>
+		<span class="token punctuation">}</span>
+	<span class="token punctuation">}</span>
+	<span class="token keyword">return</span> <span class="token boolean">true</span><span class="token punctuation">;</span>
+<span class="token punctuation">}</span>
+</code></pre> 
+<hr> 
+<h2><a id="6__268"></a>6. 总结以及拓展</h2> 
+<p>B树模块的重点是它的分裂逻辑和使用场景, 并且B树在实际生产中运行并不多, 因为有更好的数据结构: B+树或是B*树来代替它. 但是学习后两者的前提是需要你知晓B树的性质, 所以学习不是一蹴而就的,是需要持之以恒的</p> 
+<hr> 
+<center>
+  🔎 
+ <font color="#4b0080"> 下期预告:B+树,B*树,MySQL索引讲解 </font>🔍 
+</center>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/85de07450d9ae9372d9a209e98f4d354/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">文心智能体平台：想象即现实（快来开发你的第一个专属AI 智能体助手吧）</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/b8a0e003b2d13c86c1931bb47f583e40/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">【MySQL】——并发控制</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>

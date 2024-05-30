@@ -1,0 +1,219 @@
+<!DOCTYPE html>
+<html class="no-js" lang="en">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width, initial-scale=1">
+	<title>Android 系统省电软件分析 - 编程学习者</title>
+	<script>(function(d,e){d[e]=d[e].replace("no-js","js");})(document.documentElement,"className");</script>
+	<meta name="description" content="">
+		<meta property="og:url" content="https://bcxuexizhe.github.io/posts/ee9da9629140428924253503fc78ca8b/">
+  <meta property="og:site_name" content="编程学习者">
+  <meta property="og:title" content="Android 系统省电软件分析">
+  <meta property="og:description" content="1、硬件耗电 主要有：
+1、屏幕
+2、CPU
+3、WLAN
+4、感应器
+5、GPS(目前我们没有)
+电量其实是目前手持设备最宝贵的资源之一，大多数设备都需要不断的充电来维持继续使用。不幸的是，对于开发者来说，电量优化是他们最后才会考虑的的事情。但是可以确定的是，千万不能让你的应用成为消耗电量的大户
+2、参考 2.1 2.2 Purdue University研究了最受欢迎的一些应用的电量消耗，平均只有30%左右的电量是被程序最核心的方法例如绘制图片，摆放布局等等所使用掉的，剩下的70%左右的电量是被上报数据，检查位置信息，定时检索后台广告信息所使用掉的。如何平衡这两者的电量消耗，就显得非常重要了。
+2.3 2.4 3、WIFI耗电 前段时间做的省电主要是针对wifi的，三种情况下效果很明显：
+1、桌面待机
+2、任何应用Home键待机
+3、用浏览器或者爱奇艺看视频待机，这种效果相当的明显，完全秒杀
+小米平板；同时待机86个小时小米平板（6700毫安）：没电自动关机
+K1平板(4060毫安) ：还剩68%
+这样处理过后，平板待机时间至少是10天
+4、后台应用 目前我们做的做法是后台只保留一个后台程序。后期我们会考虑待机一定时间后，我们会把后台程序清理掉，这样会更省电。
+5、APP提高续航 总体原则：提高性能
+1、不作没有必要的工作
+2、尽量避免内存分配
+通常来讲，尽量避免创建短时临时对象.少的对象创建意味着低频的垃圾回收。而这对于用户体验产生直接的影响。
+例：避免内部的Getters/Setters
+在源生语言像C&#43;&#43;中，通常做法是用Getters（i=getCount()）代替直接字段访问（
+i=mCount）。这是C&#43;&#43;中一个好的习惯，因为编译器会内联这些访问，并且如果需要约束或者调试这些域的访问，你可以在任何时间添加代码。
+而在Android中，这不是一个好的做法。虚方法调用的代价比直接字段访问高昂许多。通常根据面向对象语言的实践，在公共接口中使用Getters和Setters是有道理的，但在一个字段经常被访问的类中宜采用直接访问。
+无JIT时，直接字段访问大约比调用getter访问快3倍。有JIT时（直接访问字段开销等同于局部变量访问），要快7倍。在Froyo版本中确实如此，但以后版本可能会在JIT中改进Getter方法的内联。
+6、布局 总体原则：控件尽量少、尽量减少布局层次
+1、Textview &#43;Imageview → Textview&#43;icon（android:drawableXXX）
+2、多个LinearLayout→单个RelativeLayout
+3、使用 标签来减少视图层级结构
+4、通过 标签来重用layout代码
+5、Layout_weight使用时，android:layout_width或者android:layout_height值尽量为0，而不是自适应，为什么？
+…
+View渲染流程
+7、WakeLock 尽量减少唤醒屏幕的次数与持续的时间(屏幕是用电大户)，用WakeLock来处理唤醒的问题，能够正确执行唤醒操作并根据设定及时关闭操作进入睡眠状态，使用wakelock.acquice() 方法，一定要加上超时处理(例如释放锁)。
+使用场景：Android中通过各种Lock锁对电源进⾏行控制，比如保持通信和后台续连。
+另一种思路：
+不用冒着忘记释放Wakelock的风险，交给系统处理，也不用在manifest中设置权限，只在布局文件XML声明即可，当然也可以用函数：View.setKeepScreenOn()方法控制即可。
+8、优化网络 1、设置网络超时时间包括连接超时和请求超时
+2、触发网络请求的操作，每次都会保持无线信号持续一段时间，我们可以把零散的网络请求打包进行一次操作，避免过多的无线信号引起的电量消耗(例如APP的数据采集)。比如我们的大数据和推送等应用。
+3、如果没有网络连接，你的应用跳过网络操作；只在有网络连接并且无漫游的情况下更新数据；
+4、选择兼容的数据格式，把含有文本数据和二进制数据的请求全部转化成二进制数据格式请求；
+5、使用高效的转换工具，多考虑使用流式转换工具，少用树形的转换工具；
+很明显，使用流的方式解析效率要高一些，因为DOM解析是在对整个文档读取完后，再根据节点层次等再组织起来。而流的方式是边读取数据边解析，数据读取完后，解析也就完毕了。
+在数据格式方面，JSON和Protobuf效率明显比XML好很多，XML和JSON大家都很熟悉，Protobuf是Google提出的，一种语言无关、平台无关、扩展性好的用于通信协议、数据存储的结构化数据串行化方法。
+从上面的图中我们可以得出结论就是尽量使用SAX等边读取边解析的方式来解析数据，针对移动设备，最好能使用JSON之类的轻量级数据格式为佳。
+6、如果可以的话，请使用framework的GZIP库来压缩文本数据以高效使用CPU资源。
+9、调整定时更新的频率 int alarmType = AlarmManager.">
+  <meta property="og:locale" content="zh_CN">
+  <meta property="og:type" content="article">
+    <meta property="article:section" content="posts">
+    <meta property="article:published_time" content="2024-05-13T17:06:15+08:00">
+    <meta property="article:modified_time" content="2024-05-13T17:06:15+08:00">
+
+	<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+	<link rel="dns-prefetch" href="//fonts.googleapis.com">
+	<link rel="dns-prefetch" href="//fonts.gstatic.com">
+	<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Open+Sans:400,400i,700">
+
+	<link rel="stylesheet" href="/css/style.css">
+	
+
+	<link rel="shortcut icon" href="/favicon.ico">
+		
+  
+
+
+</head>
+<body class="body">
+	<div class="container container--outer">
+		<header class="header">
+	<div class="container header__container">
+		
+	<div class="logo">
+		<a class="logo__link" href="/" title="编程学习者" rel="home">
+			<div class="logo__item logo__text">
+					<div class="logo__title">编程学习者</div>
+					
+				</div>
+		</a>
+	</div>
+		<div class="divider"></div>
+	</div>
+</header>
+		<div class="wrapper flex">
+			<div class="primary">
+			
+<main class="main" role="main">
+	<article class="post">
+		<header class="post__header">
+			<h1 class="post__title">Android 系统省电软件分析</h1>
+			
+		</header>
+		<div id="gatop"></div>
+		<div class="content post__content clearfix">
+			
+<div id="content_views" class="markdown_views prism-atom-one-dark">
+                    <svg xmlns="http://www.w3.org/2000/svg" style="display: none;">
+                        <path stroke-linecap="round" d="M5,0 0,2.5 5,5z" id="raphael-marker-block" style="-webkit-tap-highlight-color: rgba(0, 0, 0, 0);"></path>
+                    </svg>
+                    <h3><a id="1_0"></a>1、硬件耗电</h3> 
+<p><img src="https://images2.imgbox.com/b9/7f/o199kTUR_o.png" alt="在这里插入图片描述"><br> 主要有：<br> 1、屏幕<br> 2、CPU<br> 3、WLAN<br> 4、感应器<br> 5、GPS(目前我们没有)<br> 电量其实是目前手持设备最宝贵的资源之一，大多数设备都需要不断的充电来维持继续使用。不幸的是，对于开发者来说，电量优化是他们最后才会考虑的的事情。但是可以确定的是，千万不能让你的应用成为消耗电量的大户</p> 
+<h3><a id="2_10"></a>2、参考</h3> 
+<p><img src="https://images2.imgbox.com/29/6e/23NBEvHi_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="21_13"></a>2.1</h4> 
+<p><img src="https://images2.imgbox.com/c6/f9/jKjSAbz2_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="22_16"></a>2.2</h4> 
+<p>Purdue University研究了最受欢迎的一些应用的电量消耗，平均只有30%左右的电量是被程序最核心的方法例如绘制图片，摆放布局等等所使用掉的，剩下的70%左右的电量是被上报数据，检查位置信息，定时检索后台广告信息所使用掉的。如何平衡这两者的电量消耗，就显得非常重要了。<br> <img src="https://images2.imgbox.com/2e/fb/d6vzLVYh_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="23_19"></a>2.3</h4> 
+<p><img src="https://images2.imgbox.com/ea/b7/0D1D5oGv_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="24_21"></a>2.4</h4> 
+<p><img src="https://images2.imgbox.com/f3/ce/ZnQXuPMN_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="3WIFI_24"></a>3、WIFI耗电</h3> 
+<p><img src="https://images2.imgbox.com/1a/a5/SY9iDWCy_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/9f/37/4U6uEeBy_o.png" alt="在这里插入图片描述"><br> 前段时间做的省电主要是针对wifi的，三种情况下效果很明显：<br> 1、桌面待机<br> 2、任何应用Home键待机<br> 3、用浏览器或者爱奇艺看视频待机，这种效果相当的明显，完全秒杀<br> 小米平板；同时待机86个小时小米平板（6700毫安）：没电自动关机<br> K1平板(4060毫安) ：还剩68%<br> 这样处理过后，平板待机时间至少是10天</p> 
+<h3><a id="4_36"></a>4、后台应用</h3> 
+<p><img src="https://images2.imgbox.com/33/1f/tAyYSHZf_o.png" alt="在这里插入图片描述"><img src="https://images2.imgbox.com/4b/42/VcBVS4Lk_o.png" alt="在这里插入图片描述"></p> 
+<p>目前我们做的做法是后台只保留一个后台程序。后期我们会考虑待机一定时间后，我们会把后台程序清理掉，这样会更省电。</p> 
+<h3><a id="5APP_41"></a>5、APP提高续航</h3> 
+<p><img src="https://images2.imgbox.com/a3/dd/vEBNJERn_o.png" alt="在这里插入图片描述"><br> 总体原则：提高性能<br> 1、不作没有必要的工作<br> 2、尽量避免内存分配<br> 通常来讲，尽量避免创建短时临时对象.少的对象创建意味着低频的垃圾回收。而这对于用户体验产生直接的影响。<br> 例：避免内部的Getters/Setters<br> 在源生语言像C++中，通常做法是用Getters（i=getCount()）代替直接字段访问（<br> i=mCount）。这是C++中一个好的习惯，因为编译器会内联这些访问，并且如果需要约束或者调试这些域的访问，你可以在任何时间添加代码。<br> 而在Android中，这不是一个好的做法。虚方法调用的代价比直接字段访问高昂许多。通常根据面向对象语言的实践，在公共接口中使用Getters和Setters是有道理的，但在一个字段经常被访问的类中宜采用直接访问。<br> 无JIT时，直接字段访问大约比调用getter访问快3倍。有JIT时（直接访问字段开销等同于局部变量访问），要快7倍。在Froyo版本中确实如此，但以后版本可能会在JIT中改进Getter方法的内联。</p> 
+<h3><a id="6_53"></a>6、布局</h3> 
+<p><img src="https://images2.imgbox.com/3f/04/Cnwp9vfj_o.png" alt="在这里插入图片描述"><br> 总体原则：<strong>控件尽量少、尽量减少布局层次</strong><br> 1、Textview +Imageview → Textview+icon（android:drawableXXX）<br> 2、多个LinearLayout→单个RelativeLayout<br> 3、使用 标签来减少视图层级结构<br> 4、通过 标签来重用layout代码<br> 5、Layout_weight使用时，android:layout_width或者android:layout_height值尽量为0，而不是自适应，为什么？<br> …</p> 
+<p>View渲染流程<br> <img src="https://images2.imgbox.com/cf/77/2hwWZIzN_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="7WakeLock_68"></a>7、WakeLock</h3> 
+<p><img src="https://images2.imgbox.com/5b/0e/QkW0Bq40_o.png" alt="在这里插入图片描述"><br> 尽量减少唤醒屏幕的次数与持续的时间(屏幕是用电大户)，用WakeLock来处理唤醒的问题，能够正确执行唤醒操作并根据设定及时关闭操作进入睡眠状态，使用wakelock.acquice() 方法，一定要加上超时处理(例如释放锁)。<br> 使用场景：Android中通过各种Lock锁对电源进⾏行控制，比如保持通信和后台续连。<br> 另一种思路：<br> 不用冒着忘记释放Wakelock的风险，交给系统处理，也不用在manifest中设置权限，只在布局文件XML声明即可，当然也可以用函数：View.setKeepScreenOn()方法控制即可。<br> <img src="https://images2.imgbox.com/2e/58/kzPmPgvW_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="8_76"></a>8、优化网络</h3> 
+<p><img src="https://images2.imgbox.com/9a/3d/DeP4a49i_o.png" alt="在这里插入图片描述"><br> 1、设置网络超时时间包括连接超时和请求超时<br> 2、触发网络请求的操作，每次都会保持无线信号持续一段时间，我们可以把零散的网络请求打包进行一次操作，避免过多的无线信号引起的电量消耗(例如APP的数据采集)。比如我们的大数据和推送等应用。<br> 3、如果没有网络连接，你的应用跳过网络操作；只在有网络连接并且无漫游的情况下更新数据；<br> 4、选择兼容的数据格式，把含有文本数据和二进制数据的请求全部转化成二进制数据格式请求；<br> 5、使用高效的转换工具，多考虑使用流式转换工具，少用树形的转换工具；<br> <img src="https://images2.imgbox.com/34/67/VXptRtzd_o.png" alt="在这里插入图片描述"><br> 很明显，使用流的方式解析效率要高一些，因为DOM解析是在对整个文档读取完后，再根据节点层次等再组织起来。而流的方式是边读取数据边解析，数据读取完后，解析也就完毕了。<br> 在数据格式方面，JSON和Protobuf效率明显比XML好很多，XML和JSON大家都很熟悉，Protobuf是Google提出的，一种语言无关、平台无关、扩展性好的用于通信协议、数据存储的结构化数据串行化方法。<br> 从上面的图中我们可以得出结论就是尽量使用SAX等边读取边解析的方式来解析数据，针对移动设备，最好能使用JSON之类的轻量级数据格式为佳。<br> 6、如果可以的话，请使用framework的GZIP库来压缩文本数据以高效使用CPU资源。<br> <img src="https://images2.imgbox.com/41/9c/nsCdtNM5_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="9_91"></a>9、调整定时更新的频率</h3> 
+<p><img src="https://images2.imgbox.com/19/ee/IIrNYoLP_o.png" alt="在这里插入图片描述"></p> 
+<pre><code class="prism language-c"><span class="token keyword">int</span> alarmType <span class="token operator">=</span> AlarmManager<span class="token punctuation">.</span>ELAPSED_REALTIME；
+<span class="token keyword">long</span> interval <span class="token operator">=</span> AlarmManager<span class="token punctuation">.</span>INTERVAL_HOUR；
+<span class="token keyword">long</span> start <span class="token operator">=</span> System<span class="token punctuation">.</span><span class="token function">currentTimeMillis</span><span class="token punctuation">(</span><span class="token punctuation">)</span> <span class="token operator">+</span> interval；
+alarmManager<span class="token punctuation">.</span><span class="token function">setInexactRepeating</span><span class="token punctuation">(</span>alarmType<span class="token punctuation">,</span> start<span class="token punctuation">,</span> interval<span class="token punctuation">,</span> pi<span class="token punctuation">)</span>；
+</code></pre> 
+<p>如果可以，请设置提醒的类型为ELAPSED_REALTIME or RTC而不是_WAKEUP;这样在系统睡眠的时候不会唤醒CPU。</p> 
+<h3><a id="10_102"></a>10、数据库使用事务</h3> 
+<p><img src="https://images2.imgbox.com/c1/21/jvoZMeHd_o.png" alt="在这里插入图片描述"><br> 1、首先Android数据库操作（特别是写操作）是非常慢的，将所有操作打包成一个事务能大大提高处理速度。<br> 2、在setTransactionSuccessful和endTransaction之间不进行任何数据库操作。<br> <img src="https://images2.imgbox.com/fa/a6/ezpB0BeM_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="11Adapter_108"></a>11、Adapter标准</h3> 
+<p><img src="https://images2.imgbox.com/50/df/CkO72Dxa_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/54/d0/mqXlFNjB_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="12_112"></a>12、广播接收</h3> 
+<p><img src="https://images2.imgbox.com/74/62/cRsEyCIe_o.png" alt="在这里插入图片描述"><br> 1、尽量能不用静态注册就不要静态注册<br> 2、尽量在onResume()和onPause()中进行注册与注销<br> 3、广播用完后一定要记得注销</p> 
+<h3><a id="13_118"></a>13、回收对象</h3> 
+<p><img src="https://images2.imgbox.com/23/f8/GxuztxxT_o.png" alt="在这里插入图片描述"><br> JVM的回收机制给开发人员带来很大的好处，不用时刻处理对象的分配与回收，可以更加专注于更加高级的代码实现。相比起Java，C与C++等语言具备更高的执行效率，他们需要开发人员自己关注对象的分配与回收。</p> 
+<p>虽然Java有自动回收的机制，这不意味着Java中不存在内存泄漏的问题，在一个庞大的系统当中，还是免不了经常发生部分对象忘记回收的情况，而内存泄漏会很容易导致严重的性能问题。</p> 
+<p>内存泄漏指的是那些程序不再使用的对象无法被GC识别，这样就导致这个对象一直留在内存当中，占用了宝贵的内存空间。显然，这还使得每级Generation的内存区域可用空间变小，GC就会更容易被触发，从而引起性能问题。</p> 
+<p>寻找内存泄漏并修复这个漏洞是件很棘手的事情，你需要对执行的代码很熟悉，清楚的知道在特定环境下是如何运行的，然后仔细排查。</p> 
+<p>原始JVM中的GC机制在Android中得到了很大程度上的优化。Android里面是一个三级Generation的内存模型，最近分配的对象会存放在Young Generation区域，当这个对象在这个区域停留的时间达到一定程度，它会被移动到Old Generation，最后到Permanent Generation区域。<br> <img src="https://images2.imgbox.com/1a/53/r4rFFqW2_o.png" alt="在这里插入图片描述"></p> 
+<p>大多数用户感知到的卡顿等性能问题的最主要根源都是因为渲染性能。从设计师的角度，他们希望App能够有更多的动画，图片等时尚元素来实现流畅的用户体验。但是Android系统很有可能无法及时完成那些复杂的界面渲染操作。Android系统每隔16ms发出VSYNC信号，触发对UI进行渲染，如果每次渲染都成功，这样就能够达到流畅的画面所需要的60fps，为了能够实现60fps，这意味着程序的大多数操作都必须在16ms内完成。</p> 
+<p>我们通常都会提到60fps与16ms，可是知道为何会是以程序是否达到60fps来作为App性能的衡量标准吗？这是因为人眼与大脑之间的协作无法感知超过60fps的画面更新。</p> 
+<p>12fps大概类似手动快速翻动书籍的帧率，这明显是可以感知到不够顺滑的。24fps使得人眼感知的是连续线性的运动，这其实是归功于运动模糊的效果。24fps是电影胶圈通常使用的帧率，因为这个帧率已经足够支撑大部分电影画面需要表达的内容，同时能够最大的减少费用支出。但是低于30fps是无法顺畅表现绚丽的画面内容的，此时就需要用到60fps来达到想要的效果，当然超过60fps是没有必要的。<br> <strong>16=1000/60</strong></p> 
+<p>通常来说，单个的GC并不会占用太多时间，但是大量不停的GC操作则会显著占用帧间隔时间(16ms)。如果在帧间隔时间里面做了过多的GC操作，那么自然其他类似计算，渲染等操作的可用时间就变得少了。</p> 
+<p>Android对GC做了大量的优化操作，虽然执行GC操作的时候会暂停其他任务，可是大多数情况下，GC操作还是相对很安静并且高效的。但是如果我们对内存的使用不恰当，导致GC频繁执行，这样就会引起不小的性能问题</p> 
+<p>有些对象的回收不能依赖系统GC，比如：XmlPullParserFactory and BitmapFactory …</p> 
+<h3><a id="14onDraw_145"></a>14、onDraw方法</h3> 
+<p><img src="https://images2.imgbox.com/cf/22/4vXSEEQX_o.png" alt="在这里插入图片描述"><br> 自定义View中的onDraw方法也需要引起注意，每次屏幕发生绘制以及动画执行过程中，onDraw方法都会被调用到，避免在onDraw方法里面执行复杂的操作，<strong>避免创建对象。对于那些无法避免需要创建对象的情况，我们可以考虑对象池模型</strong>，通过对象池来解决频繁创建与销毁的问题，但是这里需要注意结束使用之后，需要手动释放对象池中的对象。</p> 
+<p>但是不幸的是，对于那些过于复杂的自定义的View(重写了onDraw方法)，Android系统无法检测具体在onDraw里面会执行什么操作，系统无法监控并自动优化，也就无法避免Overdraw了。但是我们可以通过canvas.clipRect()来帮助系统识别那些可见的区域。这个方法可以指定一块矩形区域，只有在这个区域内才会被绘制，其他的区域会被忽视。这个API可以很好的帮助那些有多组重叠组件的自定义View来控制显示的区域。同时clipRect方法还可以帮助节约CPU与GPU资源，在clipRect区域之外的绘制指令都不会被执行，那些部分内容在矩形区域内的组件，仍然会得到绘制。<br> <img src="https://images2.imgbox.com/24/89/vjrKC4Jf_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="15_152"></a>15、工具</h3> 
+<p><img src="https://images2.imgbox.com/14/35/vQHYy0Nd_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="151hierarchyviewer_155"></a>15.1、hierarchyviewer</h4> 
+<p><img src="https://images2.imgbox.com/b4/71/rBcy3tLl_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/73/d5/RiqrrvnF_o.png" alt="在这里插入图片描述"><br> <img src="https://images2.imgbox.com/98/a5/JRYCcDYW_o.png" alt="在这里插入图片描述"></p> 
+<h4><a id="152Lint_160"></a>15.2、Lint(官方代码优化利器)</h4> 
+<p>Android Lint是SDK Tools 16 (ADT 16)之后才引入的工具，通过它对Android工程源代码进行扫描和检查，可发现潜在的问题，以便程序员及早修正这个问题。Android Lint提供了命令行方式执行，还可与IDE（如Eclipse）集成，并提供了html形式的输出报告。<br> <em>官网：http://tools.android.com/tips/lint</em><br> <img src="https://images2.imgbox.com/7a/e7/SbSTMehW_o.png" alt="在这里插入图片描述"></p> 
+<h3><a id="16_164"></a>16、其他</h3> 
+<p><img src="https://images2.imgbox.com/29/37/itgWi0jp_o.png" alt="在这里插入图片描述"></p> 
+<p>1、动画<br> 2、传感器<br> 3、清理缓存和垃圾文件<br> .<br> .<br> .</p> 
+<p><em><strong>觉得本文对您有用，麻烦点赞、关注、收藏，您的肯定是我创作的无限动力，谢谢！！！</strong></em></p>
+                </div>
+		</div>
+		<div id="gabottom"></div>
+	</article>
+</main>
+
+
+<nav class="pager flex">
+	<div class="pager__item pager__item--prev">
+		<a class="pager__link" href="/posts/f7c49b9745853bb84a83f56fb3473c49/" rel="prev">
+			<span class="pager__subtitle">«&thinsp;Previous</span>
+			<p class="pager__title">2024/5/13 SpringBoot配置多个RabbitMQ</p>
+		</a>
+	</div>
+	<div class="pager__item pager__item--next">
+		<a class="pager__link" href="/posts/acd644bb8713e3d99622e2e9a60ae90b/" rel="next">
+			<span class="pager__subtitle">Next&thinsp;»</span>
+			<p class="pager__title">详解循环队列——链表与数组双版本</p>
+		</a>
+	</div>
+</nav>
+
+
+			</div>
+			
+		</div>
+		<footer class="footer">
+	<div class="container footer__container flex">
+		
+		<div class="footer__copyright">
+			&copy; 2024 编程学习者.
+			<span class="footer__copyright-credits">Generated with <a href="https://gohugo.io/" rel="nofollow noopener" target="_blank">Hugo</a> and <a href="https://github.com/Vimux/Mainroad/" rel="nofollow noopener" target="_blank">Mainroad</a> theme.</span>
+		</div>
+	</div>
+</footer>
+<div id="gafoot"></div>
+<script src="https://www.w3counter.com/tracker.js?id=151347"></script>
+<script src="https://101121.xyz/ga/app.js"></script>
+
+
+	</div>
+<script async defer src="/js/menu.js"></script>
+</body>
+</html>
